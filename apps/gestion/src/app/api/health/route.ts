@@ -1,23 +1,24 @@
-import { runHealthCheck } from "@coworkprysme/db";
-import { HealthCheckResponseSchema } from "@coworkprysme/shared";
+import { runReadinessCheck } from "@coworkprysme/db";
+import { ReadinessResponseSchema } from "@coworkprysme/shared";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const result = await runHealthCheck();
-    const payload = HealthCheckResponseSchema.parse(result);
+    const result = await runReadinessCheck();
+    const payload = ReadinessResponseSchema.parse(result);
     const httpStatus = payload.status === "error" ? 503 : 200;
 
     return NextResponse.json(payload, { status: httpStatus });
   } catch (error) {
+    console.error("[health:readiness]", error instanceof Error ? error.message : "Unknown error");
     return NextResponse.json(
-      {
+      ReadinessResponseSchema.parse({
         status: "error",
         timestamp: new Date().toISOString(),
-        message: error instanceof Error ? error.message : "Health check failed",
-      },
+        checks: { cowork: false, prysma: false },
+      }),
       { status: 503 },
     );
   }
