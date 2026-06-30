@@ -12,7 +12,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@coworkprysme/shared": "workspace:*",
@@ -22,6 +23,7 @@
     "@coworkprysme/config": "workspace:*",
     "@types/node": "^22.15.29",
     "eslint": "^9.39.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

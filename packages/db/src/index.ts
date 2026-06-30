@@ -1,15 +1,5 @@
-export {
-  connectMongo,
-  getCoworkDb,
-  getPrysmaDb,
-} from "./connection.js";
-
-export {
-  getCoworkDbName,
-  getPrysmaDbName,
-  getMongoUri,
-} from "./config.js";
+export { connectMongo, getCoworkDb, resetMongoCache } from "./connection.js";
 
 export { getHealthCheckModel, type HealthCheckDocument } from "./models/health-check.js";
 
-export { runHealthCheck } from "./health.js";
+export { runReadinessCheck } from "./health.js";

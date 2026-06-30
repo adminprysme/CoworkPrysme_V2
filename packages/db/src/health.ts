@@ -1,7 +1,11 @@
-import type { DatabaseCheck, HealthCheckResponse, HealthStatus } from "@coworkprysme/shared";
+import type { DatabaseCheck, HealthStatus, ReadinessResponse } from "@coworkprysme/shared";
 
 import { getCoworkDb, getPrysmaDb } from "./connection.js";
 import { getHealthCheckModel } from "./models/health-check.js";
+
+function logHealthError(scope: string, error: unknown): void {
+  console.error(`[health:${scope}]`, error instanceof Error ? error.message : "Unknown error");
+}
 
 async function checkCoworkDb(): Promise<DatabaseCheck> {
   const start = Date.now();
@@ -17,6 +21,7 @@ async function checkCoworkDb(): Promise<DatabaseCheck> {
 
     return { connected: true, latencyMs: Date.now() - start };
   } catch (error) {
+    logHealthError("cowork", error);
     return {
       connected: false,
       latencyMs: Date.now() - start,
@@ -26,10 +31,10 @@ async function checkCoworkDb(): Promise<DatabaseCheck> {
 }
 
 /**
- * Read-only ping against the external prysma_bdd SSO database.
+ * Read-only ping against the external SSO database.
  * Does not create or modify any collection.
  */
-async function pingPrysmaDb(): Promise<DatabaseCheck> {
+export async function pingPrysmaDb(): Promise<DatabaseCheck> {
   const start = Date.now();
   try {
     const db = await getPrysmaDb();
@@ -39,6 +44,7 @@ async function pingPrysmaDb(): Promise<DatabaseCheck> {
     await db.db.admin().ping();
     return { connected: true, latencyMs: Date.now() - start };
   } catch (error) {
+    logHealthError("prysma", error);
     return {
       connected: false,
       latencyMs: Date.now() - start,
@@ -57,13 +63,16 @@ function resolveStatus(cowork: DatabaseCheck, prysma: DatabaseCheck): HealthStat
   return "ok";
 }
 
-export async function runHealthCheck(): Promise<HealthCheckResponse> {
-  const [cowork_bdd, prysma_bdd] = await Promise.all([checkCoworkDb(), pingPrysmaDb()]);
+/** Sanitized readiness check for gestion — no internal error details in the response. */
+export async function runReadinessCheck(): Promise<ReadinessResponse> {
+  const [cowork, prysma] = await Promise.all([checkCoworkDb(), pingPrysmaDb()]);
 
   return {
-    status: resolveStatus(cowork_bdd, prysma_bdd),
+    status: resolveStatus(cowork, prysma),
     timestamp: new Date().toISOString(),
-    cowork_bdd,
-    prysma_bdd,
+    checks: {
+      cowork: cowork.connected,
+      prysma: prysma.connected,
+    },
   };
 }
