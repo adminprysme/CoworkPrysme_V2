@@ -25,7 +25,6 @@ graph TB
     end
 
     V --> SH
-    V --> DB
     G --> SH
     G --> DB
     DB --> C
@@ -51,7 +50,46 @@ graph TB
 | Port dev | 3000                       | 3001                           |
 | Metadata | Open Graph, `metadataBase` | Basique (app interne)          |
 
-Les deux apps importent `@coworkprysme/db` et `@coworkprysme/shared` ; aucun schéma n'est défini dans les apps.
+Les deux apps importent `@coworkprysme/shared`. Seule **gestion** importe `@coworkprysme/db` ; aucun schéma n'est défini dans les apps.
+
+## Sécurité
+
+### Variables d'environnement
+
+Validation Zod centralisée dans `packages/shared/src/env.ts`, initialisée au démarrage serveur via `instrumentation.ts` (`initServerEnv()`).
+
+| Variable               | Dev                  | Production                                 |
+| ---------------------- | -------------------- | ------------------------------------------ |
+| `MONGODB_URI`          | `mongodb://` accepté | `mongodb+srv://` ou `tls=true` obligatoire |
+| `MONGODB_DB_COWORK`    | optionnel (défaut)   | optionnel (défaut)                         |
+| `MONGODB_DB_PRYSMA`    | optionnel (défaut)   | optionnel (défaut)                         |
+| `NEXT_PUBLIC_SITE_URL` | optionnel            | **obligatoire** (vitrine)                  |
+
+Les messages d'erreur sont génériques et ne contiennent jamais de valeurs secrètes. Fichiers `.env*` ignorés par git (sauf `.env.example`).
+
+### En-têtes HTTP
+
+Les deux apps configurent via `next.config.ts` :
+
+- Content-Security-Policy (base, à affiner)
+- Strict-Transport-Security
+- X-Content-Type-Options, X-Frame-Options
+- Referrer-Policy, Permissions-Policy
+
+### prysma_bdd — lecture seule garantie
+
+- `getPrysmaDb()` n'est **pas** exporté via `@coworkprysme/db` (index public)
+- Seul `pingPrysmaDb()` (interne) effectue un `admin().ping()` — aucune écriture
+- Tests automatisés : absence d'exports sensibles, ping sans `model()`, singleton Mongoose
+
+### Health checks
+
+| App     | Type      | DB                   | Réponse publique                                                          |
+| ------- | --------- | -------------------- | ------------------------------------------------------------------------- |
+| vitrine | Liveness  | Aucune               | `{ "status": "ok" }` — HTTP 200                                           |
+| gestion | Readiness | Ping cowork + prysma | `{ status, timestamp, checks: { cowork, prysma } }` — booléens uniquement |
+
+Les détails d'erreur (host, port, stack) vont dans les **logs serveur**, jamais dans la réponse HTTP.
 
 ## MongoDB + Mongoose
 
@@ -88,8 +126,9 @@ La connexion est mise en cache sur `globalThis` et réutilisée entre les invoca
 `prysma_bdd` est la base SSO Prysma préexistante. Le package `db` :
 
 - n'expose **aucun modèle** pour cette base ;
-- n'effectue **aucune écriture** ;
-- propose uniquement un **ping** (`admin().ping()`) pour vérifier la joignabilité.
+- n'expose **pas** `getPrysmaDb()` dans l'API publique ;
+- n'effectue **aucune écriture** — uniquement un ping interne (`admin().ping()`) ;
+- est couvert par des **tests** interdisant les exports d'écriture.
 
 Toute création ou modification de collections sur `prysma_bdd` nécessite un accord explicite.
 
@@ -117,22 +156,29 @@ Configurations réutilisables :
 
 ## Health check
 
-Route : `GET /api/health` (identique sur les deux apps).
+Route : `GET /api/health` sur les deux apps, **contrats distincts**.
+
+**Vitrine (liveness)** — pas d'accès base de données :
+
+```json
+{ "status": "ok" }
+```
+
+**Gestion (readiness)** — ping des deux bases, réponse assainie :
 
 ```json
 {
   "status": "ok",
   "timestamp": "2026-06-30T12:00:00.000Z",
-  "cowork_bdd": { "connected": true, "latencyMs": 12 },
-  "prysma_bdd": { "connected": true, "latencyMs": 8 }
+  "checks": { "cowork": true, "prysma": true }
 }
 ```
 
-| `status`   | Condition                          | HTTP |
+| `status`   | Condition (gestion)                | HTTP |
 | ---------- | ---------------------------------- | ---- |
-| `ok`       | Les deux bases répondent           | 200  |
+| `ok`       | Les deux checks à `true`           | 200  |
 | `degraded` | Connexion OK mais erreur partielle | 200  |
-| `error`    | Au moins une base injoignable      | 503  |
+| `error`    | Au moins un check à `false`        | 503  |
 
 ## Qualité
 
