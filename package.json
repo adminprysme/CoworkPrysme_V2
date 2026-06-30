@@ -1,0 +1,21 @@
+{
+  "name": "coworkprysme",
+  "private": true,
+  "packageManager": "pnpm@10.8.2",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": "10.8.2"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.4",
+    "turbo": "^2.10.1"
+  }
+}
