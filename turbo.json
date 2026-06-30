@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["MONGODB_URI", "MONGODB_DB_COWORK", "MONGODB_DB_PRYSMA"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

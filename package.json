@@ -1,10 +1,11 @@
 {
   "name": "coworkprysme",
   "private": true,
-  "packageManager": "pnpm@10.8.2",
+  "type": "module",
+  "packageManager": "pnpm@10.8.1",
   "engines": {
     "node": ">=24.0.0",
-    "pnpm": "10.8.2"
+    "pnpm": ">=10.8.0"
   },
   "scripts": {
     "dev": "turbo dev",
@@ -12,10 +13,22 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore"
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .gitignore",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.0",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@coworkprysme/config": "workspace:*",
+    "eslint": "^9.39.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
     "turbo": "^2.10.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md}": [
+      "prettier --write"
+    ]
   }
 }
