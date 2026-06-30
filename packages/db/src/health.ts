@@ -7,6 +7,9 @@ async function checkCoworkDb(): Promise<DatabaseCheck> {
   const start = Date.now();
   try {
     const db = await getCoworkDb();
+    if (!db.db) {
+      throw new Error("Cowork database handle is unavailable");
+    }
     await db.db.admin().ping();
 
     const HealthCheck = getHealthCheckModel(db);
@@ -30,6 +33,9 @@ async function pingPrysmaDb(): Promise<DatabaseCheck> {
   const start = Date.now();
   try {
     const db = await getPrysmaDb();
+    if (!db.db) {
+      throw new Error("Prysma database handle is unavailable");
+    }
     await db.db.admin().ping();
     return { connected: true, latencyMs: Date.now() - start };
   } catch (error) {
