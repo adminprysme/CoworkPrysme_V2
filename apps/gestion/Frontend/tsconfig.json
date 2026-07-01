@@ -1,4 +1,7 @@
 {
   "extends": "@coworkprysme/config/typescript/vite",
+  "compilerOptions": {
+    "resolveJsonModule": true
+  },
   "include": ["src", "vite.config.ts"]
 }
