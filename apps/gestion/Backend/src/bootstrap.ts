@@ -14,7 +14,7 @@ export function configureCors(app: INestApplication, allowedOrigins: string[]): 
         callback(null, true);
         return;
       }
-      callback(new Error("Not allowed by CORS"), false);
+      callback(null, false);
     },
     credentials: true,
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
@@ -28,4 +28,12 @@ export function getPort(): number {
     throw new Error("Invalid or missing environment configuration");
   }
   return port;
+}
+
+/** Dev-only: bind IPv4 so SSH port forwarding to 127.0.0.1 reaches the server. */
+export function getListenHost(): string | undefined {
+  if (process.env.NODE_ENV === "production") {
+    return undefined;
+  }
+  return "0.0.0.0";
 }

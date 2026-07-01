@@ -26,3 +26,11 @@ export function getPort(): number {
   }
   return port;
 }
+
+/** Dev-only: bind IPv4 so SSH port forwarding to 127.0.0.1 reaches the server. */
+export function getListenHost(): string | undefined {
+  if (process.env.NODE_ENV === "production") {
+    return undefined;
+  }
+  return "0.0.0.0";
+}
