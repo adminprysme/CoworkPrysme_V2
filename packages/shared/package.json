@@ -11,6 +11,10 @@
     "./server": {
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js"
+    },
+    "./vitrine-web": {
+      "types": "./dist/vitrine-web.d.ts",
+      "import": "./dist/vitrine-web.js"
     }
   },
   "scripts": {

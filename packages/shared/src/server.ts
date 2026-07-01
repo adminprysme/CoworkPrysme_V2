@@ -1,27 +1,26 @@
 export {
-  LivenessResponseSchema,
-  ReadinessResponseSchema,
-  HealthStatusSchema,
-  DatabaseCheckSchema,
-  HealthCheckResponseSchema,
-  type LivenessResponse,
-  type ReadinessResponse,
-  type HealthStatus,
-  type DatabaseCheck,
-  type HealthCheckResponse,
-} from "./health.js";
-
-export {
   ServerEnvSchema,
   parseServerEnv,
+  parseVitrineApiEnv,
+  parseGestionApiEnv,
   resetServerEnvCache,
   GENERIC_ENV_ERROR,
   type ServerEnv,
+  type VitrineApiEnv,
+  type GestionApiEnv,
 } from "./env.js";
 
-import { parseServerEnv } from "./env.js";
+import { parseGestionApiEnv, parseServerEnv, parseVitrineApiEnv } from "./env.js";
 
-/** Validates environment — call from Next.js instrumentation at server startup. */
+/** Validates API server env at startup — used by legacy Next gestion app. */
 export function initServerEnv(): ReturnType<typeof parseServerEnv> {
   return parseServerEnv();
+}
+
+export function initVitrineApiEnv(): ReturnType<typeof parseVitrineApiEnv> {
+  return parseVitrineApiEnv();
+}
+
+export function initGestionApiEnv(): ReturnType<typeof parseGestionApiEnv> {
+  return parseGestionApiEnv();
 }

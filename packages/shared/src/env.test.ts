@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { GENERIC_ENV_ERROR, parseServerEnv, resetServerEnvCache } from "./env.js";
+import {
+  GENERIC_ENV_ERROR,
+  parseGestionApiEnv,
+  parseServerEnv,
+  resetServerEnvCache,
+} from "./env.js";
 
 describe("parseServerEnv", () => {
   afterEach(() => {
@@ -65,5 +70,25 @@ describe("parseServerEnv", () => {
       expect((error as Error).message).toBe(GENERIC_ENV_ERROR);
       expect((error as Error).message).not.toContain("supersecret");
     }
+  });
+
+  it("parses comma-separated ALLOWED_ORIGIN for gestion-api", () => {
+    const env = parseGestionApiEnv({
+      NODE_ENV: "development",
+      MONGODB_URI: "mongodb://localhost:27017",
+      ALLOWED_ORIGIN: "http://localhost:3002,http://localhost:8002",
+    });
+
+    expect(env.ALLOWED_ORIGIN).toEqual(["http://localhost:3002", "http://localhost:8002"]);
+  });
+
+  it("rejects wildcard ALLOWED_ORIGIN", () => {
+    expect(() =>
+      parseGestionApiEnv({
+        NODE_ENV: "development",
+        MONGODB_URI: "mongodb://localhost:27017",
+        ALLOWED_ORIGIN: "*",
+      }),
+    ).toThrow(GENERIC_ENV_ERROR);
   });
 });

@@ -30,3 +30,10 @@ export {
   type VitrineApiEnv,
   type GestionApiEnv,
 } from "./env.js";
+
+import { parseVitrineWebEnv } from "./env.js";
+
+/** Validates vitrine-web env at server startup. */
+export function initVitrineWebEnv(): ReturnType<typeof parseVitrineWebEnv> {
+  return parseVitrineWebEnv();
+}

@@ -37,6 +37,7 @@ vi.mock("./config.js", () => ({
 import * as dbPackage from "./index.js";
 import { connectMongo, resetMongoCache } from "./connection.js";
 import { pingPrysmaDb } from "./health.js";
+import { runCoworkReadinessCheck } from "./health.js";
 
 describe("@coworkprysme/db public API", () => {
   it("does not export getPrysmaDb", () => {
@@ -76,5 +77,13 @@ describe("prysma read-only access", () => {
 
     expect(pingSpy).toHaveBeenCalledOnce();
     expect(modelSpy).not.toHaveBeenCalled();
+  });
+
+  it("runCoworkReadinessCheck only reports cowork status", async () => {
+    const result = await runCoworkReadinessCheck();
+
+    expect(result.checks).toHaveProperty("cowork");
+    expect(typeof result.checks.cowork).toBe("boolean");
+    expect("prysma" in result.checks).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
 export async function register() {
-  const { initServerEnv } = await import("@coworkprysme/shared/server");
-  initServerEnv();
+  const { initVitrineWebEnv } = await import("@coworkprysme/shared/vitrine-web");
+  initVitrineWebEnv();
 }

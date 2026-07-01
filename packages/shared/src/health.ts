@@ -2,18 +2,27 @@ import { z } from "zod";
 
 export const HealthStatusSchema = z.enum(["ok", "degraded", "error"]);
 
-/** Public vitrine liveness — no database access. */
+/** Public frontend liveness — no database access. */
 export const LivenessResponseSchema = z.object({
   status: z.literal("ok"),
 });
 
-/** Sanitized gestion readiness — booleans only, no internal details. */
+/** Sanitized readiness for gestion-api (cowork + prysma). */
 export const ReadinessResponseSchema = z.object({
   status: HealthStatusSchema,
   timestamp: z.string().datetime(),
   checks: z.object({
     cowork: z.boolean(),
     prysma: z.boolean(),
+  }),
+});
+
+/** Sanitized readiness for vitrine-api (cowork only). */
+export const CoworkReadinessResponseSchema = z.object({
+  status: HealthStatusSchema,
+  timestamp: z.string().datetime(),
+  checks: z.object({
+    cowork: z.boolean(),
   }),
 });
 
@@ -34,5 +43,6 @@ export const HealthCheckResponseSchema = z.object({
 export type HealthStatus = z.infer<typeof HealthStatusSchema>;
 export type LivenessResponse = z.infer<typeof LivenessResponseSchema>;
 export type ReadinessResponse = z.infer<typeof ReadinessResponseSchema>;
+export type CoworkReadinessResponse = z.infer<typeof CoworkReadinessResponseSchema>;
 export type DatabaseCheck = z.infer<typeof DatabaseCheckSchema>;
 export type HealthCheckResponse = z.infer<typeof HealthCheckResponseSchema>;

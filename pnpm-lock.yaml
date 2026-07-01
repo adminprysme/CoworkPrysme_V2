@@ -107,6 +107,40 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  apps/vitrine-web:
+    dependencies:
+      '@coworkprysme/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      next:
+        specifier: ^16.2.9
+        version: 16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@coworkprysme/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/node':
+        specifier: ^22.15.29
+        version: 22.20.0
+      '@types/react':
+        specifier: ^19.1.8
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.1.6
+        version: 19.2.3(@types/react@19.2.17)
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.4(jiti@2.6.1)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/config:
     devDependencies:
       '@eslint/js':

@@ -1,4 +1,9 @@
-import type { DatabaseCheck, HealthStatus, ReadinessResponse } from "@coworkprysme/shared";
+import type {
+  CoworkReadinessResponse,
+  DatabaseCheck,
+  HealthStatus,
+  ReadinessResponse,
+} from "@coworkprysme/shared";
 
 import { getCoworkDb, getPrysmaDb } from "./connection.js";
 import { getHealthCheckModel } from "./models/health-check.js";
@@ -63,7 +68,7 @@ function resolveStatus(cowork: DatabaseCheck, prysma: DatabaseCheck): HealthStat
   return "ok";
 }
 
-/** Sanitized readiness check for gestion — no internal error details in the response. */
+/** Sanitized readiness check for gestion-api — cowork + prysma, no internal error details. */
 export async function runReadinessCheck(): Promise<ReadinessResponse> {
   const [cowork, prysma] = await Promise.all([checkCoworkDb(), pingPrysmaDb()]);
 
@@ -73,6 +78,29 @@ export async function runReadinessCheck(): Promise<ReadinessResponse> {
     checks: {
       cowork: cowork.connected,
       prysma: prysma.connected,
+    },
+  };
+}
+
+function resolveCoworkOnlyStatus(cowork: DatabaseCheck): HealthStatus {
+  if (!cowork.connected) {
+    return "error";
+  }
+  if (cowork.error) {
+    return "degraded";
+  }
+  return "ok";
+}
+
+/** Sanitized readiness for vitrine-api — cowork only, never touches prysma_bdd. */
+export async function runCoworkReadinessCheck(): Promise<CoworkReadinessResponse> {
+  const cowork = await checkCoworkDb();
+
+  return {
+    status: resolveCoworkOnlyStatus(cowork),
+    timestamp: new Date().toISOString(),
+    checks: {
+      cowork: cowork.connected,
     },
   };
 }
