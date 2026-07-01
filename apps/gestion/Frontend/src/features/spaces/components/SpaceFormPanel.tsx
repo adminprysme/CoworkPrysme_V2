@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import type { DaySchedule } from "../types.js";
 import type { SpaceFormValues } from "../space-types.js";
 import { revokePhotoUrls } from "../utils/photos.js";
 import {
@@ -13,13 +14,20 @@ import panelStyles from "./BuildingFormPanel.module.css";
 interface SpaceFormPanelProps {
   open: boolean;
   floorNames: string[];
+  buildingHours: DaySchedule[];
   onClose: () => void;
-  onSubmit: (values: SpaceFormValues) => void;
+  onSubmit: (values: SpaceFormValues) => Promise<void>;
 }
 
-export function SpaceFormPanel({ open, floorNames, onClose, onSubmit }: SpaceFormPanelProps) {
+export function SpaceFormPanel({
+  open,
+  floorNames,
+  buildingHours,
+  onClose,
+  onSubmit,
+}: SpaceFormPanelProps) {
   const [values, setValues] = useState<SpaceFormValues>(() =>
-    createEmptySpaceFormValues(floorNames),
+    createEmptySpaceFormValues(floorNames, buildingHours),
   );
   const [errors, setErrors] = useState<SpaceFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -33,9 +41,9 @@ export function SpaceFormPanel({ open, floorNames, onClose, onSubmit }: SpaceFor
     if (!open) {
       return;
     }
-    setValues(createEmptySpaceFormValues(floorNames));
+    setValues(createEmptySpaceFormValues(floorNames, buildingHours));
     setErrors({});
-  }, [open, floorNames]);
+  }, [open, floorNames, buildingHours]);
 
   useEffect(() => {
     if (!open) {
@@ -54,7 +62,7 @@ export function SpaceFormPanel({ open, floorNames, onClose, onSubmit }: SpaceFor
     return null;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const nextErrors = validateSpaceForm(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -62,10 +70,15 @@ export function SpaceFormPanel({ open, floorNames, onClose, onSubmit }: SpaceFor
     }
 
     setSubmitting(true);
-    onSubmit(values);
-    revokePhotoUrls(values.photos);
-    setSubmitting(false);
-    onClose();
+    try {
+      await onSubmit(values);
+      revokePhotoUrls(values.photos);
+      onClose();
+    } catch {
+      setErrors({ name: "Enregistrement impossible. Réessayez." });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -95,6 +108,7 @@ export function SpaceFormPanel({ open, floorNames, onClose, onSubmit }: SpaceFor
             values={values}
             errors={errors}
             floorNames={floorNames}
+            buildingHours={buildingHours}
             onChange={setValues}
           />
         </div>

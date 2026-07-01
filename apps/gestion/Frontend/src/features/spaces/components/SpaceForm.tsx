@@ -1,4 +1,5 @@
-import type { SpaceFormValues } from "../space-types.js";
+import type { DaySchedule } from "../types.js";
+import type { SpaceFormValues, SpaceStatus } from "../space-types.js";
 import { SPACE_TYPE_LABELS } from "../space-types.js";
 import type { SpaceFormErrors } from "../utils/space-validation.js";
 import { EquipmentPicker } from "./EquipmentPicker.js";
@@ -11,12 +12,32 @@ interface SpaceFormProps {
   values: SpaceFormValues;
   errors: SpaceFormErrors;
   floorNames: string[];
+  buildingHours: DaySchedule[];
   onChange: (values: SpaceFormValues) => void;
 }
 
-export function SpaceForm({ idPrefix, values, errors, floorNames, onChange }: SpaceFormProps) {
+export function SpaceForm({
+  idPrefix,
+  values,
+  errors,
+  floorNames,
+  buildingHours,
+  onChange,
+}: SpaceFormProps) {
   const capacityLabel =
     values.type === "private_office" ? "Nombre de postes" : "Capacité (personnes)";
+
+  function setUseBuildingHours(checked: boolean) {
+    if (checked) {
+      onChange({
+        ...values,
+        useBuildingHours: true,
+        openingHours: buildingHours.map((entry) => ({ ...entry })),
+      });
+      return;
+    }
+    onChange({ ...values, useBuildingHours: false });
+  }
 
   return (
     <div className={styles.form}>
@@ -57,16 +78,36 @@ export function SpaceForm({ idPrefix, values, errors, floorNames, onChange }: Sp
       </fieldset>
 
       <section className={styles.section}>
-        <label className={styles.field} htmlFor={`${idPrefix}-name`}>
-          <span className={styles.label}>Nom *</span>
-          <input
-            id={`${idPrefix}-name`}
-            className={styles.input}
-            value={values.name}
-            onChange={(event) => onChange({ ...values, name: event.target.value })}
-          />
-          {errors.name ? <span className={styles.error}>{errors.name}</span> : null}
-        </label>
+        <div className={styles.nameRow}>
+          <label className={styles.nameField} htmlFor={`${idPrefix}-name`}>
+            <span className={styles.label}>Nom *</span>
+            <input
+              id={`${idPrefix}-name`}
+              className={styles.input}
+              value={values.name}
+              onChange={(event) => onChange({ ...values, name: event.target.value })}
+            />
+            {errors.name ? <span className={styles.error}>{errors.name}</span> : null}
+          </label>
+
+          <div className={styles.statusToggle} role="group" aria-label="Statut de l'espace">
+            {(["active", "inactive"] as SpaceStatus[]).map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={[
+                  styles.statusOption,
+                  values.status === status ? styles.statusOptionActive : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => onChange({ ...values, status })}
+              >
+                {status === "active" ? "Actif" : "Inactif"}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <label className={styles.field} htmlFor={`${idPrefix}-description`}>
           <span className={styles.label}>Description</span>
@@ -110,6 +151,17 @@ export function SpaceForm({ idPrefix, values, errors, floorNames, onChange }: Sp
           />
           {errors.capacity ? <span className={styles.error}>{errors.capacity}</span> : null}
         </label>
+
+        <label className={styles.field} htmlFor={`${idPrefix}-access-code`}>
+          <span className={styles.label}>Code d&apos;accès</span>
+          <input
+            id={`${idPrefix}-access-code`}
+            className={styles.input}
+            placeholder="Code serrure salle / bureau (optionnel)"
+            value={values.accessCode}
+            onChange={(event) => onChange({ ...values, accessCode: event.target.value })}
+          />
+        </label>
       </section>
 
       <section className={styles.section}>
@@ -125,24 +177,21 @@ export function SpaceForm({ idPrefix, values, errors, floorNames, onChange }: Sp
           idPrefix={`${idPrefix}-opening`}
           title="Horaires d'ouverture de l'espace"
           schedules={values.openingHours}
-          onChange={(openingHours) => onChange({ ...values, openingHours })}
+          disabled={values.useBuildingHours}
+          onChange={(openingHours) =>
+            onChange({ ...values, openingHours, useBuildingHours: false })
+          }
+          headerExtra={
+            <label className={styles.sameBuildingCheck}>
+              <input
+                type="checkbox"
+                checked={values.useBuildingHours}
+                onChange={(event) => setUseBuildingHours(event.target.checked)}
+              />
+              <span>Même horaire que le bâtiment</span>
+            </label>
+          }
         />
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.statusRow}>
-          <span className={styles.label}>Statut</span>
-          <label className={styles.statusToggle}>
-            <input
-              type="checkbox"
-              checked={values.status === "active"}
-              onChange={(event) =>
-                onChange({ ...values, status: event.target.checked ? "active" : "inactive" })
-              }
-            />
-            <span>{values.status === "active" ? "Actif" : "Inactif"}</span>
-          </label>
-        </div>
       </section>
 
       <section className={styles.section}>

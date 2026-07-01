@@ -243,6 +243,7 @@ export function BuildingDetailPage() {
             buildingId={currentBuildingId}
             buildingName={buildingName}
             floorNames={formValues.floors.map((floor) => floor.name)}
+            buildingHours={formValues.accessibilityHours}
           />
         </div>
 

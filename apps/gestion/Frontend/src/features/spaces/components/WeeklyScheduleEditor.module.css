@@ -1,7 +1,20 @@
 .schedule h3 {
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
+}
+
+.scheduleHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+.rowDisabled {
+  opacity: 0.65;
 }
 
 .schedule {
@@ -78,9 +91,14 @@
   cursor: pointer;
 }
 
-.copyBtn:hover {
+.copyBtn:hover:not(:disabled) {
   border-color: var(--color-secondary);
   color: var(--color-secondary);
+}
+
+.copyBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .copyBtn:focus-visible {

@@ -87,6 +87,12 @@ export function SpaceDetailPanel({ space }: SpaceDetailPanelProps) {
                 {space.capacity} {space.type === "private_office" ? "poste(s)" : "personne(s)"}
               </dd>
             </div>
+            {space.accessCode ? (
+              <div>
+                <dt>Code d&apos;accès</dt>
+                <dd>{space.accessCode}</dd>
+              </div>
+            ) : null}
           </dl>
 
           {space.equipments.length > 0 ? (

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { DaySchedule } from "../types.js";
 import { WEEK_DAY_LABELS } from "../types.js";
 import { copyDayScheduleToAll } from "../utils/schedule.js";
@@ -8,6 +10,8 @@ interface WeeklyScheduleEditorProps {
   title: string;
   schedules: DaySchedule[];
   onChange: (schedules: DaySchedule[]) => void;
+  disabled?: boolean;
+  headerExtra?: ReactNode;
 }
 
 export function WeeklyScheduleEditor({
@@ -15,6 +19,8 @@ export function WeeklyScheduleEditor({
   title,
   schedules,
   onChange,
+  disabled = false,
+  headerExtra,
 }: WeeklyScheduleEditorProps) {
   function updateDay(day: DaySchedule["day"], patch: Partial<DaySchedule>) {
     onChange(schedules.map((entry) => (entry.day === day ? { ...entry, ...patch } : entry)));
@@ -22,9 +28,15 @@ export function WeeklyScheduleEditor({
 
   return (
     <section className={styles.schedule} aria-labelledby={`${idPrefix}-title`}>
-      <h3 id={`${idPrefix}-title`}>{title}</h3>
+      <div className={styles.scheduleHeader}>
+        <h3 id={`${idPrefix}-title`}>{title}</h3>
+        {headerExtra}
+      </div>
       {schedules.map((entry) => (
-        <div key={entry.day} className={styles.row}>
+        <div
+          key={entry.day}
+          className={[styles.row, disabled ? styles.rowDisabled : ""].filter(Boolean).join(" ")}
+        >
           <span className={styles.dayLabel}>{WEEK_DAY_LABELS[entry.day]}</span>
 
           <div className={styles.times}>
@@ -40,6 +52,7 @@ export function WeeklyScheduleEditor({
                   type="time"
                   className={styles.timeInput}
                   value={entry.openTime}
+                  disabled={disabled}
                   onChange={(event) => updateDay(entry.day, { openTime: event.target.value })}
                 />
                 <span aria-hidden="true">→</span>
@@ -51,6 +64,7 @@ export function WeeklyScheduleEditor({
                   type="time"
                   className={styles.timeInput}
                   value={entry.closeTime}
+                  disabled={disabled}
                   onChange={(event) => updateDay(entry.day, { closeTime: event.target.value })}
                 />
               </>
@@ -62,6 +76,7 @@ export function WeeklyScheduleEditor({
               <input
                 type="checkbox"
                 checked={entry.is24h}
+                disabled={disabled}
                 onChange={(event) => updateDay(entry.day, { is24h: event.target.checked })}
               />
               24h/24
@@ -69,6 +84,7 @@ export function WeeklyScheduleEditor({
             <button
               type="button"
               className={styles.copyBtn}
+              disabled={disabled}
               onClick={() => onChange(copyDayScheduleToAll(entry, schedules))}
             >
               Copier sur tous

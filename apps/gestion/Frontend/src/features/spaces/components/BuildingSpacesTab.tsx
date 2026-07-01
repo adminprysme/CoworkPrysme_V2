@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { createMockSpacesForBuilding } from "../mock-spaces.js";
+import { createSpace, fetchSpacesByBuilding } from "../../../lib/spaces-api.js";
+import { formValuesToCreateRequest, spaceResponseToSpace } from "../../../lib/spaces-mappers.js";
+import { persistSpacePhotos } from "../../../lib/spaces-photos.js";
+import type { DaySchedule } from "../types.js";
 import type { Space, SpaceFormValues, SpaceStatusFilter, SpaceTypeFilter } from "../space-types.js";
-import { formValuesToSpace } from "../utils/space-validation.js";
 import { filterSpaces, SpaceCard, SpaceFilters } from "./SpaceCard.js";
 import { SpaceDetailPanel } from "./SpaceDetailPanel.js";
 import { SpaceFormPanel } from "./SpaceFormPanel.js";
@@ -12,30 +14,57 @@ interface BuildingSpacesTabProps {
   buildingId: string;
   buildingName: string;
   floorNames: string[];
+  buildingHours: DaySchedule[];
 }
 
 export function BuildingSpacesTab({
   buildingId,
   buildingName,
   floorNames,
+  buildingHours,
 }: BuildingSpacesTabProps) {
-  const initialSpaces = useMemo(
-    () => createMockSpacesForBuilding(buildingId, floorNames),
-    [buildingId, floorNames],
-  );
-
-  const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<SpaceTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<SpaceStatusFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(initialSpaces[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+
+  const loadSpaces = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetchSpacesByBuilding(buildingId);
+      const nextSpaces = response.spaces.map(spaceResponseToSpace);
+      setSpaces(nextSpaces);
+      setSelectedId((current) =>
+        current && nextSpaces.some((space) => space.id === current)
+          ? current
+          : (nextSpaces[0]?.id ?? null),
+      );
+    } catch {
+      setError("Impossible de charger les espaces.");
+      setSpaces([]);
+      setSelectedId(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [buildingId]);
+
+  useEffect(() => {
+    void loadSpaces();
+  }, [loadSpaces]);
 
   const filteredSpaces = filterSpaces(spaces, typeFilter, statusFilter);
   const selectedSpace = filteredSpaces.find((space) => space.id === selectedId) ?? null;
 
-  function handleCreate(values: SpaceFormValues) {
-    const created = formValuesToSpace(values, buildingId);
-    setSpaces((current) => [...current, created]);
+  async function handleCreate(values: SpaceFormValues) {
+    const created = await createSpace(buildingId, formValuesToCreateRequest(values));
+    if (values.photos.length > 0) {
+      await persistSpacePhotos(created.id, values.photos);
+    }
+    await loadSpaces();
     setSelectedId(created.id);
   }
 
@@ -45,13 +74,15 @@ export function BuildingSpacesTab({
         <div>
           <h2 className={styles.title}>Espaces de {buildingName}</h2>
           <p className={styles.subtitle}>
-            {spaces.length} espace{spaces.length > 1 ? "s" : ""} · aperçu mock (state local)
+            {loading ? "Chargement…" : `${spaces.length} espace${spaces.length > 1 ? "s" : ""}`}
           </p>
         </div>
         <button type="button" className={styles.primaryBtn} onClick={() => setFormOpen(true)}>
           <span aria-hidden="true">＋</span> Nouvel espace
         </button>
       </header>
+
+      {error ? <p className={styles.errorBanner}>{error}</p> : null}
 
       <SpaceFilters
         typeFilter={typeFilter}
@@ -62,7 +93,9 @@ export function BuildingSpacesTab({
 
       <div className={styles.layout}>
         <section className={styles.listPanel} aria-label="Liste des espaces">
-          {filteredSpaces.length === 0 ? (
+          {loading ? (
+            <p className={styles.emptyState}>Chargement des espaces…</p>
+          ) : filteredSpaces.length === 0 ? (
             <div className={styles.emptyState}>
               <p>Aucun espace ne correspond à vos filtres.</p>
               {spaces.length === 0 ? (
@@ -106,6 +139,7 @@ export function BuildingSpacesTab({
       <SpaceFormPanel
         open={formOpen}
         floorNames={floorNames}
+        buildingHours={buildingHours}
         onClose={() => setFormOpen(false)}
         onSubmit={handleCreate}
       />

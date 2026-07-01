@@ -12,7 +12,17 @@ interface EquipmentPickerProps {
 
 export function EquipmentPicker({ idPrefix, selected, onChange }: EquipmentPickerProps) {
   const [customLabel, setCustomLabel] = useState("");
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(() => new Set());
   const selectedKeys = new Set(selected.map((entry) => entry.key));
+
+  const visiblePresets = PREDEFINED_EQUIPMENTS.filter(
+    (equipment) => !hiddenKeys.has(equipment.key),
+  );
+
+  function hideEquipment(key: string) {
+    setHiddenKeys((current) => new Set([...current, key]));
+    onChange(selected.filter((entry) => entry.key !== key));
+  }
 
   function togglePreset(equipment: SpaceEquipment) {
     if (selectedKeys.has(equipment.key)) {
@@ -44,17 +54,40 @@ export function EquipmentPicker({ idPrefix, selected, onChange }: EquipmentPicke
     <fieldset className={styles.fieldset}>
       <legend className={styles.legend}>Équipements</legend>
 
-      <div className={styles.presetGrid}>
-        {PREDEFINED_EQUIPMENTS.map((equipment) => {
-          const checked = selectedKeys.has(equipment.key);
-          return (
-            <label key={equipment.key} className={styles.presetItem}>
-              <input type="checkbox" checked={checked} onChange={() => togglePreset(equipment)} />
-              <span>{equipment.label}</span>
-            </label>
-          );
-        })}
-      </div>
+      {visiblePresets.length > 0 ? (
+        <div className={styles.presetGrid}>
+          {visiblePresets.map((equipment) => {
+            const checked = selectedKeys.has(equipment.key);
+            return (
+              <div
+                key={equipment.key}
+                className={[styles.presetItem, checked ? styles.presetItemChecked : ""]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <label className={styles.presetLabel}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => togglePreset(equipment)}
+                  />
+                  <span>{equipment.label}</span>
+                </label>
+                <button
+                  type="button"
+                  className={styles.hideBtn}
+                  aria-label={`Masquer ${equipment.label}`}
+                  onClick={() => hideEquipment(equipment.key)}
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className={styles.emptyHint}>Tous les équipements prédéfinis ont été masqués.</p>
+      )}
 
       <div className={styles.customRow}>
         <label className={styles.customLabel} htmlFor={`${idPrefix}-custom-equipment`}>

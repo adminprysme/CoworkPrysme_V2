@@ -18,6 +18,7 @@ export interface Space {
   capacity: number;
   equipments: SpaceEquipment[];
   openingHours: DaySchedule[];
+  accessCode?: string;
   status: SpaceStatus;
   photos: BuildingPhoto[];
 }
@@ -30,6 +31,8 @@ export interface SpaceFormValues {
   capacity: number;
   equipments: SpaceEquipment[];
   openingHours: DaySchedule[];
+  useBuildingHours: boolean;
+  accessCode: string;
   status: SpaceStatus;
   photos: BuildingPhoto[];
 }

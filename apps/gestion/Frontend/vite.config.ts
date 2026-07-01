@@ -12,6 +12,7 @@ export default defineConfig({
       "/auth": apiTarget,
       "/admin/permissions": apiTarget,
       "/buildings": apiTarget,
+      "/spaces": apiTarget,
       "/media": apiTarget,
       "/health": apiTarget,
       "/nominatim": {

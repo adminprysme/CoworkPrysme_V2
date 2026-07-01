@@ -23,6 +23,15 @@
   color: var(--color-text-muted);
 }
 
+.errorBanner {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: var(--color-danger);
+  font-size: 0.88rem;
+}
+
 .primaryBtn {
   display: inline-flex;
   align-items: center;
