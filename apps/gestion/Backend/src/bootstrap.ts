@@ -16,6 +16,9 @@ export function configureCors(app: INestApplication, allowedOrigins: string[]): 
       }
       callback(new Error("Not allowed by CORS"), false);
     },
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Accept"],
   });
 }
 
