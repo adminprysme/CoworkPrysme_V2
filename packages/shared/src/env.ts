@@ -123,23 +123,12 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
         .default(isProduction(env) ? "true" : "false")
         .transform((value) => value === "true"),
       COOKIE_SAME_SITE: cookieSameSiteSchema,
-      LOCAL_DEV_USERNAME: z.string().min(1).optional(),
-      LOCAL_DEV_PASSWORD: z.string().min(1).optional(),
       CENTRALE_API_URL: z.string().url().optional(),
       CENTRALE_HOME_URL: z.string().url().optional(),
     })
     .superRefine((data, ctx) => {
       if (isProduction(env) && data.AUTH_MODE === "local") {
         ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR, path: ["AUTH_MODE"] });
-      }
-      if (data.AUTH_MODE === "local") {
-        if (!data.LOCAL_DEV_USERNAME || !data.LOCAL_DEV_PASSWORD) {
-          ctx.addIssue({
-            code: "custom",
-            message: GENERIC_ENV_ERROR,
-            path: ["LOCAL_DEV_USERNAME"],
-          });
-        }
       }
       if (data.AUTH_MODE === "sso") {
         if (!data.CENTRALE_API_URL) {
@@ -248,8 +237,6 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     SESSION_TTL_HOURS: env.SESSION_TTL_HOURS,
     COOKIE_SECURE: env.COOKIE_SECURE,
     COOKIE_SAME_SITE: env.COOKIE_SAME_SITE,
-    LOCAL_DEV_USERNAME: env.LOCAL_DEV_USERNAME,
-    LOCAL_DEV_PASSWORD: env.LOCAL_DEV_PASSWORD,
     CENTRALE_API_URL: env.CENTRALE_API_URL,
     CENTRALE_HOME_URL: env.CENTRALE_HOME_URL,
   });

@@ -78,8 +78,6 @@ describe("parseServerEnv", () => {
       MONGODB_URI: "mongodb://localhost:27017",
       ALLOWED_ORIGIN: "http://localhost:3002,http://localhost:8002",
       SESSION_SECRET: "x".repeat(32),
-      LOCAL_DEV_USERNAME: "paul.thomas",
-      LOCAL_DEV_PASSWORD: "dev-secret",
     });
 
     expect(env.ALLOWED_ORIGIN).toEqual(["http://localhost:3002", "http://localhost:8002"]);
@@ -96,18 +94,6 @@ describe("parseServerEnv", () => {
     ).toThrow(GENERIC_ENV_ERROR);
   });
 
-  it("requires LOCAL_DEV credentials when AUTH_MODE is local", () => {
-    expect(() =>
-      parseGestionApiEnv({
-        NODE_ENV: "development",
-        MONGODB_URI: "mongodb://localhost:27017",
-        ALLOWED_ORIGIN: "http://localhost:3002",
-        AUTH_MODE: "local",
-        SESSION_SECRET: "x".repeat(32),
-      }),
-    ).toThrow(GENERIC_ENV_ERROR);
-  });
-
   it("accepts local auth configuration in development", () => {
     const env = parseGestionApiEnv({
       NODE_ENV: "development",
@@ -115,11 +101,8 @@ describe("parseServerEnv", () => {
       ALLOWED_ORIGIN: "http://localhost:3002",
       AUTH_MODE: "local",
       SESSION_SECRET: "x".repeat(32),
-      LOCAL_DEV_USERNAME: "paul.thomas",
-      LOCAL_DEV_PASSWORD: "dev-secret",
     });
 
     expect(env.AUTH_MODE).toBe("local");
-    expect(env.LOCAL_DEV_USERNAME).toBe("paul.thomas");
   });
 });

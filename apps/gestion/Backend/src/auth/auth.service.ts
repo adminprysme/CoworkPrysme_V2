@@ -56,27 +56,10 @@ export class AuthService {
       throw new NotFoundException();
     }
 
-    const { LOCAL_DEV_USERNAME, LOCAL_DEV_PASSWORD } = this.config.env;
-    if (
-      !SessionService.safeCompare(body.username, LOCAL_DEV_USERNAME ?? "") ||
-      !SessionService.safeCompare(body.password, LOCAL_DEV_PASSWORD ?? "")
-    ) {
+    const user = await this.prysmaRead.validateLocalCredentials(body.username, body.password);
+    if (!user) {
       throw new UnauthorizedException("Identifiants invalides");
     }
-
-    const [firstRaw, lastRaw] = body.username.split(".");
-    const firstName = firstRaw
-      ? firstRaw.charAt(0).toUpperCase() + firstRaw.slice(1).toLowerCase()
-      : body.username;
-    const lastName = (lastRaw ?? "DEV").toUpperCase();
-
-    const user: CentraleValidatedUser = {
-      id: `local:${body.username}`,
-      username: body.username,
-      email: `${body.username}@local.coworkprysme.dev`,
-      first_name: firstName,
-      last_name: lastName,
-    };
 
     return this.establishSession(user, "local", existingRawToken, res);
   }
@@ -160,10 +143,7 @@ export class AuthService {
     profile: StaffProfileDocument,
     authSource: AuthSource,
   ): Promise<AuthMeResponse> {
-    let enrichment;
-    if (authSource === "sso") {
-      enrichment = await this.prysmaRead.findEnrichment(profile.prysmAppUserId);
-    }
+    const enrichment = await this.prysmaRead.findEnrichment(profile.prysmAppUserId);
 
     const response = AuthMeResponseSchema.parse({
       profile: {
