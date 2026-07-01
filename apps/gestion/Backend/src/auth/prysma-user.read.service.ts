@@ -19,7 +19,7 @@ const PRYSMA_ENRICHMENT_PROJECTION = {
 const PRYSMA_CREDENTIALS_PROJECTION = {
   id: 1,
   username: 1,
-  password: 1,
+  password_hash: 1,
   first_name: 1,
   last_name: 1,
   email_principal: 1,
@@ -41,8 +41,8 @@ interface PrysmaEnrichmentDoc {
 interface PrysmaCredentialsDoc {
   id?: string;
   username?: string;
-  /** Prysm stores the bcrypt hash in field `password`. Never log or return. */
-  password?: string;
+  /** bcrypt hash — never log or return. */
+  password_hash?: string;
   first_name?: string;
   last_name?: string;
   email_principal?: string;
@@ -90,7 +90,7 @@ export class PrysmaUserReadService {
       return undefined;
     }
 
-    const passwordHash = doc.password;
+    const passwordHash = doc.password_hash;
     if (!passwordHash) {
       return undefined;
     }

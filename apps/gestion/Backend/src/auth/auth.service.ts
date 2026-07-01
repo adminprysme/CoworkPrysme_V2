@@ -3,6 +3,7 @@ import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/co
 import {
   AuthMeResponseSchema,
   GESTION_SESSION_COOKIE,
+  hasGestionAccess,
   type AuthMeResponse,
   type AuthSource,
   type CentraleValidatedUser,
@@ -92,7 +93,7 @@ export class AuthService {
     await connectMongo();
     const StaffProfile = await getStaffProfileModel();
     const profile = await StaffProfile.findById(session.staffProfileId).exec();
-    if (!profile || profile.status === "revoked") {
+    if (!profile || profile.status === "revoked" || !hasGestionAccess(profile.role)) {
       throw new UnauthorizedException();
     }
 
@@ -126,6 +127,9 @@ export class AuthService {
       if (error instanceof Error && error.message === "STAFF_REVOKED") {
         throw new UnauthorizedException("Identifiants invalides");
       }
+      if (error instanceof Error && error.message === "STAFF_NO_ACCESS") {
+        throw new UnauthorizedException("Aucun accès à la gestion");
+      }
       throw error;
     }
 
@@ -143,6 +147,10 @@ export class AuthService {
     profile: StaffProfileDocument,
     authSource: AuthSource,
   ): Promise<AuthMeResponse> {
+    if (!hasGestionAccess(profile.role)) {
+      throw new UnauthorizedException();
+    }
+
     const enrichment = await this.prysmaRead.findEnrichment(profile.prysmAppUserId);
 
     const response = AuthMeResponseSchema.parse({
