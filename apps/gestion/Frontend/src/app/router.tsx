@@ -6,11 +6,17 @@ import { PublicOnly, RequireAuth } from "./RequireAuth.js";
 import { ThemeProvider } from "./ThemeProvider.js";
 import { NAV_ITEMS } from "../config/navigation.js";
 import { LoginPage } from "../features/auth/LoginPage.js";
+import { BuildingsPage } from "../features/spaces/pages/BuildingsPage.js";
+import { BuildingDetailPage } from "../features/spaces/pages/BuildingDetailPage.js";
+import { SpacesLayout } from "../features/spaces/SpacesLayout.js";
 import { DashboardPage } from "../pages/DashboardPage.js";
 import { ModuleStubPage } from "../pages/ModuleStubPage.js";
+import { PermissionsPage } from "../pages/PermissionsPage.js";
 
 const STUB_PATHS = [
-  ...NAV_ITEMS.filter((item) => item.id !== "dashboard").map((item) => item.path),
+  ...NAV_ITEMS.filter(
+    (item) => item.id !== "dashboard" && item.id !== "administration" && item.id !== "spaces",
+  ).map((item) => item.path),
   "/settings",
 ];
 
@@ -26,6 +32,11 @@ export function AppRouter() {
             <Route element={<RequireAuth />}>
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/administration" element={<PermissionsPage />} />
+                <Route path="/spaces" element={<SpacesLayout />}>
+                  <Route index element={<BuildingsPage />} />
+                  <Route path=":buildingId" element={<BuildingDetailPage />} />
+                </Route>
                 {STUB_PATHS.map((path) => (
                   <Route key={path} path={path} element={<ModuleStubPage />} />
                 ))}

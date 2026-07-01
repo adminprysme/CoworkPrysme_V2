@@ -1,4 +1,5 @@
-export const API_URL = import.meta.env.VITE_API_URL as string;
+export const API_URL =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 export const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE ?? "local") as "local" | "sso";
 export const CENTRALE_HOME_URL = import.meta.env.VITE_CENTRALE_HOME_URL as string | undefined;
 
@@ -45,17 +46,46 @@ export function fetchMe(): Promise<AuthMeResponse> {
 }
 
 export function loginLocal(username: string, password: string): Promise<AuthMeResponse> {
-  return apiFetch<AuthMeResponse>("/auth/login", {
+  return apiFetchWithAuthError("/auth/login", {
     method: "POST",
     body: JSON.stringify({ username, password }),
   });
 }
 
 export function loginSso(ssoToken: string): Promise<AuthMeResponse> {
-  return apiFetch<AuthMeResponse>("/auth/sso", {
+  return apiFetchWithAuthError("/auth/sso", {
     method: "POST",
     body: JSON.stringify({ sso_token: ssoToken }),
   });
+}
+
+async function apiFetchWithAuthError<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    let message = `API ${response.status}`;
+    try {
+      const body = (await response.json()) as { message?: string | string[] };
+      if (typeof body.message === "string") {
+        message = body.message;
+      } else if (Array.isArray(body.message) && typeof body.message[0] === "string") {
+        message = body.message[0];
+      }
+    } catch {
+      // keep default message
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
 }
 
 export function logout(): Promise<{ redirectUrl: string }> {
