@@ -1,208 +1,208 @@
 # Architecture Cowork Prysme
 
-Ce document décrit les choix structurants du monorepo. Il ne couvre pas le métier applicatif.
+Ce document décrit les choix structurants du monorepo à quatre applications. Il ne couvre pas le métier applicatif.
 
 ## Vue d'ensemble
 
-Deux applications Next.js distinctes consomment les mêmes packages internes et la même base applicative MongoDB, tout en restant déployables indépendamment.
+Quatre applications déployables indépendamment, deux environnements (public / interne), packages partagés et un cluster MongoDB unique.
 
 ```mermaid
 graph TB
-    subgraph apps [Applications]
-        V[vitrine :3000]
-        G[gestion :3001]
+    subgraph public [Vitrine — public]
+        VW[vitrine-web :3001<br/>Next.js SSR/SSG]
+        VA[vitrine-api :8002<br/>NestJS BFF]
     end
 
-    subgraph packages [Packages partagés]
-        SH[shared — types + Zod]
-        DB[db — Mongoose + schémas]
-        CF[config — ESLint / TS / Prettier]
+    subgraph internal [Gestion — interne]
+        GW[gestion-web :3002<br/>Vite SPA + nginx]
+        GA[gestion-api :8003<br/>NestJS métier]
+    end
+
+    subgraph packages [Packages]
+        SH[shared — Zod + env]
+        DB[db — Mongoose]
+        CF[config — ESLint / TS]
     end
 
     subgraph mongo [Cluster MongoDB]
-        C[(cowork_bdd<br/>lecture/écriture)]
-        P[(prysma_bdd<br/>lecture seule)]
+        C[(cowork_bdd R/W)]
+        P[(prysma_bdd RO)]
     end
 
-    V --> SH
-    G --> SH
-    G --> DB
-    DB --> C
-    DB --> P
-    V -.-> CF
-    G -.-> CF
-    SH -.-> CF
-    DB -.-> CF
+    VW -->|NEXT_PUBLIC_API_URL| VA
+    GW -->|VITE_API_URL| GA
+    VA -->|GESTION_API_URL writes stub| GA
+    VA --> DB
+    VA --> C
+    GA --> DB
+    GA --> C
+    GA --> P
+    VW -.-> SH
+    GW -.-> SH
+    VA -.-> SH
+    GA -.-> SH
+    DB -.-> SH
 ```
+
+## Rôles des applications
+
+| App             | Stack                | Port | Rôle                                                                                      |
+| --------------- | -------------------- | ---- | ----------------------------------------------------------------------------------------- |
+| **vitrine-web** | Next.js App Router   | 3001 | Frontend public SEO. Aucun accès direct à la base.                                        |
+| **vitrine-api** | NestJS (ESM)         | 8002 | BFF public. Lit `cowork_bdd` uniquement. Délègue les écritures à gestion-api (stub HTTP). |
+| **gestion-web** | Vite + React + nginx | 3002 | Frontend CRM interne (SPA).                                                               |
+| **gestion-api** | NestJS (ESM)         | 8003 | Cœur métier. Écritures sur `cowork_bdd`, lecture seule `prysma_bdd`.                      |
+
+## Flux inter-services
+
+### Vitrine (public)
+
+1. Le navigateur charge **vitrine-web** (SSR/SSG).
+2. Les appels API passent par `NEXT_PUBLIC_API_URL` → **vitrine-api**.
+3. **vitrine-api** lit `cowork_bdd` via `packages/db` (`DbModule` fin, sans `@nestjs/mongoose`).
+4. Les opérations d'écriture futures seront déléguées à **gestion-api** via `GESTION_API_URL` (stub `GestionClientService` en place).
+
+### Gestion (interne)
+
+1. **gestion-web** (SPA statique) appelle **gestion-api** via `VITE_API_URL`.
+2. **gestion-api** centralise la logique métier et l'accès aux deux bases.
 
 ## Monorepo : pnpm + Turborepo
 
-**Pourquoi un monorepo ?** Les deux apps partagent la couche data, les types et la configuration qualité. Un monorepo évite la duplication des schémas Mongoose et garantit la cohérence des contrats API.
+**pnpm workspaces** avec `workspace:*`. **Turborepo** orchestre le cache et l'ordre de build (`dependsOn: ["^build"]`).
 
-**pnpm workspaces** gère les dépendances inter-packages via `workspace:*`. **Turborepo** orchestre le cache et l'ordre de build (`^build` = construire les dépendances avant les consommateurs).
+Presets TypeScript dans `packages/config` :
 
-## Séparation vitrine / gestion
-
-| Critère  | vitrine                    | gestion                        |
-| -------- | -------------------------- | ------------------------------ |
-| Audience | Public                     | Staff interne                  |
-| Priorité | SEO, SSR/SSG, performance  | UX riche, temps réel (à venir) |
-| Port dev | 3000                       | 3001                           |
-| Metadata | Open Graph, `metadataBase` | Basique (app interne)          |
-
-Les deux apps importent `@coworkprysme/shared`. Seule **gestion** importe `@coworkprysme/db` ; aucun schéma n'est défini dans les apps.
+- `typescript/nextjs.json` — vitrine-web
+- `typescript/nestjs.json` — APIs Nest (NodeNext / ESM)
+- `typescript/vite.json` — gestion-web
+- `typescript/library.json` — packages compilés
 
 ## Sécurité
 
 ### Variables d'environnement
 
-Validation Zod centralisée dans `packages/shared/src/env.ts`, initialisée au démarrage serveur via `instrumentation.ts` (`initServerEnv()`).
+Validation Zod centralisée dans `packages/shared/src/env.ts`, parsers dédiés par app :
 
-| Variable               | Dev                  | Production                                 |
-| ---------------------- | -------------------- | ------------------------------------------ |
-| `MONGODB_URI`          | `mongodb://` accepté | `mongodb+srv://` ou `tls=true` obligatoire |
-| `MONGODB_DB_COWORK`    | optionnel (défaut)   | optionnel (défaut)                         |
-| `MONGODB_DB_PRYSMA`    | optionnel (défaut)   | optionnel (défaut)                         |
-| `NEXT_PUBLIC_SITE_URL` | optionnel            | **obligatoire** (vitrine)                  |
+| Parser               | Initialisation                                              |
+| -------------------- | ----------------------------------------------------------- |
+| `parseVitrineWebEnv` | `initVitrineWebEnv()` dans vitrine-web `instrumentation.ts` |
+| `parseVitrineApiEnv` | `initVitrineApiEnv()` dans vitrine-api `main.ts`            |
+| `parseGestionApiEnv` | `initGestionApiEnv()` dans gestion-api `main.ts`            |
+| `parseGestionWebEnv` | côté client Vite (`import.meta.env`)                        |
 
-Les messages d'erreur sont génériques et ne contiennent jamais de valeurs secrètes. Fichiers `.env*` ignorés par git (sauf `.env.example`).
+| Variable               | Dev                  | Production                                  |
+| ---------------------- | -------------------- | ------------------------------------------- |
+| `MONGODB_URI`          | `mongodb://` accepté | `mongodb+srv://` ou `?tls=true` obligatoire |
+| `ALLOWED_ORIGIN`       | liste CSV explicite  | idem, **jamais `*`**                        |
+| `NEXT_PUBLIC_SITE_URL` | optionnel            | **obligatoire** (vitrine-web)               |
 
-### En-têtes HTTP
+Messages d'erreur génériques, jamais de valeurs secrètes exposées.
 
-Les deux apps configurent via `next.config.ts` :
+### CORS (APIs Nest)
 
-- Content-Security-Policy (base, à affiner)
-- Strict-Transport-Security
-- X-Content-Type-Options, X-Frame-Options
-- Referrer-Policy, Permissions-Policy
+`ALLOWED_ORIGIN` est une **liste d'origines séparées par des virgules**, configurée explicitement par API :
 
-### prysma_bdd — lecture seule garantie
+- **vitrine-api** : origines du frontend public (ex. `http://localhost:3001`)
+- **gestion-api** : frontend gestion **et** vitrine-api si appels server-side (ex. `http://localhost:3002,http://localhost:8002`)
 
-- `getPrysmaDb()` n'est **pas** exporté via `@coworkprysme/db` (index public)
-- Seul `pingPrysmaDb()` (interne) effectue un `admin().ping()` — aucune écriture
-- Tests automatisés : absence d'exports sensibles, ping sans `model()`, singleton Mongoose
+Origine non listée = refus. Aucune dérivation automatique.
+
+### Content-Security-Policy
+
+| App         | Mécanisme                | `connect-src`                                                 |
+| ----------- | ------------------------ | ------------------------------------------------------------- |
+| vitrine-web | `next.config.ts` headers | `'self'` + origin de `NEXT_PUBLIC_API_URL`                    |
+| gestion-web | nginx `add_header`       | `'self'` + origin de `VITE_API_URL` (injecté au build Docker) |
+
+### prysma_bdd — lecture seule
+
+- `getPrysmaDb()` **non exporté** via `@coworkprysme/db`
+- **vitrine-api** n'accède **jamais** à `prysma_bdd` (`runCoworkReadinessCheck` uniquement)
+- **gestion-api** seule exécute le readiness complet (cowork + prysma)
+- Tests automatisés dans `packages/db`
 
 ### Health checks
 
-| App     | Type      | DB                   | Réponse publique                                                          |
-| ------- | --------- | -------------------- | ------------------------------------------------------------------------- |
-| vitrine | Liveness  | Aucune               | `{ "status": "ok" }` — HTTP 200                                           |
-| gestion | Readiness | Ping cowork + prysma | `{ status, timestamp, checks: { cowork, prysma } }` — booléens uniquement |
+| App         | Route         | Type              | Réponse                                             |
+| ----------- | ------------- | ----------------- | --------------------------------------------------- |
+| vitrine-web | `/api/health` | Liveness          | `{ "status": "ok" }`                                |
+| gestion-web | `/api/health` | Liveness (nginx)  | `{ "status": "ok" }`                                |
+| vitrine-api | `/health`     | Readiness cowork  | `{ status, timestamp, checks: { cowork } }`         |
+| gestion-api | `/health`     | Readiness complet | `{ status, timestamp, checks: { cowork, prysma } }` |
 
-Les détails d'erreur (host, port, stack) vont dans les **logs serveur**, jamais dans la réponse HTTP.
+Détails d'erreur dans les **logs serveur** uniquement.
 
-## MongoDB + Mongoose
+## MongoDB + Mongoose (`packages/db`)
 
-**100 % MongoDB**, sans ORM alternatif ni SQL.
-
-### Connexion unique, deux bases
-
-Une seule connexion Mongoose au cluster (`MONGODB_URI`), avec bascule de base via `connection.useDb()` :
+Connexion unique au cluster, bascule via `useDb()` :
 
 ```
-MONGODB_URI  ──► mongoose.connect()
-                      │
-                      ├── useDb(MONGODB_DB_COWORK)  → cowork_bdd  (R/W)
-                      └── useDb(MONGODB_DB_PRYSMA)  → prysma_bdd  (RO)
+MONGODB_URI ──► mongoose.connect()
+                    ├── useDb(MONGODB_DB_COWORK)  → cowork_bdd  (R/W)
+                    └── useDb(MONGODB_DB_PRYSMA)  → prysma_bdd  (RO, gestion-api)
 ```
 
-Les noms de bases sont configurables par variables d'environnement (défauts : `cowork_bdd`, `prysma_bdd`), ce qui permet de changer entre dev / staging / prod sans modifier le code.
+Singleton serverless via cache `globalThis._mongooseCache`.
 
-### Singleton serverless
+Schémas Mongoose dans `packages/db/src/models/` uniquement.
 
-Next.js exécute les route handlers dans un environnement serverless où les modules peuvent être réinstanciés. Le pattern utilisé :
+### Intégration NestJS
 
-```typescript
-declare global {
-  var _mongooseCache: { conn: Mongoose | null; promise: Promise<Mongoose> | null };
-}
-global._mongooseCache ??= { conn: null, promise: null };
-```
-
-La connexion est mise en cache sur `globalThis` et réutilisée entre les invocations. **Jamais** de nouvelle connexion par requête.
-
-### prysma_bdd : externe et lecture seule
-
-`prysma_bdd` est la base SSO Prysma préexistante. Le package `db` :
-
-- n'expose **aucun modèle** pour cette base ;
-- n'expose **pas** `getPrysmaDb()` dans l'API publique ;
-- n'effectue **aucune écriture** — uniquement un ping interne (`admin().ping()`) ;
-- est couvert par des **tests** interdisant les exports d'écriture.
-
-Toute création ou modification de collections sur `prysma_bdd` nécessite un accord explicite.
-
-### Schémas : source de vérité unique
-
-Tous les schémas Mongoose vivent dans `packages/db/src/models/`. Les apps ne définissent jamais de schémas locaux.
-
-Modèle actuel (minimal, non métier) :
-
-- **HealthCheck** sur `cowork_bdd` — vérifie que la connexion et les requêtes fonctionnent.
+`DbModule` / `DbService` fins dans chaque API — wrapper autour de `packages/db`, **sans** `@nestjs/mongoose`.
 
 ## packages/shared
 
-Contient les types TypeScript et schémas Zod partagés entre apps. Exemple : le contrat de réponse `/api/health` est défini ici et validé côté route handler.
+Schémas Zod, parsers d'environnement, contrats health (`LivenessResponseSchema`, `CoworkReadinessResponseSchema`, `ReadinessResponseSchema`).
 
-## packages/config
+Exports :
 
-Configurations réutilisables :
+- `@coworkprysme/shared` — contrats publics
+- `@coworkprysme/shared/server` — init env serveur (APIs Nest)
+- `@coworkprysme/shared/vitrine-web` — init env vitrine-web
 
-- `eslint/base.js` — règles TypeScript strictes
-- `eslint/next.js` — règles Next.js + React
-- `typescript/base.json` — `strict: true`, `noUncheckedIndexedAccess`
-- `typescript/nextjs.json` — extension pour les apps Next.js
-- `typescript/library.json` — extension pour les packages compilés
+## Docker
 
-## Health check
+Stratégie multi-stage commune :
 
-Route : `GET /api/health` sur les deux apps, **contrats distincts**.
+1. **prepare** — `turbo prune --docker` pour isoler le sous-graphe de dépendances
+2. **builder** — `pnpm install` (×2) + `turbo run build`
+3. **runner** — image minimale, utilisateur non-root (Node) ou nginx
 
-**Vitrine (liveness)** — pas d'accès base de données :
+| App         | Runner              | Particularité                           |
+| ----------- | ------------------- | --------------------------------------- |
+| vitrine-web | `node:24-alpine`    | Next.js `output: "standalone"`          |
+| vitrine-api | `node:24-alpine`    | `pnpm deploy --prod` → dossier autonome |
+| gestion-api | `node:24-alpine`    | idem                                    |
+| gestion-web | `nginx:1.27-alpine` | assets statiques + nginx.conf           |
 
-```json
-{ "status": "ok" }
-```
+### Coolify
 
-**Gestion (readiness)** — ping des deux bases, réponse assainie :
+- **Contexte de build** : racine du dépôt (`.`)
+- **Dockerfile path** : `apps/<app>/Dockerfile`
+- Variables runtime injectées via l'UI Coolify (voir README)
 
-```json
-{
-  "status": "ok",
-  "timestamp": "2026-06-30T12:00:00.000Z",
-  "checks": { "cowork": true, "prysma": true }
-}
-```
-
-| `status`   | Condition (gestion)                | HTTP |
-| ---------- | ---------------------------------- | ---- |
-| `ok`       | Les deux checks à `true`           | 200  |
-| `degraded` | Connexion OK mais erreur partielle | 200  |
-| `error`    | Au moins un check à `false`        | 503  |
+`pnpm deploy` requiert `inject-workspace-packages=true` et `force-legacy-deploy=true` dans `.npmrc` (pnpm v10 + lockfile partagé).
 
 ## Qualité
 
-- **TypeScript** strict dans tout le monorepo
-- **ESLint 9** (flat config) + **Prettier**
-- **Husky** : pre-commit (lint-staged) + commit-msg (Commitlint conventional)
-- **Turborepo** : `lint` et `typecheck` en pipeline
+- TypeScript strict, ESLint 9 (flat config), Prettier
+- Husky : lint-staged + Commitlint conventional
+- Tests : `packages/db` (singleton, read-only prysma), `packages/shared` (env)
 
 ## Lancer une app individuellement
 
 ```bash
-# Vitrine seule
-pnpm --filter @coworkprysme/vitrine dev
-
-# Gestion seule
-pnpm --filter @coworkprysme/gestion dev
-
-# Package db seul (build)
-pnpm --filter @coworkprysme/db build
+pnpm --filter @coworkprysme/vitrine-web dev
+pnpm --filter @coworkprysme/vitrine-api dev
+pnpm --filter @coworkprysme/gestion-web dev
+pnpm --filter @coworkprysme/gestion-api dev
+pnpm --filter @coworkprysme/db test
 ```
 
 ## Évolutions prévues (hors périmètre actuel)
 
 - Modèles métier sur `cowork_bdd`
-- Authentification staff via `prysma_bdd` (lecture)
-- Temps réel dans `gestion`
-- CI/CD et déploiement
+- Endpoints de délégation vitrine-api → gestion-api (au-delà du stub HTTP)
+- Authentification staff via `prysma_bdd`
+- CI/CD automatisé
