@@ -3,22 +3,22 @@ import type {
   BuildingResponse,
   CreateBuildingRequest,
 } from "@coworkprysme/shared";
+import { mediaPathFromStorageKey } from "@coworkprysme/shared";
 
 import type { Building, BuildingFormValues, BuildingPhoto } from "../features/spaces/types.js";
 import { createDefaultDaySchedules, createFloors } from "../features/spaces/utils/schedule.js";
+import { API_URL } from "./api.js";
 
-function mimeFromStorageKey(storageKey: string): string {
-  const ext = storageKey.split(".").pop()?.toLowerCase();
-  if (ext === "png") {
-    return "image/png";
-  }
-  if (ext === "webp") {
-    return "image/webp";
-  }
-  return "image/jpeg";
+function mimeFromStorageKey(_storageKey: string): string {
+  return "image/webp";
 }
 
-export function apiPhotosToFormPhotos(photos: BuildingPhotoResponse[]): BuildingPhoto[] {
+export function buildingPhotoUrl(storageKey: string): string {
+  const path = mediaPathFromStorageKey(storageKey);
+  return API_URL ? `${API_URL}${path}` : path;
+}
+
+export function mapApiPhotosToFormPhotos(photos: BuildingPhotoResponse[]): BuildingPhoto[] {
   return [...photos]
     .sort((left, right) => {
       if (left.isPrimary !== right.isPrimary) {
@@ -31,13 +31,16 @@ export function apiPhotosToFormPhotos(photos: BuildingPhotoResponse[]): Building
       return {
         id: photo.storageKey,
         storageKey: photo.storageKey,
-        previewUrl: "",
+        previewUrl: buildingPhotoUrl(photo.storageKey),
         fileName: photo.alt?.trim() || fileName,
         fileSize: 0,
         mimeType: mimeFromStorageKey(photo.storageKey),
       };
     });
 }
+
+/** @deprecated Use mapApiPhotosToFormPhotos */
+export const apiPhotosToFormPhotos = mapApiPhotosToFormPhotos;
 
 export function formValuesToCreateRequest(values: BuildingFormValues): CreateBuildingRequest {
   return {
@@ -63,7 +66,7 @@ export function buildingResponseToBuilding(response: BuildingResponse): Building
     accessibilityHours: response.accessibilityHours.map((entry) => ({ ...entry })),
     receptionHours: response.receptionHours.map((entry) => ({ ...entry })),
     concierge: { ...response.concierge },
-    photos: apiPhotosToFormPhotos(response.photos),
+    photos: mapApiPhotosToFormPhotos(response.photos),
   };
 }
 
@@ -78,7 +81,7 @@ export function buildingResponseToFormValues(response: BuildingResponse): Buildi
     accessibilityHours: response.accessibilityHours.map((entry) => ({ ...entry })),
     receptionHours: response.receptionHours.map((entry) => ({ ...entry })),
     concierge: { ...response.concierge },
-    photos: apiPhotosToFormPhotos(response.photos),
+    photos: mapApiPhotosToFormPhotos(response.photos),
   };
 }
 

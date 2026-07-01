@@ -11,9 +11,16 @@ interface BuildingFormProps {
   values: BuildingFormValues;
   errors: BuildingFormErrors;
   onChange: (values: BuildingFormValues) => void;
+  onRemovePersistedPhoto?: (storageKey: string) => Promise<void>;
 }
 
-export function BuildingForm({ idPrefix, values, errors, onChange }: BuildingFormProps) {
+export function BuildingForm({
+  idPrefix,
+  values,
+  errors,
+  onChange,
+  onRemovePersistedPhoto,
+}: BuildingFormProps) {
   function patchAddress(addressPatch: Partial<BuildingFormValues["address"]>) {
     onChange({
       ...values,
@@ -233,6 +240,7 @@ export function BuildingForm({ idPrefix, values, errors, onChange }: BuildingFor
         <PhotoUploadGallery
           photos={values.photos}
           onChange={(photos) => onChange({ ...values, photos })}
+          onRemovePersisted={onRemovePersistedPhoto}
         />
       </section>
     </div>

@@ -63,7 +63,7 @@ export function validatePhotoFile(file: File): string | null {
     return "Format non pris en charge. Utilisez JPG, PNG ou WebP.";
   }
   if (file.size > MAX_PHOTO_SIZE_BYTES) {
-    return "L'image dépasse 15 Mo.";
+    return "L'image dépasse 5 Mo.";
   }
   return null;
 }

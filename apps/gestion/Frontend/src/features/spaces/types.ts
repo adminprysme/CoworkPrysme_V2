@@ -21,8 +21,9 @@ export interface BuildingPhoto {
   fileName: string;
   fileSize: number;
   mimeType: string;
-  /** Set when loaded from API — object storage not yet wired for preview URLs. */
   storageKey?: string;
+  /** Local file pending upload — never sent to API directly. */
+  file?: File;
 }
 
 export interface BuildingAddress {
@@ -85,7 +86,7 @@ export const WEEK_DAY_LABELS: Record<WeekDay, string> = {
 };
 
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-export const MAX_PHOTO_SIZE_BYTES = 15 * 1024 * 1024;
+export const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 
 /** @deprecated Use Building */
 export type MockBuilding = Building;

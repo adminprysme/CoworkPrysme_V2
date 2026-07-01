@@ -6,6 +6,7 @@ import {
   buildingResponseToBuilding,
   formValuesToCreateRequest,
 } from "../../../lib/buildings-mappers.js";
+import { persistBuildingPhotos } from "../../../lib/buildings-photos.js";
 import { BuildingCard } from "../components/BuildingCard.js";
 import { BuildingFormPanel } from "../components/BuildingFormPanel.js";
 import { BuildingsMap } from "../components/BuildingsMap.js";
@@ -43,6 +44,9 @@ export function BuildingsPage() {
 
   async function handleCreate(values: BuildingFormValues) {
     const created = await createBuilding(formValuesToCreateRequest(values));
+    if (values.photos.length > 0) {
+      await persistBuildingPhotos(created.id, values.photos);
+    }
     await loadBuildings();
     setSelectedId(created.id);
   }

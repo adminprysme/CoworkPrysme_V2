@@ -6,6 +6,10 @@ import {
   buildingResponseToFormValues,
   formValuesToCreateRequest,
 } from "../../../lib/buildings-mappers.js";
+import {
+  persistBuildingPhotos,
+  removePersistedBuildingPhoto,
+} from "../../../lib/buildings-photos.js";
 import { BuildingForm } from "../components/BuildingForm.js";
 import { revokePhotoUrls } from "../utils/photos.js";
 import type { BuildingFormValues } from "../types.js";
@@ -116,16 +120,16 @@ export function BuildingDetailPage() {
     }
 
     setSaving(true);
-    const photosToKeep = formValues.photos;
     try {
       const updated = await updateBuilding(
         currentBuildingId,
         formValuesToCreateRequest(formValues),
       );
+      const photos = await persistBuildingPhotos(currentBuildingId, formValues.photos);
       setBuildingName(updated.name);
       setValues({
         ...buildingResponseToFormValues(updated),
-        photos: photosToKeep,
+        photos,
       });
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2500);
@@ -204,6 +208,17 @@ export function BuildingDetailPage() {
               onChange={(nextValues) => {
                 setValues(nextValues);
                 setSaved(false);
+              }}
+              onRemovePersistedPhoto={async (storageKey) => {
+                await removePersistedBuildingPhoto(currentBuildingId, storageKey);
+                setValues((current) =>
+                  current
+                    ? {
+                        ...current,
+                        photos: current.photos.filter((photo) => photo.storageKey !== storageKey),
+                      }
+                    : current,
+                );
               }}
             />
             <div className={styles.saveBar}>

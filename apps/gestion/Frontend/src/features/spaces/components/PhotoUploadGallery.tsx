@@ -7,9 +7,14 @@ import styles from "./PhotoUploadGallery.module.css";
 interface PhotoUploadGalleryProps {
   photos: BuildingPhoto[];
   onChange: (photos: BuildingPhoto[]) => void;
+  onRemovePersisted?: (storageKey: string) => Promise<void>;
 }
 
-export function PhotoUploadGallery({ photos, onChange }: PhotoUploadGalleryProps) {
+export function PhotoUploadGallery({
+  photos,
+  onChange,
+  onRemovePersisted,
+}: PhotoUploadGalleryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +40,7 @@ export function PhotoUploadGallery({ photos, onChange }: PhotoUploadGalleryProps
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type,
+        file,
       });
     }
 
@@ -42,12 +48,26 @@ export function PhotoUploadGallery({ photos, onChange }: PhotoUploadGalleryProps
     setError(nextError);
   }
 
-  function removePhoto(photoId: string) {
+  async function removePhoto(photoId: string) {
     const target = photos.find((photo) => photo.id === photoId);
-    if (target?.previewUrl.startsWith("blob:")) {
+    if (!target) {
+      return;
+    }
+
+    if (target.storageKey && onRemovePersisted) {
+      try {
+        await onRemovePersisted(target.storageKey);
+      } catch {
+        setError("Impossible de supprimer cette photo.");
+        return;
+      }
+    }
+
+    if (target.previewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(target.previewUrl);
     }
     onChange(photos.filter((photo) => photo.id !== photoId));
+    setError(null);
   }
 
   function movePhoto(photoId: string, direction: -1 | 1) {
@@ -98,9 +118,7 @@ export function PhotoUploadGallery({ photos, onChange }: PhotoUploadGalleryProps
           onChange={(event) => addFiles(event.target.files)}
         />
         <p className={styles.dropzoneTitle}>Glissez-déposez vos photos ici</p>
-        <p className={styles.dropzoneHint}>
-          ou cliquez pour parcourir — JPG, PNG, WebP · max 15 Mo · upload définitif à venir
-        </p>
+        <p className={styles.dropzoneHint}>ou cliquez pour parcourir — JPG, PNG, WebP · max 5 Mo</p>
       </div>
 
       {error ? <p className={styles.error}>{error}</p> : null}
@@ -142,7 +160,7 @@ export function PhotoUploadGallery({ photos, onChange }: PhotoUploadGalleryProps
                   type="button"
                   className={styles.actionBtn}
                   aria-label={`Supprimer ${photo.fileName}`}
-                  onClick={() => removePhoto(photo.id)}
+                  onClick={() => void removePhoto(photo.id)}
                 >
                   ✕
                 </button>
