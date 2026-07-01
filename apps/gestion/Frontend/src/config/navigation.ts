@@ -16,23 +16,66 @@ export interface NavItem {
   adminOnly?: boolean;
 }
 
-export const NAV_ITEMS: NavItem[] = [
+export interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+/** Shown first, outside of any group. */
+export const NAV_STANDALONE_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Tableau de bord", path: "/dashboard", always: true },
-  { id: "planning", label: "Planning", path: "/planning", permission: "planning" },
-  { id: "reservations", label: "Réservations", path: "/reservations", permission: "planning" },
-  { id: "spaces", label: "Bâtiments & Espaces", path: "/spaces", permission: "spaces" },
-  { id: "clients", label: "Clients (Cardex)", path: "/clients", permission: "clients" },
-  { id: "billing", label: "Facturation", path: "/billing", permission: "billing" },
-  { id: "promo", label: "Codes promo", path: "/promo", permission: "promo" },
-  { id: "stats", label: "Statistiques", path: "/stats", permission: "stats" },
-  { id: "news", label: "Actualités & Offres", path: "/news", staff: true },
-  { id: "incidents", label: "Pannes / Incidents", path: "/incidents", staff: true },
+];
+
+export const NAV_GROUPS: NavGroup[] = [
   {
-    id: "administration",
-    label: "Administration",
-    path: "/administration",
-    adminOnly: true,
+    id: "operations",
+    label: "Exploitation",
+    items: [
+      { id: "planning", label: "Planning", path: "/planning", permission: "planning" },
+      { id: "reservations", label: "Réservations", path: "/reservations", permission: "planning" },
+      { id: "spaces", label: "Bâtiments & Espaces", path: "/spaces", permission: "spaces" },
+    ],
   },
+  {
+    id: "commercial",
+    label: "Clients & revenus",
+    items: [
+      { id: "clients", label: "Clients", path: "/clients", permission: "clients" },
+      { id: "billing", label: "Facturation", path: "/billing", permission: "billing" },
+      { id: "promo", label: "Codes promo", path: "/promo", permission: "promo" },
+    ],
+  },
+  {
+    id: "pilotage",
+    label: "Pilotage",
+    items: [{ id: "stats", label: "Statistiques", path: "/stats", permission: "stats" }],
+  },
+  {
+    id: "site",
+    label: "Vie du site",
+    items: [
+      { id: "news", label: "Actualités & Offres", path: "/news", staff: true },
+      { id: "incidents", label: "Incidents", path: "/incidents", staff: true },
+    ],
+  },
+  {
+    id: "admin",
+    label: "Administration",
+    items: [
+      {
+        id: "administration",
+        label: "Permissions",
+        path: "/administration",
+        adminOnly: true,
+      },
+    ],
+  },
+];
+
+export const NAV_ITEMS: NavItem[] = [
+  ...NAV_STANDALONE_ITEMS,
+  ...NAV_GROUPS.flatMap((group) => group.items),
 ];
 
 export function isNavItemVisible(item: NavItem, user: AuthMeResponse): boolean {
@@ -49,6 +92,17 @@ export function isNavItemVisible(item: NavItem, user: AuthMeResponse): boolean {
     return user.profile.permissions[item.permission] === true;
   }
   return false;
+}
+
+export function getVisibleStandaloneNavItems(user: AuthMeResponse): NavItem[] {
+  return NAV_STANDALONE_ITEMS.filter((item) => isNavItemVisible(item, user));
+}
+
+export function getVisibleNavGroups(user: AuthMeResponse): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => isNavItemVisible(item, user)),
+  })).filter((group) => group.items.length > 0);
 }
 
 export function getNavItemByPath(pathname: string): NavItem | undefined {

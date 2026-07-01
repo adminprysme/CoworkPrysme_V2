@@ -110,8 +110,19 @@ export function NavIcon({ id, className }: { id: string; className?: string }) {
 
 export function CollapseIcon({ className }: { className?: string }) {
   return (
-    <svg {...base({ className })}>
-      <path d="M9 6 4 12l5 6M20 6l-5 6 5 6" />
+    <svg
+      className={className}
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.25}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M15 6l-6 6 6 6" />
     </svg>
   );
 }

@@ -3,7 +3,6 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, useSidebar } from "./SidebarContext.js";
 import { SidebarNav } from "./SidebarNav.js";
 import { UserMenu } from "./UserMenu.js";
-import { APP_VERSION } from "../../config/version.js";
 import { CollapseIcon, MenuIcon } from "../../components/NavIcons.js";
 import styles from "./AppShell.module.css";
 
@@ -31,12 +30,10 @@ function AppShellContent() {
           .join(" ")}
       >
         <div className={styles.zoneA}>
-          <img
-            src={collapsed ? "/logo-icon.png" : "/logo-full.png"}
-            alt="Cowork Prysme Gestion"
-            className={collapsed ? styles.logoIcon : styles.logoFull}
-          />
-          {!collapsed ? <span className={styles.appName}>Gestion</span> : null}
+          <div className={styles.brand}>
+            <img src="/logo-icon.png" alt="" className={styles.logoIcon} />
+            {!collapsed ? <span className={styles.appName}>Gestion</span> : null}
+          </div>
         </div>
 
         <div className={styles.zoneB}>
@@ -53,12 +50,9 @@ function AppShellContent() {
             className={styles.collapseBtn}
             onClick={toggleCollapsed}
             aria-label={collapsed ? "Développer la sidebar" : "Réduire la sidebar"}
-            title={collapsed ? "Développer" : "Réduire"}
           >
             <CollapseIcon className={styles.collapseIcon} />
-            {!collapsed ? <span>Réduire</span> : null}
           </button>
-          {!collapsed ? <span className={styles.version}>v{APP_VERSION}</span> : null}
         </div>
       </aside>
 

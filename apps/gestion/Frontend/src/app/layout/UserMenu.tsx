@@ -2,9 +2,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../AuthProvider.js";
-import { useTheme } from "../ThemeProvider.js";
 import { useSidebar } from "./SidebarContext.js";
 import { ChevronDownIcon } from "../../components/NavIcons.js";
+import { ThemeToggleSwitch } from "../../components/ThemeToggleSwitch.js";
 import { logout } from "../../lib/api.js";
 import styles from "./UserMenu.module.css";
 
@@ -18,7 +18,6 @@ function getInitials(displayName: string): string {
 
 export function UserMenu() {
   const { user, setUser } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { collapsed } = useSidebar();
   const navigate = useNavigate();
   const menuId = useId();
@@ -110,30 +109,12 @@ export function UserMenu() {
 
       {open ? (
         <div id={menuId} className={styles.dropdown} role="menu">
+          <div className={styles.themeRow} role="none">
+            <ThemeToggleSwitch />
+          </div>
           <button
             type="button"
-            className={styles.menuItem}
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              navigate("/settings");
-            }}
-          >
-            Paramètres
-          </button>
-          <button
-            type="button"
-            className={styles.menuItem}
-            role="menuitem"
-            onClick={() => {
-              toggleTheme();
-            }}
-          >
-            {theme === "dark" ? "Basculer thème clair" : "Basculer thème sombre"}
-          </button>
-          <button
-            type="button"
-            className={styles.menuItem}
+            className={`${styles.menuItem} ${styles.menuItemDanger}`}
             role="menuitem"
             disabled={loggingOut}
             onClick={() => void handleLogout()}
