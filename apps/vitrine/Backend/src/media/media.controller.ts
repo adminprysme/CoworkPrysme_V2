@@ -1,0 +1,35 @@
+import { Controller, Get, Param, Res } from "@nestjs/common";
+import { createReadStream } from "node:fs";
+import type { Response } from "express";
+
+/* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { MediaStorageService } from "./media-storage.service.js";
+
+@Controller("media")
+export class MediaController {
+  constructor(private readonly mediaStorage: MediaStorageService) {}
+
+  @Get("buildings/:buildingId/:filename")
+  async serveBuildingPhoto(
+    @Param("buildingId") buildingId: string,
+    @Param("filename") filename: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    const storageKey = `buildings/${buildingId}/${filename}`;
+    const absolutePath = await this.mediaStorage.assertReadableFile(storageKey);
+
+    response.setHeader("Content-Type", "image/webp");
+    response.setHeader("Cache-Control", "public, max-age=86400, immutable");
+    response.setHeader("X-Content-Type-Options", "nosniff");
+
+    const stream = createReadStream(absolutePath);
+    stream.on("error", () => {
+      if (!response.headersSent) {
+        response.status(404).end();
+        return;
+      }
+      response.destroy();
+    });
+    stream.pipe(response);
+  }
+}
