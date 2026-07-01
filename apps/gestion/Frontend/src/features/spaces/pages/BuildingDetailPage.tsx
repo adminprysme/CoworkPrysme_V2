@@ -6,6 +6,7 @@ import {
   buildingResponseToFormValues,
   formValuesToCreateRequest,
 } from "../../../lib/buildings-mappers.js";
+import { mapBuildingSaveError } from "../../../lib/building-save-errors.js";
 import {
   persistBuildingPhotos,
   removePersistedBuildingPhoto,
@@ -126,7 +127,11 @@ export function BuildingDetailPage() {
         currentBuildingId,
         formValuesToCreateRequest(formValues),
       );
-      const photos = await persistBuildingPhotos(currentBuildingId, formValues.photos);
+      const photos = await persistBuildingPhotos(
+        currentBuildingId,
+        formValues.photos,
+        new Set(updated.photos.map((photo) => photo.storageKey)),
+      );
       setBuildingName(updated.name);
       setValues({
         ...buildingResponseToFormValues(updated),
@@ -134,8 +139,8 @@ export function BuildingDetailPage() {
       });
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2500);
-    } catch {
-      setErrors({ coordinates: "Impossible d'enregistrer ce bâtiment." });
+    } catch (error) {
+      setErrors(mapBuildingSaveError(error));
     } finally {
       setSaving(false);
     }
@@ -158,9 +163,7 @@ export function BuildingDetailPage() {
   }
 
   return (
-    <div
-      className={[styles.page, tab === "spaces" ? styles.pageWide : ""].filter(Boolean).join(" ")}
-    >
+    <div className={styles.page}>
       <nav aria-label="Fil d'Ariane">
         <ol className={styles.breadcrumb}>
           <li>
@@ -203,7 +206,7 @@ export function BuildingDetailPage() {
 
       <div className={styles.panel} role="tabpanel">
         {tab === "building" ? (
-          <>
+          <div className={styles.buildingTab}>
             <BuildingForm
               idPrefix={`edit-${currentBuildingId}`}
               values={formValues}
@@ -224,18 +227,22 @@ export function BuildingDetailPage() {
                 );
               }}
             />
-            <div className={styles.saveBar}>
-              {saved ? <p className={styles.savedHint}>Modifications enregistrées</p> : null}
+            <div className={styles.saveFab} aria-live="polite">
+              {saved ? (
+                <p className={styles.saveFabHint} role="status">
+                  Modifications enregistrées
+                </p>
+              ) : null}
               <button
                 type="button"
-                className={styles.saveBtn}
+                className={styles.saveFabBtn}
                 disabled={saving}
                 onClick={() => void handleSave()}
               >
                 {saving ? "Enregistrement…" : "Enregistrer"}
               </button>
             </div>
-          </>
+          </div>
         ) : null}
 
         <div hidden={tab !== "spaces"}>

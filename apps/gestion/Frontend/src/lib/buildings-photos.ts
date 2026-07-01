@@ -17,37 +17,49 @@ function photosToPatchPayload(photos: BuildingPhoto[]): UpdateBuildingPhotosRequ
 export async function persistBuildingPhotos(
   buildingId: string,
   photos: BuildingPhoto[],
+  existingStorageKeys: ReadonlySet<string> = new Set(),
 ): Promise<BuildingPhoto[]> {
+  if (photos.length === 0) {
+    const patchResponse = await updateBuildingPhotos(buildingId, { photos: [] });
+    return mapApiPhotosToFormPhotos(patchResponse.photos);
+  }
+
   const uploadedPhotos: BuildingPhoto[] = [];
 
   for (const photo of photos) {
-    if (photo.storageKey) {
+    if (photo.file) {
+      if (photo.file.size === 0) {
+        throw new Error("Empty file");
+      }
+
+      const response = await uploadBuildingPhoto(buildingId, photo.file);
+      const uploaded = response.photos.at(-1);
+      if (!uploaded) {
+        throw new Error("Upload failed");
+      }
+
+      if (photo.previewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(photo.previewUrl);
+      }
+
+      uploadedPhotos.push({
+        id: uploaded.storageKey,
+        storageKey: uploaded.storageKey,
+        previewUrl: buildingPhotoUrl(uploaded.storageKey),
+        fileName: photo.fileName,
+        fileSize: photo.fileSize,
+        mimeType: "image/webp",
+      });
+      continue;
+    }
+
+    if (photo.storageKey && existingStorageKeys.has(photo.storageKey)) {
       uploadedPhotos.push(photo);
-      continue;
     }
+  }
 
-    if (!photo.file) {
-      continue;
-    }
-
-    const response = await uploadBuildingPhoto(buildingId, photo.file);
-    const uploaded = response.photos.at(-1);
-    if (!uploaded) {
-      throw new Error("Upload failed");
-    }
-
-    if (photo.previewUrl.startsWith("blob:")) {
-      URL.revokeObjectURL(photo.previewUrl);
-    }
-
-    uploadedPhotos.push({
-      id: uploaded.storageKey,
-      storageKey: uploaded.storageKey,
-      previewUrl: buildingPhotoUrl(uploaded.storageKey),
-      fileName: photo.fileName,
-      fileSize: photo.fileSize,
-      mimeType: "image/webp",
-    });
+  if (uploadedPhotos.length === 0) {
+    throw new Error("Unknown photo");
   }
 
   const patchResponse = await updateBuildingPhotos(

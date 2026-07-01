@@ -3,6 +3,22 @@ import { defineConfig } from "vite";
 
 const apiTarget = process.env.VITE_DEV_API_PROXY ?? "http://127.0.0.1:8003";
 
+/** Keep SPA routes (/spaces, /spaces/:id) on Vite; proxy JSON API calls only. */
+function proxyApiOnly(pathPrefix: string) {
+  return {
+    target: apiTarget,
+    bypass(req: { headers: { accept?: string }; url?: string }) {
+      const accept = req.headers.accept ?? "";
+      if (accept.includes("text/html")) {
+        return req.url;
+      }
+      if (req.url === pathPrefix || req.url?.startsWith(`${pathPrefix}?`)) {
+        return req.url;
+      }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -12,7 +28,7 @@ export default defineConfig({
       "/auth": apiTarget,
       "/admin/permissions": apiTarget,
       "/buildings": apiTarget,
-      "/spaces": apiTarget,
+      "/spaces": proxyApiOnly("/spaces"),
       "/media": apiTarget,
       "/health": apiTarget,
       "/nominatim": {

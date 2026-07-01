@@ -260,6 +260,7 @@ export function BuildingForm({
           onChange={(photos) => onChange({ ...values, photos })}
           onRemovePersisted={onRemovePersistedPhoto}
         />
+        {errors.photos ? <p className={styles.fieldError}>{errors.photos}</p> : null}
       </section>
     </div>
   );

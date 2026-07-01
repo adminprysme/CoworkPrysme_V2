@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { mapBuildingSaveError } from "../../../lib/building-save-errors.js";
 import { revokePhotoUrls } from "../utils/photos.js";
 import type { BuildingFormValues } from "../types.js";
 import { createDefaultDaySchedules, createFloors } from "../utils/schedule.js";
@@ -77,8 +78,13 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
       await onSubmit(values);
       revokePhotoUrls(values.photos);
       onClose();
-    } catch {
-      setSubmitError("Impossible de créer le bâtiment. Vérifiez l'adresse et réessayez.");
+    } catch (error) {
+      const mapped = mapBuildingSaveError(error);
+      setSubmitError(
+        mapped.photos ??
+          mapped.coordinates ??
+          "Impossible de créer le bâtiment. Vérifiez l'adresse et réessayez.",
+      );
     } finally {
       setSubmitting(false);
     }
