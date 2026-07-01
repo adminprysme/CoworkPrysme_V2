@@ -6,8 +6,17 @@ const { modelSpy, pingSpy } = vi.hoisted(() => ({
 }));
 
 vi.mock("mongoose", () => {
+  class ObjectId {}
+
   class Schema {
+    static Types = { ObjectId, Mixed: class {} };
     constructor(_definition: unknown, _options?: unknown) {}
+    index() {
+      return this;
+    }
+    pre() {
+      return this;
+    }
   }
 
   const connect = vi.fn().mockResolvedValue({
@@ -25,6 +34,7 @@ vi.mock("mongoose", () => {
   return {
     default: { connect },
     Schema,
+    Types: { ObjectId },
   };
 });
 

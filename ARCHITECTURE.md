@@ -152,6 +152,61 @@ MONGODB_URI ──► mongoose.connect()
 
 `DbModule` / `DbService` fins dans chaque API — wrapper autour de `packages/db`, **sans** `@nestjs/mongoose`.
 
+### Modèle de données `cowork_bdd`
+
+Source de vérité : [`docs/cowork_bdd_schema.md`](docs/cowork_bdd_schema.md).
+
+**21 collections métier** (+ `health_checks` technique) enregistrées **uniquement** sur la connexion cowork via `getCoworkDb()` / `registerAllCoworkModels()` — jamais via `mongoose.model()` global, jamais sur `prysma_bdd`.
+
+| Domaine         | Collections                                                                  |
+| --------------- | ---------------------------------------------------------------------------- |
+| **structure**   | `buildings`, `spaces`, `slotClosures`                                        |
+| **reservation** | `reservations`, `slotLocks`, `reservationRequests`                           |
+| **client**      | `clientAccounts`, `cardex`                                                   |
+| **staff**       | `staffProfiles`, `auditLogs`                                                 |
+| **pricing**     | `tariffs`, `services`, `discountCodes`                                       |
+| **billing**     | `quotes`, `invoices`, `payments`                                             |
+| **peripheral**  | `notifications`, `reviews`, `satisfactionSurveys`, `newsOffers`, `incidents` |
+
+Conventions : montants en **centimes entiers**, dates UTC, snapshots figés sur `reservations` / factures, TVA **par ligne** + `vatBreakdown[]` agrégé.
+
+### Verrou temporaire (`slotLocks`)
+
+Collection distincte des réservations — mutex pendant le tunnel client (10 min).
+
+- Index TTL : `{ expiresAt: 1 }` avec `expireAfterSeconds: 0` (purge automatique).
+- Index unique : `{ spaceId, startAt, endAt }` (anti-collision exacte).
+- À la lecture : tout lock avec `expiresAt < now` est traité comme invalide (le moniteur TTL Mongo peut prendre ~60 s).
+
+Helpers : `acquireLock()`, `releaseLock()`, `findActiveLock()`.
+
+### Anti-chevauchement réservations
+
+MongoDB n'exprime pas l'unicité sur des plages qui se chevauchent. Stratégie :
+
+1. Lock = mutex sur créneau exact (index unique ci-dessus).
+2. `createReservation()` = **transaction Mongo** : vérifie l'absence de réservation `pending`/`confirmed` chevauchante (`startAt < newEnd AND endAt > newStart`), puis insert atomique. Échec explicite si conflit — pas de dégradation silencieuse.
+
+### Exigence replica set (déploiement Coolify)
+
+Les transactions Mongo (`createReservation`) exigent un **replica set** (un nœud unique configuré en RS suffit). Un `mongod` standalone **ne permet pas** les transactions.
+
+- Le TTL des locks fonctionne sans replica set ; les transactions, non.
+- Utilitaire : `assertReplicaSetForTransactions()` / `detectReplicaSet()` dans `packages/db`.
+- **Action Coolify** : configurer MongoDB avec `--replSet rs0` + `rs.initiate()`, ou utiliser un cluster managé.
+
+Les tests d'intégration de `packages/db` démarrent un replica set mono-nœud en mémoire (`mongodb-memory-server`) à chaque run CI.
+
+### `auditLogs` immuable
+
+Journal de conformité : `at` (horodatage métier) + `createdAt`/`updatedAt` auto, mais **aucune modification** après insertion (middleware Mongoose bloque save/update/delete).
+
+### `prysma_bdd` — garde-fous
+
+- Aucun modèle enregistré sur la connexion prysma.
+- Aucune opération d'écriture vers prysma dans `packages/db`.
+- `getPrysmaDb()` non exporté ; seul `pingPrysmaDb()` (admin ping) touche prysma.
+
 ## Docker
 
 Stratégie multi-stage : `turbo prune --docker` → build → runner non-root (ou nginx).
@@ -177,7 +232,7 @@ Les filtres `turbo prune` / `pnpm deploy` utilisent les **noms de package** (`@c
 ## Qualité
 
 - TypeScript strict, ESLint 9, Prettier, Husky + Commitlint
-- Tests : `packages/db` (singleton, read-only prysma), `packages/shared` (env)
+- Tests : `packages/db` (connexion, modèles cowork, lock/overlap transactionnels, isolation prysma), `packages/shared` (env)
 
 ## Lancer une app individuellement
 
@@ -191,7 +246,8 @@ pnpm --filter @coworkprysme/db test
 
 ## Évolutions prévues (hors périmètre actuel)
 
-- Modèles métier sur `cowork_bdd`
+- Endpoints métier NestJS consommant les modèles `cowork_bdd`
 - Endpoints de délégation vitrine-api → gestion-api (au-delà du stub HTTP)
 - Authentification staff via `prysma_bdd`
+- Moteur facturation / codes promo (schémas en place, logique à venir)
 - CI/CD automatisé
