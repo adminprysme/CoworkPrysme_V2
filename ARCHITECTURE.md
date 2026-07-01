@@ -4,18 +4,18 @@ Ce document décrit les choix structurants du monorepo à quatre applications. I
 
 ## Vue d'ensemble
 
-Quatre applications déployables indépendamment, deux environnements (public / interne), packages partagés et un cluster MongoDB unique.
+Quatre applications déployables indépendamment, regroupées par environnement (`vitrine` / `gestion`), packages partagés et un cluster MongoDB unique.
 
 ```mermaid
 graph TB
     subgraph public [Vitrine — public]
-        VW[vitrine-web :3001<br/>Next.js SSR/SSG]
-        VA[vitrine-api :8002<br/>NestJS BFF]
+        VW[vitrine-web :3001<br/>apps/vitrine/Frontend]
+        VA[vitrine-api :8002<br/>apps/vitrine/Backend]
     end
 
     subgraph internal [Gestion — interne]
-        GW[gestion-web :3002<br/>Vite SPA + nginx]
-        GA[gestion-api :8003<br/>NestJS métier]
+        GW[gestion-web :3002<br/>apps/gestion/Frontend]
+        GA[gestion-api :8003<br/>apps/gestion/Backend]
     end
 
     subgraph packages [Packages]
@@ -44,9 +44,23 @@ graph TB
     DB -.-> SH
 ```
 
+## Arborescence apps
+
+```
+apps/
+├── vitrine/
+│   ├── Frontend/    @coworkprysme/vitrine-web   (Next.js)
+│   └── Backend/     @coworkprysme/vitrine-api    (NestJS)
+└── gestion/
+    ├── Frontend/    @coworkprysme/gestion-web   (Vite + nginx)
+    └── Backend/     @coworkprysme/gestion-api    (NestJS)
+```
+
+Les **noms npm** (`@coworkprysme/vitrine-web`, etc.) sont inchangés — seuls les chemins filesystem diffèrent. Turborepo et `pnpm --filter` continuent de cibler par nom de package.
+
 ## Rôles des applications
 
-| App             | Stack                | Port | Rôle                                                                                      |
+| App (package)   | Stack                | Port | Rôle                                                                                      |
 | --------------- | -------------------- | ---- | ----------------------------------------------------------------------------------------- |
 | **vitrine-web** | Next.js App Router   | 3001 | Frontend public SEO. Aucun accès direct à la base.                                        |
 | **vitrine-api** | NestJS (ESM)         | 8002 | BFF public. Lit `cowork_bdd` uniquement. Délègue les écritures à gestion-api (stub HTTP). |
@@ -69,7 +83,7 @@ graph TB
 
 ## Monorepo : pnpm + Turborepo
 
-**pnpm workspaces** avec `workspace:*`. **Turborepo** orchestre le cache et l'ordre de build (`dependsOn: ["^build"]`).
+**pnpm workspaces** avec glob `apps/*/*` + `packages/*`. **Turborepo** orchestre le cache et l'ordre de build (`dependsOn: ["^build"]`).
 
 Presets TypeScript dans `packages/config` :
 
@@ -84,20 +98,18 @@ Presets TypeScript dans `packages/config` :
 
 Validation Zod centralisée dans `packages/shared/src/env.ts`, parsers dédiés par app :
 
-| Parser               | Initialisation                                              |
-| -------------------- | ----------------------------------------------------------- |
-| `parseVitrineWebEnv` | `initVitrineWebEnv()` dans vitrine-web `instrumentation.ts` |
-| `parseVitrineApiEnv` | `initVitrineApiEnv()` dans vitrine-api `main.ts`            |
-| `parseGestionApiEnv` | `initGestionApiEnv()` dans gestion-api `main.ts`            |
-| `parseGestionWebEnv` | côté client Vite (`import.meta.env`)                        |
+| Parser               | Initialisation                                                            |
+| -------------------- | ------------------------------------------------------------------------- |
+| `parseVitrineWebEnv` | `initVitrineWebEnv()` dans `apps/vitrine/Frontend/src/instrumentation.ts` |
+| `parseVitrineApiEnv` | `initVitrineApiEnv()` dans `apps/vitrine/Backend/src/main.ts`             |
+| `parseGestionApiEnv` | `initGestionApiEnv()` dans `apps/gestion/Backend/src/main.ts`             |
+| `parseGestionWebEnv` | côté client Vite (`import.meta.env`)                                      |
 
 | Variable               | Dev                  | Production                                  |
 | ---------------------- | -------------------- | ------------------------------------------- |
 | `MONGODB_URI`          | `mongodb://` accepté | `mongodb+srv://` ou `?tls=true` obligatoire |
 | `ALLOWED_ORIGIN`       | liste CSV explicite  | idem, **jamais `*`**                        |
 | `NEXT_PUBLIC_SITE_URL` | optionnel            | **obligatoire** (vitrine-web)               |
-
-Messages d'erreur génériques, jamais de valeurs secrètes exposées.
 
 ### CORS (APIs Nest)
 
@@ -106,21 +118,18 @@ Messages d'erreur génériques, jamais de valeurs secrètes exposées.
 - **vitrine-api** : origines du frontend public (ex. `http://localhost:3001`)
 - **gestion-api** : frontend gestion **et** vitrine-api si appels server-side (ex. `http://localhost:3002,http://localhost:8002`)
 
-Origine non listée = refus. Aucune dérivation automatique.
-
 ### Content-Security-Policy
 
-| App         | Mécanisme                | `connect-src`                                                 |
-| ----------- | ------------------------ | ------------------------------------------------------------- |
-| vitrine-web | `next.config.ts` headers | `'self'` + origin de `NEXT_PUBLIC_API_URL`                    |
-| gestion-web | nginx `add_header`       | `'self'` + origin de `VITE_API_URL` (injecté au build Docker) |
+| App         | Mécanisme                              | `connect-src`                                                 |
+| ----------- | -------------------------------------- | ------------------------------------------------------------- |
+| vitrine-web | `apps/vitrine/Frontend/next.config.ts` | `'self'` + origin de `NEXT_PUBLIC_API_URL`                    |
+| gestion-web | nginx `add_header`                     | `'self'` + origin de `VITE_API_URL` (injecté au build Docker) |
 
 ### prysma_bdd — lecture seule
 
 - `getPrysmaDb()` **non exporté** via `@coworkprysme/db`
 - **vitrine-api** n'accède **jamais** à `prysma_bdd` (`runCoworkReadinessCheck` uniquement)
 - **gestion-api** seule exécute le readiness complet (cowork + prysma)
-- Tests automatisés dans `packages/db`
 
 ### Health checks
 
@@ -130,8 +139,6 @@ Origine non listée = refus. Aucune dérivation automatique.
 | gestion-web | `/api/health` | Liveness (nginx)  | `{ "status": "ok" }`                                |
 | vitrine-api | `/health`     | Readiness cowork  | `{ status, timestamp, checks: { cowork } }`         |
 | gestion-api | `/health`     | Readiness complet | `{ status, timestamp, checks: { cowork, prysma } }` |
-
-Détails d'erreur dans les **logs serveur** uniquement.
 
 ## MongoDB + Mongoose (`packages/db`)
 
@@ -143,51 +150,33 @@ MONGODB_URI ──► mongoose.connect()
                     └── useDb(MONGODB_DB_PRYSMA)  → prysma_bdd  (RO, gestion-api)
 ```
 
-Singleton serverless via cache `globalThis._mongooseCache`.
-
-Schémas Mongoose dans `packages/db/src/models/` uniquement.
-
-### Intégration NestJS
-
 `DbModule` / `DbService` fins dans chaque API — wrapper autour de `packages/db`, **sans** `@nestjs/mongoose`.
-
-## packages/shared
-
-Schémas Zod, parsers d'environnement, contrats health (`LivenessResponseSchema`, `CoworkReadinessResponseSchema`, `ReadinessResponseSchema`).
-
-Exports :
-
-- `@coworkprysme/shared` — contrats publics
-- `@coworkprysme/shared/server` — init env serveur (APIs Nest)
-- `@coworkprysme/shared/vitrine-web` — init env vitrine-web
 
 ## Docker
 
-Stratégie multi-stage commune :
+Stratégie multi-stage : `turbo prune --docker` → build → runner non-root (ou nginx).
 
-1. **prepare** — `turbo prune --docker` pour isoler le sous-graphe de dépendances
-2. **builder** — `pnpm install` (×2) + `turbo run build`
-3. **runner** — image minimale, utilisateur non-root (Node) ou nginx
+| App         | Dockerfile                         | Runner                                                          |
+| ----------- | ---------------------------------- | --------------------------------------------------------------- |
+| vitrine-web | `apps/vitrine/Frontend/Dockerfile` | Next.js standalone — `CMD node apps/vitrine/Frontend/server.js` |
+| vitrine-api | `apps/vitrine/Backend/Dockerfile`  | `pnpm deploy --prod`                                            |
+| gestion-web | `apps/gestion/Frontend/Dockerfile` | nginx                                                           |
+| gestion-api | `apps/gestion/Backend/Dockerfile`  | `pnpm deploy --prod`                                            |
 
-| App         | Runner              | Particularité                           |
-| ----------- | ------------------- | --------------------------------------- |
-| vitrine-web | `node:24-alpine`    | Next.js `output: "standalone"`          |
-| vitrine-api | `node:24-alpine`    | `pnpm deploy --prod` → dossier autonome |
-| gestion-api | `node:24-alpine`    | idem                                    |
-| gestion-web | `nginx:1.27-alpine` | assets statiques + nginx.conf           |
+### Coolify — configuration par service
 
-### Coolify
+| Service Coolify | Dockerfile path                    | Build context     | Port |
+| --------------- | ---------------------------------- | ----------------- | ---- |
+| vitrine-web     | `apps/vitrine/Frontend/Dockerfile` | `.` (racine repo) | 3001 |
+| vitrine-api     | `apps/vitrine/Backend/Dockerfile`  | `.`               | 8002 |
+| gestion-web     | `apps/gestion/Frontend/Dockerfile` | `.`               | 3002 |
+| gestion-api     | `apps/gestion/Backend/Dockerfile`  | `.`               | 8003 |
 
-- **Contexte de build** : racine du dépôt (`.`)
-- **Dockerfile path** : `apps/<app>/Dockerfile`
-- Variables runtime injectées via l'UI Coolify (voir README)
-
-`pnpm deploy` requiert `inject-workspace-packages=true` et `force-legacy-deploy=true` dans `.npmrc` (pnpm v10 + lockfile partagé).
+Les filtres `turbo prune` / `pnpm deploy` utilisent les **noms de package** (`@coworkprysme/vitrine-web`, etc.), pas les chemins filesystem.
 
 ## Qualité
 
-- TypeScript strict, ESLint 9 (flat config), Prettier
-- Husky : lint-staged + Commitlint conventional
+- TypeScript strict, ESLint 9, Prettier, Husky + Commitlint
 - Tests : `packages/db` (singleton, read-only prysma), `packages/shared` (env)
 
 ## Lancer une app individuellement

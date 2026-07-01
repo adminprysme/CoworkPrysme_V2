@@ -13,14 +13,16 @@ Monorepo pour la **vitrine publique** (SEO) et l'**application de gestion intern
 ```
 coworkprysme_v2/
 ├── apps/
-│   ├── vitrine-web/   # Frontend public — Next.js, port 3001
-│   ├── vitrine-api/   # BFF public — NestJS, port 8002
-│   ├── gestion-web/   # Frontend CRM — Vite SPA, port 3002
-│   └── gestion-api/   # API métier — NestJS, port 8003
+│   ├── vitrine/
+│   │   ├── Frontend/   # @coworkprysme/vitrine-web — Next.js, port 3001
+│   │   └── Backend/    # @coworkprysme/vitrine-api  — NestJS, port 8002
+│   └── gestion/
+│       ├── Frontend/   # @coworkprysme/gestion-web — Vite SPA, port 3002
+│       └── Backend/    # @coworkprysme/gestion-api  — NestJS, port 8003
 ├── packages/
-│   ├── config/        # ESLint, Prettier, tsconfig partagés
-│   ├── db/            # Mongoose singleton, schémas, health checks
-│   └── shared/        # Schémas Zod, contrats inter-services
+│   ├── config/         # ESLint, Prettier, tsconfig partagés
+│   ├── db/             # Mongoose singleton, schémas, health checks
+│   └── shared/         # Schémas Zod, contrats inter-services
 ├── .env.example
 └── ARCHITECTURE.md
 ```
@@ -30,22 +32,22 @@ coworkprysme_v2/
 ```bash
 pnpm install
 
-# Copier les variables par app (voir .env.example dans chaque app/)
-cp apps/vitrine-web/.env.example apps/vitrine-web/.env.local
-cp apps/vitrine-api/.env.example apps/vitrine-api/.env
-cp apps/gestion-web/.env.example apps/gestion-web/.env
-cp apps/gestion-api/.env.example apps/gestion-api/.env
+# Copier les variables par app (voir .env.example dans chaque dossier)
+cp apps/vitrine/Frontend/.env.example apps/vitrine/Frontend/.env.local
+cp apps/vitrine/Backend/.env.example apps/vitrine/Backend/.env
+cp apps/gestion/Frontend/.env.example apps/gestion/Frontend/.env
+cp apps/gestion/Backend/.env.example apps/gestion/Backend/.env
 
 pnpm build
 pnpm dev
 ```
 
-| App         | URL locale            | Health check    |
-| ----------- | --------------------- | --------------- |
-| vitrine-web | http://localhost:3001 | GET /api/health |
-| vitrine-api | http://localhost:8002 | GET /health     |
-| gestion-web | http://localhost:3002 | GET /api/health |
-| gestion-api | http://localhost:8003 | GET /health     |
+| App (package)          | URL locale            | Health check    |
+| ---------------------- | --------------------- | --------------- |
+| vitrine-web (Frontend) | http://localhost:3001 | GET /api/health |
+| vitrine-api (Backend)  | http://localhost:8002 | GET /health     |
+| gestion-web (Frontend) | http://localhost:3002 | GET /api/health |
+| gestion-api (Backend)  | http://localhost:8003 | GET /health     |
 
 ## Flux inter-services
 
@@ -58,24 +60,24 @@ gestion-api  ──packages/db───────────►  cowork_bdd +
 
 ## Docker / Coolify
 
-Chaque app possède un `Dockerfile` sous `apps/<app>/Dockerfile`.
+Chaque app possède un `Dockerfile` sous `apps/<env>/<Frontend|Backend>/Dockerfile`.
 
 **Important Coolify** : le **contexte de build est la racine du monorepo** (`.`), pas le sous-dossier de l'app.
 
-| App         | Dockerfile                    | Port | Notes                                                                |
-| ----------- | ----------------------------- | ---- | -------------------------------------------------------------------- |
-| vitrine-web | `apps/vitrine-web/Dockerfile` | 3001 | Build args + runtime : `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL` |
-| vitrine-api | `apps/vitrine-api/Dockerfile` | 8002 | `pnpm deploy --prod`, `ALLOWED_ORIGIN` (liste CSV)                   |
-| gestion-web | `apps/gestion-web/Dockerfile` | 3002 | Build arg : `VITE_API_URL` (injecté dans CSP nginx)                  |
-| gestion-api | `apps/gestion-api/Dockerfile` | 8003 | `pnpm deploy --prod`, `ALLOWED_ORIGIN` (liste CSV)                   |
+| App (package) | Dockerfile path                    | Port | Notes                                                                |
+| ------------- | ---------------------------------- | ---- | -------------------------------------------------------------------- |
+| vitrine-web   | `apps/vitrine/Frontend/Dockerfile` | 3001 | Build args + runtime : `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL` |
+| vitrine-api   | `apps/vitrine/Backend/Dockerfile`  | 8002 | `pnpm deploy --prod`, `ALLOWED_ORIGIN` (liste CSV)                   |
+| gestion-web   | `apps/gestion/Frontend/Dockerfile` | 3002 | Build arg : `VITE_API_URL` (injecté dans CSP nginx)                  |
+| gestion-api   | `apps/gestion/Backend/Dockerfile`  | 8003 | `pnpm deploy --prod`, `ALLOWED_ORIGIN` (liste CSV)                   |
 
 Build local :
 
 ```bash
-docker build -f apps/vitrine-web/Dockerfile -t vitrine-web .
-docker build -f apps/vitrine-api/Dockerfile -t vitrine-api .
-docker build -f apps/gestion-web/Dockerfile -t gestion-web .
-docker build -f apps/gestion-api/Dockerfile -t gestion-api .
+docker build -f apps/vitrine/Frontend/Dockerfile -t vitrine-web .
+docker build -f apps/vitrine/Backend/Dockerfile -t vitrine-api .
+docker build -f apps/gestion/Frontend/Dockerfile -t gestion-web .
+docker build -f apps/gestion/Backend/Dockerfile -t gestion-api .
 ```
 
 ## Scripts racine
