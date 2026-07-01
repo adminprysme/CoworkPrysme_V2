@@ -1,0 +1,58 @@
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f5f9;
+  --color-text: #1e293b;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-accent: #3b6fa8;
+  --color-accent-hover: #2d5a8a;
+  --color-accent-soft: rgba(59, 111, 168, 0.12);
+  --color-danger: #b42318;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #141c2b;
+  --color-surface: #1f2937;
+  --color-surface-muted: #111827;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-border: #374151;
+  --color-accent: #3b6fa8;
+  --color-accent-hover: #2d5a8a;
+  --color-accent-soft: rgba(59, 111, 168, 0.2);
+  --color-danger: #f87171;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}

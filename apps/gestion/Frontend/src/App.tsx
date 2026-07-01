@@ -1,8 +1,6 @@
+import { AppRouter } from "./app/router.js";
+import "./styles/tokens.css";
+
 export function App() {
-  return (
-    <main>
-      <h1>Cowork Gestion</h1>
-      <p>Application interne CRM — frontend SPA.</p>
-    </main>
-  );
+  return <AppRouter />;
 }
