@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "sh -c 'set -a && . ./.env && set +a && exec nest start --watch'",
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit -p tsconfig.build.json"
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@coworkprysme/db": "workspace:*",
@@ -31,6 +32,7 @@
     "@types/express": "^5.0.3",
     "@types/node": "^22.15.29",
     "eslint": "^9.39.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
