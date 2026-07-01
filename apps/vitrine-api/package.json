@@ -1,0 +1,31 @@
+{
+  "name": "@coworkprysme/vitrine-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@coworkprysme/db": "workspace:*",
+    "@coworkprysme/shared": "workspace:*",
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/core": "^11.1.27",
+    "@nestjs/platform-express": "^11.1.27",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@coworkprysme/config": "workspace:*",
+    "@nestjs/cli": "^11.0.23",
+    "@nestjs/schematics": "^11.0.9",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.15.29",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "@coworkprysme/config/typescript/nestjs",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmit": true,
+    "sourceMap": true
+  },
+  "include": ["src"]
+}
