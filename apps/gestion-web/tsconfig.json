@@ -1,0 +1,4 @@
+{
+  "extends": "@coworkprysme/config/typescript/vite",
+  "include": ["src", "vite.config.ts"]
+}
