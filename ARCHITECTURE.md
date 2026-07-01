@@ -218,6 +218,59 @@ Stratégie multi-stage : `turbo prune --docker` → build → runner non-root (o
 | gestion-web | `apps/gestion/Frontend/Dockerfile` | nginx                                                           |
 | gestion-api | `apps/gestion/Backend/Dockerfile`  | `pnpm deploy --prod`                                            |
 
+## Stockage fichiers — photos bâtiments
+
+Les **métadonnées** (`storageKey`, `alt?`, `order`, `isPrimary`) sont persistées dans `cowork_bdd.buildings.photos[]`. Les **binaires** sont stockés sur un volume disque partagé. **`prysma_bdd` n'est jamais touchée.**
+
+```mermaid
+graph LR
+    subgraph volume [Volume UPLOADS_DIR]
+        FS["buildings/{buildingId}/{uuid}.webp"]
+    end
+
+    GA[gestion-api] -->|WRITE DELETE| FS
+    GA -->|GET /media/* public| FS
+    VA[vitrine-api] -->|GET /media/* public READ-ONLY| FS
+```
+
+| Service         | Volume Coolify                          | Accès disque      | Rôle                                                                 |
+| --------------- | --------------------------------------- | ----------------- | -------------------------------------------------------------------- |
+| **gestion-api** | `/data/uploads` (lecture/écriture)      | R/W               | Upload, suppression, nettoyage ; sert `/media` pour gestion-web      |
+| **vitrine-api** | **même volume** (montage **read-only**) | **Lecture seule** | Sert `/media` pour la vitrine publique — indépendante de gestion-api |
+
+> **Persistent storage OBLIGATOIRE** sur gestion-api (écriture) et vitrine-api (lecture). Sans volume monté, chaque redéploiement recrée un filesystem éphémère → **perte de toutes les photos** alors que les `storageKey` restent en base.
+
+### Variables d'environnement
+
+| Variable                         | gestion-api | vitrine-api | Défaut local     | Production (Coolify)              |
+| -------------------------------- | ----------- | ----------- | ---------------- | --------------------------------- |
+| `UPLOADS_DIR`                    | oui         | oui         | `{repo}/uploads` | `/data/uploads` (**obligatoire**) |
+| `UPLOAD_MAX_BYTES`               | oui         | —           | `5242880` (5 Mo) | idem                              |
+| `UPLOAD_MAX_PHOTOS_PER_BUILDING` | oui         | —           | `15`             | idem                              |
+| `UPLOAD_MAX_DIMENSION_PX`        | oui         | —           | `2048`           | idem                              |
+
+La limite **5 Mo est appliquée côté serveur** (magic bytes + sharp), indépendamment de toute validation front.
+
+Structure sur le volume :
+
+```
+UPLOADS_DIR/
+└── buildings/
+    └── {buildingId}/
+        └── {uuid}.webp
+```
+
+`storageKey` en base = chemin relatif (`buildings/{buildingId}/{uuid}.webp`). Upload protégé par permission `spaces` ; lecture `GET /media/buildings/:buildingId/:filename` **publique** (content-type, cache, pas de directory listing). Double protection path traversal : regex stricte + résolution sous `UPLOADS_DIR`.
+
+### Coolify — persistent storage (garde-fou)
+
+| Service Coolify | Volume partagé   | Mount path      | Mode mount     | `UPLOADS_DIR`   |
+| --------------- | ---------------- | --------------- | -------------- | --------------- |
+| gestion-api     | `cowork-uploads` | `/data/uploads` | **Read/Write** | `/data/uploads` |
+| vitrine-api     | `cowork-uploads` | `/data/uploads` | **Read-only**  | `/data/uploads` |
+
+Le montage **read-only** sur vitrine-api est un garde-fou infra : la vitrine ne fait que lire ; elle ne peut pas modifier ni supprimer les fichiers même en cas de faille applicative.
+
 ### Coolify — configuration par service
 
 | Service Coolify | Dockerfile path                    | Build context     | Port |

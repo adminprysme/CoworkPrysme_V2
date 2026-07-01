@@ -33,4 +33,5 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 # Testing
-coverage/
+# Local upload storage (repo root only — not src/uploads modules)
+/uploads/
