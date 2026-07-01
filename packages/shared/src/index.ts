@@ -98,6 +98,20 @@ export {
 } from "./buildings.js";
 
 export {
+  BUILDING_PHOTO_STORAGE_KEY_PATTERN,
+  DEFAULT_UPLOAD_MAX_BYTES,
+  DEFAULT_UPLOAD_MAX_DIMENSION_PX,
+  DEFAULT_UPLOAD_MAX_PHOTOS_PER_BUILDING,
+  UpdateBuildingPhotosRequestSchema,
+  buildBuildingPhotoStorageKey,
+  isValidBuildingPhotoStorageKey,
+  mediaPathFromStorageKey,
+  resolveStorageKeyAbsolutePath,
+  resolveUploadsDir,
+  type UpdateBuildingPhotosRequest,
+} from "./uploads.js";
+
+export {
   ServerEnvSchema,
   VitrineWebEnvSchema,
   GestionWebEnvSchema,

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { UploadLimitsSchema } from "./uploads.js";
+
 const GENERIC_ENV_ERROR = "Invalid or missing environment configuration";
 
 function isProduction(env: NodeJS.ProcessEnv): boolean {
@@ -98,12 +100,24 @@ export const GestionWebEnvSchema = z.object({
 
 export type GestionWebEnv = z.infer<typeof GestionWebEnvSchema>;
 
+const uploadsDirSchema = (env: NodeJS.ProcessEnv) =>
+  z
+    .string()
+    .min(1)
+    .optional()
+    .superRefine((value, ctx) => {
+      if (isProduction(env) && !value?.trim()) {
+        ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR, path: [] });
+      }
+    });
+
 export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
   z.object({
     MONGODB_URI: mongoUriSchema(env),
     MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
     ALLOWED_ORIGIN: allowedOriginsSchema,
     GESTION_API_URL: z.string().url(),
+    UPLOADS_DIR: uploadsDirSchema(env),
   });
 
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
@@ -125,7 +139,9 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
       COOKIE_SAME_SITE: cookieSameSiteSchema,
       CENTRALE_API_URL: z.string().url().optional(),
       CENTRALE_HOME_URL: z.string().url().optional(),
+      UPLOADS_DIR: uploadsDirSchema(env),
     })
+    .merge(UploadLimitsSchema)
     .superRefine((data, ctx) => {
       if (isProduction(env) && data.AUTH_MODE === "local") {
         ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR, path: ["AUTH_MODE"] });
@@ -212,6 +228,7 @@ export function parseVitrineApiEnv(env: NodeJS.ProcessEnv = process.env): Vitrin
     MONGODB_DB_COWORK: env.MONGODB_DB_COWORK,
     ALLOWED_ORIGIN: env.ALLOWED_ORIGIN,
     GESTION_API_URL: env.GESTION_API_URL,
+    UPLOADS_DIR: env.UPLOADS_DIR,
   });
 
   if (!result.success) {
@@ -239,6 +256,10 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     COOKIE_SAME_SITE: env.COOKIE_SAME_SITE,
     CENTRALE_API_URL: env.CENTRALE_API_URL,
     CENTRALE_HOME_URL: env.CENTRALE_HOME_URL,
+    UPLOADS_DIR: env.UPLOADS_DIR,
+    UPLOAD_MAX_BYTES: env.UPLOAD_MAX_BYTES,
+    UPLOAD_MAX_PHOTOS_PER_BUILDING: env.UPLOAD_MAX_PHOTOS_PER_BUILDING,
+    UPLOAD_MAX_DIMENSION_PX: env.UPLOAD_MAX_DIMENSION_PX,
   });
 
   if (!result.success) {
