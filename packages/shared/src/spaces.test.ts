@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CreateSpaceRequestSchema } from "./spaces.js";
+import { CreateSpaceRequestSchema, mapTariffInputsToDb, SpaceTariffInputSchema } from "./spaces.js";
 
 const validPayload = {
   type: "meeting_room" as const,
@@ -20,10 +20,15 @@ const validPayload = {
   ],
   accessCode: "4821",
   status: "active" as const,
+  tariffs: [
+    { durationClass: "hourly" as const, priceEuros: 19.99, vatRate: 20, enabled: true },
+    { durationClass: "daily" as const, priceEuros: 120, vatRate: 20, enabled: true },
+    { durationClass: "monthly" as const, priceEuros: 450, vatRate: 20, enabled: false },
+  ],
 };
 
 describe("CreateSpaceRequestSchema", () => {
-  it("accepts a valid space payload", () => {
+  it("accepts a valid space payload with tariffs", () => {
     expect(CreateSpaceRequestSchema.safeParse(validPayload).success).toBe(true);
   });
 
@@ -35,5 +40,60 @@ describe("CreateSpaceRequestSchema", () => {
       ),
     };
     expect(CreateSpaceRequestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("rejects duplicate enabled durationClass", () => {
+    const invalid = {
+      ...validPayload,
+      tariffs: [
+        { durationClass: "hourly", priceEuros: 10, vatRate: 20, enabled: true },
+        { durationClass: "hourly", priceEuros: 12, vatRate: 20, enabled: true },
+      ],
+    };
+    expect(CreateSpaceRequestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("rejects more than five tariff lines", () => {
+    const invalid = {
+      ...validPayload,
+      tariffs: [
+        { durationClass: "hourly", priceEuros: 10, vatRate: 20, enabled: true },
+        { durationClass: "halfday", priceEuros: 10, vatRate: 20, enabled: true },
+        { durationClass: "daily", priceEuros: 10, vatRate: 20, enabled: true },
+        { durationClass: "weekly", priceEuros: 10, vatRate: 20, enabled: true },
+        { durationClass: "monthly", priceEuros: 10, vatRate: 20, enabled: true },
+        { durationClass: "hourly", priceEuros: 11, vatRate: 20, enabled: false },
+      ],
+    };
+    expect(CreateSpaceRequestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("rejects euro amounts with more than 2 decimals", () => {
+    expect(
+      SpaceTariffInputSchema.safeParse({
+        durationClass: "hourly",
+        priceEuros: 12.555,
+        vatRate: 20,
+        enabled: true,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("mapTariffInputsToDb", () => {
+  it("maps euros to centimes and drops disabled lines", () => {
+    expect(mapTariffInputsToDb(validPayload.tariffs)).toEqual([
+      { durationClass: "hourly", priceHT: 1999, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceHT: 12000, vatRate: 20, enabled: true },
+    ]);
+  });
+
+  it("round-trips tricky amounts without float drift", () => {
+    const mapped = mapTariffInputsToDb([
+      { durationClass: "hourly", priceEuros: 19.99, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceEuros: 20, vatRate: 20, enabled: true },
+    ]);
+    expect(mapped[0]?.priceHT).toBe(1999);
+    expect(mapped[1]?.priceHT).toBe(2000);
   });
 });

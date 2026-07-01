@@ -13,11 +13,8 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import {
-  CreateBuildingRequestSchema,
-  UpdateBuildingRequestSchema,
-  parseGestionApiEnv,
-} from "@coworkprysme/shared";
+import { CreateBuildingRequestSchema, UpdateBuildingRequestSchema } from "@coworkprysme/shared";
+import { parseGestionApiEnv } from "@coworkprysme/shared/server";
 import type { Request } from "express";
 import { memoryStorage } from "multer";
 

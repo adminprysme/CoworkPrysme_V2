@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { parseVitrineApiEnv } from "@coworkprysme/shared";
+import { parseVitrineApiEnv } from "@coworkprysme/shared/server";
 
 @Injectable()
 export class GestionClientService {

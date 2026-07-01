@@ -1,14 +1,22 @@
 export {
-  ServerEnvSchema,
+  createServerEnvSchema,
+  createVitrineWebEnvSchema,
+  GestionWebEnvSchema,
   parseServerEnv,
+  parseVitrineWebEnv,
+  parseGestionWebEnv,
   parseVitrineApiEnv,
   parseGestionApiEnv,
   resetServerEnvCache,
   GENERIC_ENV_ERROR,
   type ServerEnv,
+  type VitrineWebEnv,
+  type GestionWebEnv,
   type VitrineApiEnv,
   type GestionApiEnv,
 } from "./env.js";
+
+export { resolveStorageKeyAbsolutePath, resolveUploadsDir } from "./uploads-server.js";
 
 import { parseGestionApiEnv, parseServerEnv, parseVitrineApiEnv } from "./env.js";
 

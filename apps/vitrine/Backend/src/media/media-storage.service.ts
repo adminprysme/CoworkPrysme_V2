@@ -4,7 +4,7 @@ import {
   parseVitrineApiEnv,
   resolveStorageKeyAbsolutePath,
   resolveUploadsDir,
-} from "@coworkprysme/shared";
+} from "@coworkprysme/shared/server";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 

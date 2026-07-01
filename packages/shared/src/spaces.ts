@@ -6,6 +6,7 @@ import {
   BuildingPhotoResponseSchema,
   BuildingStatusSchema,
 } from "./buildings.js";
+import { eurosToCents, isValidEuroAmount } from "./money.js";
 
 export const SPACE_TYPES = ["meeting_room", "private_office"] as const;
 
@@ -28,6 +29,56 @@ export const SpaceEquipmentInputSchema = z.object({
 
 export const SpaceAccessCodeSchema = z.string().trim().optional();
 
+export const SPACE_DURATION_CLASSES = ["hourly", "halfday", "daily", "weekly", "monthly"] as const;
+
+export const SpaceDurationClassSchema = z.enum(SPACE_DURATION_CLASSES);
+
+export const DEFAULT_SPACE_TARIFF_VAT_RATE = 20;
+export const MAX_SPACE_TARIFFS = 5;
+
+export const DURATION_CLASS_LABELS: Record<(typeof SPACE_DURATION_CLASSES)[number], string> = {
+  hourly: "Heure",
+  halfday: "Demi-journée",
+  daily: "Journée",
+  weekly: "Semaine",
+  monthly: "Mois",
+};
+
+export const euroAmountSchema = z
+  .number()
+  .min(0)
+  .refine((value) => isValidEuroAmount(value), {
+    message: "Amount must have at most 2 decimal places",
+  });
+
+export const SpaceTariffInputSchema = z.object({
+  durationClass: SpaceDurationClassSchema,
+  priceEuros: euroAmountSchema,
+  vatRate: z.number().min(0).default(DEFAULT_SPACE_TARIFF_VAT_RATE),
+  enabled: z.boolean(),
+});
+
+export const SpaceTariffResponseSchema = z.object({
+  durationClass: SpaceDurationClassSchema,
+  priceHT: z.number().int().min(0),
+  vatRate: z.number().min(0),
+});
+
+const tariffsInputSchema = z
+  .array(SpaceTariffInputSchema)
+  .max(MAX_SPACE_TARIFFS)
+  .superRefine((tariffs, context) => {
+    const enabledClasses = tariffs.filter((tariff) => tariff.enabled).map((t) => t.durationClass);
+    if (new Set(enabledClasses).size !== enabledClasses.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Each enabled durationClass must be unique",
+        path: [],
+      });
+    }
+  })
+  .default([]);
+
 export const CreateSpaceRequestSchema = z.object({
   type: SpaceTypeSchema,
   name: z.string().trim().min(1),
@@ -38,6 +89,7 @@ export const CreateSpaceRequestSchema = z.object({
   openingHours: z.array(BuildingDayScheduleInputSchema).length(7),
   accessCode: SpaceAccessCodeSchema,
   status: SpaceStatusSchema,
+  tariffs: tariffsInputSchema,
 });
 
 export const UpdateSpaceRequestSchema = CreateSpaceRequestSchema;
@@ -61,6 +113,7 @@ export const SpaceResponseSchema = z.object({
   accessCode: SpaceAccessCodeSchema,
   status: SpaceStatusSchema,
   photos: z.array(BuildingPhotoResponseSchema),
+  tariffs: z.array(SpaceTariffResponseSchema),
   seo: SpaceSeoResponseSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -70,8 +123,28 @@ export const SpacesListResponseSchema = z.object({
   spaces: z.array(SpaceResponseSchema),
 });
 
+export type SpaceDurationClass = z.infer<typeof SpaceDurationClassSchema>;
+export type SpaceTariffInput = z.infer<typeof SpaceTariffInputSchema>;
+export type SpaceTariffResponse = z.infer<typeof SpaceTariffResponseSchema>;
 export type CreateSpaceRequest = z.infer<typeof CreateSpaceRequestSchema>;
 export type UpdateSpaceRequest = z.infer<typeof UpdateSpaceRequestSchema>;
 export type SpaceResponse = z.infer<typeof SpaceResponseSchema>;
 export type SpacesListResponse = z.infer<typeof SpacesListResponseSchema>;
 export type SpaceSeoResponse = z.infer<typeof SpaceSeoResponseSchema>;
+
+/** Maps validated API tariff inputs to DB centimes (enabled lines only). */
+export function mapTariffInputsToDb(tariffs: SpaceTariffInput[]): Array<{
+  durationClass: SpaceDurationClass;
+  priceHT: number;
+  vatRate: number;
+  enabled: boolean;
+}> {
+  return tariffs
+    .filter((tariff) => tariff.enabled)
+    .map((tariff) => ({
+      durationClass: tariff.durationClass,
+      priceHT: eurosToCents(tariff.priceEuros),
+      vatRate: tariff.vatRate,
+      enabled: true,
+    }));
+}

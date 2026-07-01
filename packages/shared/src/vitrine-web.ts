@@ -14,8 +14,8 @@ export {
 } from "./health.js";
 
 export {
-  ServerEnvSchema,
-  VitrineWebEnvSchema,
+  createServerEnvSchema,
+  createVitrineWebEnvSchema,
   GestionWebEnvSchema,
   parseServerEnv,
   parseVitrineWebEnv,

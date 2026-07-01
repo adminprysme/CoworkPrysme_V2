@@ -131,21 +131,41 @@ export {
 } from "./seo.js";
 
 export {
+  centsToEuros,
+  computeTtcCents,
+  eurosToCents,
+  formatCentsAsEuroString,
+  isValidEuroAmount,
+} from "./money.js";
+
+export {
   CreateSpaceRequestSchema,
+  DEFAULT_SPACE_TARIFF_VAT_RATE,
+  DURATION_CLASS_LABELS,
+  MAX_SPACE_TARIFFS,
   SPACE_DESCRIPTION_MAX_LENGTH,
+  SPACE_DURATION_CLASSES,
   SPACE_TYPES,
   SpaceAccessCodeSchema,
   SpaceDescriptionSchema,
+  SpaceDurationClassSchema,
   SpaceEquipmentInputSchema,
   SpaceResponseSchema,
   SpaceSeoResponseSchema,
   SpaceStatusSchema,
+  SpaceTariffInputSchema,
+  SpaceTariffResponseSchema,
   SpaceTypeSchema,
   SpacesListResponseSchema,
   UpdateSpaceRequestSchema,
+  euroAmountSchema,
+  mapTariffInputsToDb,
   type CreateSpaceRequest,
+  type SpaceDurationClass,
   type SpaceResponse,
   type SpaceSeoResponse,
+  type SpaceTariffInput,
+  type SpaceTariffResponse,
   type SpacesListResponse,
   type UpdateSpaceRequest,
 } from "./spaces.js";

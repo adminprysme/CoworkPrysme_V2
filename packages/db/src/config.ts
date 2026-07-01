@@ -1,4 +1,4 @@
-import { parseServerEnv, type ServerEnv } from "@coworkprysme/shared";
+import { parseServerEnv, type ServerEnv } from "@coworkprysme/shared/server";
 
 let cachedEnv: ServerEnv | null = null;
 
