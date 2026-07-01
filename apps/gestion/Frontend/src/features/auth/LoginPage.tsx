@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AUTH_MODE, loginLocal, loginSso } from "../../lib/api.js";
 import { useAuth } from "../../app/AuthProvider.js";
+import { ThemeToggle } from "../../components/ThemeToggle.js";
 import styles from "./LoginPage.module.css";
 
 export function LoginPage() {
@@ -60,6 +61,9 @@ export function LoginPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.themeToggle}>
+        <ThemeToggle />
+      </div>
       <div className={styles.card}>
         <img src="/logo-full.png" alt="Cowork Prysme" className={styles.logo} />
         <p className={styles.subtitle}>Espace de gestion interne</p>

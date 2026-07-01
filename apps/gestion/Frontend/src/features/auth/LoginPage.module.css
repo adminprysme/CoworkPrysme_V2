@@ -1,9 +1,24 @@
 .page {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 1.5rem;
   background: var(--color-bg);
+}
+
+.themeToggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+}
+
+@media (max-width: 480px) {
+  .themeToggle {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
 }
 
 .card {
