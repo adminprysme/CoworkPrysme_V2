@@ -1,7 +1,10 @@
 import { Schema, type Types } from "mongoose";
 
-import { WEEK_DAYS, type WeekDay } from "./enums.js";
+import { DURATION_CLASSES, WEEK_DAYS, type DurationClass, type WeekDay } from "./enums.js";
 import { centsField } from "./schema-helpers.js";
+
+export const DEFAULT_SPACE_TARIFF_VAT_RATE = 20;
+export const MAX_SPACE_TARIFFS = 5;
 
 export interface Address {
   street: string;
@@ -46,6 +49,24 @@ export const equipmentSchema = new Schema<Equipment>(
   {
     key: { type: String, required: true },
     label: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+/** Punctual price grid line embedded on a space (gestion). */
+export interface SpaceTariff {
+  durationClass: DurationClass;
+  priceHT: number;
+  vatRate: number;
+  enabled: boolean;
+}
+
+export const spaceTariffSchema = new Schema<SpaceTariff>(
+  {
+    durationClass: { type: String, enum: DURATION_CLASSES, required: true },
+    priceHT: centsField({ min: 0 }),
+    vatRate: { type: Number, required: true, default: DEFAULT_SPACE_TARIFF_VAT_RATE, min: 0 },
+    enabled: { type: Boolean, required: true, default: false },
   },
   { _id: false },
 );

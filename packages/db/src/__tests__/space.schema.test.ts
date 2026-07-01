@@ -51,6 +51,7 @@ function minimalSpaceInput(
       metaTitle: "Salon Part-Dieu | Cowork Prysme",
       metaDescription: "Grande salle lumineuse.",
     },
+    tariffs: [],
   };
 }
 
@@ -104,6 +105,73 @@ describe("space schema", () => {
 
     expect(doc.validateSync()).toBeUndefined();
     expect(doc.photos[0]?.isPrimary).toBe(true);
+    void connection.close();
+  });
+
+  it("accepts embedded tariffs with integer centimes and default vatRate", () => {
+    const connection = mongoose.createConnection();
+    const Space = registerSpaceModel(connection);
+    const buildingId = new mongoose.Types.ObjectId();
+    const input = minimalSpaceInput(buildingId);
+    input.tariffs = [
+      { durationClass: "hourly", priceHT: 2500, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceHT: 15000, vatRate: 20, enabled: true },
+      { durationClass: "monthly", priceHT: 45000, vatRate: 10, enabled: false },
+    ];
+    const doc = new Space(input);
+
+    expect(doc.validateSync()).toBeUndefined();
+    expect(doc.tariffs).toHaveLength(3);
+    expect(doc.tariffs[0]?.priceHT).toBe(2500);
+    void connection.close();
+  });
+
+  it("rejects non-integer priceHT in tariffs", () => {
+    const connection = mongoose.createConnection();
+    const Space = registerSpaceModel(connection);
+    const buildingId = new mongoose.Types.ObjectId();
+    const input = minimalSpaceInput(buildingId);
+    input.tariffs = [{ durationClass: "hourly", priceHT: 25.5, vatRate: 20, enabled: true }];
+    const doc = new Space(input);
+
+    const error = doc.validateSync();
+    expect(error?.errors["tariffs.0.priceHT"]).toBeDefined();
+    void connection.close();
+  });
+
+  it("rejects duplicate durationClass in tariffs", () => {
+    const connection = mongoose.createConnection();
+    const Space = registerSpaceModel(connection);
+    const buildingId = new mongoose.Types.ObjectId();
+    const input = minimalSpaceInput(buildingId);
+    input.tariffs = [
+      { durationClass: "hourly", priceHT: 2500, vatRate: 20, enabled: true },
+      { durationClass: "hourly", priceHT: 3000, vatRate: 20, enabled: true },
+    ];
+    const doc = new Space(input);
+
+    const error = doc.validateSync();
+    expect(error?.errors.tariffs).toBeDefined();
+    void connection.close();
+  });
+
+  it("rejects more than five tariffs", () => {
+    const connection = mongoose.createConnection();
+    const Space = registerSpaceModel(connection);
+    const buildingId = new mongoose.Types.ObjectId();
+    const input = minimalSpaceInput(buildingId);
+    input.tariffs = [
+      { durationClass: "hourly", priceHT: 1000, vatRate: 20, enabled: true },
+      { durationClass: "halfday", priceHT: 2000, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceHT: 3000, vatRate: 20, enabled: true },
+      { durationClass: "weekly", priceHT: 4000, vatRate: 20, enabled: true },
+      { durationClass: "monthly", priceHT: 5000, vatRate: 20, enabled: true },
+      { durationClass: "hourly", priceHT: 6000, vatRate: 20, enabled: false },
+    ];
+    const doc = new Space(input);
+
+    const error = doc.validateSync();
+    expect(error?.errors.tariffs).toBeDefined();
     void connection.close();
   });
 });
@@ -166,6 +234,39 @@ describe("space persistence on cowork_bdd", () => {
       order: 0,
       isPrimary: true,
     });
+  });
+
+  it("persists embedded tariffs with centimes and vatRate", async () => {
+    const cowork = await getCoworkDb();
+    const Building = registerBuildingModel(cowork);
+    const Space = registerSpaceModel(cowork);
+
+    const building = await Building.create({
+      name: "Cowork Test",
+      address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
+      coordinates: { lat: 45.76, lng: 4.86 },
+      floors: [{ name: "RDC" }],
+      accessibilityHours: defaultDaySchedules(),
+      receptionHours: defaultDaySchedules(),
+      concierge: { url: "", accessCode: "" },
+      photos: [],
+      status: "active",
+    });
+
+    const input = minimalSpaceInput(building._id as mongoose.Types.ObjectId);
+    input.tariffs = [
+      { durationClass: "hourly", priceHT: 3500, vatRate: 20, enabled: true },
+      { durationClass: "halfday", priceHT: 12000, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceHT: 18000, vatRate: 20, enabled: false },
+    ];
+    const created = await Space.create(input);
+    const found = await Space.findById(created._id).lean();
+
+    expect(found?.tariffs).toEqual([
+      { durationClass: "hourly", priceHT: 3500, vatRate: 20, enabled: true },
+      { durationClass: "halfday", priceHT: 12000, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceHT: 18000, vatRate: 20, enabled: false },
+    ]);
   });
 
   it("rejects duplicate seo.slug across spaces", async () => {

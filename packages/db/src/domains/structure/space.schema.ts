@@ -8,11 +8,14 @@ import {
   buildingDayScheduleSchema,
   buildingPhotoSchema,
   equipmentSchema,
+  MAX_SPACE_TARIFFS,
   seoSchema,
+  spaceTariffSchema,
   type BuildingDaySchedule,
   type BuildingPhoto,
   type Equipment,
   type SeoMeta,
+  type SpaceTariff,
 } from "../../lib/subdocuments.js";
 
 export interface Space {
@@ -28,6 +31,7 @@ export interface Space {
   accessCode?: string;
   status: (typeof ACTIVE_STATUSES)[number];
   seo: SeoMeta;
+  tariffs: SpaceTariff[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +52,20 @@ const spaceSchema = new Schema<Space>(
     accessCode: { type: String, trim: true },
     status: { type: String, enum: ACTIVE_STATUSES, default: "active", required: true },
     seo: { type: seoSchema, required: true },
+    tariffs: {
+      type: [spaceTariffSchema],
+      default: [],
+      validate: {
+        validator(value: SpaceTariff[]) {
+          if (value.length > MAX_SPACE_TARIFFS) {
+            return false;
+          }
+          const durationClasses = value.map((tariff) => tariff.durationClass);
+          return new Set(durationClasses).size === durationClasses.length;
+        },
+        message: `tariffs: at most ${MAX_SPACE_TARIFFS} entries, each durationClass must be unique`,
+      },
+    },
   },
   { ...TIMESTAMP_OPTIONS, collection: "spaces" },
 );
@@ -68,4 +86,10 @@ export async function getSpaceModel(): Promise<SpaceModel> {
 
 export type SpaceId = Types.ObjectId;
 
-export { type BuildingDaySchedule, type BuildingPhoto, type Equipment, type SeoMeta };
+export {
+  type BuildingDaySchedule,
+  type BuildingPhoto,
+  type Equipment,
+  type SeoMeta,
+  type SpaceTariff,
+};

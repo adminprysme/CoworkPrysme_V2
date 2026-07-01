@@ -18,6 +18,7 @@ export {
   type SpaceDocument,
   type SpaceId,
   type SpaceModel,
+  type SpaceTariff,
 } from "./space.schema.js";
 export {
   getSlotClosureModel,
