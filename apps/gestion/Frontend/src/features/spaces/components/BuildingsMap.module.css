@@ -1,0 +1,58 @@
+.mapContainer {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  z-index: 0;
+}
+
+:global(.building-marker),
+:global(.building-cluster-marker) {
+  background: transparent;
+  border: 0;
+}
+
+:global(.building-marker-dot) {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid var(--color-surface);
+  background: var(--color-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+:global(.building-marker-dot.inactive) {
+  background: var(--color-text-muted);
+}
+
+:global(.building-cluster-dot) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  border: 2px solid var(--color-surface);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+:global(.building-cluster-count) {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+:global(.leaflet-container) {
+  font: inherit;
+  background: var(--color-surface);
+}
+
+:global(.marker-cluster) {
+  background: transparent;
+}
+
+:global(.marker-cluster div) {
+  background: transparent;
+}
