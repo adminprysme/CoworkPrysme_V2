@@ -9,6 +9,14 @@ export type AuthSource = z.infer<typeof AuthSourceSchema>;
 export const StaffRoleSchema = z.enum(["manager", "admin"]);
 export type StaffRole = z.infer<typeof StaffRoleSchema>;
 
+/** Includes users without gestion access (permissions directory only). */
+export const PermissionsStaffRoleSchema = z.enum(["none", "manager", "admin"]);
+export type PermissionsStaffRole = z.infer<typeof PermissionsStaffRoleSchema>;
+
+export function hasGestionAccess(role: PermissionsStaffRole | StaffRole): role is StaffRole {
+  return role === "manager" || role === "admin";
+}
+
 export const StaffPermissionsSchema = z.object({
   planning: z.boolean(),
   billing: z.boolean(),
