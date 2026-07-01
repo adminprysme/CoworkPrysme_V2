@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { OnModuleInit } from "@nestjs/common";
 import {
-  buildBuildingPhotoStorageKey,
-  isValidBuildingPhotoStorageKey,
+  buildEntityPhotoStorageKey,
+  isValidEntityPhotoStorageKey,
+  type UploadEntityType,
+} from "@coworkprysme/shared";
+import {
   parseGestionApiEnv,
   resolveStorageKeyAbsolutePath,
   resolveUploadsDir,
-} from "@coworkprysme/shared";
+} from "@coworkprysme/shared/server";
 import { fileTypeFromBuffer } from "file-type";
 import { mkdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
@@ -59,7 +62,11 @@ export class UploadsService implements OnModuleInit {
     return absolutePath;
   }
 
-  async storeBuildingPhoto(buildingId: string, buffer: Buffer): Promise<{ storageKey: string }> {
+  async storePhoto(
+    entityType: UploadEntityType,
+    entityId: string,
+    buffer: Buffer,
+  ): Promise<{ storageKey: string }> {
     const limits = this.getLimits();
 
     if (buffer.length === 0) {
@@ -76,8 +83,8 @@ export class UploadsService implements OnModuleInit {
     }
 
     const fileId = crypto.randomUUID();
-    const storageKey = buildBuildingPhotoStorageKey(buildingId, fileId);
-    if (!isValidBuildingPhotoStorageKey(storageKey)) {
+    const storageKey = buildEntityPhotoStorageKey(entityType, entityId, fileId);
+    if (!isValidEntityPhotoStorageKey(storageKey)) {
       throw new BadRequestException("Invalid storage key");
     }
 
@@ -101,8 +108,16 @@ export class UploadsService implements OnModuleInit {
     return { storageKey };
   }
 
+  async storeBuildingPhoto(buildingId: string, buffer: Buffer): Promise<{ storageKey: string }> {
+    return this.storePhoto("buildings", buildingId, buffer);
+  }
+
+  async storeSpacePhoto(spaceId: string, buffer: Buffer): Promise<{ storageKey: string }> {
+    return this.storePhoto("spaces", spaceId, buffer);
+  }
+
   async deletePhotoFile(storageKey: string): Promise<void> {
-    if (!isValidBuildingPhotoStorageKey(storageKey)) {
+    if (!isValidEntityPhotoStorageKey(storageKey)) {
       return;
     }
 
@@ -120,16 +135,24 @@ export class UploadsService implements OnModuleInit {
     }
   }
 
-  async deleteBuildingDirectory(buildingId: string): Promise<void> {
-    const buildingDir = path.resolve(this.uploadsDir, "buildings", buildingId);
+  async deleteEntityDirectory(entityType: UploadEntityType, entityId: string): Promise<void> {
+    const entityDir = path.resolve(this.uploadsDir, entityType, entityId);
     const uploadsPrefix = this.uploadsDir.endsWith(path.sep)
       ? this.uploadsDir
       : `${this.uploadsDir}${path.sep}`;
 
-    if (!buildingDir.startsWith(uploadsPrefix)) {
+    if (!entityDir.startsWith(uploadsPrefix)) {
       return;
     }
 
-    await rm(buildingDir, { recursive: true, force: true });
+    await rm(entityDir, { recursive: true, force: true });
+  }
+
+  async deleteBuildingDirectory(buildingId: string): Promise<void> {
+    return this.deleteEntityDirectory("buildings", buildingId);
+  }
+
+  async deleteSpaceDirectory(spaceId: string): Promise<void> {
+    return this.deleteEntityDirectory("spaces", spaceId);
   }
 }

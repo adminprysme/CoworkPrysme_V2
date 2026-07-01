@@ -7,6 +7,7 @@ import { BuildingsModule } from "./buildings/buildings.module.js";
 import { DbModule } from "./db/db.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
+import { SpacesModule } from "./spaces/spaces.module.js";
 import { UploadsModule } from "./uploads/uploads.module.js";
 
 @Module({
@@ -18,6 +19,7 @@ import { UploadsModule } from "./uploads/uploads.module.js";
     PermissionsModule,
     UploadsModule,
     BuildingsModule,
+    SpacesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -15,7 +15,19 @@ export class MediaController {
     @Param("filename") filename: string,
     @Res() response: Response,
   ): Promise<void> {
-    const storageKey = `buildings/${buildingId}/${filename}`;
+    await this.servePhoto(`buildings/${buildingId}/${filename}`, response);
+  }
+
+  @Get("spaces/:spaceId/:filename")
+  async serveSpacePhoto(
+    @Param("spaceId") spaceId: string,
+    @Param("filename") filename: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.servePhoto(`spaces/${spaceId}/${filename}`, response);
+  }
+
+  private async servePhoto(storageKey: string, response: Response): Promise<void> {
     const absolutePath = await this.uploads.assertReadableFile(storageKey);
 
     response.setHeader("Content-Type", "image/webp");
