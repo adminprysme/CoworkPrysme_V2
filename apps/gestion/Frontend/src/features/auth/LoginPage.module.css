@@ -5,13 +5,31 @@
   place-items: center;
   padding: 1.5rem;
   background: var(--color-bg);
+  overflow: hidden;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 15% 10%,
+      color-mix(in srgb, var(--color-primary) 18%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 90% 85%,
+      color-mix(in srgb, var(--color-secondary) 16%, transparent),
+      transparent 72%
+    );
 }
 
 .themeToggle {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  z-index: 1;
+  z-index: 2;
 }
 
 @media (max-width: 480px) {
@@ -22,58 +40,112 @@
 }
 
 .card {
-  width: min(100%, 420px);
+  position: relative;
+  z-index: 1;
+  width: min(100%, 400px);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: var(--shadow-sm);
+  border-radius: 20px;
+  padding: 2rem 1.75rem 1.75rem;
+  box-shadow:
+    0 4px 24px color-mix(in srgb, var(--color-text) 8%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent);
+  overflow: hidden;
 }
 
-.logo {
-  display: block;
-  width: min(100%, 280px);
-  height: auto;
-  margin: 0 auto 1rem;
+.cardAccent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
 }
 
-.subtitle {
-  margin: 0 0 1.5rem;
-  text-align: center;
-  color: var(--color-text-muted);
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin: 0 0 1.75rem;
+}
+
+.logoIcon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brandTitle {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  color: var(--color-text);
 }
 
 .form {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .label {
   display: grid;
-  gap: 0.35rem;
-  font-size: 0.95rem;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
 }
 
 .input {
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
   background: var(--color-surface-muted);
   color: var(--color-text);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+  color: color-mix(in srgb, var(--color-text-muted) 70%, transparent);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px var(--color-secondary-soft);
 }
 
 .button {
+  margin-top: 0.25rem;
   border: 0;
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  background: var(--color-accent);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  background: var(--color-primary);
   color: #fff;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.95rem;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .button:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: var(--color-primary-hover);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
 }
 
 .button:disabled {
@@ -83,11 +155,16 @@
 
 .error {
   margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
   color: var(--color-danger);
-  font-size: 0.92rem;
+  font-size: 0.875rem;
 }
 
 .ssoBox {
   text-align: center;
   color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
 }

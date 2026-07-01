@@ -36,8 +36,10 @@ export function LoginPage() {
         setSearchParams({});
         navigate("/dashboard", { replace: true });
       })
-      .catch(() => {
-        setError("Session expirée, reconnectez-vous via Centrale");
+      .catch((error: unknown) => {
+        setError(
+          error instanceof Error ? error.message : "Session expirée, reconnectez-vous via Centrale",
+        );
       })
       .finally(() => {
         setSsoPending(false);
@@ -52,8 +54,8 @@ export function LoginPage() {
       const me = await loginLocal(username, password);
       setUser(me);
       navigate("/dashboard", { replace: true });
-    } catch {
-      setError("Identifiants invalides");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Identifiants invalides");
     } finally {
       setLoading(false);
     }
@@ -61,12 +63,19 @@ export function LoginPage() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.backdrop} aria-hidden="true" />
+
       <div className={styles.themeToggle}>
         <ThemeToggle />
       </div>
+
       <div className={styles.card}>
-        <img src="/logo-full.png" alt="Cowork Prysme" className={styles.logo} />
-        <p className={styles.subtitle}>Espace de gestion interne</p>
+        <div className={styles.cardAccent} aria-hidden="true" />
+
+        <header className={styles.brand}>
+          <img src="/logo-icon.png" alt="" className={styles.logoIcon} />
+          <h1 className={styles.brandTitle}>GESTION</h1>
+        </header>
 
         {AUTH_MODE === "local" ? (
           <form className={styles.form} onSubmit={handleSubmit}>
@@ -77,6 +86,7 @@ export function LoginPage() {
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 autoComplete="username"
+                placeholder="prenom.nom"
                 required
               />
             </label>
@@ -88,6 +98,7 @@ export function LoginPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
+                placeholder="••••••••"
                 required
               />
             </label>

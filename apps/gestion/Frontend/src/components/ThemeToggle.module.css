@@ -19,8 +19,8 @@
 
 .toggle:hover {
   background: var(--color-surface-muted);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
 }
 
 .toggle:focus-visible {
