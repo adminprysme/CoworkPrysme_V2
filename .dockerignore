@@ -1,0 +1,15 @@
+node_modules
+.git
+.github
+**/.turbo
+**/.next/cache
+**/dist
+apps/vitrine
+apps/gestion
+*.md
+.env
+.env.*
+!.env.example
+**/.env.local
+coverage
+.husky/_

@@ -1,5 +1,17 @@
 import type { NextConfig } from "next";
 
+function getConnectSrc(): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    return "'self'";
+  }
+  try {
+    return `'self' ${new URL(apiUrl).origin}`;
+  } catch {
+    return "'self'";
+  }
+}
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -16,7 +28,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self'",
-      "connect-src 'self'",
+      `connect-src ${getConnectSrc()}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -29,6 +41,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   transpilePackages: ["@coworkprysme/shared"],
   serverExternalPackages: ["mongoose"],
   async headers() {
