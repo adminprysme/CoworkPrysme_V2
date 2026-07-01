@@ -13,21 +13,29 @@ import panelStyles from "./BuildingFormPanel.module.css";
 
 interface SpaceFormPanelProps {
   open: boolean;
+  mode?: "create" | "edit";
+  title?: string;
   floorNames: string[];
   buildingHours: DaySchedule[];
+  initialValues?: SpaceFormValues;
   onClose: () => void;
   onSubmit: (values: SpaceFormValues) => Promise<void>;
+  onRemovePersistedPhoto?: (storageKey: string) => Promise<void>;
 }
 
 export function SpaceFormPanel({
   open,
+  mode = "create",
+  title,
   floorNames,
   buildingHours,
+  initialValues,
   onClose,
   onSubmit,
+  onRemovePersistedPhoto,
 }: SpaceFormPanelProps) {
-  const [values, setValues] = useState<SpaceFormValues>(() =>
-    createEmptySpaceFormValues(floorNames, buildingHours),
+  const [values, setValues] = useState<SpaceFormValues>(
+    () => initialValues ?? createEmptySpaceFormValues(floorNames, buildingHours),
   );
   const [errors, setErrors] = useState<SpaceFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -41,9 +49,9 @@ export function SpaceFormPanel({
     if (!open) {
       return;
     }
-    setValues(createEmptySpaceFormValues(floorNames, buildingHours));
+    setValues(initialValues ?? createEmptySpaceFormValues(floorNames, buildingHours));
     setErrors({});
-  }, [open, floorNames, buildingHours]);
+  }, [open, floorNames, buildingHours, initialValues]);
 
   useEffect(() => {
     if (!open) {
@@ -81,6 +89,8 @@ export function SpaceFormPanel({
     }
   }
 
+  const panelTitle = title ?? (mode === "edit" ? "Modifier l'espace" : "Nouvel espace");
+
   return (
     <div className={panelStyles.overlay} role="presentation" onClick={handleClose}>
       <aside
@@ -91,7 +101,7 @@ export function SpaceFormPanel({
         onClick={(event) => event.stopPropagation()}
       >
         <header className={panelStyles.header}>
-          <h2 id="space-form-title">Nouvel espace</h2>
+          <h2 id="space-form-title">{panelTitle}</h2>
           <button
             type="button"
             className={panelStyles.closeBtn}
@@ -104,12 +114,13 @@ export function SpaceFormPanel({
 
         <div className={panelStyles.body}>
           <SpaceForm
-            idPrefix="create-space"
+            idPrefix={mode === "edit" ? "edit-space" : "create-space"}
             values={values}
             errors={errors}
             floorNames={floorNames}
             buildingHours={buildingHours}
             onChange={setValues}
+            onRemovePersistedPhoto={onRemovePersistedPhoto}
           />
         </div>
 

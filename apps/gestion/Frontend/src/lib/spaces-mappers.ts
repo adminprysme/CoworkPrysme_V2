@@ -3,10 +3,15 @@ import type {
   CreateSpaceRequest,
   SpaceResponse,
 } from "@coworkprysme/shared";
-import { mediaPathFromStorageKey } from "@coworkprysme/shared";
+import { DURATION_CLASS_LABELS, mediaPathFromStorageKey } from "@coworkprysme/shared";
 
 import type { BuildingPhoto } from "../features/spaces/types.js";
 import type { Space, SpaceFormValues } from "../features/spaces/space-types.js";
+import {
+  createDefaultTariffLines,
+  tariffLinesToApiInput,
+  tariffResponseToFormLines,
+} from "../features/spaces/utils/space-tariffs.js";
 import { API_URL } from "./api.js";
 
 export function spacePhotoUrl(storageKey: string): string {
@@ -46,6 +51,7 @@ export function formValuesToCreateRequest(values: SpaceFormValues): CreateSpaceR
     openingHours: values.openingHours.map((entry) => ({ ...entry })),
     accessCode: values.accessCode.trim(),
     status: values.status,
+    tariffs: tariffLinesToApiInput(values.tariffs),
   };
 }
 
@@ -63,6 +69,12 @@ export function spaceResponseToSpace(response: SpaceResponse): Space {
     accessCode: response.accessCode,
     status: response.status,
     photos: mapApiPhotosToFormPhotos(response.photos),
+    tariffs: response.tariffs.map((tariff) => ({
+      durationClass: tariff.durationClass,
+      label: DURATION_CLASS_LABELS[tariff.durationClass],
+      priceHT: tariff.priceHT,
+      vatRate: tariff.vatRate,
+    })),
   };
 }
 
@@ -96,5 +108,9 @@ export function spaceResponseToFormValues(
     accessCode: response.accessCode ?? "",
     status: response.status,
     photos: mapApiPhotosToFormPhotos(response.photos),
+    tariffs:
+      response.tariffs.length > 0
+        ? tariffResponseToFormLines(response.tariffs)
+        : createDefaultTariffLines(),
   };
 }

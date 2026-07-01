@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { createSpace, fetchSpacesByBuilding } from "../../../lib/spaces-api.js";
-import { formValuesToCreateRequest, spaceResponseToSpace } from "../../../lib/spaces-mappers.js";
-import { persistSpacePhotos } from "../../../lib/spaces-photos.js";
+import {
+  createSpace,
+  fetchSpace,
+  fetchSpacesByBuilding,
+  updateSpace,
+} from "../../../lib/spaces-api.js";
+import {
+  formValuesToCreateRequest,
+  spaceResponseToFormValues,
+  spaceResponseToSpace,
+} from "../../../lib/spaces-mappers.js";
+import { persistSpacePhotos, removePersistedSpacePhoto } from "../../../lib/spaces-photos.js";
 import type { DaySchedule } from "../types.js";
 import type { Space, SpaceFormValues, SpaceStatusFilter, SpaceTypeFilter } from "../space-types.js";
 import { filterSpaces, SpaceCard, SpaceFilters } from "./SpaceCard.js";
@@ -30,6 +39,8 @@ export function BuildingSpacesTab({
   const [statusFilter, setStatusFilter] = useState<SpaceStatusFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingSpaceId, setEditingSpaceId] = useState<string | null>(null);
+  const [editFormValues, setEditFormValues] = useState<SpaceFormValues | null>(null);
 
   const loadSpaces = useCallback(async () => {
     setLoading(true);
@@ -58,6 +69,7 @@ export function BuildingSpacesTab({
 
   const filteredSpaces = filterSpaces(spaces, typeFilter, statusFilter);
   const selectedSpace = filteredSpaces.find((space) => space.id === selectedId) ?? null;
+  const editingSpace = spaces.find((space) => space.id === editingSpaceId) ?? null;
 
   async function handleCreate(values: SpaceFormValues) {
     const created = await createSpace(buildingId, formValuesToCreateRequest(values));
@@ -66,6 +78,29 @@ export function BuildingSpacesTab({
     }
     await loadSpaces();
     setSelectedId(created.id);
+  }
+
+  async function handleUpdate(values: SpaceFormValues) {
+    if (!editingSpaceId) {
+      return;
+    }
+    await updateSpace(editingSpaceId, formValuesToCreateRequest(values));
+    if (values.photos.length > 0) {
+      await persistSpacePhotos(editingSpaceId, values.photos);
+    }
+    await loadSpaces();
+    setSelectedId(editingSpaceId);
+  }
+
+  function openEdit(space: Space) {
+    void fetchSpace(space.id)
+      .then((response) => {
+        setEditFormValues(spaceResponseToFormValues(response, buildingHours));
+        setEditingSpaceId(space.id);
+      })
+      .catch(() => {
+        setError("Impossible de charger cet espace pour modification.");
+      });
   }
 
   return (
@@ -133,15 +168,37 @@ export function BuildingSpacesTab({
           )}
         </section>
 
-        <SpaceDetailPanel space={selectedSpace} />
+        <SpaceDetailPanel space={selectedSpace} onEdit={openEdit} />
       </div>
 
       <SpaceFormPanel
         open={formOpen}
+        mode="create"
         floorNames={floorNames}
         buildingHours={buildingHours}
         onClose={() => setFormOpen(false)}
         onSubmit={handleCreate}
+      />
+
+      <SpaceFormPanel
+        open={editingSpaceId !== null}
+        mode="edit"
+        title={editingSpace ? `Modifier ${editingSpace.name}` : "Modifier l'espace"}
+        floorNames={floorNames}
+        buildingHours={buildingHours}
+        initialValues={editFormValues ?? undefined}
+        onClose={() => {
+          setEditingSpaceId(null);
+          setEditFormValues(null);
+        }}
+        onSubmit={handleUpdate}
+        onRemovePersistedPhoto={async (storageKey) => {
+          if (!editingSpaceId) {
+            return;
+          }
+          await removePersistedSpacePhoto(editingSpaceId, storageKey);
+          await loadSpaces();
+        }}
       />
     </div>
   );

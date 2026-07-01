@@ -66,6 +66,9 @@ export function validateBuildingForm(values: BuildingFormValues): BuildingFormEr
 }
 
 export function validatePhotoFile(file: File): string | null {
+  if (file.size === 0) {
+    return "Le fichier image est vide.";
+  }
   if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
     return "Format non pris en charge. Utilisez JPG, PNG ou WebP.";
   }

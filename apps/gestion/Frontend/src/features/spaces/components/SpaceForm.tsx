@@ -4,6 +4,7 @@ import { SPACE_TYPE_LABELS } from "../space-types.js";
 import type { SpaceFormErrors } from "../utils/space-validation.js";
 import { EquipmentPicker } from "./EquipmentPicker.js";
 import { PhotoUploadGallery } from "./PhotoUploadGallery.js";
+import { SpaceTariffsEditor } from "./SpaceTariffsEditor.js";
 import { WeeklyScheduleEditor } from "./WeeklyScheduleEditor.js";
 import styles from "./SpaceForm.module.css";
 
@@ -14,6 +15,7 @@ interface SpaceFormProps {
   floorNames: string[];
   buildingHours: DaySchedule[];
   onChange: (values: SpaceFormValues) => void;
+  onRemovePersistedPhoto?: (storageKey: string) => Promise<void>;
 }
 
 export function SpaceForm({
@@ -23,6 +25,7 @@ export function SpaceForm({
   floorNames,
   buildingHours,
   onChange,
+  onRemovePersistedPhoto,
 }: SpaceFormProps) {
   const capacityLabel =
     values.type === "private_office" ? "Nombre de postes" : "Capacité (personnes)";
@@ -195,10 +198,19 @@ export function SpaceForm({
       </section>
 
       <section className={styles.section}>
+        <SpaceTariffsEditor
+          tariffs={values.tariffs}
+          error={errors.tariffs}
+          onChange={(tariffs) => onChange({ ...values, tariffs })}
+        />
+      </section>
+
+      <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Photos de l&apos;espace</h3>
         <PhotoUploadGallery
           photos={values.photos}
           onChange={(photos) => onChange({ ...values, photos })}
+          onRemovePersisted={onRemovePersistedPhoto}
         />
       </section>
     </div>

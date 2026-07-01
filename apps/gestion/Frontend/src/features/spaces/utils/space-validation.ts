@@ -1,9 +1,10 @@
 import type { SpaceFormValues } from "../space-types.js";
 import type { DaySchedule } from "../types.js";
 import { createDefaultDaySchedules } from "./schedule.js";
+import { createDefaultTariffLines } from "./space-tariffs.js";
 
 export type SpaceFormErrors = Partial<
-  Record<"name" | "floor" | "capacity" | "equipments" | "photos", string>
+  Record<"name" | "floor" | "capacity" | "equipments" | "photos" | "tariffs", string>
 >;
 
 export function validateSpaceForm(values: SpaceFormValues): SpaceFormErrors {
@@ -19,6 +20,18 @@ export function validateSpaceForm(values: SpaceFormValues): SpaceFormErrors {
 
   if (!Number.isFinite(values.capacity) || values.capacity < 1) {
     errors.capacity = "La capacité doit être d'au moins 1 personne.";
+  }
+
+  const enabledTariffs = values.tariffs.filter((tariff) => tariff.enabled);
+  for (const tariff of enabledTariffs) {
+    if (!Number.isFinite(tariff.priceEuros) || tariff.priceEuros < 0) {
+      errors.tariffs = "Chaque tarif activé doit avoir un prix HT valide.";
+      break;
+    }
+    if (!Number.isFinite(tariff.vatRate) || tariff.vatRate < 0) {
+      errors.tariffs = "Chaque tarif activé doit avoir un taux de TVA valide.";
+      break;
+    }
   }
 
   return errors;
@@ -44,5 +57,6 @@ export function createEmptySpaceFormValues(
     accessCode: "",
     status: "active",
     photos: [],
+    tariffs: createDefaultTariffLines(),
   };
 }

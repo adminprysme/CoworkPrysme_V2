@@ -1,7 +1,10 @@
 import { useState } from "react";
 
+import { formatCentsAsEuroString } from "@coworkprysme/shared";
+
 import type { Space } from "../space-types.js";
 import { SPACE_TYPE_LABELS } from "../space-types.js";
+import { formatTtcFromResponse } from "../utils/space-tariffs.js";
 import { WEEK_DAY_LABELS, type WeekDay } from "../types.js";
 import styles from "./SpaceDetailPanel.module.css";
 
@@ -9,9 +12,10 @@ type DetailTab = "info" | "pricing";
 
 interface SpaceDetailPanelProps {
   space: Space | null;
+  onEdit?: (space: Space) => void;
 }
 
-export function SpaceDetailPanel({ space }: SpaceDetailPanelProps) {
+export function SpaceDetailPanel({ space, onEdit }: SpaceDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>("info");
 
   if (!space) {
@@ -61,16 +65,23 @@ export function SpaceDetailPanel({ space }: SpaceDetailPanelProps) {
 
           <div className={styles.headerRow}>
             <h2 className={styles.title}>{space.name}</h2>
-            <div className={styles.badges}>
-              <span className={styles.badgeType}>{SPACE_TYPE_LABELS[space.type]}</span>
-              <span
-                className={[
-                  styles.badgeStatus,
-                  space.status === "active" ? styles.badgeActive : styles.badgeInactive,
-                ].join(" ")}
-              >
-                {space.status === "active" ? "Actif" : "Inactif"}
-              </span>
+            <div className={styles.headerActions}>
+              {onEdit ? (
+                <button type="button" className={styles.editBtn} onClick={() => onEdit(space)}>
+                  Modifier
+                </button>
+              ) : null}
+              <div className={styles.badges}>
+                <span className={styles.badgeType}>{SPACE_TYPE_LABELS[space.type]}</span>
+                <span
+                  className={[
+                    styles.badgeStatus,
+                    space.status === "active" ? styles.badgeActive : styles.badgeInactive,
+                  ].join(" ")}
+                >
+                  {space.status === "active" ? "Actif" : "Inactif"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -136,10 +147,35 @@ export function SpaceDetailPanel({ space }: SpaceDetailPanelProps) {
         </div>
       ) : (
         <div className={styles.body} role="tabpanel">
-          <p className={styles.stubMessage}>Tarifs — à venir</p>
-          <p className={styles.stubHint}>
-            La gestion des tarifs par espace sera disponible dans une prochaine étape.
-          </p>
+          {space.tariffs.length === 0 ? (
+            <p className={styles.emptyTariffs}>Aucun tarif activé pour cet espace.</p>
+          ) : (
+            <table className={styles.tariffTable}>
+              <thead>
+                <tr>
+                  <th scope="col">Durée</th>
+                  <th scope="col">Prix HT</th>
+                  <th scope="col">TVA</th>
+                  <th scope="col">TTC indicatif</th>
+                </tr>
+              </thead>
+              <tbody>
+                {space.tariffs.map((tariff) => (
+                  <tr key={tariff.durationClass}>
+                    <td>{tariff.label}</td>
+                    <td>{formatCentsAsEuroString(tariff.priceHT)} €</td>
+                    <td>{tariff.vatRate} %</td>
+                    <td>{formatTtcFromResponse(tariff)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {onEdit ? (
+            <button type="button" className={styles.editBtn} onClick={() => onEdit(space)}>
+              Modifier les tarifs
+            </button>
+          ) : null}
         </div>
       )}
     </aside>
