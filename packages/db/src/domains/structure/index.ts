@@ -2,9 +2,14 @@ export {
   getBuildingModel,
   registerBuildingModel,
   type Building,
+  type BuildingConcierge,
+  type BuildingDaySchedule,
   type BuildingDocument,
+  type BuildingFloor,
   type BuildingId,
   type BuildingModel,
+  type BuildingPhoto,
+  type Coordinates,
 } from "./building.schema.js";
 export {
   getSpaceModel,

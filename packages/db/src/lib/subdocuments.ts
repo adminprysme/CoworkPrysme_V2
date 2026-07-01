@@ -1,5 +1,6 @@
 import { Schema, type Types } from "mongoose";
 
+import { WEEK_DAYS, type WeekDay } from "./enums.js";
 import { centsField } from "./schema-helpers.js";
 
 export interface Address {
@@ -60,6 +61,100 @@ export const photoSchema = new Schema<Photo>(
     storageKey: { type: String, required: true },
     alt: { type: String, required: true },
     order: { type: Number, required: true },
+  },
+  { _id: false },
+);
+
+const TIME_OF_DAY_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export interface BuildingFloor {
+  name: string;
+}
+
+export const buildingFloorSchema = new Schema<BuildingFloor>(
+  {
+    name: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
+/** Weekly schedule entry for building access or reception hours. */
+export interface BuildingDaySchedule {
+  day: WeekDay;
+  is24h: boolean;
+  open: string;
+  close: string;
+}
+
+export const buildingDayScheduleSchema = new Schema<BuildingDaySchedule>(
+  {
+    day: {
+      type: String,
+      required: true,
+      enum: WEEK_DAYS,
+    },
+    is24h: { type: Boolean, required: true, default: false },
+    open: {
+      type: String,
+      required: true,
+      default: "00:00",
+      validate: {
+        validator: (value: string) => TIME_OF_DAY_PATTERN.test(value),
+        message: "open must be a valid HH:mm time",
+      },
+    },
+    close: {
+      type: String,
+      required: true,
+      default: "00:00",
+      validate: {
+        validator: (value: string) => TIME_OF_DAY_PATTERN.test(value),
+        message: "close must be a valid HH:mm time",
+      },
+    },
+  },
+  { _id: false },
+);
+
+export interface BuildingConcierge {
+  url: string;
+  accessCode: string;
+}
+
+export const buildingConciergeSchema = new Schema<BuildingConcierge>(
+  {
+    url: { type: String, default: "", trim: true },
+    accessCode: { type: String, default: "", trim: true },
+  },
+  { _id: false },
+);
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export const coordinatesSchema = new Schema<Coordinates>(
+  {
+    lat: { type: Number, required: true, min: -90, max: 90 },
+    lng: { type: Number, required: true, min: -180, max: 180 },
+  },
+  { _id: false },
+);
+
+export interface BuildingPhoto {
+  storageKey: string;
+  alt?: string;
+  order: number;
+  isPrimary: boolean;
+}
+
+export const buildingPhotoSchema = new Schema<BuildingPhoto>(
+  {
+    storageKey: { type: String, required: true, trim: true },
+    alt: { type: String, trim: true },
+    order: { type: Number, required: true, min: 0 },
+    isPrimary: { type: Boolean, required: true, default: false },
   },
   { _id: false },
 );

@@ -3,6 +3,17 @@
 export const ACTIVE_STATUSES = ["active", "inactive"] as const;
 export type ActiveStatus = (typeof ACTIVE_STATUSES)[number];
 
+export const WEEK_DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+export type WeekDay = (typeof WEEK_DAYS)[number];
+
 export const SPACE_TYPES = ["meeting_room", "private_office"] as const;
 export type SpaceType = (typeof SPACE_TYPES)[number];
 
@@ -43,7 +54,7 @@ export type RetentionStatus = (typeof RETENTION_STATUSES)[number];
 export const CARDEX_DOCUMENT_KINDS = ["rib", "id", "insurance"] as const;
 export type CardexDocumentKind = (typeof CARDEX_DOCUMENT_KINDS)[number];
 
-export const STAFF_ROLES = ["manager", "admin"] as const;
+export const STAFF_ROLES = ["none", "manager", "admin"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const STAFF_STATUSES = ["active", "revoked"] as const;
