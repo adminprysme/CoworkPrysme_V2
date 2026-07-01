@@ -9,7 +9,9 @@
     "./prettier": "./prettier.config.js",
     "./typescript/base": "./typescript/base.json",
     "./typescript/nextjs": "./typescript/nextjs.json",
-    "./typescript/library": "./typescript/library.json"
+    "./typescript/library": "./typescript/library.json",
+    "./typescript/nestjs": "./typescript/nestjs.json",
+    "./typescript/vite": "./typescript/vite.json"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
