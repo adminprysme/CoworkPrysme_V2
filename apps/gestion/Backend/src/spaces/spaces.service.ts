@@ -159,7 +159,7 @@ export class SpacesService {
     const payload = mapRequestToDbDocument(parsed.data, building._id as Types.ObjectId, seo);
 
     const Space = await getSpaceModel();
-    const doc = await Space.create(payload);
+    const doc = await Space.create({ ...payload, photos: [] });
     const saved = await Space.findById(doc._id).lean().exec();
     if (!saved) {
       throw new NotFoundException();

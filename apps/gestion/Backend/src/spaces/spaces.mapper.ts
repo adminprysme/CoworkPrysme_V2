@@ -4,6 +4,7 @@ import {
   SpaceResponseSchema,
   buildSpaceSeoMeta,
   iterateSlugCandidates,
+  mapTariffInputsToDb,
   slugifySpaceName,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
@@ -23,11 +24,15 @@ function normalizeDescription(description: string | undefined): string | undefin
   return normalizeOptionalString(description);
 }
 
+export function mapTariffsToDb(tariffs: CreateSpaceRequest["tariffs"]) {
+  return mapTariffInputsToDb(tariffs);
+}
+
 export function mapRequestToDbDocument(
   input: CreateSpaceRequest,
   buildingId: Types.ObjectId,
   seo: Space["seo"],
-): Omit<Space, "createdAt" | "updatedAt"> {
+): Omit<Space, "createdAt" | "updatedAt" | "photos"> {
   return {
     buildingId,
     type: input.type,
@@ -46,9 +51,9 @@ export function mapRequestToDbDocument(
       close: entry.closeTime,
     })),
     accessCode: normalizeAccessCode(input.accessCode),
-    photos: [],
     status: input.status,
     seo,
+    tariffs: mapTariffsToDb(input.tariffs),
   };
 }
 
@@ -84,6 +89,11 @@ export function mapSpaceToResponse(doc: SpaceLean): SpaceResponse {
       metaTitle: doc.seo.metaTitle,
       metaDescription: doc.seo.metaDescription,
     },
+    tariffs: doc.tariffs.map((tariff) => ({
+      durationClass: tariff.durationClass,
+      priceHT: tariff.priceHT,
+      vatRate: tariff.vatRate,
+    })),
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   });

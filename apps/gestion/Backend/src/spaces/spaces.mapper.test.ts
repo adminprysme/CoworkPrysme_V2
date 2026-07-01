@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { CreateSpaceRequest } from "@coworkprysme/shared";
 
 import {
-  baseSlugForSpaceName,
   mapRequestToDbDocument,
   mapSpaceToResponse,
   resolveUniqueSlug,
+  baseSlugForSpaceName,
 } from "./spaces.mapper.js";
 
 const sampleRequest: CreateSpaceRequest = {
@@ -27,6 +27,7 @@ const sampleRequest: CreateSpaceRequest = {
   ],
   accessCode: "4821",
   status: "active",
+  tariffs: [],
 };
 
 describe("spaces.mapper", () => {
@@ -78,6 +79,7 @@ describe("spaces.mapper", () => {
         metaTitle: "Salon Part-Dieu | Cowork Prysme",
         metaDescription: "Grande salle lumineuse.",
       },
+      tariffs: [{ durationClass: "hourly", priceHT: 1999, vatRate: 20, enabled: true }],
       createdAt: now,
       updatedAt: now,
     });
@@ -86,6 +88,32 @@ describe("spaces.mapper", () => {
     expect(response.accessCode).toBe("4821");
     expect(response.seo.slug).toBe("salon-part-dieu");
     expect(response.photos[0]?.isPrimary).toBe(true);
+    expect(response.tariffs[0]?.priceHT).toBe(1999);
+  });
+
+  it("maps tariff euros to centimes for MongoDB", () => {
+    const buildingId = "507f1f77bcf86cd799439011" as never;
+    const dbDoc = mapRequestToDbDocument(
+      {
+        ...sampleRequest,
+        tariffs: [
+          { durationClass: "hourly", priceEuros: 19.99, vatRate: 20, enabled: true },
+          { durationClass: "daily", priceEuros: 20, vatRate: 20, enabled: true },
+          { durationClass: "weekly", priceEuros: 100, vatRate: 20, enabled: false },
+        ],
+      },
+      buildingId,
+      {
+        slug: "salon-part-dieu",
+        metaTitle: "Salon Part-Dieu | Cowork Prysme",
+        metaDescription: "Grande salle lumineuse.",
+      },
+    );
+
+    expect(dbDoc.tariffs).toEqual([
+      { durationClass: "hourly", priceHT: 1999, vatRate: 20, enabled: true },
+      { durationClass: "daily", priceHT: 2000, vatRate: 20, enabled: true },
+    ]);
   });
 
   it("deduplicates slug candidates for two spaces with the same name", () => {
