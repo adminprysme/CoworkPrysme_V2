@@ -5,6 +5,10 @@
   max-width: 960px;
 }
 
+.pageWide {
+  max-width: 1200px;
+}
+
 .breadcrumb {
   display: flex;
   flex-wrap: wrap;

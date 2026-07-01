@@ -11,6 +11,7 @@ import {
   removePersistedBuildingPhoto,
 } from "../../../lib/buildings-photos.js";
 import { BuildingForm } from "../components/BuildingForm.js";
+import { BuildingSpacesTab } from "../components/BuildingSpacesTab.js";
 import { revokePhotoUrls } from "../utils/photos.js";
 import type { BuildingFormValues } from "../types.js";
 import { validateBuildingForm, type BuildingFormErrors } from "../utils/validation.js";
@@ -157,7 +158,9 @@ export function BuildingDetailPage() {
   }
 
   return (
-    <div className={styles.page}>
+    <div
+      className={[styles.page, tab === "spaces" ? styles.pageWide : ""].filter(Boolean).join(" ")}
+    >
       <nav aria-label="Fil d'Ariane">
         <ol className={styles.breadcrumb}>
           <li>
@@ -235,9 +238,13 @@ export function BuildingDetailPage() {
           </>
         ) : null}
 
-        {tab === "spaces" ? (
-          <p className={styles.stubMessage}>Création et gestion des espaces — à venir</p>
-        ) : null}
+        <div hidden={tab !== "spaces"}>
+          <BuildingSpacesTab
+            buildingId={currentBuildingId}
+            buildingName={buildingName}
+            floorNames={formValues.floors.map((floor) => floor.name)}
+          />
+        </div>
 
         {tab === "danger" ? (
           <div className={styles.dangerPanel}>
