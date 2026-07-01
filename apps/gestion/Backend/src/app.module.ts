@@ -3,9 +3,11 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module.js";
+import { BuildingsModule } from "./buildings/buildings.module.js";
 import { DbModule } from "./db/db.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
+import { UploadsModule } from "./uploads/uploads.module.js";
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { PermissionsModule } from "./permissions/permissions.module.js";
     HealthModule,
     AuthModule,
     PermissionsModule,
+    UploadsModule,
+    BuildingsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
