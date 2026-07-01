@@ -14,6 +14,8 @@ export * from "./domains/pricing/index.js";
 export * from "./domains/billing/index.js";
 export * from "./domains/peripheral/index.js";
 
+export * from "./domains/auth/index.js";
+
 export {
   COWORK_COLLECTION_NAMES,
   registerAllCoworkModels,

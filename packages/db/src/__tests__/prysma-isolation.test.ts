@@ -60,7 +60,7 @@ describe("prysma_bdd isolation", () => {
 
     it("registers all cowork models only on the cowork connection", async () => {
       const cowork = await getCoworkDb();
-      expect(Object.keys(cowork.models).length).toBeGreaterThanOrEqual(21);
+      expect(Object.keys(cowork.models).length).toBeGreaterThanOrEqual(22);
     });
 
     it("leaves the prysma connection with zero registered models", async () => {

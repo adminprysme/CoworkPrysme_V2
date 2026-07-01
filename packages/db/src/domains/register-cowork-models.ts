@@ -1,5 +1,6 @@
 import type { Connection } from "mongoose";
 
+import { registerStaffSessionModel } from "./auth/index.js";
 import { registerCardexModel, registerClientAccountModel } from "./client/index.js";
 import { registerInvoiceModel, registerPaymentModel, registerQuoteModel } from "./billing/index.js";
 import {
@@ -37,6 +38,7 @@ export function registerAllCoworkModels(connection: Connection): void {
   registerClientAccountModel(connection);
   registerCardexModel(connection);
   registerStaffProfileModel(connection);
+  registerStaffSessionModel(connection);
   registerAuditLogModel(connection);
   registerTariffModel(connection);
   registerServiceModel(connection);
@@ -61,6 +63,7 @@ export const COWORK_COLLECTION_NAMES = [
   "clientAccounts",
   "cardex",
   "staffProfiles",
+  "staffSessions",
   "auditLogs",
   "tariffs",
   "services",
