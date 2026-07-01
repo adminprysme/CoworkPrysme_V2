@@ -1,6 +1,7 @@
 import type { BuildingFormValues, BuildingStatus } from "../types.js";
 import { defaultFloorNames } from "../utils/schedule.js";
 import type { BuildingFormErrors } from "../utils/validation.js";
+import { BUILDING_DESCRIPTION_MAX_LENGTH } from "@coworkprysme/shared";
 import { AddressAutocomplete } from "./AddressAutocomplete.js";
 import { PhotoUploadGallery } from "./PhotoUploadGallery.js";
 import { WeeklyScheduleEditor } from "./WeeklyScheduleEditor.js";
@@ -54,6 +55,23 @@ export function BuildingForm({
               onChange={(event) => onChange({ ...values, name: event.target.value })}
             />
             {errors.name ? <p className={styles.fieldError}>{errors.name}</p> : null}
+          </label>
+
+          <label className={styles.field}>
+            <span className={styles.label}>Description</span>
+            <textarea
+              id={`${idPrefix}-description`}
+              className={styles.textarea}
+              rows={4}
+              maxLength={BUILDING_DESCRIPTION_MAX_LENGTH}
+              placeholder="Texte affiché sur le site vitrine (texte brut, sans mise en forme HTML)"
+              value={values.description}
+              onChange={(event) => onChange({ ...values, description: event.target.value })}
+            />
+            <p className={styles.charCount}>
+              {values.description.length} / {BUILDING_DESCRIPTION_MAX_LENGTH}
+            </p>
+            {errors.description ? <p className={styles.fieldError}>{errors.description}</p> : null}
           </label>
 
           <div className={styles.statusToggle} role="group" aria-label="Statut du bâtiment">

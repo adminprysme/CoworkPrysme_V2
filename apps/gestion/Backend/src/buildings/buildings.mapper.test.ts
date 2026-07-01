@@ -51,6 +51,7 @@ describe("buildings.mapper", () => {
     const response = mapBuildingToResponse({
       _id: "507f1f77bcf86cd799439011" as never,
       name: "Cowork Test",
+      description: "  Espace lumineux  ",
       address: {
         street: "47 avenue Leclerc",
         zip: "69003",
@@ -87,6 +88,19 @@ describe("buildings.mapper", () => {
     expect(response.address.postalCode).toBe("69003");
     expect(response.address.country).toBe("France");
     expect(response.concierge.link).toBe("https://example.com");
+    expect(response.description).toBe("Espace lumineux");
     expect(response.accessibilityHours[0]?.openTime).toBe("08:00");
+  });
+
+  it("persists description on create and clears empty values", () => {
+    const withDescription = { ...sampleRequest, description: "  Accueil chaleureux  " };
+    const dbDoc = mapRequestToDbDocument(withDescription, { lat: 45.76, lng: 4.86 });
+    expect(dbDoc.description).toBe("Accueil chaleureux");
+
+    const cleared = mapRequestToDbDocument(
+      { ...sampleRequest, description: "" },
+      { lat: 45.76, lng: 4.86 },
+    );
+    expect(cleared.description).toBeUndefined();
   });
 });

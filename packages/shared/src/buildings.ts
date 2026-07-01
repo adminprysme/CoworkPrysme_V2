@@ -40,8 +40,17 @@ export const BuildingConciergeInputSchema = z.object({
   accessCode: z.string().trim(),
 });
 
+export const BUILDING_DESCRIPTION_MAX_LENGTH = 2000;
+
+export const BuildingDescriptionSchema = z
+  .string()
+  .trim()
+  .max(BUILDING_DESCRIPTION_MAX_LENGTH)
+  .optional();
+
 export const CreateBuildingRequestSchema = z.object({
   name: z.string().trim().min(1),
+  description: BuildingDescriptionSchema,
   address: BuildingAddressInputSchema,
   floors: z.array(BuildingFloorInputSchema).min(1),
   status: BuildingStatusSchema,
@@ -78,6 +87,7 @@ export const BuildingPhotoResponseSchema = z.object({
 export const BuildingResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
+  description: BuildingDescriptionSchema,
   address: BuildingAddressResponseSchema,
   coordinates: BuildingCoordinatesResponseSchema,
   floors: z.array(BuildingFloorResponseSchema),

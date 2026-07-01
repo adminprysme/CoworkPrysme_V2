@@ -125,6 +125,9 @@ export class BuildingsService {
     const coordinates = await this.geocoding.geocodeAddress(input.address);
     const payload = mapRequestToDbDocument(input, coordinates);
     existing.set(payload);
+    if (payload.description === undefined) {
+      existing.set("description", undefined);
+    }
     await existing.save();
 
     const saved = await Building.findById(existing._id).lean().exec();

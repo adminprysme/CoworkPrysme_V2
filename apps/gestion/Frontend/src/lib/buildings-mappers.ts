@@ -45,6 +45,7 @@ export const apiPhotosToFormPhotos = mapApiPhotosToFormPhotos;
 export function formValuesToCreateRequest(values: BuildingFormValues): CreateBuildingRequest {
   return {
     name: values.name,
+    description: values.description.trim(),
     address: { ...values.address },
     floors: values.floors.map((floor) => ({ name: floor.name })),
     status: values.status,
@@ -58,6 +59,7 @@ export function buildingResponseToBuilding(response: BuildingResponse): Building
   return {
     id: response.id,
     name: response.name,
+    description: response.description,
     address: { ...response.address },
     lat: response.coordinates.lat,
     lng: response.coordinates.lng,
@@ -73,6 +75,7 @@ export function buildingResponseToBuilding(response: BuildingResponse): Building
 export function buildingResponseToFormValues(response: BuildingResponse): BuildingFormValues {
   return {
     name: response.name,
+    description: response.description ?? "",
     address: { ...response.address },
     lat: response.coordinates.lat,
     lng: response.coordinates.lng,
@@ -88,6 +91,7 @@ export function buildingResponseToFormValues(response: BuildingResponse): Buildi
 export function createEmptyBuildingFormValues(): BuildingFormValues {
   return {
     name: "",
+    description: "",
     address: {
       street: "",
       postalCode: "",

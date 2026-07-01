@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BUILDING_DESCRIPTION_MAX_LENGTH,
   CreateBuildingRequestSchema,
   normalizeCountryFromDb,
   normalizeCountryToDb,
@@ -57,6 +58,28 @@ describe("CreateBuildingRequestSchema", () => {
       ),
     };
     expect(CreateBuildingRequestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("accepts an optional description up to the max length", () => {
+    const withDescription = {
+      ...validPayload,
+      description: "Espace lumineux au cœur de Lyon.",
+    };
+    expect(CreateBuildingRequestSchema.safeParse(withDescription).success).toBe(true);
+  });
+
+  it("rejects descriptions longer than the max length", () => {
+    const tooLong = {
+      ...validPayload,
+      description: "x".repeat(BUILDING_DESCRIPTION_MAX_LENGTH + 1),
+    };
+    expect(CreateBuildingRequestSchema.safeParse(tooLong).success).toBe(false);
+  });
+
+  it("accepts an empty description string", () => {
+    expect(
+      CreateBuildingRequestSchema.safeParse({ ...validPayload, description: "" }).success,
+    ).toBe(true);
   });
 });
 

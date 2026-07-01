@@ -41,6 +41,7 @@ export interface BuildingConcierge {
 export interface Building {
   id: string;
   name: string;
+  description?: string;
   address: BuildingAddress;
   lat: number;
   lng: number;
@@ -54,6 +55,7 @@ export interface Building {
 
 export interface BuildingFormValues {
   name: string;
+  description: string;
   address: BuildingAddress;
   lat: number | null;
   lng: number | null;

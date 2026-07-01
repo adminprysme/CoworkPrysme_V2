@@ -1,3 +1,5 @@
+import { BUILDING_DESCRIPTION_MAX_LENGTH } from "@coworkprysme/shared";
+
 import { ACCEPTED_IMAGE_TYPES, MAX_PHOTO_SIZE_BYTES, type BuildingFormValues } from "../types.js";
 
 const URL_PATTERN = /^https?:\/\/.+/i;
@@ -5,6 +7,7 @@ const URL_PATTERN = /^https?:\/\/.+/i;
 export type BuildingFormErrors = Partial<
   Record<
     | "name"
+    | "description"
     | "street"
     | "postalCode"
     | "city"
@@ -22,6 +25,10 @@ export function validateBuildingForm(values: BuildingFormValues): BuildingFormEr
 
   if (!values.name.trim()) {
     errors.name = "Le nom du bâtiment est requis.";
+  }
+
+  if (values.description.length > BUILDING_DESCRIPTION_MAX_LENGTH) {
+    errors.description = `La description ne peut pas dépasser ${BUILDING_DESCRIPTION_MAX_LENGTH} caractères.`;
   }
 
   if (!values.address.street.trim()) {
@@ -71,6 +78,7 @@ export function validatePhotoFile(file: File): string | null {
 export function createEmptyFormValues(): BuildingFormValues {
   return {
     name: "",
+    description: "",
     address: {
       street: "",
       postalCode: "",

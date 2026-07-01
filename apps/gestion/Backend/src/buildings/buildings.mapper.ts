@@ -9,12 +9,18 @@ import type { Types } from "mongoose";
 
 type BuildingLean = Building & { _id: Types.ObjectId };
 
+function normalizeBuildingDescription(description: string | undefined): string | undefined {
+  const trimmed = description?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 export function mapRequestToDbDocument(
   input: CreateBuildingRequest,
   coordinates: { lat: number; lng: number },
 ): Omit<Building, "createdAt" | "updatedAt"> {
   return {
     name: input.name.trim(),
+    description: normalizeBuildingDescription(input.description),
     address: {
       street: input.address.street.trim(),
       zip: input.address.postalCode.trim(),
@@ -48,6 +54,7 @@ export function mapBuildingToResponse(doc: BuildingLean): BuildingResponse {
   return BuildingResponseSchema.parse({
     id: doc._id.toString(),
     name: doc.name,
+    description: normalizeBuildingDescription(doc.description),
     address: {
       street: doc.address.street,
       postalCode: doc.address.zip,

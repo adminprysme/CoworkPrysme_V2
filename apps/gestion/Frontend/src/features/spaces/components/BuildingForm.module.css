@@ -53,9 +53,29 @@
   color: var(--color-text);
 }
 
-.input:focus-visible {
+.textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+  min-height: 5.5rem;
+}
+
+.input:focus-visible,
+.textarea:focus-visible {
   outline: 2px solid var(--color-secondary);
   outline-offset: 1px;
+}
+
+.charCount {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
 }
 
 .fieldError {
