@@ -1,17 +1,19 @@
 import { Schema, type Connection, type HydratedDocument, type Model, type Types } from "mongoose";
 
+import { getCoworkDb } from "../../connection.js";
 import { ACTIVE_STATUSES, SPACE_TYPES } from "../../lib/enums.js";
 import { registerModel } from "../../lib/register-model.js";
 import { objectIdRef, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
 import {
+  buildingDayScheduleSchema,
+  buildingPhotoSchema,
   equipmentSchema,
-  photoSchema,
   seoSchema,
+  type BuildingDaySchedule,
+  type BuildingPhoto,
   type Equipment,
-  type Photo,
   type SeoMeta,
 } from "../../lib/subdocuments.js";
-import { getCoworkDb } from "../../connection.js";
 
 export interface Space {
   buildingId: Types.ObjectId;
@@ -21,8 +23,8 @@ export interface Space {
   floor?: string | number;
   capacity: number;
   equipments: Equipment[];
-  photos: Photo[];
-  openingHours?: Record<string, unknown>;
+  photos: BuildingPhoto[];
+  openingHours: BuildingDaySchedule[];
   accessCode?: string;
   status: (typeof ACTIVE_STATUSES)[number];
   seo: SeoMeta;
@@ -36,14 +38,14 @@ const spaceSchema = new Schema<Space>(
   {
     buildingId: objectIdRef("Building"),
     type: { type: String, enum: SPACE_TYPES, required: true },
-    name: { type: String, required: true },
-    description: { type: String },
+    name: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
     floor: { type: Schema.Types.Mixed },
     capacity: { type: Number, required: true, min: 1 },
     equipments: { type: [equipmentSchema], default: [] },
-    photos: { type: [photoSchema], default: [] },
-    openingHours: { type: Schema.Types.Mixed },
-    accessCode: { type: String },
+    photos: { type: [buildingPhotoSchema], default: [] },
+    openingHours: { type: [buildingDayScheduleSchema], default: [] },
+    accessCode: { type: String, trim: true },
     status: { type: String, enum: ACTIVE_STATUSES, default: "active", required: true },
     seo: { type: seoSchema, required: true },
   },
@@ -65,3 +67,5 @@ export async function getSpaceModel(): Promise<SpaceModel> {
 }
 
 export type SpaceId = Types.ObjectId;
+
+export { type BuildingDaySchedule, type BuildingPhoto, type Equipment, type SeoMeta };
