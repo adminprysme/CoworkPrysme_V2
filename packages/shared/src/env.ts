@@ -86,8 +86,14 @@ export const VitrineWebEnvSchema = createVitrineWebEnvSchema(process.env);
 
 export type VitrineWebEnv = z.infer<ReturnType<typeof createVitrineWebEnvSchema>>;
 
+const authModeSchema = z.enum(["local", "sso"]);
+
+const cookieSameSiteSchema = z.enum(["lax", "none", "strict"]).default("lax");
+
 export const GestionWebEnvSchema = z.object({
   VITE_API_URL: z.string().url(),
+  VITE_AUTH_MODE: authModeSchema.default("local"),
+  VITE_CENTRALE_HOME_URL: z.string().url().optional(),
 });
 
 export type GestionWebEnv = z.infer<typeof GestionWebEnvSchema>;
@@ -103,12 +109,44 @@ export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
 
 export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
-  z.object({
-    MONGODB_URI: mongoUriSchema(env),
-    MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
-    MONGODB_DB_PRYSMA: z.string().min(1).default("prysma_bdd"),
-    ALLOWED_ORIGIN: allowedOriginsSchema,
-  });
+  z
+    .object({
+      MONGODB_URI: mongoUriSchema(env),
+      MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
+      MONGODB_DB_PRYSMA: z.string().min(1).default("prysma_bdd"),
+      ALLOWED_ORIGIN: allowedOriginsSchema,
+      AUTH_MODE: authModeSchema.default("local"),
+      SESSION_SECRET: z.string().min(32),
+      SESSION_TTL_HOURS: z.coerce.number().int().positive().default(4),
+      COOKIE_SECURE: z
+        .enum(["true", "false"])
+        .default(isProduction(env) ? "true" : "false")
+        .transform((value) => value === "true"),
+      COOKIE_SAME_SITE: cookieSameSiteSchema,
+      LOCAL_DEV_USERNAME: z.string().min(1).optional(),
+      LOCAL_DEV_PASSWORD: z.string().min(1).optional(),
+      CENTRALE_API_URL: z.string().url().optional(),
+      CENTRALE_HOME_URL: z.string().url().optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (isProduction(env) && data.AUTH_MODE === "local") {
+        ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR, path: ["AUTH_MODE"] });
+      }
+      if (data.AUTH_MODE === "local") {
+        if (!data.LOCAL_DEV_USERNAME || !data.LOCAL_DEV_PASSWORD) {
+          ctx.addIssue({
+            code: "custom",
+            message: GENERIC_ENV_ERROR,
+            path: ["LOCAL_DEV_USERNAME"],
+          });
+        }
+      }
+      if (data.AUTH_MODE === "sso") {
+        if (!data.CENTRALE_API_URL) {
+          ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR, path: ["CENTRALE_API_URL"] });
+        }
+      }
+    });
 
 export type GestionApiEnv = z.infer<ReturnType<typeof GestionApiEnvSchema>>;
 
@@ -163,6 +201,8 @@ export function parseGestionWebEnv(env: NodeJS.ProcessEnv = process.env): Gestio
 
   const result = GestionWebEnvSchema.safeParse({
     VITE_API_URL: env.VITE_API_URL,
+    VITE_AUTH_MODE: env.VITE_AUTH_MODE,
+    VITE_CENTRALE_HOME_URL: env.VITE_CENTRALE_HOME_URL,
   });
 
   if (!result.success) {
@@ -203,6 +243,15 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     MONGODB_DB_COWORK: env.MONGODB_DB_COWORK,
     MONGODB_DB_PRYSMA: env.MONGODB_DB_PRYSMA,
     ALLOWED_ORIGIN: env.ALLOWED_ORIGIN,
+    AUTH_MODE: env.AUTH_MODE,
+    SESSION_SECRET: env.SESSION_SECRET,
+    SESSION_TTL_HOURS: env.SESSION_TTL_HOURS,
+    COOKIE_SECURE: env.COOKIE_SECURE,
+    COOKIE_SAME_SITE: env.COOKIE_SAME_SITE,
+    LOCAL_DEV_USERNAME: env.LOCAL_DEV_USERNAME,
+    LOCAL_DEV_PASSWORD: env.LOCAL_DEV_PASSWORD,
+    CENTRALE_API_URL: env.CENTRALE_API_URL,
+    CENTRALE_HOME_URL: env.CENTRALE_HOME_URL,
   });
 
   if (!result.success) {
