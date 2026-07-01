@@ -74,17 +74,13 @@ export function createServerEnvSchema(env: NodeJS.ProcessEnv) {
   });
 }
 
-export const ServerEnvSchema = createServerEnvSchema(process.env);
-
-export type ServerEnv = z.infer<typeof ServerEnvSchema>;
+export type ServerEnv = z.infer<ReturnType<typeof createServerEnvSchema>>;
 
 export const createVitrineWebEnvSchema = (env: NodeJS.ProcessEnv) =>
   z.object({
     NEXT_PUBLIC_SITE_URL: siteUrlSchema(env),
     NEXT_PUBLIC_API_URL: z.string().url(),
   });
-
-export const VitrineWebEnvSchema = createVitrineWebEnvSchema(process.env);
 
 export type VitrineWebEnv = z.infer<ReturnType<typeof createVitrineWebEnvSchema>>;
 
@@ -259,6 +255,7 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     UPLOADS_DIR: env.UPLOADS_DIR,
     UPLOAD_MAX_BYTES: env.UPLOAD_MAX_BYTES,
     UPLOAD_MAX_PHOTOS_PER_BUILDING: env.UPLOAD_MAX_PHOTOS_PER_BUILDING,
+    UPLOAD_MAX_PHOTOS_PER_SPACE: env.UPLOAD_MAX_PHOTOS_PER_SPACE,
     UPLOAD_MAX_DIMENSION_PX: env.UPLOAD_MAX_DIMENSION_PX,
   });
 

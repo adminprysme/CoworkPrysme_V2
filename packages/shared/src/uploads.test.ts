@@ -1,24 +1,38 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { resolveStorageKeyAbsolutePath, resolveUploadsDir } from "./uploads-server.js";
 import {
   buildBuildingPhotoStorageKey,
+  buildEntityPhotoStorageKey,
+  buildSpacePhotoStorageKey,
   isValidBuildingPhotoStorageKey,
+  isValidEntityPhotoStorageKey,
+  isValidSpacePhotoStorageKey,
   mediaPathFromStorageKey,
-  resolveStorageKeyAbsolutePath,
-  resolveUploadsDir,
 } from "./uploads.js";
 
 const BUILDING_ID = "507f1f77bcf86cd799439011";
+const SPACE_ID = "607f1f77bcf86cd799439022";
 const FILE_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 describe("uploads helpers", () => {
-  it("validates building photo storage keys", () => {
-    const key = buildBuildingPhotoStorageKey(BUILDING_ID, FILE_ID);
-    expect(isValidBuildingPhotoStorageKey(key)).toBe(true);
-    expect(isValidBuildingPhotoStorageKey("../etc/passwd")).toBe(false);
-    expect(isValidBuildingPhotoStorageKey(`buildings/${BUILDING_ID}/../../secret.webp`)).toBe(
-      false,
+  it("validates entity photo storage keys for buildings and spaces", () => {
+    const buildingKey = buildBuildingPhotoStorageKey(BUILDING_ID, FILE_ID);
+    const spaceKey = buildSpacePhotoStorageKey(SPACE_ID, FILE_ID);
+
+    expect(isValidEntityPhotoStorageKey(buildingKey)).toBe(true);
+    expect(isValidEntityPhotoStorageKey(spaceKey)).toBe(true);
+    expect(isValidBuildingPhotoStorageKey(buildingKey)).toBe(true);
+    expect(isValidSpacePhotoStorageKey(spaceKey)).toBe(true);
+    expect(isValidBuildingPhotoStorageKey(spaceKey)).toBe(false);
+    expect(isValidEntityPhotoStorageKey("../etc/passwd")).toBe(false);
+    expect(isValidEntityPhotoStorageKey(`buildings/${BUILDING_ID}/../../secret.webp`)).toBe(false);
+  });
+
+  it("builds entity storage keys with explicit prefixes", () => {
+    expect(buildEntityPhotoStorageKey("spaces", SPACE_ID, FILE_ID)).toBe(
+      `spaces/${SPACE_ID}/${FILE_ID}.webp`,
     );
   });
 
