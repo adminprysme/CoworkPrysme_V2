@@ -322,6 +322,42 @@ describe("space persistence on cowork_bdd", () => {
     ).rejects.toThrow();
   });
 
+  it("persists archived status with audit fields", async () => {
+    const cowork = await getCoworkDb();
+    const Building = registerBuildingModel(cowork);
+    const Space = registerSpaceModel(cowork);
+
+    const building = await Building.create({
+      name: "Cowork Test",
+      address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
+      coordinates: { lat: 45.76, lng: 4.86 },
+      floors: [{ name: "RDC" }],
+      accessibilityHours: defaultDaySchedules(),
+      receptionHours: defaultDaySchedules(),
+      concierge: { url: "", accessCode: "" },
+      photos: [],
+      status: "active",
+    });
+
+    const staffId = new mongoose.Types.ObjectId();
+    const input = minimalSpaceInput(building._id as mongoose.Types.ObjectId);
+    const created = await Space.create({
+      ...input,
+      status: "archived",
+      archivedAt: new Date("2026-01-15T10:00:00.000Z"),
+      archivedBy: staffId,
+      seo: {
+        ...input.seo,
+        slug: "salon-part-dieu-archived-439011",
+      },
+    });
+    const found = await Space.findById(created._id).lean();
+
+    expect(found?.status).toBe("archived");
+    expect(found?.archivedAt?.toISOString()).toBe("2026-01-15T10:00:00.000Z");
+    expect(found?.archivedBy?.toString()).toBe(staffId.toString());
+  });
+
   it("stores spaces only on cowork_bdd, not on prysma_bdd", async () => {
     const cowork = await getCoworkDb();
     const prysma = await getPrysmaDb();

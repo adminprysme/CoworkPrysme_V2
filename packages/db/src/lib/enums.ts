@@ -3,6 +3,10 @@
 export const ACTIVE_STATUSES = ["active", "inactive"] as const;
 export type ActiveStatus = (typeof ACTIVE_STATUSES)[number];
 
+/** Lifecycle for buildings/spaces (soft-delete via `archived`). */
+export const STRUCTURE_STATUSES = ["active", "inactive", "archived"] as const;
+export type StructureStatus = (typeof STRUCTURE_STATUSES)[number];
+
 export const WEEK_DAYS = [
   "monday",
   "tuesday",

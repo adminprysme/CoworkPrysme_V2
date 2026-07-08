@@ -68,6 +68,8 @@ export function spaceResponseToSpace(response: SpaceResponse): Space {
     openingHours: response.openingHours.map((entry) => ({ ...entry })),
     accessCode: response.accessCode,
     status: response.status,
+    archivedAt: response.archivedAt,
+    archivedBy: response.archivedBy,
     photos: mapApiPhotosToFormPhotos(response.photos),
     tariffs: response.tariffs.map((tariff) => ({
       durationClass: tariff.durationClass,
@@ -106,7 +108,7 @@ export function spaceResponseToFormValues(
     openingHours: response.openingHours.map((entry) => ({ ...entry })),
     useBuildingHours: hoursMatchBuilding,
     accessCode: response.accessCode ?? "",
-    status: response.status,
+    status: response.status === "archived" ? "inactive" : response.status,
     photos: mapApiPhotosToFormPhotos(response.photos),
     tariffs:
       response.tariffs.length > 0

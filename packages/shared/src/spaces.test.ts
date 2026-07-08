@@ -78,6 +78,12 @@ describe("CreateSpaceRequestSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("rejects archived status on create/update payloads", () => {
+    expect(
+      CreateSpaceRequestSchema.safeParse({ ...validPayload, status: "archived" }).success,
+    ).toBe(false);
+  });
 });
 
 describe("mapTariffInputsToDb", () => {

@@ -4,7 +4,6 @@ import {
   BuildingDayScheduleInputSchema,
   BuildingDayScheduleResponseSchema,
   BuildingPhotoResponseSchema,
-  BuildingStatusSchema,
 } from "./buildings.js";
 import { eurosToCents, isValidEuroAmount } from "./money.js";
 
@@ -12,7 +11,11 @@ export const SPACE_TYPES = ["meeting_room", "private_office"] as const;
 
 export const SpaceTypeSchema = z.enum(SPACE_TYPES);
 
-export const SpaceStatusSchema = BuildingStatusSchema;
+export const SPACE_STATUSES = ["active", "inactive", "archived"] as const;
+
+export const SpaceStatusSchema = z.enum(SPACE_STATUSES);
+
+export const SpaceOperationalStatusSchema = z.enum(["active", "inactive"]);
 
 export const SPACE_DESCRIPTION_MAX_LENGTH = 2000;
 
@@ -88,7 +91,7 @@ export const CreateSpaceRequestSchema = z.object({
   equipments: z.array(SpaceEquipmentInputSchema),
   openingHours: z.array(BuildingDayScheduleInputSchema).length(7),
   accessCode: SpaceAccessCodeSchema,
-  status: SpaceStatusSchema,
+  status: SpaceOperationalStatusSchema,
   tariffs: tariffsInputSchema,
 });
 
@@ -112,6 +115,8 @@ export const SpaceResponseSchema = z.object({
   openingHours: z.array(BuildingDayScheduleResponseSchema),
   accessCode: SpaceAccessCodeSchema,
   status: SpaceStatusSchema,
+  archivedAt: z.string().datetime().optional(),
+  archivedBy: z.string().optional(),
   photos: z.array(BuildingPhotoResponseSchema),
   tariffs: z.array(SpaceTariffResponseSchema),
   seo: SpaceSeoResponseSchema,
@@ -123,6 +128,17 @@ export const SpacesListResponseSchema = z.object({
   spaces: z.array(SpaceResponseSchema),
 });
 
+export const SpaceArchiveResponseSchema = z.object({
+  ok: z.literal(true),
+  space: SpaceResponseSchema,
+});
+
+export const SpaceRestoreRequestSchema = z.object({
+  status: SpaceOperationalStatusSchema.default("inactive"),
+});
+
+export type SpaceStatus = z.infer<typeof SpaceStatusSchema>;
+export type SpaceOperationalStatus = z.infer<typeof SpaceOperationalStatusSchema>;
 export type SpaceDurationClass = z.infer<typeof SpaceDurationClassSchema>;
 export type SpaceTariffInput = z.infer<typeof SpaceTariffInputSchema>;
 export type SpaceTariffResponse = z.infer<typeof SpaceTariffResponseSchema>;
@@ -130,7 +146,13 @@ export type CreateSpaceRequest = z.infer<typeof CreateSpaceRequestSchema>;
 export type UpdateSpaceRequest = z.infer<typeof UpdateSpaceRequestSchema>;
 export type SpaceResponse = z.infer<typeof SpaceResponseSchema>;
 export type SpacesListResponse = z.infer<typeof SpacesListResponseSchema>;
+export type SpaceArchiveResponse = z.infer<typeof SpaceArchiveResponseSchema>;
+export type SpaceRestoreRequest = z.infer<typeof SpaceRestoreRequestSchema>;
 export type SpaceSeoResponse = z.infer<typeof SpaceSeoResponseSchema>;
+
+export function isSpaceArchived(status: SpaceStatus): boolean {
+  return status === "archived";
+}
 
 /** Maps validated API tariff inputs to DB centimes (enabled lines only). */
 export function mapTariffInputsToDb(tariffs: SpaceTariffInput[]): Array<{

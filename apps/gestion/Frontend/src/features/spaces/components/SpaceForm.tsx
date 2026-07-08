@@ -1,5 +1,5 @@
 import type { DaySchedule } from "../types.js";
-import type { SpaceFormValues, SpaceStatus } from "../space-types.js";
+import type { SpaceFormValues, SpaceOperationalStatus } from "../space-types.js";
 import { SPACE_TYPE_LABELS } from "../space-types.js";
 import type { SpaceFormErrors } from "../utils/space-validation.js";
 import { EquipmentPicker } from "./EquipmentPicker.js";
@@ -7,6 +7,8 @@ import { PhotoUploadGallery } from "./PhotoUploadGallery.js";
 import { SpaceTariffsEditor } from "./SpaceTariffsEditor.js";
 import { WeeklyScheduleEditor } from "./WeeklyScheduleEditor.js";
 import styles from "./SpaceForm.module.css";
+
+export type SpaceFormSection = "info" | "accessibility" | "tariffs";
 
 interface SpaceFormProps {
   idPrefix: string;
@@ -16,6 +18,8 @@ interface SpaceFormProps {
   buildingHours: DaySchedule[];
   onChange: (values: SpaceFormValues) => void;
   onRemovePersistedPhoto?: (storageKey: string) => Promise<void>;
+  section: SpaceFormSection;
+  showStatus?: boolean;
 }
 
 export function SpaceForm({
@@ -26,6 +30,8 @@ export function SpaceForm({
   buildingHours,
   onChange,
   onRemovePersistedPhoto,
+  section,
+  showStatus = false,
 }: SpaceFormProps) {
   const capacityLabel =
     values.type === "private_office" ? "Nombre de postes" : "Capacité (personnes)";
@@ -42,59 +48,61 @@ export function SpaceForm({
     onChange({ ...values, useBuildingHours: false });
   }
 
-  return (
-    <div className={styles.form}>
-      <fieldset className={styles.typeFieldset}>
-        <legend className={styles.sectionTitle}>Type d&apos;espace</legend>
-        <div className={styles.typeChoices} role="radiogroup" aria-label="Type d'espace">
-          {(Object.keys(SPACE_TYPE_LABELS) as SpaceFormValues["type"][]).map((type) => (
-            <label
-              key={type}
-              className={[styles.typeChoice, values.type === type ? styles.typeChoiceActive : ""]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <input
-                type="radio"
-                name={`${idPrefix}-space-type`}
-                checked={values.type === type}
-                onChange={() =>
-                  onChange({
-                    ...values,
-                    type,
-                    capacity:
-                      type === "private_office"
-                        ? Math.min(values.capacity, 6) || 2
-                        : Math.max(values.capacity, 4),
-                  })
-                }
-              />
-              <span className={styles.typeChoiceLabel}>{SPACE_TYPE_LABELS[type]}</span>
-              <span className={styles.typeChoiceHint}>
-                {type === "meeting_room"
-                  ? "Salles équipées pour réunions et visioconférences."
-                  : "Bureaux fermés pour équipes ou indépendants."}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <section className={styles.section}>
-        <div className={styles.nameRow}>
-          <label className={styles.nameField} htmlFor={`${idPrefix}-name`}>
-            <span className={styles.label}>Nom *</span>
+  const typeSection = (
+    <fieldset className={styles.typeFieldset}>
+      <legend className={styles.sectionTitle}>Type d&apos;espace</legend>
+      <div className={styles.typeChoices} role="radiogroup" aria-label="Type d'espace">
+        {(Object.keys(SPACE_TYPE_LABELS) as SpaceFormValues["type"][]).map((type) => (
+          <label
+            key={type}
+            className={[styles.typeChoice, values.type === type ? styles.typeChoiceActive : ""]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <input
-              id={`${idPrefix}-name`}
-              className={styles.input}
-              value={values.name}
-              onChange={(event) => onChange({ ...values, name: event.target.value })}
+              type="radio"
+              name={`${idPrefix}-space-type`}
+              checked={values.type === type}
+              onChange={() =>
+                onChange({
+                  ...values,
+                  type,
+                  capacity:
+                    type === "private_office"
+                      ? Math.min(values.capacity, 6) || 2
+                      : Math.max(values.capacity, 4),
+                })
+              }
             />
-            {errors.name ? <span className={styles.error}>{errors.name}</span> : null}
+            <span className={styles.typeChoiceLabel}>{SPACE_TYPE_LABELS[type]}</span>
+            <span className={styles.typeChoiceHint}>
+              {type === "meeting_room"
+                ? "Salles équipées pour réunions et visioconférences."
+                : "Bureaux fermés pour équipes ou indépendants."}
+            </span>
           </label>
+        ))}
+      </div>
+    </fieldset>
+  );
 
+  const detailsSection = (
+    <section className={styles.section}>
+      <div className={styles.nameRow}>
+        <label className={styles.nameField} htmlFor={`${idPrefix}-name`}>
+          <span className={styles.label}>Nom *</span>
+          <input
+            id={`${idPrefix}-name`}
+            className={styles.input}
+            value={values.name}
+            onChange={(event) => onChange({ ...values, name: event.target.value })}
+          />
+          {errors.name ? <span className={styles.error}>{errors.name}</span> : null}
+        </label>
+
+        {showStatus ? (
           <div className={styles.statusToggle} role="group" aria-label="Statut de l'espace">
-            {(["active", "inactive"] as SpaceStatus[]).map((status) => (
+            {(["active", "inactive"] as SpaceOperationalStatus[]).map((status) => (
               <button
                 key={status}
                 type="button"
@@ -110,19 +118,21 @@ export function SpaceForm({
               </button>
             ))}
           </div>
-        </div>
+        ) : null}
+      </div>
 
-        <label className={styles.field} htmlFor={`${idPrefix}-description`}>
-          <span className={styles.label}>Description</span>
-          <textarea
-            id={`${idPrefix}-description`}
-            className={styles.textarea}
-            rows={3}
-            value={values.description}
-            onChange={(event) => onChange({ ...values, description: event.target.value })}
-          />
-        </label>
+      <label className={styles.field} htmlFor={`${idPrefix}-description`}>
+        <span className={styles.label}>Description</span>
+        <textarea
+          id={`${idPrefix}-description`}
+          className={styles.textarea}
+          rows={3}
+          value={values.description}
+          onChange={(event) => onChange({ ...values, description: event.target.value })}
+        />
+      </label>
 
+      <div className={styles.fieldGrid2}>
         <label className={styles.field} htmlFor={`${idPrefix}-floor`}>
           <span className={styles.label}>Étage *</span>
           <select
@@ -154,65 +164,88 @@ export function SpaceForm({
           />
           {errors.capacity ? <span className={styles.error}>{errors.capacity}</span> : null}
         </label>
+      </div>
 
-        <label className={styles.field} htmlFor={`${idPrefix}-access-code`}>
-          <span className={styles.label}>Code d&apos;accès</span>
-          <input
-            id={`${idPrefix}-access-code`}
-            className={styles.input}
-            placeholder="Code serrure salle / bureau (optionnel)"
-            value={values.accessCode}
-            onChange={(event) => onChange({ ...values, accessCode: event.target.value })}
-          />
-        </label>
-      </section>
-
-      <section className={styles.section}>
-        <EquipmentPicker
-          idPrefix={idPrefix}
-          selected={values.equipments}
-          onChange={(equipments) => onChange({ ...values, equipments })}
+      <label className={styles.field} htmlFor={`${idPrefix}-access-code`}>
+        <span className={styles.label}>Code d&apos;accès</span>
+        <input
+          id={`${idPrefix}-access-code`}
+          className={styles.input}
+          placeholder="Code serrure salle / bureau (optionnel)"
+          value={values.accessCode}
+          onChange={(event) => onChange({ ...values, accessCode: event.target.value })}
         />
-      </section>
-
-      <section className={styles.section}>
-        <WeeklyScheduleEditor
-          idPrefix={`${idPrefix}-opening`}
-          title="Horaires d'ouverture de l'espace"
-          schedules={values.openingHours}
-          disabled={values.useBuildingHours}
-          onChange={(openingHours) =>
-            onChange({ ...values, openingHours, useBuildingHours: false })
-          }
-          headerExtra={
-            <label className={styles.sameBuildingCheck}>
-              <input
-                type="checkbox"
-                checked={values.useBuildingHours}
-                onChange={(event) => setUseBuildingHours(event.target.checked)}
-              />
-              <span>Même horaire que le bâtiment</span>
-            </label>
-          }
-        />
-      </section>
-
-      <section className={styles.section}>
-        <SpaceTariffsEditor
-          tariffs={values.tariffs}
-          error={errors.tariffs}
-          onChange={(tariffs) => onChange({ ...values, tariffs })}
-        />
-      </section>
-
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>Photos de l&apos;espace</h3>
-        <PhotoUploadGallery
-          photos={values.photos}
-          onChange={(photos) => onChange({ ...values, photos })}
-          onRemovePersisted={onRemovePersistedPhoto}
-        />
-      </section>
-    </div>
+      </label>
+    </section>
   );
+
+  const equipmentSection = (
+    <section className={styles.section}>
+      <EquipmentPicker
+        idPrefix={idPrefix}
+        selected={values.equipments}
+        onChange={(equipments) => onChange({ ...values, equipments })}
+      />
+    </section>
+  );
+
+  const photosSection = (
+    <section className={styles.section}>
+      <h3 className={styles.sectionTitle}>Photos de l&apos;espace</h3>
+      <PhotoUploadGallery
+        photos={values.photos}
+        onChange={(photos) => onChange({ ...values, photos })}
+        onRemovePersisted={onRemovePersistedPhoto}
+      />
+    </section>
+  );
+
+  const accessibilitySection = (
+    <section className={styles.section}>
+      <WeeklyScheduleEditor
+        idPrefix={`${idPrefix}-opening`}
+        title="Horaires d'ouverture de l'espace"
+        schedules={values.openingHours}
+        disabled={values.useBuildingHours}
+        onChange={(openingHours) => onChange({ ...values, openingHours, useBuildingHours: false })}
+        headerExtra={
+          <label className={styles.sameBuildingCheck}>
+            <input
+              type="checkbox"
+              checked={values.useBuildingHours}
+              onChange={(event) => setUseBuildingHours(event.target.checked)}
+            />
+            <span>Même horaire que le bâtiment</span>
+          </label>
+        }
+      />
+    </section>
+  );
+
+  const tariffsSection = (
+    <section className={styles.section}>
+      <SpaceTariffsEditor
+        tariffs={values.tariffs}
+        error={errors.tariffs}
+        onChange={(tariffs) => onChange({ ...values, tariffs })}
+      />
+    </section>
+  );
+
+  if (section === "info") {
+    return (
+      <div className={styles.form}>
+        {typeSection}
+        {detailsSection}
+        {equipmentSection}
+        {photosSection}
+      </div>
+    );
+  }
+
+  if (section === "accessibility") {
+    return <div className={styles.form}>{accessibilitySection}</div>;
+  }
+
+  return <div className={styles.form}>{tariffsSection}</div>;
 }

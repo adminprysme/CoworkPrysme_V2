@@ -2,7 +2,8 @@ import type { BuildingPhoto, DaySchedule } from "./types.js";
 import type { SpaceTariffFormLine } from "./utils/space-tariffs.js";
 
 export type SpaceType = "meeting_room" | "private_office";
-export type SpaceStatus = "active" | "inactive";
+export type SpaceStatus = "active" | "inactive" | "archived";
+export type SpaceOperationalStatus = "active" | "inactive";
 
 export interface SpaceEquipment {
   key: string;
@@ -28,6 +29,8 @@ export interface Space {
   openingHours: DaySchedule[];
   accessCode?: string;
   status: SpaceStatus;
+  archivedAt?: string;
+  archivedBy?: string;
   photos: BuildingPhoto[];
   tariffs: SpaceTariff[];
 }
@@ -42,7 +45,7 @@ export interface SpaceFormValues {
   openingHours: DaySchedule[];
   useBuildingHours: boolean;
   accessCode: string;
-  status: SpaceStatus;
+  status: SpaceOperationalStatus;
   photos: BuildingPhoto[];
   tariffs: SpaceTariffFormLine[];
 }

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  archiveSpace,
   createSpace,
   fetchSpace,
   fetchSpacesByBuilding,
+  restoreSpace,
   updateSpace,
 } from "../../../lib/spaces-api.js";
 import {
@@ -14,7 +16,9 @@ import {
 import { persistSpacePhotos, removePersistedSpacePhoto } from "../../../lib/spaces-photos.js";
 import type { DaySchedule } from "../types.js";
 import type { Space, SpaceFormValues, SpaceStatusFilter, SpaceTypeFilter } from "../space-types.js";
+import { isArchivedSpace } from "../utils/space-status.js";
 import { filterSpaces, SpaceCard, SpaceFilters } from "./SpaceCard.js";
+import { SpaceArchiveDialog } from "./SpaceArchiveDialog.js";
 import { SpaceDetailPanel } from "./SpaceDetailPanel.js";
 import { SpaceFormPanel } from "./SpaceFormPanel.js";
 import styles from "./BuildingSpacesTab.module.css";
@@ -41,18 +45,26 @@ export function BuildingSpacesTab({
   const [formOpen, setFormOpen] = useState(false);
   const [editingSpaceId, setEditingSpaceId] = useState<string | null>(null);
   const [editFormValues, setEditFormValues] = useState<SpaceFormValues | null>(null);
+  const [archivingSpace, setArchivingSpace] = useState<Space | null>(null);
+  const [archiveSubmitting, setArchiveSubmitting] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   const loadSpaces = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetchSpacesByBuilding(buildingId);
+      const response = await fetchSpacesByBuilding(buildingId, {
+        includeArchived: statusFilter === "archived",
+      });
       const nextSpaces = response.spaces.map(spaceResponseToSpace);
       setSpaces(nextSpaces);
       setSelectedId((current) =>
         current && nextSpaces.some((space) => space.id === current)
           ? current
-          : (nextSpaces[0]?.id ?? null),
+          : (nextSpaces.find((space) => !isArchivedSpace(space.status))?.id ??
+            nextSpaces[0]?.id ??
+            null),
       );
     } catch {
       setError("Impossible de charger les espaces.");
@@ -61,12 +73,13 @@ export function BuildingSpacesTab({
     } finally {
       setLoading(false);
     }
-  }, [buildingId]);
+  }, [buildingId, statusFilter]);
 
   useEffect(() => {
     void loadSpaces();
   }, [loadSpaces]);
 
+  const operationalCount = spaces.filter((space) => !isArchivedSpace(space.status)).length;
   const filteredSpaces = filterSpaces(spaces, typeFilter, statusFilter);
   const selectedSpace = filteredSpaces.find((space) => space.id === selectedId) ?? null;
   const editingSpace = spaces.find((space) => space.id === editingSpaceId) ?? null;
@@ -92,7 +105,52 @@ export function BuildingSpacesTab({
     setSelectedId(editingSpaceId);
   }
 
+  async function handleArchiveConfirm() {
+    if (!archivingSpace) {
+      return;
+    }
+    setArchiveSubmitting(true);
+    setArchiveError(null);
+    try {
+      await archiveSpace(archivingSpace.id);
+      setArchivingSpace(null);
+      if (selectedId === archivingSpace.id) {
+        setSelectedId(null);
+      }
+      if (statusFilter !== "archived") {
+        setStatusFilter("all");
+      }
+      await loadSpaces();
+    } catch (archiveFailure) {
+      setArchiveError(
+        archiveFailure instanceof Error
+          ? archiveFailure.message
+          : "Impossible d'archiver cet espace.",
+      );
+    } finally {
+      setArchiveSubmitting(false);
+    }
+  }
+
+  async function handleRestore(space: Space) {
+    setRestoring(true);
+    setError(null);
+    try {
+      await restoreSpace(space.id, "inactive");
+      setStatusFilter("all");
+      await loadSpaces();
+      setSelectedId(space.id);
+    } catch {
+      setError("Impossible de restaurer cet espace.");
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   function openEdit(space: Space) {
+    if (isArchivedSpace(space.status)) {
+      return;
+    }
     void fetchSpace(space.id)
       .then((response) => {
         setEditFormValues(spaceResponseToFormValues(response, buildingHours));
@@ -109,7 +167,9 @@ export function BuildingSpacesTab({
         <div>
           <h2 className={styles.title}>Espaces de {buildingName}</h2>
           <p className={styles.subtitle}>
-            {loading ? "Chargement…" : `${spaces.length} espace${spaces.length > 1 ? "s" : ""}`}
+            {loading
+              ? "Chargement…"
+              : `${operationalCount} espace${operationalCount > 1 ? "s" : ""} actif${operationalCount > 1 ? "s" : ""}`}
           </p>
         </div>
         <button type="button" className={styles.primaryBtn} onClick={() => setFormOpen(true)}>
@@ -133,7 +193,7 @@ export function BuildingSpacesTab({
           ) : filteredSpaces.length === 0 ? (
             <div className={styles.emptyState}>
               <p>Aucun espace ne correspond à vos filtres.</p>
-              {spaces.length === 0 ? (
+              {operationalCount === 0 && statusFilter !== "archived" ? (
                 <button
                   type="button"
                   className={styles.primaryBtn}
@@ -168,7 +228,16 @@ export function BuildingSpacesTab({
           )}
         </section>
 
-        <SpaceDetailPanel space={selectedSpace} onEdit={openEdit} />
+        <SpaceDetailPanel
+          space={selectedSpace}
+          onEdit={openEdit}
+          onArchive={(space) => {
+            setArchiveError(null);
+            setArchivingSpace(space);
+          }}
+          onRestore={(space) => void handleRestore(space)}
+          restoring={restoring}
+        />
       </div>
 
       <SpaceFormPanel
@@ -199,6 +268,20 @@ export function BuildingSpacesTab({
           await removePersistedSpacePhoto(editingSpaceId, storageKey);
           await loadSpaces();
         }}
+      />
+
+      <SpaceArchiveDialog
+        space={archivingSpace}
+        open={archivingSpace !== null}
+        submitting={archiveSubmitting}
+        error={archiveError}
+        onClose={() => {
+          if (!archiveSubmitting) {
+            setArchivingSpace(null);
+            setArchiveError(null);
+          }
+        }}
+        onConfirm={() => void handleArchiveConfirm()}
       />
     </div>
   );

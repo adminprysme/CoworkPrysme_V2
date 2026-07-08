@@ -57,6 +57,14 @@ export function mapRequestToDbDocument(
   };
 }
 
+export function buildArchivedSpaceSlug(slug: string, spaceId: string): string {
+  const suffix = `-archived-${spaceId.slice(-6)}`;
+  if (slug.endsWith(suffix)) {
+    return slug;
+  }
+  return `${slug}${suffix}`;
+}
+
 export function mapSpaceToResponse(doc: SpaceLean): SpaceResponse {
   return SpaceResponseSchema.parse({
     id: doc._id.toString(),
@@ -78,6 +86,8 @@ export function mapSpaceToResponse(doc: SpaceLean): SpaceResponse {
     })),
     accessCode: normalizeAccessCode(doc.accessCode),
     status: doc.status,
+    archivedAt: doc.archivedAt?.toISOString(),
+    archivedBy: doc.archivedBy?.toString(),
     photos: doc.photos.map((photo) => ({
       storageKey: photo.storageKey,
       alt: photo.alt,

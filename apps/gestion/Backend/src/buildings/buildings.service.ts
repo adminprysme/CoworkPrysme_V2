@@ -124,7 +124,14 @@ export class BuildingsService {
 
     const coordinates = await this.geocoding.geocodeAddress(input.address);
     const payload = mapRequestToDbDocument(input, coordinates);
+    const preservedPhotos = existing.photos.map((photo) => ({
+      storageKey: photo.storageKey,
+      alt: photo.alt,
+      order: photo.order,
+      isPrimary: photo.isPrimary,
+    }));
     existing.set(payload);
+    existing.photos = preservedPhotos;
     if (payload.description === undefined) {
       existing.set("description", undefined);
     }

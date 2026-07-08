@@ -1,0 +1,47 @@
+.toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.option {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.option:hover:not(.optionSelected):not(.optionSelectedInactive) {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.optionSelected {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.optionSelectedInactive {
+  background: var(--color-text-muted);
+  color: var(--color-surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-text-muted) 35%, transparent);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}

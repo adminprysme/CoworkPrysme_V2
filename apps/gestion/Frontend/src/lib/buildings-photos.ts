@@ -17,7 +17,6 @@ function photosToPatchPayload(photos: BuildingPhoto[]): UpdateBuildingPhotosRequ
 export async function persistBuildingPhotos(
   buildingId: string,
   photos: BuildingPhoto[],
-  existingStorageKeys: ReadonlySet<string> = new Set(),
 ): Promise<BuildingPhoto[]> {
   if (photos.length === 0) {
     const patchResponse = await updateBuildingPhotos(buildingId, { photos: [] });
@@ -53,7 +52,7 @@ export async function persistBuildingPhotos(
       continue;
     }
 
-    if (photo.storageKey && existingStorageKeys.has(photo.storageKey)) {
+    if (photo.storageKey) {
       uploadedPhotos.push(photo);
     }
   }

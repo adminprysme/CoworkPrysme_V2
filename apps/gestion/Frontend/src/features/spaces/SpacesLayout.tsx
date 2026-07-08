@@ -1,6 +1,7 @@
 import { Outlet, Navigate } from "react-router-dom";
 
 import { useAuth } from "../../app/AuthProvider.js";
+import styles from "./SpacesLayout.module.css";
 
 export function SpacesLayout() {
   const { user } = useAuth();
@@ -9,5 +10,9 @@ export function SpacesLayout() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <div className={styles.root}>
+      <Outlet />
+    </div>
+  );
 }

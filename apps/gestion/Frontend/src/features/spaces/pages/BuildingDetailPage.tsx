@@ -12,7 +12,9 @@ import {
   removePersistedBuildingPhoto,
 } from "../../../lib/buildings-photos.js";
 import { BuildingForm } from "../components/BuildingForm.js";
+import { StatusToggle } from "../components/StatusToggle.js";
 import { BuildingSpacesTab } from "../components/BuildingSpacesTab.js";
+import { ArchivedSpacesDangerSection } from "../components/ArchivedSpacesDangerSection.js";
 import { revokePhotoUrls } from "../utils/photos.js";
 import type { BuildingFormValues } from "../types.js";
 import { validateBuildingForm, type BuildingFormErrors } from "../utils/validation.js";
@@ -127,11 +129,7 @@ export function BuildingDetailPage() {
         currentBuildingId,
         formValuesToCreateRequest(formValues),
       );
-      const photos = await persistBuildingPhotos(
-        currentBuildingId,
-        formValues.photos,
-        new Set(updated.photos.map((photo) => photo.storageKey)),
-      );
+      const photos = await persistBuildingPhotos(currentBuildingId, formValues.photos);
       setBuildingName(updated.name);
       setValues({
         ...buildingResponseToFormValues(updated),
@@ -164,123 +162,145 @@ export function BuildingDetailPage() {
 
   return (
     <div className={styles.page}>
-      <nav aria-label="Fil d'Ariane">
-        <ol className={styles.breadcrumb}>
-          <li>
-            <Link to="/spaces">Bâtiments &amp; Espaces</Link>
-          </li>
-          <li aria-hidden="true">›</li>
-          <li>{buildingName}</li>
-        </ol>
-      </nav>
+      <div className={styles.pageTop}>
+        <nav aria-label="Fil d'Ariane">
+          <ol className={styles.breadcrumb}>
+            <li>
+              <Link to="/spaces">Bâtiments &amp; Espaces</Link>
+            </li>
+            <li aria-hidden="true">›</li>
+            <li>{buildingName}</li>
+          </ol>
+        </nav>
 
-      <header className={styles.header}>
-        <h1>{buildingName}</h1>
-        <p className={styles.subtitle}>Gestion du bâtiment</p>
-      </header>
+        <header className={styles.header}>
+          <div className={styles.headerMain}>
+            <h1>{buildingName}</h1>
+            <p className={styles.subtitle}>Gestion du bâtiment</p>
+          </div>
+          <StatusToggle
+            value={formValues.status}
+            ariaLabel="Statut du bâtiment"
+            onChange={(status) => {
+              setValues({ ...formValues, status });
+              setSaved(false);
+            }}
+          />
+        </header>
 
-      <Link to="/spaces" className={styles.backBtn}>
-        ← Retour aux bâtiments
-      </Link>
+        <Link to="/spaces" className={styles.backBtn}>
+          ← Retour aux bâtiments
+        </Link>
 
-      <div className={styles.tabs} role="tablist" aria-label="Sections du bâtiment">
-        {TABS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === entry.id}
-            className={[
-              styles.tab,
-              tab === entry.id ? styles.tabActive : "",
-              entry.danger ? styles.tabDanger : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => setTab(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
+        <div className={styles.tabs} role="tablist" aria-label="Sections du bâtiment">
+          {TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === entry.id}
+              className={[
+                styles.tab,
+                tab === entry.id ? styles.tabActive : "",
+                entry.danger ? styles.tabDanger : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setTab(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className={styles.panel} role="tabpanel">
-        {tab === "building" ? (
-          <div className={styles.buildingTab}>
-            <BuildingForm
-              idPrefix={`edit-${currentBuildingId}`}
-              values={formValues}
-              errors={errors}
-              onChange={(nextValues) => {
-                setValues(nextValues);
-                setSaved(false);
-              }}
-              onRemovePersistedPhoto={async (storageKey) => {
-                await removePersistedBuildingPhoto(currentBuildingId, storageKey);
-                setValues((current) =>
-                  current
-                    ? {
-                        ...current,
-                        photos: current.photos.filter((photo) => photo.storageKey !== storageKey),
-                      }
-                    : current,
-                );
-              }}
-            />
-            <div className={styles.saveFab} aria-live="polite">
-              {saved ? (
-                <p className={styles.saveFabHint} role="status">
-                  Modifications enregistrées
-                </p>
-              ) : null}
-              <button
-                type="button"
-                className={styles.saveFabBtn}
-                disabled={saving}
-                onClick={() => void handleSave()}
-              >
-                {saving ? "Enregistrement…" : "Enregistrer"}
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        <div hidden={tab !== "spaces"}>
-          <BuildingSpacesTab
-            buildingId={currentBuildingId}
-            buildingName={buildingName}
-            floorNames={formValues.floors.map((floor) => floor.name)}
-            buildingHours={formValues.accessibilityHours}
-          />
-        </div>
-
-        {tab === "danger" ? (
-          <div className={styles.dangerPanel}>
-            <h2 className={styles.dangerTitle}>Supprimer ce bâtiment</h2>
-            <p className={styles.dangerText}>
-              Cette action est irréversible. Le bâtiment sera retiré de la liste et de la carte.
-            </p>
-            <label className={styles.confirmField}>
-              <span className={styles.confirmLabel}>
-                Saisissez le nom du bâtiment pour confirmer
-              </span>
-              <input
-                className={styles.confirmInput}
-                value={confirmName}
-                placeholder={buildingName}
-                onChange={(event) => setConfirmName(event.target.value)}
+      <div className={styles.pageBody}>
+        <div className={styles.panel} role="tabpanel">
+          {tab === "building" ? (
+            <div className={styles.buildingTab}>
+              <BuildingForm
+                idPrefix={`edit-${currentBuildingId}`}
+                values={formValues}
+                errors={errors}
+                onChange={(nextValues) => {
+                  setValues(nextValues);
+                  setSaved(false);
+                }}
+                onRemovePersistedPhoto={async (storageKey) => {
+                  await removePersistedBuildingPhoto(currentBuildingId, storageKey);
+                  setValues((current) =>
+                    current
+                      ? {
+                          ...current,
+                          photos: current.photos.filter((photo) => photo.storageKey !== storageKey),
+                        }
+                      : current,
+                  );
+                }}
               />
-            </label>
-            <button
-              type="button"
-              className={styles.deleteBtn}
-              disabled={deleting || confirmName.trim() !== buildingName}
-              onClick={() => void handleDelete()}
-            >
-              {deleting ? "Suppression…" : "Supprimer définitivement"}
-            </button>
-          </div>
-        ) : null}
+              <div className={styles.saveFab} aria-live="polite">
+                {saved ? (
+                  <p className={styles.saveFabHint} role="status">
+                    Modifications enregistrées
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.saveFabBtn}
+                  disabled={saving}
+                  onClick={() => void handleSave()}
+                >
+                  {saving ? "Enregistrement…" : "Enregistrer"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {tab === "spaces" ? (
+            <div className={styles.spacesTab}>
+              <BuildingSpacesTab
+                buildingId={currentBuildingId}
+                buildingName={buildingName}
+                floorNames={formValues.floors.map((floor) => floor.name)}
+                buildingHours={formValues.accessibilityHours}
+              />
+            </div>
+          ) : null}
+
+          {tab === "danger" ? (
+            <div className={styles.dangerPanel}>
+              <ArchivedSpacesDangerSection buildingId={currentBuildingId} />
+
+              <section className={styles.dangerBlock} aria-labelledby="building-delete-title">
+                <h2 id="building-delete-title" className={styles.dangerTitle}>
+                  Supprimer ce bâtiment
+                </h2>
+                <p className={styles.dangerText}>
+                  Cette action est irréversible. Le bâtiment sera retiré de la liste et de la carte.
+                </p>
+                <label className={styles.confirmField}>
+                  <span className={styles.confirmLabel}>
+                    Saisissez le nom du bâtiment pour confirmer
+                  </span>
+                  <input
+                    className={styles.confirmInput}
+                    value={confirmName}
+                    placeholder={buildingName}
+                    onChange={(event) => setConfirmName(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  disabled={deleting || confirmName.trim() !== buildingName}
+                  onClick={() => void handleDelete()}
+                >
+                  {deleting ? "Suppression…" : "Supprimer définitivement"}
+                </button>
+              </section>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

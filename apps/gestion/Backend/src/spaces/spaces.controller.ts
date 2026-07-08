@@ -7,13 +7,18 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { CreateSpaceRequestSchema, UpdateSpaceRequestSchema } from "@coworkprysme/shared";
+import {
+  CreateSpaceRequestSchema,
+  SpaceRestoreRequestSchema,
+  UpdateSpaceRequestSchema,
+} from "@coworkprysme/shared";
 import { parseGestionApiEnv } from "@coworkprysme/shared/server";
 import type { Request } from "express";
 import { memoryStorage } from "multer";
@@ -38,9 +43,17 @@ export class SpacesController {
   ) {}
 
   @Get("buildings/:buildingId/spaces")
-  async listByBuilding(@Param("buildingId") buildingId: string, @Req() request: Request) {
+  async listByBuilding(
+    @Param("buildingId") buildingId: string,
+    @Query("includeArchived") includeArchived: string | undefined,
+    @Query("archivedOnly") archivedOnly: string | undefined,
+    @Req() request: Request,
+  ) {
     const profile = await this.staffContext.requireProfileFromRequest(request);
-    return this.spaces.listByBuilding(buildingId, profile);
+    return this.spaces.listByBuilding(buildingId, profile, {
+      includeArchived: includeArchived === "true",
+      archivedOnly: archivedOnly === "true",
+    });
   }
 
   @Post("buildings/:buildingId/spaces")
@@ -76,8 +89,23 @@ export class SpacesController {
   @Delete("spaces/:id")
   async delete(@Param("id") id: string, @Req() request: Request) {
     const profile = await this.staffContext.requireProfileFromRequest(request);
-    await this.spaces.delete(id, profile);
-    return { ok: true };
+    return this.spaces.archive(id, profile);
+  }
+
+  @Post("spaces/:id/restore")
+  async restore(@Param("id") id: string, @Body() body: unknown, @Req() request: Request) {
+    const parsed = SpaceRestoreRequestSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      throw new BadRequestException();
+    }
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.spaces.restore(id, parsed.data, profile);
+  }
+
+  @Delete("spaces/:id/permanent")
+  async purgePermanently(@Param("id") id: string, @Req() request: Request) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.spaces.purgePermanently(id, profile);
   }
 
   @Post("spaces/:id/photos")

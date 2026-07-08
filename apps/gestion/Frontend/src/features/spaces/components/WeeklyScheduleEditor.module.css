@@ -10,7 +10,42 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.65rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.copyAllBtn {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.copyAllBtn:hover:not(:disabled) {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  background: var(--color-secondary-soft);
+}
+
+.copyAllBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.copyAllBtn:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 1px;
 }
 
 .rowDisabled {
@@ -19,95 +54,144 @@
 
 .schedule {
   display: grid;
+  gap: 0.5rem;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tableHead,
+.row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 5rem) minmax(0, 1fr) auto;
   gap: 0.65rem;
+  align-items: center;
+}
+
+.tableHead {
+  padding: 0 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.tableHead span:last-child {
+  justify-self: center;
 }
 
 .row {
-  display: grid;
-  grid-template-columns: minmax(88px, 0.8fr) minmax(0, 1fr) auto;
-  gap: 0.55rem;
-  align-items: center;
-  padding: 0.55rem 0.65rem;
+  padding: 0.5rem 0.65rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface-muted);
 }
 
 .dayLabel {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--color-text);
 }
 
 .times {
+  min-width: 0;
+}
+
+.timeRange {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.45rem 0.65rem;
+}
+
+.timeField {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.timeFieldLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 .timeInput {
-  padding: 0.45rem 0.55rem;
+  width: 6.5rem;
+  max-width: 100%;
+  padding: 0.4rem 0.45rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-text);
-  min-width: 0;
+  font-size: 0.86rem;
 }
 
 .timeInput:disabled {
   opacity: 0.55;
 }
 
+.timeInput:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 1px;
+}
+
 .allDay {
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+  background: var(--color-secondary-soft);
 }
 
 .toggle24h {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.78rem;
+  justify-content: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  justify-self: center;
+}
+
+.toggle24hText {
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.85rem;
-}
+@media (max-width: 520px) {
+  .tableHead {
+    display: none;
+  }
 
-.copyBtn {
-  padding: 0.35rem 0.55rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.copyBtn:hover:not(:disabled) {
-  border-color: var(--color-secondary);
-  color: var(--color-secondary);
-}
-
-.copyBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.copyBtn:focus-visible {
-  outline: 2px solid var(--color-secondary);
-  outline-offset: 1px;
-}
-
-@media (max-width: 720px) {
   .row {
     grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .toggle24h {
+    justify-self: start;
+  }
+
+  .timeRange {
+    width: 100%;
+  }
+
+  .timeInput {
+    flex: 1;
+    width: auto;
+    min-width: 5.5rem;
   }
 }

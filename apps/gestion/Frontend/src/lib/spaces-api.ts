@@ -1,5 +1,6 @@
 import type {
   CreateSpaceRequest,
+  SpaceArchiveResponse,
   SpaceResponse,
   SpacesListResponse,
   UpdateEntityPhotosRequest,
@@ -40,8 +41,22 @@ async function spacesFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function fetchSpacesByBuilding(buildingId: string): Promise<SpacesListResponse> {
-  return spacesFetch<SpacesListResponse>(`/buildings/${buildingId}/spaces`);
+export function fetchSpacesByBuilding(
+  buildingId: string,
+  options?: { includeArchived?: boolean; archivedOnly?: boolean },
+): Promise<SpacesListResponse> {
+  const params = new URLSearchParams();
+  if (options?.archivedOnly) {
+    params.set("archivedOnly", "true");
+  } else if (options?.includeArchived) {
+    params.set("includeArchived", "true");
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : "";
+  return spacesFetch<SpacesListResponse>(`/buildings/${buildingId}/spaces${query}`);
+}
+
+export function fetchArchivedSpacesByBuilding(buildingId: string): Promise<SpacesListResponse> {
+  return fetchSpacesByBuilding(buildingId, { archivedOnly: true });
 }
 
 export function fetchSpace(id: string): Promise<SpaceResponse> {
@@ -65,8 +80,24 @@ export function updateSpace(id: string, payload: CreateSpaceRequest): Promise<Sp
   });
 }
 
-export function deleteSpace(id: string): Promise<{ ok: true }> {
-  return spacesFetch<{ ok: true }>(`/spaces/${id}`, {
+export function archiveSpace(id: string): Promise<SpaceArchiveResponse> {
+  return spacesFetch<SpaceArchiveResponse>(`/spaces/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function restoreSpace(
+  id: string,
+  status: "active" | "inactive" = "inactive",
+): Promise<SpaceResponse> {
+  return spacesFetch<SpaceResponse>(`/spaces/${id}/restore`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function purgeSpacePermanently(id: string): Promise<{ ok: true }> {
+  return spacesFetch<{ ok: true }>(`/spaces/${id}/permanent`, {
     method: "DELETE",
   });
 }

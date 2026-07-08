@@ -86,6 +86,28 @@ export function BuildingsMap({ buildings, selectedId, onSelect }: BuildingsMapPr
   }, []);
 
   useEffect(() => {
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!map || !container) {
+      return;
+    }
+
+    const invalidate = () => {
+      map.invalidateSize();
+    };
+
+    invalidate();
+    const observer = new ResizeObserver(invalidate);
+    observer.observe(container);
+    window.addEventListener("orientationchange", invalidate);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("orientationchange", invalidate);
+    };
+  }, []);
+
+  useEffect(() => {
     const clusterGroup = clusterGroupRef.current;
     if (!clusterGroup) {
       return;

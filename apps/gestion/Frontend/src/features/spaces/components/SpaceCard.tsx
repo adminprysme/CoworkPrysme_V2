@@ -1,11 +1,22 @@
 import type { Space, SpaceStatusFilter, SpaceTypeFilter } from "../space-types.js";
 import { SPACE_TYPE_LABELS } from "../space-types.js";
+import { SPACE_STATUS_LABELS } from "../utils/space-status.js";
 import styles from "./SpaceCard.module.css";
 
 interface SpaceCardProps {
   space: Space;
   selected: boolean;
   onSelect: () => void;
+}
+
+function statusBadgeClass(status: Space["status"]): string {
+  if (status === "active") {
+    return styles.badgeActive ?? "";
+  }
+  if (status === "archived") {
+    return styles.badgeArchived ?? "";
+  }
+  return styles.badgeInactive ?? "";
 }
 
 export function SpaceCard({ space, selected, onSelect }: SpaceCardProps) {
@@ -41,13 +52,8 @@ export function SpaceCard({ space, selected, onSelect }: SpaceCardProps) {
         </p>
 
         <div className={styles.badges}>
-          <span
-            className={[
-              styles.badge,
-              space.status === "active" ? styles.badgeActive : styles.badgeInactive,
-            ].join(" ")}
-          >
-            {space.status === "active" ? "Actif" : "Inactif"}
+          <span className={[styles.badge, statusBadgeClass(space.status)].join(" ")}>
+            {SPACE_STATUS_LABELS[space.status]}
           </span>
         </div>
 
@@ -102,6 +108,7 @@ export function SpaceFilters({
           <option value="all">Tous</option>
           <option value="active">Actifs</option>
           <option value="inactive">Inactifs</option>
+          <option value="archived">Archivés</option>
         </select>
       </label>
     </div>
@@ -115,6 +122,9 @@ export function filterSpaces(
 ): Space[] {
   return spaces.filter((space) => {
     if (typeFilter !== "all" && space.type !== typeFilter) {
+      return false;
+    }
+    if (statusFilter === "all" && space.status === "archived") {
       return false;
     }
     if (statusFilter !== "all" && space.status !== statusFilter) {

@@ -103,4 +103,19 @@ describe("buildings.mapper", () => {
     );
     expect(cleared.description).toBeUndefined();
   });
+
+  it("create payload starts with empty photos (updates must preserve existing photos separately)", () => {
+    const dbDoc = mapRequestToDbDocument(sampleRequest, { lat: 45.76, lng: 4.86 });
+    expect(dbDoc.photos).toEqual([]);
+
+    const existingPhotos = [
+      {
+        storageKey: "buildings/507f1f77bcf86cd799439011/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp",
+        order: 0,
+        isPrimary: true,
+      },
+    ];
+    const updatePayload = { ...dbDoc, photos: existingPhotos };
+    expect(updatePayload.photos).toEqual(existingPhotos);
+  });
 });

@@ -14,7 +14,7 @@
 
 .title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: clamp(1rem, 2vw, 1.15rem);
 }
 
 .subtitle {
@@ -71,7 +71,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -80,7 +80,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  min-height: 320px;
 }
 
 .list {
@@ -106,5 +105,16 @@
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    align-items: stretch;
+  }
+
+  .primaryBtn {
+    width: 100%;
+    justify-content: center;
   }
 }

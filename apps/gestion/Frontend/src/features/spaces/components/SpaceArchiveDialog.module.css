@@ -1,0 +1,79 @@
+.dialog {
+  width: min(100%, 560px);
+  height: auto;
+  max-height: min(90dvh, 640px);
+}
+
+.body {
+  padding: 0 1.35rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.effectsList {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.confirmField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.confirmLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.confirmInput {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.confirmInput:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 1px;
+}
+
+.dangerBtn {
+  padding: 0.7rem 1.1rem;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-danger);
+  color: var(--color-surface);
+}
+
+.dangerBtn:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.dangerBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.dangerBtn:focus-visible {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .body {
+    padding-inline: 1rem;
+  }
+
+  .dialog {
+    height: auto;
+  }
+}

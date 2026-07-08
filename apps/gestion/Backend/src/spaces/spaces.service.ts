@@ -1,23 +1,29 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import {
   CreateSpaceRequestSchema,
+  SpaceArchiveResponseSchema,
   SpaceResponseSchema,
+  SpaceRestoreRequestSchema,
   SpacesListResponseSchema,
   UpdateEntityPhotosRequestSchema,
   UpdateSpaceRequestSchema,
   isValidSpacePhotoStorageKey,
   type CreateSpaceRequest,
+  type SpaceRestoreRequest,
   type UpdateEntityPhotosRequest,
   type UpdateSpaceRequest,
 } from "@coworkprysme/shared";
 import {
+  BLOCKING_RESERVATION_STATUSES,
   connectMongo,
   getBuildingModel,
+  getReservationModel,
   getSpaceModel,
   type BuildingPhoto,
   type StaffProfileDocument,
@@ -28,6 +34,7 @@ import type { Types } from "mongoose";
 import { UploadsService } from "../uploads/uploads.service.js";
 import {
   baseSlugForSpaceName,
+  buildArchivedSpaceSlug,
   buildSeoForSpace,
   buildSpaceScopeFilter,
   isBuildingInScope,
@@ -58,6 +65,22 @@ function normalizePhotoMetadata(photos: UpdateEntityPhotosRequest["photos"]): Bu
   }));
 }
 
+function assertSpaceMutable(status: string): void {
+  if (status === "archived") {
+    throw new ConflictException("Cet espace est archivé. Restaurez-le avant toute modification.");
+  }
+}
+
+function buildListStatusFilter(options: { includeArchived?: boolean; archivedOnly?: boolean }) {
+  if (options.archivedOnly) {
+    return { status: "archived" as const };
+  }
+  if (options.includeArchived) {
+    return {};
+  }
+  return { status: { $ne: "archived" as const } };
+}
+
 @Injectable()
 export class SpacesService {
   constructor(private readonly uploads: UploadsService) {}
@@ -85,7 +108,11 @@ export class SpacesService {
     };
   }
 
-  async listByBuilding(buildingId: string, profile: StaffProfileDocument) {
+  async listByBuilding(
+    buildingId: string,
+    profile: StaffProfileDocument,
+    options: { includeArchived?: boolean; archivedOnly?: boolean } = {},
+  ) {
     if (!isObjectId(buildingId)) {
       throw new NotFoundException();
     }
@@ -103,7 +130,8 @@ export class SpacesService {
 
     const Space = await getSpaceModel();
     const scopeFilter = buildSpaceScopeFilter(profile.scope.buildingIds);
-    const docs = await Space.find({ buildingId, ...scopeFilter })
+    const statusFilter = buildListStatusFilter(options);
+    const docs = await Space.find({ buildingId, ...scopeFilter, ...statusFilter })
       .sort({ name: 1 })
       .lean()
       .exec();
@@ -191,6 +219,8 @@ export class SpacesService {
       throw new ForbiddenException();
     }
 
+    assertSpaceMutable(existing.status);
+
     const seo = await this.resolveUniqueSpaceSeo(
       parsed.data.name,
       parsed.data.description,
@@ -217,7 +247,7 @@ export class SpacesService {
     );
   }
 
-  async delete(id: string, profile: StaffProfileDocument) {
+  async archive(id: string, profile: StaffProfileDocument) {
     if (!isObjectId(id)) {
       throw new NotFoundException();
     }
@@ -233,8 +263,131 @@ export class SpacesService {
       throw new ForbiddenException();
     }
 
+    if (existing.status === "archived") {
+      throw new ConflictException("Cet espace est déjà archivé.");
+    }
+
+    const Reservation = await getReservationModel();
+    const blockingReservations = await Reservation.countDocuments({
+      spaceId: existing._id,
+      status: { $in: BLOCKING_RESERVATION_STATUSES },
+    }).exec();
+
+    if (blockingReservations > 0) {
+      throw new ConflictException(
+        "Impossible d'archiver cet espace : des réservations en cours y sont rattachées.",
+      );
+    }
+
+    existing.status = "archived";
+    existing.archivedAt = new Date();
+    existing.archivedBy = profile._id;
+    existing.seo = {
+      ...existing.seo,
+      slug: buildArchivedSpaceSlug(existing.seo.slug, existing._id.toString()),
+    };
+    await existing.save();
+
+    const saved = await Space.findById(existing._id).lean().exec();
+    if (!saved) {
+      throw new NotFoundException();
+    }
+
+    return SpaceArchiveResponseSchema.parse({
+      ok: true,
+      space: mapSpaceToResponse({ ...saved, _id: saved._id as Types.ObjectId }),
+    });
+  }
+
+  async restore(id: string, input: SpaceRestoreRequest, profile: StaffProfileDocument) {
+    if (!isObjectId(id)) {
+      throw new NotFoundException();
+    }
+
+    const parsed = SpaceRestoreRequestSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new BadRequestException();
+    }
+
+    await connectMongo();
+    const Space = await getSpaceModel();
+    const existing = await Space.findById(id).exec();
+    if (!existing) {
+      throw new NotFoundException();
+    }
+
+    if (!isBuildingInScope(existing.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+
+    if (existing.status !== "archived") {
+      throw new ConflictException("Seuls les espaces archivés peuvent être restaurés.");
+    }
+
+    const seo = await this.resolveUniqueSpaceSeo(
+      existing.name,
+      existing.description,
+      existing._id.toString(),
+    );
+
+    existing.status = parsed.data.status;
+    existing.archivedAt = undefined;
+    existing.archivedBy = undefined;
+    existing.seo = seo;
+    await existing.save();
+
+    const saved = await Space.findById(existing._id).lean().exec();
+    if (!saved) {
+      throw new NotFoundException();
+    }
+
+    return SpaceResponseSchema.parse(
+      mapSpaceToResponse({ ...saved, _id: saved._id as Types.ObjectId }),
+    );
+  }
+
+  /** @deprecated Use archive — kept as alias for the HTTP DELETE route. */
+  async delete(id: string, profile: StaffProfileDocument) {
+    return this.archive(id, profile);
+  }
+
+  async purgePermanently(id: string, profile: StaffProfileDocument) {
+    if (!isObjectId(id)) {
+      throw new NotFoundException();
+    }
+
+    await connectMongo();
+    const Space = await getSpaceModel();
+    const existing = await Space.findById(id).exec();
+    if (!existing) {
+      throw new NotFoundException();
+    }
+
+    if (!isBuildingInScope(existing.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+
+    if (existing.status !== "archived") {
+      throw new ConflictException(
+        "Seuls les espaces archivés peuvent être supprimés définitivement.",
+      );
+    }
+
+    const Reservation = await getReservationModel();
+    const reservationCount = await Reservation.countDocuments({
+      spaceId: existing._id,
+    }).exec();
+
+    if (reservationCount > 0) {
+      throw new ConflictException(
+        "Impossible de supprimer définitivement : des réservations historiques référencent cet espace.",
+      );
+    }
+
     await this.uploads.deleteSpaceDirectory(id);
     await existing.deleteOne();
+
+    return { ok: true as const };
   }
 
   async uploadPhoto(id: string, buffer: Buffer, profile: StaffProfileDocument) {
@@ -252,6 +405,8 @@ export class SpacesService {
     if (!isBuildingInScope(existing.buildingId, profile.scope.buildingIds)) {
       throw new ForbiddenException();
     }
+
+    assertSpaceMutable(existing.status);
 
     const limits = this.uploads.getLimits();
     if (existing.photos.length >= limits.UPLOAD_MAX_PHOTOS_PER_SPACE) {
@@ -296,6 +451,8 @@ export class SpacesService {
     if (!isBuildingInScope(existing.buildingId, profile.scope.buildingIds)) {
       throw new ForbiddenException();
     }
+
+    assertSpaceMutable(existing.status);
 
     const photoIndex = existing.photos.findIndex((photo) => photo.storageKey === storageKey);
     if (photoIndex === -1) {
@@ -353,6 +510,8 @@ export class SpacesService {
     if (!isBuildingInScope(existing.buildingId, profile.scope.buildingIds)) {
       throw new ForbiddenException();
     }
+
+    assertSpaceMutable(existing.status);
 
     const knownKeys = new Set(existing.photos.map((photo) => photo.storageKey));
     for (const photo of parsed.data.photos) {

@@ -10,7 +10,37 @@ import {
   type BuildingFormErrors,
 } from "../utils/validation.js";
 import { BuildingForm } from "./BuildingForm.js";
+import { StatusToggle } from "./StatusToggle.js";
 import styles from "./BuildingFormPanel.module.css";
+
+type CreateTab = "info" | "accessibility";
+
+const INFO_ERROR_KEYS = new Set<string>([
+  "name",
+  "description",
+  "floors",
+  "conciergeLink",
+  "photos",
+]);
+
+const ACCESSIBILITY_ERROR_KEYS = new Set<string>([
+  "street",
+  "postalCode",
+  "city",
+  "country",
+  "coordinates",
+]);
+
+function tabForErrors(errors: BuildingFormErrors): CreateTab {
+  const keys = Object.keys(errors) as (keyof BuildingFormErrors)[];
+  if (keys.some((key) => ACCESSIBILITY_ERROR_KEYS.has(key))) {
+    return "accessibility";
+  }
+  if (keys.some((key) => INFO_ERROR_KEYS.has(key))) {
+    return "info";
+  }
+  return "info";
+}
 
 interface BuildingFormPanelProps {
   open: boolean;
@@ -19,6 +49,7 @@ interface BuildingFormPanelProps {
 }
 
 export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanelProps) {
+  const [tab, setTab] = useState<CreateTab>("info");
   const [values, setValues] = useState<BuildingFormValues>(() => ({
     ...createEmptyFormValues(),
     accessibilityHours: createDefaultDaySchedules(),
@@ -38,6 +69,7 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
     if (!open) {
       return;
     }
+    setTab("info");
     setValues({
       ...createEmptyFormValues(),
       accessibilityHours: createDefaultDaySchedules(),
@@ -61,6 +93,17 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, handleClose]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -69,6 +112,7 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
     const nextErrors = validateBuildingForm(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
+      setTab(tabForErrors(nextErrors));
       return;
     }
 
@@ -80,6 +124,8 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
       onClose();
     } catch (error) {
       const mapped = mapBuildingSaveError(error);
+      setErrors(mapped);
+      setTab(tabForErrors(mapped));
       setSubmitError(
         mapped.photos ??
           mapped.coordinates ??
@@ -92,28 +138,68 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
 
   return (
     <div className={styles.overlay} role="presentation" onClick={handleClose}>
-      <aside
-        className={styles.panel}
+      <div
+        className={styles.dialog}
         role="dialog"
         aria-modal="true"
         aria-labelledby="building-form-title"
         onClick={(event) => event.stopPropagation()}
       >
+        <div className={styles.dialogAccent} aria-hidden="true" />
+
         <header className={styles.header}>
-          <h2 id="building-form-title">Nouveau bâtiment</h2>
-          <button
-            type="button"
-            className={styles.closeBtn}
-            onClick={handleClose}
-            aria-label="Fermer"
-          >
-            ✕
-          </button>
+          <div className={styles.headerMain}>
+            <h2 id="building-form-title">Nouveau bâtiment</h2>
+            <p className={styles.headerSubtitle}>
+              Créez un bâtiment et configurez son accessibilité.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <StatusToggle
+              value={values.status}
+              ariaLabel="Statut du bâtiment"
+              onChange={(status) => setValues({ ...values, status })}
+            />
+            <button
+              type="button"
+              className={styles.closeBtn}
+              onClick={handleClose}
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
+          </div>
         </header>
 
-        <div className={styles.body}>
+        <div className={styles.tabs} role="tablist" aria-label="Sections du formulaire">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "info"}
+            className={[styles.tab, tab === "info" ? styles.tabActive : ""]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => setTab("info")}
+          >
+            Informations
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "accessibility"}
+            className={[styles.tab, tab === "accessibility" ? styles.tabActive : ""]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => setTab("accessibility")}
+          >
+            Accessibilité
+          </button>
+        </div>
+
+        <div className={styles.body} role="tabpanel">
           <BuildingForm
             idPrefix="create-building"
+            section={tab}
             values={values}
             errors={errors}
             onChange={setValues}
@@ -131,10 +217,10 @@ export function BuildingFormPanel({ open, onClose, onSubmit }: BuildingFormPanel
             disabled={submitting}
             onClick={() => void handleSubmit()}
           >
-            {submitting ? "Enregistrement…" : "Enregistrer"}
+            {submitting ? "Enregistrement…" : "Créer le bâtiment"}
           </button>
         </footer>
-      </aside>
+      </div>
     </div>
   );
 }

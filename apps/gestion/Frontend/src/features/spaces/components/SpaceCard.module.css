@@ -111,6 +111,12 @@
   border: 1px solid var(--color-border);
 }
 
+.badgeArchived {
+  background: color-mix(in srgb, var(--color-text-muted) 14%, var(--color-surface));
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
 .equipments {
   display: flex;
   flex-wrap: wrap;

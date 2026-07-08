@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { CreateSpaceRequest } from "@coworkprysme/shared";
 
 import {
+  buildArchivedSpaceSlug,
   mapRequestToDbDocument,
   mapSpaceToResponse,
   resolveUniqueSlug,
@@ -141,5 +142,25 @@ describe("spaces.mapper", () => {
 
     expect(dbDoc.accessCode).toBeUndefined();
     expect(dbDoc.description).toBeUndefined();
+  });
+
+  it("suffixes archived slug with space id tail", () => {
+    expect(buildArchivedSpaceSlug("salon-part-dieu", "507f1f77bcf86cd799439011")).toBe(
+      "salon-part-dieu-archived-439011",
+    );
+    expect(
+      buildArchivedSpaceSlug("salon-part-dieu-archived-439011", "507f1f77bcf86cd799439011"),
+    ).toBe("salon-part-dieu-archived-439011");
+  });
+
+  it("update payload omits photos (PATCH must not wipe embedded photos like buildings create mapper)", () => {
+    const buildingId = "507f1f77bcf86cd799439011" as never;
+    const dbDoc = mapRequestToDbDocument(sampleRequest, buildingId, {
+      slug: "salon-part-dieu",
+      metaTitle: "Salon Part-Dieu | Cowork Prysme",
+      metaDescription: "Grande salle lumineuse.",
+    });
+
+    expect(dbDoc).not.toHaveProperty("photos");
   });
 });

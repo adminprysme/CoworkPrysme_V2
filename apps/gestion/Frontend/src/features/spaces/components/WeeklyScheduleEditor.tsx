@@ -26,52 +26,76 @@ export function WeeklyScheduleEditor({
     onChange(schedules.map((entry) => (entry.day === day ? { ...entry, ...patch } : entry)));
   }
 
+  function copyFromDay(source: DaySchedule) {
+    onChange(copyDayScheduleToAll(source, schedules));
+  }
+
+  const monday = schedules.find((entry) => entry.day === "monday");
+
   return (
     <section className={styles.schedule} aria-labelledby={`${idPrefix}-title`}>
       <div className={styles.scheduleHeader}>
         <h3 id={`${idPrefix}-title`}>{title}</h3>
-        {headerExtra}
+        <div className={styles.headerActions}>
+          {headerExtra}
+          {monday ? (
+            <button
+              type="button"
+              className={styles.copyAllBtn}
+              disabled={disabled}
+              onClick={() => copyFromDay(monday)}
+            >
+              Appliquer le lundi à tous
+            </button>
+          ) : null}
+        </div>
       </div>
-      {schedules.map((entry) => (
-        <div
-          key={entry.day}
-          className={[styles.row, disabled ? styles.rowDisabled : ""].filter(Boolean).join(" ")}
-        >
-          <span className={styles.dayLabel}>{WEEK_DAY_LABELS[entry.day]}</span>
 
-          <div className={styles.times}>
-            {entry.is24h ? (
-              <span className={styles.allDay}>24h/24</span>
-            ) : (
-              <>
-                <label className="visually-hidden" htmlFor={`${idPrefix}-${entry.day}-open`}>
-                  Ouverture {WEEK_DAY_LABELS[entry.day]}
-                </label>
-                <input
-                  id={`${idPrefix}-${entry.day}-open`}
-                  type="time"
-                  className={styles.timeInput}
-                  value={entry.openTime}
-                  disabled={disabled}
-                  onChange={(event) => updateDay(entry.day, { openTime: event.target.value })}
-                />
-                <span aria-hidden="true">→</span>
-                <label className="visually-hidden" htmlFor={`${idPrefix}-${entry.day}-close`}>
-                  Fermeture {WEEK_DAY_LABELS[entry.day]}
-                </label>
-                <input
-                  id={`${idPrefix}-${entry.day}-close`}
-                  type="time"
-                  className={styles.timeInput}
-                  value={entry.closeTime}
-                  disabled={disabled}
-                  onChange={(event) => updateDay(entry.day, { closeTime: event.target.value })}
-                />
-              </>
-            )}
-          </div>
+      <div className={styles.table}>
+        <div className={styles.tableHead} aria-hidden="true">
+          <span>Jour</span>
+          <span>Horaires</span>
+          <span>24h/24</span>
+        </div>
 
-          <div className={styles.actions}>
+        {schedules.map((entry) => (
+          <div
+            key={entry.day}
+            className={[styles.row, disabled ? styles.rowDisabled : ""].filter(Boolean).join(" ")}
+          >
+            <span className={styles.dayLabel}>{WEEK_DAY_LABELS[entry.day]}</span>
+
+            <div className={styles.times}>
+              {entry.is24h ? (
+                <span className={styles.allDay}>Ouvert en continu</span>
+              ) : (
+                <div className={styles.timeRange}>
+                  <label className={styles.timeField} htmlFor={`${idPrefix}-${entry.day}-open`}>
+                    <span className={styles.timeFieldLabel}>De</span>
+                    <input
+                      id={`${idPrefix}-${entry.day}-open`}
+                      type="time"
+                      className={styles.timeInput}
+                      value={entry.openTime}
+                      disabled={disabled}
+                      onChange={(event) => updateDay(entry.day, { openTime: event.target.value })}
+                    />
+                  </label>
+                  <label className={styles.timeField} htmlFor={`${idPrefix}-${entry.day}-close`}>
+                    <span className={styles.timeFieldLabel}>À</span>
+                    <input
+                      id={`${idPrefix}-${entry.day}-close`}
+                      type="time"
+                      className={styles.timeInput}
+                      value={entry.closeTime}
+                      disabled={disabled}
+                      onChange={(event) => updateDay(entry.day, { closeTime: event.target.value })}
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+
             <label className={styles.toggle24h}>
               <input
                 type="checkbox"
@@ -79,19 +103,11 @@ export function WeeklyScheduleEditor({
                 disabled={disabled}
                 onChange={(event) => updateDay(entry.day, { is24h: event.target.checked })}
               />
-              24h/24
+              <span className={styles.toggle24hText}>24h/24</span>
             </label>
-            <button
-              type="button"
-              className={styles.copyBtn}
-              disabled={disabled}
-              onClick={() => onChange(copyDayScheduleToAll(entry, schedules))}
-            >
-              Copier sur tous
-            </button>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }

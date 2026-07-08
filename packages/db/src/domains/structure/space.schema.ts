@@ -1,9 +1,9 @@
 import { Schema, type Connection, type HydratedDocument, type Model, type Types } from "mongoose";
 
 import { getCoworkDb } from "../../connection.js";
-import { ACTIVE_STATUSES, SPACE_TYPES } from "../../lib/enums.js";
+import { SPACE_TYPES, STRUCTURE_STATUSES } from "../../lib/enums.js";
 import { registerModel } from "../../lib/register-model.js";
-import { objectIdRef, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
+import { objectIdRef, optionalObjectIdRef, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
 import {
   buildingDayScheduleSchema,
   buildingPhotoSchema,
@@ -29,7 +29,9 @@ export interface Space {
   photos: BuildingPhoto[];
   openingHours: BuildingDaySchedule[];
   accessCode?: string;
-  status: (typeof ACTIVE_STATUSES)[number];
+  status: (typeof STRUCTURE_STATUSES)[number];
+  archivedAt?: Date;
+  archivedBy?: Types.ObjectId;
   seo: SeoMeta;
   tariffs: SpaceTariff[];
   createdAt: Date;
@@ -50,7 +52,9 @@ const spaceSchema = new Schema<Space>(
     photos: { type: [buildingPhotoSchema], default: [] },
     openingHours: { type: [buildingDayScheduleSchema], default: [] },
     accessCode: { type: String, trim: true },
-    status: { type: String, enum: ACTIVE_STATUSES, default: "active", required: true },
+    status: { type: String, enum: STRUCTURE_STATUSES, default: "active", required: true },
+    archivedAt: { type: Date },
+    archivedBy: optionalObjectIdRef("StaffProfile"),
     seo: { type: seoSchema, required: true },
     tariffs: {
       type: [spaceTariffSchema],
