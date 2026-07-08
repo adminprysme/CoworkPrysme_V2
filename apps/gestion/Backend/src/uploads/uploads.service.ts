@@ -2,8 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { OnModuleInit } from "@nestjs/common";
 import {
   buildEntityPhotoStorageKey,
+  buildVitrineImageStorageKey,
   isValidEntityPhotoStorageKey,
+  isValidVitrineImageStorageKey,
+  VITRINE_UPLOAD_MAX_BYTES,
   type UploadEntityType,
+  type VitrineImageSlot,
 } from "@coworkprysme/shared";
 import {
   parseGestionApiEnv,
@@ -62,18 +66,16 @@ export class UploadsService implements OnModuleInit {
     return absolutePath;
   }
 
-  async storePhoto(
-    entityType: UploadEntityType,
-    entityId: string,
+  private async storeImageBuffer(
     buffer: Buffer,
-  ): Promise<{ storageKey: string }> {
-    const limits = this.getLimits();
-
+    maxBytes: number,
+    absolutePath: string,
+  ): Promise<void> {
     if (buffer.length === 0) {
       throw new BadRequestException("Empty file");
     }
 
-    if (buffer.length > limits.UPLOAD_MAX_BYTES) {
+    if (buffer.length > maxBytes) {
       throw new BadRequestException("File exceeds maximum size");
     }
 
@@ -81,6 +83,28 @@ export class UploadsService implements OnModuleInit {
     if (!detected || !ACCEPTED_MIME_TYPES.has(detected.mime)) {
       throw new BadRequestException("Unsupported file type");
     }
+
+    await mkdir(path.dirname(absolutePath), { recursive: true });
+
+    const limits = this.getLimits();
+    await sharp(buffer)
+      .rotate()
+      .resize({
+        width: limits.UPLOAD_MAX_DIMENSION_PX,
+        height: limits.UPLOAD_MAX_DIMENSION_PX,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 85 })
+      .toFile(absolutePath);
+  }
+
+  async storePhoto(
+    entityType: UploadEntityType,
+    entityId: string,
+    buffer: Buffer,
+  ): Promise<{ storageKey: string }> {
+    const limits = this.getLimits();
 
     const fileId = crypto.randomUUID();
     const storageKey = buildEntityPhotoStorageKey(entityType, entityId, fileId);
@@ -92,18 +116,8 @@ export class UploadsService implements OnModuleInit {
     if (!absolutePath) {
       throw new BadRequestException("Invalid storage key");
     }
-    await mkdir(path.dirname(absolutePath), { recursive: true });
 
-    await sharp(buffer)
-      .rotate()
-      .resize({
-        width: limits.UPLOAD_MAX_DIMENSION_PX,
-        height: limits.UPLOAD_MAX_DIMENSION_PX,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: 85 })
-      .toFile(absolutePath);
+    await this.storeImageBuffer(buffer, limits.UPLOAD_MAX_BYTES, absolutePath);
 
     return { storageKey };
   }
@@ -114,6 +128,45 @@ export class UploadsService implements OnModuleInit {
 
   async storeSpacePhoto(spaceId: string, buffer: Buffer): Promise<{ storageKey: string }> {
     return this.storePhoto("spaces", spaceId, buffer);
+  }
+
+  async storeVitrineImage(
+    slot: VitrineImageSlot,
+    buffer: Buffer,
+    fileId = crypto.randomUUID(),
+  ): Promise<{ storageKey: string }> {
+    const storageKey = buildVitrineImageStorageKey(slot, fileId);
+    if (!isValidVitrineImageStorageKey(storageKey)) {
+      throw new BadRequestException("Invalid storage key");
+    }
+
+    const absolutePath = resolveStorageKeyAbsolutePath(this.uploadsDir, storageKey);
+    if (!absolutePath) {
+      throw new BadRequestException("Invalid storage key");
+    }
+
+    await this.storeImageBuffer(buffer, VITRINE_UPLOAD_MAX_BYTES, absolutePath);
+
+    return { storageKey };
+  }
+
+  async deleteVitrineImageFile(storageKey: string): Promise<void> {
+    if (!isValidVitrineImageStorageKey(storageKey)) {
+      return;
+    }
+
+    const absolutePath = resolveStorageKeyAbsolutePath(this.uploadsDir, storageKey);
+    if (!absolutePath) {
+      return;
+    }
+
+    try {
+      await rm(absolutePath, { force: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
+    }
   }
 
   async deletePhotoFile(storageKey: string): Promise<void> {
