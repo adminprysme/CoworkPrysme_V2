@@ -1,0 +1,32 @@
+.intro {
+  padding-block: var(--v-space-12) var(--v-space-10);
+  border-bottom: 1px solid var(--v-color-border);
+  background:
+    radial-gradient(circle at top right, rgba(197, 131, 105, 0.12), transparent 55%),
+    var(--v-color-surface-muted);
+}
+
+.inner {
+  max-width: 44rem;
+}
+
+.title {
+  margin: 0 0 var(--v-space-4);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  color: var(--v-color-ink);
+  text-wrap: balance;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 38rem;
+  font-size: var(--v-text-lg);
+  line-height: 1.7;
+  color: var(--v-color-text-muted);
+}
+
+@media (max-width: 768px) {
+  .intro {
+    padding-block: var(--v-space-10) var(--v-space-8);
+  }
+}

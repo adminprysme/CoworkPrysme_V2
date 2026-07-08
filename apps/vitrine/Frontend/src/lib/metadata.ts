@@ -21,7 +21,7 @@ export function createPageMetadata({
   const fullTitle = path === "/" || title.includes(SITE.name) ? title : `${title} | ${SITE.name}`;
 
   return {
-    title: fullTitle,
+    title: path === "/" ? fullTitle : title,
     description,
     keywords: [...SITE.keywords] as string[],
     alternates: {
