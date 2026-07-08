@@ -1,0 +1,43 @@
+.banner {
+  overflow: hidden;
+  border-block: 1px solid var(--v-color-border);
+  background: var(--v-color-brand-muted);
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+
+.item {
+  flex-shrink: 0;
+  padding: 0.85rem 2rem;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--v-color-brand-hover);
+  white-space: nowrap;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .item + .item {
+    display: none;
+  }
+}
