@@ -11,6 +11,7 @@ import { connectMongo, getVitrineContentModel } from "@coworkprysme/db";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { UploadsService } from "../uploads/uploads.service.js";
+import { collectRemovedKeys } from "../uploads/photo-storage.helpers.js";
 import {
   getOrCreateVitrineContentDocument,
   getServiceImageField,
@@ -41,6 +42,7 @@ export class VitrineContentService {
 
     const payload = parsed.data;
     const doc = await getOrCreateVitrineContentDocument();
+    let removedHeroKeys: string[] = [];
 
     if (payload.heroImages) {
       for (const storageKey of payload.heroImages) {
@@ -48,6 +50,7 @@ export class VitrineContentService {
           throw new BadRequestException("Invalid hero image storage key");
         }
       }
+      removedHeroKeys = collectRemovedKeys(doc.heroImages, payload.heroImages);
       doc.heroImages = payload.heroImages;
     }
 
@@ -73,6 +76,10 @@ export class VitrineContentService {
 
     if (!updated) {
       throw new NotFoundException();
+    }
+
+    for (const storageKey of removedHeroKeys) {
+      await this.uploads.deleteVitrineImageFile(storageKey);
     }
 
     return mapVitrineContentToResponse(updated);

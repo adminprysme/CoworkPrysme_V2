@@ -69,6 +69,17 @@ function mockFailedDbUpdate() {
   });
 }
 
+function mockSuccessfulDbUpdate() {
+  mockVitrineContentModel.findByIdAndUpdate.mockImplementation((_id, update) => ({
+    lean: vi.fn().mockReturnValue({
+      exec: vi.fn().mockResolvedValue({
+        ...structuredClone(mockDoc),
+        ...update,
+      }),
+    }),
+  }));
+}
+
 async function seedFile(uploadsDir: string, storageKey: string) {
   const absolute = path.join(uploadsDir, storageKey);
   await mkdir(path.dirname(absolute), { recursive: true });
@@ -146,5 +157,56 @@ describe("VitrineContentService upload rollback", () => {
     expect(deleteSpy.mock.calls[0]?.[0]).toMatch(/^vitrine\/room-service\/[0-9a-f-]{36}\.webp$/);
 
     await expect(access(path.join(tempDir, previousKey))).resolves.toBeUndefined();
+  });
+});
+
+describe("VitrineContentService PATCH heroImages orphan cleanup", () => {
+  let uploads: UploadsService;
+  let service: VitrineContentService;
+  let tempDir: string;
+
+  const keptKey = "vitrine/hero/11111111-1111-4111-8111-111111111111.webp";
+  const removedKey = "vitrine/hero/22222222-2222-4222-8222-222222222222.webp";
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "vitrine-patch-"));
+    uploads = new UploadsService();
+    (uploads as unknown as { uploadsDir: string }).uploadsDir = tempDir;
+    service = new VitrineContentService(uploads);
+
+    mockDoc.heroImages = [keptKey, removedKey];
+    mockDoc.conceptImage = null;
+    mockDoc.serviceImages = {
+      roomService: null,
+      afterwork: null,
+      conciergerie: null,
+    };
+    mockVitrineContentModel.findByIdAndUpdate.mockReset();
+    await seedFile(tempDir, keptKey);
+    await seedFile(tempDir, removedKey);
+  });
+
+  it("deletes removed hero files from disk after a successful PATCH", async () => {
+    mockSuccessfulDbUpdate();
+
+    await service.updateContent({ heroImages: [keptKey] });
+
+    await expect(access(path.join(tempDir, keptKey))).resolves.toBeUndefined();
+    await expect(access(path.join(tempDir, removedKey))).rejects.toThrow();
+
+    const heroFiles = await readdir(path.join(tempDir, "vitrine", "hero"));
+    expect(heroFiles).toEqual(["11111111-1111-4111-8111-111111111111.webp"]);
+  });
+
+  it("keeps removed hero files on disk when the Mongo update fails", async () => {
+    mockFailedDbUpdate();
+    const deleteSpy = vi.spyOn(uploads, "deleteVitrineImageFile");
+
+    await expect(service.updateContent({ heroImages: [keptKey] })).rejects.toThrow();
+
+    expect(deleteSpy).not.toHaveBeenCalled();
+    await expect(access(path.join(tempDir, removedKey))).resolves.toBeUndefined();
+    const heroFiles = await readdir(path.join(tempDir, "vitrine", "hero"));
+    expect(heroFiles).toHaveLength(2);
   });
 });

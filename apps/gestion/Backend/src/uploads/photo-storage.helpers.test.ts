@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBuildingDeleteBlockedMessage,
+  collectRemovedKeys,
   collectRemovedStorageKeys,
 } from "./photo-storage.helpers.js";
 
@@ -16,6 +17,13 @@ describe("photo-storage.helpers", () => {
   it("returns empty when no photos were removed", () => {
     const photos = [{ storageKey: "spaces/b/1.webp" }];
     expect(collectRemovedStorageKeys(photos, photos)).toEqual([]);
+  });
+
+  it("collects plain storage keys removed between string arrays", () => {
+    const existing = ["vitrine/hero/a.webp", "vitrine/hero/b.webp"];
+    const next = ["vitrine/hero/b.webp"];
+
+    expect(collectRemovedKeys(existing, next)).toEqual(["vitrine/hero/a.webp"]);
   });
 
   it("builds an actionable building delete message with count", () => {
