@@ -1,0 +1,85 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--v-space-2);
+  padding: 0.8rem 1.35rem;
+  border-radius: var(--v-radius-full);
+  border: 1px solid transparent;
+  font-family: var(--v-font-body);
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background-color var(--v-duration-fast) var(--v-ease-out),
+    border-color var(--v-duration-fast) var(--v-ease-out),
+    color var(--v-duration-fast) var(--v-ease-out),
+    transform var(--v-duration-fast) var(--v-ease-out),
+    box-shadow var(--v-duration-fast) var(--v-ease-out);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.primary {
+  background: var(--v-color-brand);
+  color: var(--v-color-text-on-brand);
+  box-shadow: var(--v-shadow-brand);
+}
+
+.primary:hover {
+  background: var(--v-color-brand-hover);
+}
+
+.secondary {
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  border-color: var(--v-color-border-strong);
+}
+
+.secondary:hover {
+  border-color: var(--v-color-brand);
+  color: var(--v-color-brand);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--v-color-ink);
+  border-color: transparent;
+}
+
+.ghost:hover {
+  background: var(--v-color-brand-muted);
+  color: var(--v-color-brand-hover);
+}
+
+.outlineLight {
+  background: transparent;
+  color: var(--v-color-text-inverse);
+  border-color: rgba(250, 248, 246, 0.55);
+}
+
+.outlineLight:hover {
+  background: rgba(250, 248, 246, 0.12);
+  border-color: rgba(250, 248, 246, 0.85);
+}
+
+.sm {
+  padding: 0.55rem 1rem;
+  font-size: var(--v-text-xs);
+}
+
+.lg {
+  padding: 0.95rem 1.65rem;
+  font-size: var(--v-text-base);
+}
+
+.fullWidth {
+  width: 100%;
+}

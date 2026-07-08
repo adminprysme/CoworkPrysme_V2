@@ -1,0 +1,77 @@
+:root {
+  /* Brand — terracotta / copper */
+  --v-color-brand: #c58369;
+  --v-color-brand-hover: #a86d54;
+  --v-color-brand-soft: rgba(197, 131, 105, 0.14);
+  --v-color-brand-muted: rgba(197, 131, 105, 0.08);
+
+  /* Warm neutrals */
+  --v-color-bg: #faf8f6;
+  --v-color-bg-elevated: #ffffff;
+  --v-color-bg-warm: #f3ede8;
+  --v-color-bg-dark: #1c1917;
+  --v-color-surface: #ffffff;
+  --v-color-surface-muted: #f7f3f0;
+  --v-color-border: #e8dfd8;
+  --v-color-border-strong: #d4c8bf;
+
+  /* Text */
+  --v-color-text: #2a2522;
+  --v-color-text-muted: #6b5f57;
+  --v-color-text-inverse: #faf8f6;
+  --v-color-text-on-brand: #ffffff;
+
+  /* Accent secondary — deep warm charcoal for contrast */
+  --v-color-ink: #3d3530;
+  --v-color-ink-soft: #524842;
+
+  /* Typography scale */
+  --v-font-display: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  --v-font-body: var(--font-body), "DM Sans", system-ui, sans-serif;
+
+  --v-text-xs: 0.75rem;
+  --v-text-sm: 0.875rem;
+  --v-text-base: 1rem;
+  --v-text-lg: 1.125rem;
+  --v-text-xl: 1.25rem;
+  --v-text-2xl: 1.5rem;
+  --v-text-3xl: clamp(1.75rem, 3vw, 2.25rem);
+  --v-text-4xl: clamp(2.25rem, 4.5vw, 3.25rem);
+  --v-text-hero: clamp(2.5rem, 5.5vw, 4rem);
+
+  /* Spacing */
+  --v-space-1: 0.25rem;
+  --v-space-2: 0.5rem;
+  --v-space-3: 0.75rem;
+  --v-space-4: 1rem;
+  --v-space-5: 1.25rem;
+  --v-space-6: 1.5rem;
+  --v-space-8: 2rem;
+  --v-space-10: 2.5rem;
+  --v-space-12: 3rem;
+  --v-space-16: 4rem;
+  --v-space-20: 5rem;
+  --v-space-24: 6rem;
+
+  /* Layout */
+  --v-container-max: 72rem;
+  --v-container-narrow: 48rem;
+  --v-header-height: 4.5rem;
+  --v-radius-sm: 0.5rem;
+  --v-radius-md: 0.75rem;
+  --v-radius-lg: 1rem;
+  --v-radius-xl: 1.25rem;
+  --v-radius-full: 9999px;
+
+  /* Shadows */
+  --v-shadow-sm: 0 1px 2px rgba(42, 37, 34, 0.05);
+  --v-shadow-md: 0 8px 24px rgba(42, 37, 34, 0.08);
+  --v-shadow-lg: 0 16px 48px rgba(42, 37, 34, 0.12);
+  --v-shadow-brand: 0 8px 28px rgba(197, 131, 105, 0.28);
+
+  /* Motion */
+  --v-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --v-duration-fast: 150ms;
+  --v-duration-normal: 280ms;
+  --v-duration-slow: 600ms;
+}

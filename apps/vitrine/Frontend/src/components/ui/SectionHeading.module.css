@@ -1,0 +1,52 @@
+.section {
+  padding-block: var(--v-space-16);
+}
+
+.sectionMuted {
+  background: var(--v-color-surface-muted);
+}
+
+.eyebrow {
+  margin: 0 0 var(--v-space-3);
+  font-family: var(--v-font-body);
+  font-size: var(--v-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--v-color-brand);
+}
+
+.title {
+  margin: 0 0 var(--v-space-4);
+  font-size: var(--v-text-3xl);
+}
+
+.lead {
+  margin: 0;
+  max-width: 42rem;
+  font-size: var(--v-text-lg);
+  color: var(--v-color-text-muted);
+  line-height: 1.7;
+}
+
+.header {
+  margin-bottom: var(--v-space-10);
+}
+
+.centered {
+  text-align: center;
+}
+
+.centered .lead {
+  margin-inline: auto;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding-block: var(--v-space-12);
+  }
+
+  .header {
+    margin-bottom: var(--v-space-8);
+  }
+}

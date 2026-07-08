@@ -44,6 +44,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@coworkprysme/shared"],
   serverExternalPackages: ["mongoose"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
   async headers() {
     return [
       {
