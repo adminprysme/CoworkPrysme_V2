@@ -303,3 +303,10 @@
   outline-offset: 2px;
 }
 
+.dangerError {
+  margin: 0.75rem 0 0;
+  color: var(--color-danger);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+

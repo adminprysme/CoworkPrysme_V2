@@ -38,6 +38,7 @@ export function BuildingDetailPage() {
   const [errors, setErrors] = useState<BuildingFormErrors>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -150,11 +151,14 @@ export function BuildingDetailPage() {
     }
 
     setDeleting(true);
+    setDeleteError(null);
     try {
       await deleteBuilding(currentBuildingId);
       void navigate("/spaces", { replace: true });
-    } catch {
-      setLoadError("Impossible de supprimer ce bâtiment.");
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Impossible de supprimer ce bâtiment.",
+      );
     } finally {
       setDeleting(false);
     }
@@ -297,6 +301,11 @@ export function BuildingDetailPage() {
                 >
                   {deleting ? "Suppression…" : "Supprimer définitivement"}
                 </button>
+                {deleteError ? (
+                  <p className={styles.dangerError} role="alert">
+                    {deleteError}
+                  </p>
+                ) : null}
               </section>
             </div>
           ) : null}
