@@ -4,24 +4,17 @@ import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 
-vi.mock("@coworkprysme/shared/server", () => ({
-  parseGestionApiEnv: () => ({
-    UPLOAD_MAX_BYTES: 15 * 1024 * 1024,
-    UPLOAD_MAX_DIMENSION_PX: 4096,
-  }),
-  resolveUploadsDir: (_env: unknown, cwd: string) => path.join(cwd, "uploads-test"),
-  resolveStorageKeyAbsolutePath: (uploadsDir: string, storageKey: string) => {
-    const absoluteUploads = path.resolve(uploadsDir);
-    const absoluteTarget = path.resolve(absoluteUploads, storageKey);
-    const uploadsPrefix = absoluteUploads.endsWith(path.sep)
-      ? absoluteUploads
-      : `${absoluteUploads}${path.sep}`;
-    if (!absoluteTarget.startsWith(uploadsPrefix)) {
-      return null;
-    }
-    return absoluteTarget;
-  },
-}));
+vi.mock("@coworkprysme/shared/server", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    parseGestionApiEnv: () => ({
+      UPLOAD_MAX_BYTES: 15 * 1024 * 1024,
+      UPLOAD_MAX_DIMENSION_PX: 4096,
+    }),
+    resolveUploadsDir: (_env: unknown, cwd: string) => path.join(cwd, "uploads-test"),
+  };
+});
 
 import { UploadsService } from "../uploads/uploads.service.js";
 import { VitrineContentService } from "./vitrine-content.service.js";
@@ -127,7 +120,7 @@ describe("VitrineContentService upload rollback", () => {
   });
 
   it("rolls back the new concept file but keeps the previous one when DB update fails", async () => {
-    const previousKey = "vitrine/concept/previous-00000000-0000-4000-8000-000000000001.webp";
+    const previousKey = "vitrine/concept/00000000-0000-4000-8000-000000000001.webp";
     mockDoc.conceptImage = previousKey;
     await seedFile(tempDir, previousKey);
     mockFailedDbUpdate();
@@ -141,11 +134,11 @@ describe("VitrineContentService upload rollback", () => {
 
     await expect(access(path.join(tempDir, previousKey))).resolves.toBeUndefined();
     const conceptFiles = await readdir(path.join(tempDir, "vitrine", "concept"));
-    expect(conceptFiles).toEqual(["previous-00000000-0000-4000-8000-000000000001.webp"]);
+    expect(conceptFiles).toEqual(["00000000-0000-4000-8000-000000000001.webp"]);
   });
 
   it("rolls back the new service file but keeps the previous one when DB update fails", async () => {
-    const previousKey = "vitrine/room-service/previous-00000000-0000-4000-8000-000000000002.webp";
+    const previousKey = "vitrine/room-service/00000000-0000-4000-8000-000000000002.webp";
     mockDoc.serviceImages.roomService = previousKey;
     await seedFile(tempDir, previousKey);
     mockFailedDbUpdate();
