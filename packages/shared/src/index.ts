@@ -178,3 +178,27 @@ export {
   type SpaceStatus,
   type UpdateSpaceRequest,
 } from "./spaces.js";
+
+export {
+  DEFAULT_HOME_PUBLIC_CONTENT,
+  DEFAULT_VITRINE_MARQUEE_TEXT,
+  HomePublicContentSchema,
+  UpdateVitrineContentRequestSchema,
+  VITRINE_CONTENT_SINGLETON_ID,
+  VITRINE_HERO_MAX_IMAGES,
+  VITRINE_UPLOAD_MAX_BYTES,
+  VITRINE_IMAGE_SLOTS,
+  VITRINE_IMAGE_STORAGE_KEY_PATTERN,
+  VitrineContentResponseSchema,
+  VitrineMarqueeSchema,
+  VitrineServiceImagesSchema,
+  buildVitrineImageStorageKey,
+  isValidVitrineImageStorageKey,
+  mediaPathFromVitrineStorageKey,
+  type HomePublicContent,
+  type UpdateVitrineContentRequest,
+  type VitrineContentResponse,
+  type VitrineImageSlot,
+  type VitrineMarquee,
+  type VitrineServiceImages,
+} from "./vitrine-content.js";

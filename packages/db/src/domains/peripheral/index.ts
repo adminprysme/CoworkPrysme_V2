@@ -34,3 +34,11 @@ export {
   type SatisfactionSurveyDocument,
   type SatisfactionSurveyModel,
 } from "./satisfaction-survey.schema.js";
+export {
+  getVitrineContentModel,
+  registerVitrineContentModel,
+  type VitrineContentDocument,
+  type VitrineContentDocumentData,
+  type VitrineMarquee,
+  type VitrineServiceImages,
+} from "./vitrine-content.schema.js";

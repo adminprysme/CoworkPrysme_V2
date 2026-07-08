@@ -20,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

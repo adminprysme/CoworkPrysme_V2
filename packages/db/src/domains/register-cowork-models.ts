@@ -9,6 +9,7 @@ import {
   registerIncidentModel,
   registerReviewModel,
   registerSatisfactionSurveyModel,
+  registerVitrineContentModel,
 } from "./peripheral/index.js";
 import {
   registerDiscountCodeModel,
@@ -51,6 +52,7 @@ export function registerAllCoworkModels(connection: Connection): void {
   registerSatisfactionSurveyModel(connection);
   registerNewsOfferModel(connection);
   registerIncidentModel(connection);
+  registerVitrineContentModel(connection);
 }
 
 export const COWORK_COLLECTION_NAMES = [
@@ -76,4 +78,5 @@ export const COWORK_COLLECTION_NAMES = [
   "satisfactionSurveys",
   "newsOffers",
   "incidents",
+  "vitrineContent",
 ] as const;
