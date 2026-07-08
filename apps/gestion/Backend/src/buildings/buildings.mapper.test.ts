@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { CreateBuildingRequest } from "@coworkprysme/shared";
 
-import { mapBuildingToResponse, mapRequestToDbDocument } from "./buildings.mapper.js";
+import {
+  mapBuildingToResponse,
+  mapRequestToDbDocument,
+  canCreateBuilding,
+} from "./buildings.mapper.js";
 
 const sampleRequest: CreateBuildingRequest = {
   name: "Cowork Test",
@@ -117,5 +121,10 @@ describe("buildings.mapper", () => {
     ];
     const updatePayload = { ...dbDoc, photos: existingPhotos };
     expect(updatePayload.photos).toEqual(existingPhotos);
+  });
+
+  it("allows building creation only for global scope (empty buildingIds)", () => {
+    expect(canCreateBuilding({ scope: { buildingIds: [] } })).toBe(true);
+    expect(canCreateBuilding({ scope: { buildingIds: ["507f1f77bcf86cd799439011"] } })).toBe(false);
   });
 });

@@ -31,6 +31,7 @@ import {
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { collectRemovedStorageKeys } from "../uploads/photo-storage.helpers.js";
 import { UploadsService } from "../uploads/uploads.service.js";
 import {
   baseSlugForSpaceName,
@@ -419,8 +420,14 @@ export class SpacesService {
       order: existing.photos.length,
       isPrimary: existing.photos.length === 0,
     };
-    existing.photos.push(nextPhoto);
-    await existing.save();
+
+    try {
+      existing.photos.push(nextPhoto);
+      await existing.save();
+    } catch (error) {
+      await this.uploads.deletePhotoFile(storageKey);
+      throw error;
+    }
 
     const saved = await Space.findById(existing._id).lean().exec();
     if (!saved) {
@@ -523,8 +530,13 @@ export class SpacesService {
       }
     }
 
+    const removedKeys = collectRemovedStorageKeys(existing.photos, parsed.data.photos);
     existing.photos = normalizePhotoMetadata(parsed.data.photos);
     await existing.save();
+
+    for (const storageKey of removedKeys) {
+      await this.uploads.deletePhotoFile(storageKey);
+    }
 
     const saved = await Space.findById(existing._id).lean().exec();
     if (!saved) {

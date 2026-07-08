@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -13,15 +14,25 @@ import {
   type UpdateBuildingPhotosRequest,
   type UpdateBuildingRequest,
 } from "@coworkprysme/shared";
-import { connectMongo, getBuildingModel, type StaffProfileDocument } from "@coworkprysme/db";
+import {
+  connectMongo,
+  getBuildingModel,
+  getSpaceModel,
+  type StaffProfileDocument,
+} from "@coworkprysme/db";
 import type { BuildingPhoto } from "@coworkprysme/db";
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { GeocodingService } from "../geocoding/geocoding.service.js";
+import {
+  buildBuildingDeleteBlockedMessage,
+  collectRemovedStorageKeys,
+} from "../uploads/photo-storage.helpers.js";
 import { UploadsService } from "../uploads/uploads.service.js";
 import {
   buildScopeFilter,
+  canCreateBuilding,
   isBuildingInScope,
   mapBuildingToResponse,
   mapRequestToDbDocument,
@@ -89,7 +100,11 @@ export class BuildingsService {
     return BuildingResponseSchema.parse(mapBuildingToResponse({ ...doc, _id: buildingId }));
   }
 
-  async create(input: CreateBuildingRequest, _profile: StaffProfileDocument) {
+  async create(input: CreateBuildingRequest, profile: StaffProfileDocument) {
+    if (!canCreateBuilding(profile)) {
+      throw new ForbiddenException();
+    }
+
     const coordinates = await this.geocoding.geocodeAddress(input.address);
     const payload = mapRequestToDbDocument(input, coordinates);
 
@@ -163,6 +178,12 @@ export class BuildingsService {
       throw new ForbiddenException();
     }
 
+    const Space = await getSpaceModel();
+    const spaceCount = await Space.countDocuments({ buildingId: existing._id }).exec();
+    if (spaceCount > 0) {
+      throw new ConflictException(buildBuildingDeleteBlockedMessage(spaceCount));
+    }
+
     await this.uploads.deleteBuildingDirectory(id);
     await existing.deleteOne();
   }
@@ -194,8 +215,14 @@ export class BuildingsService {
       order: existing.photos.length,
       isPrimary: existing.photos.length === 0,
     };
-    existing.photos.push(nextPhoto);
-    await existing.save();
+
+    try {
+      existing.photos.push(nextPhoto);
+      await existing.save();
+    } catch (error) {
+      await this.uploads.deletePhotoFile(storageKey);
+      throw error;
+    }
 
     const saved = await Building.findById(existing._id).lean().exec();
     if (!saved) {
@@ -294,8 +321,13 @@ export class BuildingsService {
       }
     }
 
+    const removedKeys = collectRemovedStorageKeys(existing.photos, parsed.data.photos);
     existing.photos = normalizePhotoMetadata(parsed.data.photos);
     await existing.save();
+
+    for (const storageKey of removedKeys) {
+      await this.uploads.deletePhotoFile(storageKey);
+    }
 
     const saved = await Building.findById(existing._id).lean().exec();
     if (!saved) {

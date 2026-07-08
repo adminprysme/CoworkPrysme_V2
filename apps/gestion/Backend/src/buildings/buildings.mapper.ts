@@ -113,3 +113,8 @@ export function isBuildingInScope(
   }
   return scopedIds.some((id) => id.equals(buildingId));
 }
+
+/** Creating a building requires global scope (empty buildingIds). Scoped managers are read/update-only. */
+export function canCreateBuilding(profile: { scope: { buildingIds: unknown[] } }): boolean {
+  return profile.scope.buildingIds.length === 0;
+}
