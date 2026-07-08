@@ -1,12 +1,17 @@
 import path from "node:path";
 
 import { isValidEntityPhotoStorageKey } from "./uploads.js";
+import { isValidVitrineImageStorageKey } from "./vitrine-content.js";
+
+function isValidUploadStorageKey(storageKey: string): boolean {
+  return isValidEntityPhotoStorageKey(storageKey) || isValidVitrineImageStorageKey(storageKey);
+}
 
 export function resolveStorageKeyAbsolutePath(
   uploadsDir: string,
   storageKey: string,
 ): string | null {
-  if (!isValidEntityPhotoStorageKey(storageKey)) {
+  if (!isValidUploadStorageKey(storageKey)) {
     return null;
   }
 

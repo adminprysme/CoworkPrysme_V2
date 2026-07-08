@@ -11,6 +11,7 @@ import {
   isValidSpacePhotoStorageKey,
   mediaPathFromStorageKey,
 } from "./uploads.js";
+import { buildVitrineImageStorageKey } from "./vitrine-content.js";
 
 const BUILDING_ID = "507f1f77bcf86cd799439011";
 const SPACE_ID = "607f1f77bcf86cd799439022";
@@ -46,6 +47,12 @@ describe("uploads helpers", () => {
     const key = buildBuildingPhotoStorageKey(BUILDING_ID, FILE_ID);
     expect(resolveStorageKeyAbsolutePath(uploadsDir, key)).toBe(path.resolve(uploadsDir, key));
     expect(resolveStorageKeyAbsolutePath(uploadsDir, "../../../etc/passwd")).toBeNull();
+  });
+
+  it("resolves vitrine image storage keys under uploads dir", () => {
+    const uploadsDir = "/data/uploads";
+    const key = buildVitrineImageStorageKey("hero", FILE_ID);
+    expect(resolveStorageKeyAbsolutePath(uploadsDir, key)).toBe(path.resolve(uploadsDir, key));
   });
 
   it("defaults uploads dir outside repo in development", () => {
