@@ -260,7 +260,24 @@ UPLOADS_DIR/
         └── {uuid}.webp
 ```
 
-`storageKey` en base = chemin relatif (`buildings/{buildingId}/{uuid}.webp`). Upload protégé par permission `spaces` ; lecture `GET /media/buildings/:buildingId/:filename` **publique** (content-type, cache, pas de directory listing). Double protection path traversal : regex stricte + résolution sous `UPLOADS_DIR`.
+`storageKey` en base = chemin relatif (`buildings/{buildingId}/{uuid}.webp` ou `spaces/{spaceId}/{uuid}.webp`). Upload protégé par permission `spaces` ; voir ci-dessous pour la lecture publique.
+
+### Politique `/media` — accès public volontaire
+
+`GET /media/buildings/:buildingId/:filename` et `GET /media/spaces/:spaceId/:filename` sont **volontairement sans authentification** sur gestion-api et vitrine-api.
+
+| Aspect          | Choix                                                                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pourquoi**    | Les mêmes photos s'affichent sur la **vitrine publique** ; l'URL `/media/...` est stable et cacheable (CDN-friendly).                                                                         |
+| **Sécurité**    | Pas de directory listing ; `storageKey` validé par regex stricte + résolution sous `UPLOADS_DIR` (path traversal impossible). Les noms de fichier sont des UUID — pas d'énumération triviale. |
+| **Hors scope**  | Pas d'auth, pas de signed URLs, pas de proxy authentifié gestion-web → à documenter, pas à « corriger ».                                                                                      |
+| **vitrine-api** | Montage volume **read-only** : la vitrine ne peut ni écrire ni supprimer sur le disque, même en cas de faille.                                                                                |
+
+L'écriture (upload, suppression fichier, nettoyage) reste réservée à gestion-api avec permission `spaces`.
+
+### Garde-fous suppression bâtiment
+
+`DELETE /buildings/:id` est **refusé (409 Conflict)** tant qu'au moins un espace (actif **ou** archivé) référence ce `buildingId`. Pas de cascade destructive : supprimer un bâtiment ne doit jamais effacer silencieusement espaces et photos associées.
 
 ### Coolify — persistent storage (garde-fou)
 
@@ -281,6 +298,18 @@ Le montage **read-only** sur vitrine-api est un garde-fou infra : la vitrine ne 
 | gestion-api     | `apps/gestion/Backend/Dockerfile`  | `.`               | 8003 |
 
 Les filtres `turbo prune` / `pnpm deploy` utilisent les **noms de package** (`@coworkprysme/vitrine-web`, etc.), pas les chemins filesystem.
+
+## Dette technique — module Bâtiments & Espaces
+
+Optimisations et durcissements **reportés** tant que le volume reste faible (peu de bâtiments/espaces). À traiter avant montée en charge :
+
+| Sujet                          | Impact                                                                               | Piste                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| **DTO summary liste**          | `GET /buildings` renvoie le schéma détail complet (horaires ×2, photos, description) | Introduire `BuildingSummary` pour la liste / carte      |
+| **Résolution slug O(n)**       | `resolveUniqueSpaceSeo` charge tous les slugs à chaque create/update                 | Requêtes ciblées sur candidats `slug`, `slug-2`, …      |
+| **Test scope API intégration** | Couverture unitaire des helpers ; pas de test e2e profil scoped                      | Seed + scénarios curl automatisés                       |
+| **`scope.spaceTypes`**         | Champ profil staff jamais appliqué côté API                                          | Filtrer listes/écritures ou retirer du modèle           |
+| **Lazy-load Leaflet**          | `BuildingsMap` (Leaflet + markercluster) dans le bundle principal (~595 kB JS)       | `React.lazy` sur la carte si le split devient pertinent |
 
 ## Qualité
 
