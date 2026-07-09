@@ -1,8 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { getLegalPageMeta } from "@/config/legal/meta";
+import { PolitiqueConfidentialiteContent } from "@/components/legal/PolitiqueConfidentialiteContent";
+import { createLegalPageMetadata } from "@/lib/legal-page-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports(
-  "/politique-de-confidentialite",
-);
+const page = getLegalPageMeta("/politique-de-confidentialite")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createLegalPageMetadata(page);
+
+export default function PolitiqueConfidentialitePage() {
+  return <PolitiqueConfidentialiteContent />;
+}

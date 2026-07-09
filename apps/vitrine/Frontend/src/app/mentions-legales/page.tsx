@@ -1,6 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { getLegalPageMeta } from "@/config/legal/meta";
+import { MentionsLegalesContent } from "@/components/legal/MentionsLegalesContent";
+import { createLegalPageMetadata } from "@/lib/legal-page-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports("/mentions-legales");
+const page = getLegalPageMeta("/mentions-legales")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createLegalPageMetadata(page);
+
+export default function MentionsLegalesPage() {
+  return <MentionsLegalesContent />;
+}

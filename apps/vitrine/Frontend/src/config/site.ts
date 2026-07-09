@@ -60,6 +60,7 @@ export const FOOTER_NAV = {
   legal: [
     { href: "/mentions-legales", label: "Mentions légales" },
     { href: "/politique-de-confidentialite", label: "Politique de confidentialité" },
+    { href: "/cgv", label: "CGV" },
   ],
 } as const;
 
@@ -182,20 +183,6 @@ export const STUB_PAGES: PageSeoConfig[] = [
     description:
       "Questions fréquentes sur nos espaces, tarifs, accès et réservations à Cowork Prysme Lyon 7.",
     h1: "FAQ",
-  },
-  {
-    path: "/mentions-legales",
-    title: "Mentions légales",
-    description: "Mentions légales du site Cowork Prysme.",
-    h1: "Mentions légales",
-    noIndex: true,
-  },
-  {
-    path: "/politique-de-confidentialite",
-    title: "Politique de confidentialité",
-    description: "Politique de confidentialité et protection des données — Cowork Prysme.",
-    h1: "Politique de confidentialité",
-    noIndex: true,
   },
 ];
 
