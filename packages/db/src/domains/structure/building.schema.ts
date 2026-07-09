@@ -35,6 +35,8 @@ export interface Building {
   concierge: BuildingConcierge;
   photos: BuildingPhoto[];
   status: (typeof ACTIVE_STATUSES)[number];
+  visibleOnVitrine: boolean;
+  isDefaultVitrineBuilding: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,12 +62,18 @@ const buildingSchema = new Schema<Building>(
     },
     photos: { type: [buildingPhotoSchema], default: [] },
     status: { type: String, enum: ACTIVE_STATUSES, default: "active", required: true },
+    visibleOnVitrine: { type: Boolean, default: false },
+    isDefaultVitrineBuilding: { type: Boolean, default: false },
   },
   { ...TIMESTAMP_OPTIONS, collection: "buildings" },
 );
 
 buildingSchema.index({ "coordinates.lat": 1, "coordinates.lng": 1 });
 buildingSchema.index({ status: 1 });
+buildingSchema.index(
+  { isDefaultVitrineBuilding: 1 },
+  { unique: true, partialFilterExpression: { isDefaultVitrineBuilding: true } },
+);
 
 export type BuildingModel = Model<Building>;
 

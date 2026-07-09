@@ -37,6 +37,8 @@ function minimalBuildingInput(): Omit<Building, "createdAt" | "updatedAt"> {
     concierge: { url: "https://concierge.example.com", accessCode: "1234" },
     photos: [],
     status: "active" as const,
+    visibleOnVitrine: false,
+    isDefaultVitrineBuilding: false,
   };
 }
 
@@ -51,6 +53,10 @@ describe("building schema", () => {
       expect.arrayContaining([
         [{ "coordinates.lat": 1, "coordinates.lng": 1 }, {}],
         [{ status: 1 }, {}],
+        [
+          { isDefaultVitrineBuilding: 1 },
+          { unique: true, partialFilterExpression: { isDefaultVitrineBuilding: true } },
+        ],
       ]),
     );
     void connection.close();
@@ -127,6 +133,8 @@ describe("building persistence on cowork_bdd", () => {
     expect(found?.receptionHours).toHaveLength(7);
     expect(found?.photos).toEqual(input.photos);
     expect(found?.floors.map((floor) => floor.name)).toEqual(["RDC", "1er"]);
+    expect(found?.visibleOnVitrine).toBe(false);
+    expect(found?.isDefaultVitrineBuilding).toBe(false);
   });
 
   it("stores buildings only on cowork_bdd, not on prysma_bdd", async () => {

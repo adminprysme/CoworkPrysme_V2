@@ -34,6 +34,8 @@ export interface Space {
   archivedBy?: Types.ObjectId;
   seo: SeoMeta;
   tariffs: SpaceTariff[];
+  featuredOnVitrine: boolean;
+  vitrineOrder?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,11 +72,14 @@ const spaceSchema = new Schema<Space>(
         message: `tariffs: at most ${MAX_SPACE_TARIFFS} entries, each durationClass must be unique`,
       },
     },
+    featuredOnVitrine: { type: Boolean, default: false },
+    vitrineOrder: { type: Number, min: 0 },
   },
   { ...TIMESTAMP_OPTIONS, collection: "spaces" },
 );
 
 spaceSchema.index({ buildingId: 1, type: 1, status: 1 });
+spaceSchema.index({ buildingId: 1, featuredOnVitrine: 1, vitrineOrder: 1 });
 spaceSchema.index({ "seo.slug": 1 }, { unique: true });
 
 export type SpaceModel = Model<Space>;

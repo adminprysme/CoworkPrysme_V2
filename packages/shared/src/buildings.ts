@@ -72,6 +72,8 @@ export const CreateBuildingRequestSchema = z.object({
   accessibilityHours: z.array(BuildingDayScheduleInputSchema).length(7),
   receptionHours: z.array(BuildingDayScheduleInputSchema).length(7),
   concierge: BuildingConciergeInputSchema,
+  visibleOnVitrine: z.boolean().default(false),
+  isDefaultVitrineBuilding: z.boolean().default(false),
 });
 
 export const UpdateBuildingRequestSchema = CreateBuildingRequestSchema;
@@ -108,6 +110,8 @@ export const BuildingResponseSchema = z.object({
   receptionHours: z.array(BuildingDayScheduleResponseSchema),
   concierge: BuildingConciergeResponseSchema,
   photos: z.array(BuildingPhotoResponseSchema),
+  visibleOnVitrine: z.boolean(),
+  isDefaultVitrineBuilding: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

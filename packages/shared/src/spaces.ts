@@ -93,6 +93,8 @@ export const CreateSpaceRequestSchema = z.object({
   accessCode: SpaceAccessCodeSchema,
   status: SpaceOperationalStatusSchema,
   tariffs: tariffsInputSchema,
+  featuredOnVitrine: z.boolean().default(false),
+  vitrineOrder: z.number().int().min(0).optional(),
 });
 
 export const UpdateSpaceRequestSchema = CreateSpaceRequestSchema;
@@ -120,6 +122,8 @@ export const SpaceResponseSchema = z.object({
   photos: z.array(BuildingPhotoResponseSchema),
   tariffs: z.array(SpaceTariffResponseSchema),
   seo: SpaceSeoResponseSchema,
+  featuredOnVitrine: z.boolean(),
+  vitrineOrder: z.number().int().min(0).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

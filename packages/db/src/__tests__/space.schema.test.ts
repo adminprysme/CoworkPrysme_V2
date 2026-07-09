@@ -52,6 +52,7 @@ function minimalSpaceInput(
       metaDescription: "Grande salle lumineuse.",
     },
     tariffs: [],
+    featuredOnVitrine: false,
   };
 }
 
@@ -65,6 +66,7 @@ describe("space schema", () => {
     expect(indexes).toEqual(
       expect.arrayContaining([
         [{ buildingId: 1, type: 1, status: 1 }, {}],
+        [{ buildingId: 1, featuredOnVitrine: 1, vitrineOrder: 1 }, {}],
         [{ "seo.slug": 1 }, { unique: true }],
       ]),
     );
@@ -234,6 +236,8 @@ describe("space persistence on cowork_bdd", () => {
       order: 0,
       isPrimary: true,
     });
+    expect(found?.featuredOnVitrine).toBe(false);
+    expect(found?.vitrineOrder).toBeUndefined();
   });
 
   it("persists embedded tariffs with centimes and vatRate", async () => {
