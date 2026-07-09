@@ -11,6 +11,8 @@ export const SPACE_TYPES = ["meeting_room", "private_office"] as const;
 
 export const SpaceTypeSchema = z.enum(SPACE_TYPES);
 
+export type SpaceType = z.infer<typeof SpaceTypeSchema>;
+
 export const SPACE_STATUSES = ["active", "inactive", "archived"] as const;
 
 export const SpaceStatusSchema = z.enum(SPACE_STATUSES);

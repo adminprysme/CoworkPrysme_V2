@@ -200,6 +200,7 @@ export {
   type SpaceOperationalStatus,
   type SpaceRestoreRequest,
   type SpaceStatus,
+  type SpaceType,
   type UpdateSpaceRequest,
 } from "./spaces.js";
 
