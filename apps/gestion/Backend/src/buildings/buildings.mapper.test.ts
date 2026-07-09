@@ -39,6 +39,8 @@ const sampleRequest: CreateBuildingRequest = {
     { day: "sunday", is24h: false, openTime: "00:00", closeTime: "00:00" },
   ],
   concierge: { link: "https://example.com", accessCode: "1234" },
+  visibleOnVitrine: false,
+  isDefaultVitrineBuilding: false,
 };
 
 describe("buildings.mapper", () => {
@@ -50,6 +52,8 @@ describe("buildings.mapper", () => {
     expect(dbDoc.email).toBe("contact@example.com");
     expect(dbDoc.address.country).toBe("FR");
     expect(dbDoc.concierge.url).toBe("https://example.com");
+    expect(dbDoc.visibleOnVitrine).toBe(false);
+    expect(dbDoc.isDefaultVitrineBuilding).toBe(false);
     expect(dbDoc.accessibilityHours[0]?.open).toBe("08:00");
     expect(dbDoc.coordinates).toEqual({ lat: 45.76, lng: 4.86 });
   });
@@ -91,6 +95,8 @@ describe("buildings.mapper", () => {
       concierge: { url: "https://example.com", accessCode: "1234" },
       photos: [],
       status: "active",
+      visibleOnVitrine: true,
+      isDefaultVitrineBuilding: false,
       createdAt: now,
       updatedAt: now,
     });
@@ -99,6 +105,8 @@ describe("buildings.mapper", () => {
     expect(response.address.country).toBe("France");
     expect(response.concierge.link).toBe("https://example.com");
     expect(response.description).toBe("Espace lumineux");
+    expect(response.visibleOnVitrine).toBe(true);
+    expect(response.isDefaultVitrineBuilding).toBe(false);
     expect(response.accessibilityHours[0]?.openTime).toBe("08:00");
   });
 

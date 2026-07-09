@@ -37,6 +37,7 @@ import {
   mapBuildingToResponse,
   mapRequestToDbDocument,
 } from "./buildings.mapper.js";
+import { resolveVitrineBuildingFlags } from "./buildings-vitrine.js";
 
 const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 
@@ -58,6 +59,29 @@ function normalizePhotoMetadata(photos: UpdateBuildingPhotosRequest["photos"]): 
     order: index,
     isPrimary: primaryIndex === -1 ? index === 0 : index === primaryIndex,
   }));
+}
+
+async function clearOtherDefaultBuildings(
+  Building: Awaited<ReturnType<typeof getBuildingModel>>,
+  keepBuildingId: Types.ObjectId,
+): Promise<void> {
+  await Building.updateMany(
+    { _id: { $ne: keepBuildingId }, isDefaultVitrineBuilding: true },
+    { $set: { isDefaultVitrineBuilding: false } },
+  ).exec();
+}
+
+function mapBuildingRequestToDbDocument(
+  input: CreateBuildingRequest | UpdateBuildingRequest,
+  coordinates: { lat: number; lng: number },
+) {
+  const vitrineFlags = resolveVitrineBuildingFlags({
+    status: input.status,
+    visibleOnVitrine: input.visibleOnVitrine,
+    isDefaultVitrineBuilding: input.isDefaultVitrineBuilding,
+  });
+
+  return mapRequestToDbDocument({ ...input, ...vitrineFlags }, coordinates);
 }
 
 @Injectable()
@@ -106,11 +130,14 @@ export class BuildingsService {
     }
 
     const coordinates = await this.geocoding.geocodeAddress(input.address);
-    const payload = mapRequestToDbDocument(input, coordinates);
+    const payload = mapBuildingRequestToDbDocument(input, coordinates);
 
     await connectMongo();
     const Building = await getBuildingModel();
     const doc = await Building.create(payload);
+    if (payload.isDefaultVitrineBuilding) {
+      await clearOtherDefaultBuildings(Building, doc._id as Types.ObjectId);
+    }
     const saved = await Building.findById(doc._id).lean().exec();
     if (!saved) {
       throw new NotFoundException();
@@ -138,13 +165,16 @@ export class BuildingsService {
     }
 
     const coordinates = await this.geocoding.geocodeAddress(input.address);
-    const payload = mapRequestToDbDocument(input, coordinates);
+    const payload = mapBuildingRequestToDbDocument(input, coordinates);
     const preservedPhotos = existing.photos.map((photo) => ({
       storageKey: photo.storageKey,
       alt: photo.alt,
       order: photo.order,
       isPrimary: photo.isPrimary,
     }));
+    if (payload.isDefaultVitrineBuilding) {
+      await clearOtherDefaultBuildings(Building, existing._id as Types.ObjectId);
+    }
     existing.set(payload);
     existing.photos = preservedPhotos;
     if (payload.description === undefined) {

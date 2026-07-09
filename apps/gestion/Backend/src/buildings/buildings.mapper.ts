@@ -50,6 +50,8 @@ export function mapRequestToDbDocument(
     },
     photos: [],
     status: input.status,
+    visibleOnVitrine: input.visibleOnVitrine,
+    isDefaultVitrineBuilding: input.isDefaultVitrineBuilding,
   };
 }
 
@@ -97,6 +99,8 @@ export function mapBuildingToResponse(doc: BuildingLean): BuildingResponse {
       order: photo.order,
       isPrimary: photo.isPrimary,
     })),
+    visibleOnVitrine: doc.visibleOnVitrine ?? false,
+    isDefaultVitrineBuilding: doc.isDefaultVitrineBuilding ?? false,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   });

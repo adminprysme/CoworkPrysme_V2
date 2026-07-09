@@ -1,5 +1,7 @@
-import { ConflictException, ForbiddenException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { UpdateBuildingRequest } from "@coworkprysme/shared";
 
 import { BuildingsService } from "./buildings.service.js";
 
@@ -34,6 +36,8 @@ function leanBuilding(photos: Array<{ storageKey: string; order: number; isPrima
     concierge: { url: "https://example.com", accessCode: "1234" },
     photos,
     status: "active" as const,
+    visibleOnVitrine: false,
+    isDefaultVitrineBuilding: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -53,6 +57,7 @@ const mockBuildingModel = {
   findById: vi.fn(),
   find: vi.fn(),
   create: vi.fn(),
+  updateMany: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue({ modifiedCount: 1 }) }),
 };
 
 const mockSpaceModel = {
@@ -88,6 +93,39 @@ function scopedProfile() {
     scope: { buildingIds: [BUILDING_ID], spaceTypes: [] },
     permissions: { spaces: true },
   } as never;
+}
+
+function fullBuildingUpdateRequest(
+  overrides: Partial<UpdateBuildingRequest> = {},
+): UpdateBuildingRequest {
+  return {
+    name: "Cowork Test",
+    address: { street: "1 rue Test", postalCode: "69003", city: "Lyon", country: "France" },
+    floors: [{ name: "RDC" }],
+    status: "active",
+    accessibilityHours: [
+      { day: "monday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "tuesday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "wednesday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "thursday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "friday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "saturday", is24h: false, openTime: "08:00", closeTime: "13:00" },
+      { day: "sunday", is24h: false, openTime: "00:00", closeTime: "00:00" },
+    ],
+    receptionHours: [
+      { day: "monday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "tuesday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "wednesday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "thursday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "friday", is24h: false, openTime: "08:00", closeTime: "19:00" },
+      { day: "saturday", is24h: false, openTime: "08:00", closeTime: "13:00" },
+      { day: "sunday", is24h: false, openTime: "00:00", closeTime: "00:00" },
+    ],
+    concierge: { link: "https://example.com", accessCode: "1234" },
+    visibleOnVitrine: false,
+    isDefaultVitrineBuilding: false,
+    ...overrides,
+  };
 }
 
 function mockFindById(mutableDoc: ReturnType<typeof mutableBuilding>, leanDoc = leanBuilding([])) {
@@ -212,6 +250,68 @@ describe("BuildingsService", () => {
       ).rejects.toThrow("save failed");
 
       expect(mockUploads.deletePhotoFile).toHaveBeenCalledWith(storageKey);
+    });
+  });
+
+  describe("update vitrine flags", () => {
+    it("clears other default buildings when setting a new default", async () => {
+      const doc = mutableBuilding([]);
+      mockFindById(doc, leanBuilding([]));
+
+      await service.update(
+        BUILDING_ID,
+        fullBuildingUpdateRequest({
+          visibleOnVitrine: true,
+          isDefaultVitrineBuilding: true,
+        }),
+        globalProfile(),
+      );
+
+      expect(mockBuildingModel.updateMany).toHaveBeenCalledWith(
+        { _id: { $ne: BUILDING_ID }, isDefaultVitrineBuilding: true },
+        { $set: { isDefaultVitrineBuilding: false } },
+      );
+    });
+
+    it("rejects inactive building visible on vitrine", async () => {
+      const doc = mutableBuilding([]);
+      mockFindById(doc, leanBuilding([]));
+
+      await expect(
+        service.update(
+          BUILDING_ID,
+          fullBuildingUpdateRequest({
+            status: "inactive",
+            visibleOnVitrine: true,
+          }),
+          globalProfile(),
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mockBuildingModel.updateMany).not.toHaveBeenCalled();
+      expect(doc.save).not.toHaveBeenCalled();
+    });
+
+    it("auto-clears default when visibility is turned off", async () => {
+      const doc = mutableBuilding([]);
+      mockFindById(doc, leanBuilding([]));
+
+      await service.update(
+        BUILDING_ID,
+        fullBuildingUpdateRequest({
+          visibleOnVitrine: false,
+          isDefaultVitrineBuilding: true,
+        }),
+        globalProfile(),
+      );
+
+      expect(doc.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visibleOnVitrine: false,
+          isDefaultVitrineBuilding: false,
+        }),
+      );
+      expect(mockBuildingModel.updateMany).not.toHaveBeenCalled();
     });
   });
 });

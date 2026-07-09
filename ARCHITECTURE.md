@@ -288,6 +288,18 @@ L'écriture (upload, suppression fichier, nettoyage) reste réservée à gestion
 
 Le montage **read-only** sur vitrine-api est un garde-fou infra : la vitrine ne fait que lire ; elle ne peut pas modifier ni supprimer les fichiers même en cas de faille applicative.
 
+## Mise en avant vitrine — trois mécanismes distincts
+
+Ne pas fusionner ces mécanismes : chacun sert des pages différentes et vit dans un modèle différent.
+
+| Mécanisme                          | Stockage                                                                             | Pilotage admin                                                    | Pages vitrine concernées                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------- |
+| **1. Bâtiments catalogue**         | Champs `visibleOnVitrine`, `isDefaultVitrineBuilding` sur le document `buildings`    | Onglet **Espaces** → section Bâtiments (`PATCH /buildings/:id`)   | `/bureaux-privatifs`, `/salle-de-reunion` (catalogue) |
+| **2. Espaces catalogue**           | Champs `featuredOnVitrine`, `vitrineOrder` sur le document `spaces`                  | Onglet **Espaces** → section Mise en avant (`PATCH /spaces/:id`)  | `/bureaux-privatifs`, `/salle-de-reunion` (catalogue) |
+| **3. Listes éditoriales homepage** | Tableaux `featuredBuildingIds`, `featuredSpaceIds` sur le singleton `vitrineContent` | Onglets **Accès** / **Services** (`PATCH /admin/vitrine-content`) | Contact public, homepage, encarts services            |
+
+Contrainte catalogue bâtiment : un seul `isDefaultVitrineBuilding: true` à la fois (service + index unique partiel MongoDB).
+
 ### Coolify — configuration par service
 
 | Service Coolify | Dockerfile path                    | Build context     | Port |
