@@ -1,6 +1,9 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { FaqPageContent } from "@/components/faq/FaqPageContent";
+import { FAQ_PAGE_SEO } from "@/config/faq-page";
+import { createPageMetadata } from "@/lib/metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports("/faq");
+export const metadata = createPageMetadata(FAQ_PAGE_SEO);
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export default function FaqPage() {
+  return <FaqPageContent />;
+}

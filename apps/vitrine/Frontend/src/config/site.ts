@@ -179,10 +179,10 @@ export const STUB_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/faq",
-    title: "FAQ — Cowork Prysme",
+    title: "FAQ — Réservation, accès et tarifs | Cowork Prysme Lyon 7",
     description:
-      "Questions fréquentes sur nos espaces, tarifs, accès et réservations à Cowork Prysme Lyon 7.",
-    h1: "FAQ",
+      "Questions fréquentes sur la réservation, l'accès, le parking, l'annulation, la facturation et vos données personnelles chez Cowork Prysme, Lyon 7.",
+    h1: "Questions fréquentes",
   },
 ];
 
