@@ -2,6 +2,7 @@ import type {
   BuildingPhotoResponse,
   BuildingResponse,
   CreateBuildingRequest,
+  UpdateBuildingRequest,
 } from "@coworkprysme/shared";
 import { mediaPathFromStorageKey } from "@coworkprysme/shared";
 
@@ -54,6 +55,25 @@ export function formValuesToCreateRequest(values: BuildingFormValues): CreateBui
     accessibilityHours: values.accessibilityHours.map((entry) => ({ ...entry })),
     receptionHours: values.receptionHours.map((entry) => ({ ...entry })),
     concierge: { ...values.concierge },
+    visibleOnVitrine: false,
+    isDefaultVitrineBuilding: false,
+  };
+}
+
+export function buildingResponseToUpdateRequest(response: BuildingResponse): UpdateBuildingRequest {
+  return {
+    name: response.name,
+    description: response.description,
+    phone: response.phone,
+    email: response.email,
+    address: { ...response.address },
+    floors: response.floors.map((floor) => ({ name: floor.name })),
+    status: response.status,
+    accessibilityHours: response.accessibilityHours.map((entry) => ({ ...entry })),
+    receptionHours: response.receptionHours.map((entry) => ({ ...entry })),
+    concierge: { ...response.concierge },
+    visibleOnVitrine: response.visibleOnVitrine,
+    isDefaultVitrineBuilding: response.isDefaultVitrineBuilding,
   };
 }
 

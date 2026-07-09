@@ -1,0 +1,85 @@
+.wrapper {
+  display: grid;
+  gap: 1rem;
+}
+
+.intro,
+.hint,
+.statusMuted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.rowInactive {
+  opacity: 0.72;
+}
+
+.rowHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.buildingName {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.buildingMeta {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+}
+
+.toggleLabel,
+.radioLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.toggleLabel input:disabled,
+.radioLabel input:disabled {
+  cursor: not-allowed;
+}
+
+.saving {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

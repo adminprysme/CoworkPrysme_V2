@@ -2,6 +2,7 @@ import type {
   BuildingPhotoResponse,
   CreateSpaceRequest,
   SpaceResponse,
+  UpdateSpaceRequest,
 } from "@coworkprysme/shared";
 import { DURATION_CLASS_LABELS, mediaPathFromStorageKey } from "@coworkprysme/shared";
 
@@ -52,6 +53,16 @@ export function formValuesToCreateRequest(values: SpaceFormValues): CreateSpaceR
     accessCode: values.accessCode.trim(),
     status: values.status,
     tariffs: tariffLinesToApiInput(values.tariffs),
+    featuredOnVitrine: false,
+  };
+}
+
+export function spaceResponseToUpdateRequest(response: SpaceResponse): UpdateSpaceRequest {
+  const request = formValuesToCreateRequest(spaceResponseToFormValues(response));
+  return {
+    ...request,
+    featuredOnVitrine: response.featuredOnVitrine,
+    vitrineOrder: response.vitrineOrder,
   };
 }
 
