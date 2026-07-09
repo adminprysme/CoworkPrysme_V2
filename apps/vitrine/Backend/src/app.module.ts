@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AboutContentModule } from "./about-content/about-content.module.js";
+import { CatalogContentModule } from "./catalog-content/catalog-content.module.js";
 import { DbModule } from "./db/db.module.js";
 import { GestionModule } from "./gestion/gestion.module.js";
 import { HealthModule } from "./health/health.module.js";
@@ -15,6 +17,8 @@ import { SiteContactModule } from "./site-contact/site-contact.module.js";
     GestionModule,
     MediaModule,
     HomeContentModule,
+    AboutContentModule,
+    CatalogContentModule,
     ServicesContentModule,
     SiteContactModule,
   ],
