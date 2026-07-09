@@ -1,0 +1,89 @@
+.section {
+  scroll-margin-top: calc(var(--v-header-height) + var(--v-space-6));
+}
+
+.section + .section {
+  margin-top: var(--v-space-12);
+}
+
+.title {
+  margin: 0 0 var(--v-space-5);
+  font-size: var(--v-text-2xl);
+  color: var(--v-color-ink);
+}
+
+.body {
+  display: grid;
+  gap: var(--v-space-4);
+}
+
+.subSection {
+  display: grid;
+  gap: var(--v-space-3);
+  margin-top: var(--v-space-4);
+}
+
+.subTitle {
+  margin: 0;
+  font-size: var(--v-text-lg);
+  color: var(--v-color-ink-soft);
+}
+
+.paragraph {
+  margin: 0;
+  font-size: var(--v-text-lg);
+  line-height: 1.75;
+  color: var(--v-color-text);
+}
+
+.list {
+  display: grid;
+  gap: var(--v-space-2);
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+  font-size: var(--v-text-lg);
+  line-height: 1.7;
+  color: var(--v-color-text);
+}
+
+.definitionList {
+  display: grid;
+  gap: var(--v-space-3);
+  margin: 0;
+}
+
+.definitionRow {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.definitionRow dt {
+  font-weight: 700;
+  color: var(--v-color-ink);
+  font-size: var(--v-text-base);
+}
+
+.definitionRow dd {
+  margin: 0;
+  font-size: var(--v-text-lg);
+  line-height: 1.7;
+  color: var(--v-color-text);
+}
+
+.body a {
+  color: var(--v-color-brand);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.body a:hover {
+  color: var(--v-color-brand-hover);
+}
+
+@media (max-width: 768px) {
+  .paragraph,
+  .list {
+    font-size: var(--v-text-base);
+  }
+}

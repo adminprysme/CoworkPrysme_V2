@@ -1,0 +1,66 @@
+.wrap {
+  margin: var(--v-space-6) 0;
+  overflow-x: auto;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-surface);
+}
+
+.table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-size: var(--v-text-base);
+  line-height: 1.55;
+}
+
+.caption {
+  padding: var(--v-space-4) var(--v-space-5);
+  text-align: left;
+  font-weight: 700;
+  color: var(--v-color-ink);
+  border-bottom: 1px solid var(--v-color-border);
+}
+
+.table th,
+.table td {
+  padding: var(--v-space-4) var(--v-space-5);
+  vertical-align: top;
+  border-bottom: 1px solid var(--v-color-border);
+  color: var(--v-color-text);
+}
+
+.table th {
+  background: var(--v-color-surface-muted);
+  font-weight: 700;
+  color: var(--v-color-ink);
+  text-align: left;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+@media (max-width: 640px) {
+  .table {
+    min-width: 28rem;
+    font-size: var(--v-text-sm);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--v-space-3) var(--v-space-4);
+  }
+}
+
+@media print {
+  .wrap {
+    overflow: visible;
+    break-inside: avoid;
+  }
+}
