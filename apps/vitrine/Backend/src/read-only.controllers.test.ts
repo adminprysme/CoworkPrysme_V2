@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,10 +11,15 @@ vi.mock("./catalog-content/catalog-content.service.js", () => ({
   CatalogContentService: class CatalogContentService {},
 }));
 
+vi.mock("./booking/booking.service.js", () => ({
+  BookingService: class BookingService {},
+}));
+
 import { CatalogContentController } from "./catalog-content/catalog-content.controller.js";
 import { CatalogContentService } from "./catalog-content/catalog-content.service.js";
 
 const SRC_DIR = fileURLToPath(new URL(".", import.meta.url));
+const BOOKING_CONTROLLER = "booking/booking.controller.ts";
 
 function walkControllers(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -34,15 +40,29 @@ function walkControllers(dir: string): string[] {
   return files;
 }
 
+function relativeControllerPath(filePath: string): string {
+  return filePath.replace(`${SRC_DIR}/`, "");
+}
+
 describe("vitrine-api read-only controllers", () => {
-  it("declares no write HTTP decorators in controller files", () => {
+  it("declares no write HTTP decorators except booking/slotLocks lock endpoints", () => {
     const controllerFiles = walkControllers(SRC_DIR);
     expect(controllerFiles.length).toBeGreaterThan(0);
 
     const writeDecoratorPattern = /@(Post|Put|Patch|Delete)\(/;
 
     for (const filePath of controllerFiles) {
+      const relative = relativeControllerPath(filePath);
       const source = readFileSync(filePath, "utf8");
+
+      if (relative.endsWith(BOOKING_CONTROLLER)) {
+        expect(source).not.toMatch(/@(Put|Patch)\(/);
+        expect(source).toMatch(/@Post\("lock"\)/);
+        expect(source).toMatch(/@Delete\("lock\/:lockId"\)/);
+        expect(source).not.toMatch(/createReservation|clientAccount|Reservation\.create/i);
+        continue;
+      }
+
       expect(source, filePath).not.toMatch(writeDecoratorPattern);
     }
   });
@@ -59,14 +79,23 @@ describe("vitrine-api read-only controllers", () => {
     expect(source).toContain('@Get("tariffs/:slug")');
     expect(source).not.toMatch(/@(Post|Put|Patch|Delete)\(/);
   });
+
+  it("booking controller only exposes lock/unlock writes", () => {
+    const source = readFileSync(join(SRC_DIR, BOOKING_CONTROLLER), "utf8");
+    const writeMatches = [...source.matchAll(/@(Post|Put|Patch|Delete)\(([^)]*)\)/g)];
+    expect(writeMatches.map((match) => `${match[1]}(${match[2]})`)).toEqual([
+      'Post("lock")',
+      'Delete("lock/:lockId")',
+    ]);
+  });
 });
 
 describe("vitrine-api read-only HTTP", () => {
-  let app: INestApplication;
-  let baseUrl: string;
+  let catalogApp: INestApplication;
+  let catalogBaseUrl: string;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+    const catalogModuleRef = await Test.createTestingModule({
       controllers: [CatalogContentController],
       providers: [
         {
@@ -88,25 +117,32 @@ describe("vitrine-api read-only HTTP", () => {
       ],
     }).compile();
 
-    app = moduleRef.createNestApplication();
-    await app.init();
-    await app.listen(0);
-    const address = app.getHttpServer().address();
-    const port = typeof address === "object" && address ? address.port : 0;
-    baseUrl = `http://127.0.0.1:${port}`;
+    catalogApp = catalogModuleRef.createNestApplication();
+    await catalogApp.init();
+    await catalogApp.listen(0);
+    const catalogAddress = catalogApp.getHttpServer().address();
+    const catalogPort =
+      typeof catalogAddress === "object" && catalogAddress ? catalogAddress.port : 0;
+    catalogBaseUrl = `http://127.0.0.1:${catalogPort}`;
   });
 
   afterAll(async () => {
-    await app.close();
+    await catalogApp.close();
   });
 
   it("rejects POST /catalog/buildings with 404 or 405", async () => {
-    const response = await fetch(`${baseUrl}/catalog/buildings`, {
+    const response = await fetch(`${catalogBaseUrl}/catalog/buildings`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name: "should-not-write" }),
     });
 
     expect([404, 405]).toContain(response.status);
+  });
+
+  it("documents booking lock route in controller source", () => {
+    const source = readFileSync(join(SRC_DIR, BOOKING_CONTROLLER), "utf8");
+    expect(source).toMatch(/@Post\("lock"\)/);
+    expect(source).toMatch(/@Delete\("lock\/:lockId"\)/);
   });
 });

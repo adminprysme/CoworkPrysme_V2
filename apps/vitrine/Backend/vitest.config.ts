@@ -7,6 +7,14 @@ export default {
   test: {
     include: ["src/**/*.test.ts"],
   },
+  esbuild: {
+    tsconfigRaw: {
+      compilerOptions: {
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       "@coworkprysme/db": join(repoRoot, "packages/db/dist/index.js"),

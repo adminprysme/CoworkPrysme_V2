@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AboutContentModule } from "./about-content/about-content.module.js";
+import { BookingModule } from "./booking/booking.module.js";
 import { CatalogContentModule } from "./catalog-content/catalog-content.module.js";
 import { DbModule } from "./db/db.module.js";
 import { GestionModule } from "./gestion/gestion.module.js";
@@ -19,6 +20,7 @@ import { SiteContactModule } from "./site-contact/site-contact.module.js";
     HomeContentModule,
     AboutContentModule,
     CatalogContentModule,
+    BookingModule,
     ServicesContentModule,
     SiteContactModule,
   ],
