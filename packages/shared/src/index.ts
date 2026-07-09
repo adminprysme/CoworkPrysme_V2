@@ -107,13 +107,14 @@ export {
   type UpdateBuildingRequest,
 } from "./buildings.js";
 
-export { DEFAULT_SITE_CONTACT } from "./site-contact.js";
+export { DEFAULT_SITE_CONTACT, resolveVitrineSiteContact } from "./site-contact.js";
 
 export {
   PublicBuildingAddressSchema,
   PublicBuildingInfoSchema,
   DEFAULT_PUBLIC_BUILDING_INFO,
   buildGoogleMapsUrl,
+  buildGoogleMapsDirectionsUrl,
   formatPublicBuildingAddress,
   mapDbBuildingToPublicInfo,
   type PublicBuildingAddress,
@@ -205,11 +206,14 @@ export {
 } from "./spaces.js";
 
 export {
+  AboutPublicContentSchema,
+  DEFAULT_ABOUT_PUBLIC_CONTENT,
   DEFAULT_HOME_PUBLIC_CONTENT,
   DEFAULT_VITRINE_MARQUEE_TEXT,
   HomePublicContentSchema,
   UpdateVitrineContentRequestSchema,
   VITRINE_CONTENT_SINGLETON_ID,
+  VITRINE_FEATURED_BUILDINGS_MAX,
   VITRINE_FEATURED_SPACES_MAX,
   VITRINE_HERO_MAX_IMAGES,
   VITRINE_UPLOAD_MAX_BYTES,
@@ -218,6 +222,8 @@ export {
   VitrineContentResponseSchema,
   VitrineMarqueeSchema,
   VitrineServiceImagesSchema,
+  VitrineSiteContactSchema,
+  VitrineSiteContactInputSchema,
   ServicesFeaturedSpaceSchema,
   ServicesPublicContentSchema,
   DEFAULT_SERVICES_PUBLIC_CONTENT,
@@ -226,6 +232,7 @@ export {
   isValidVitrineImageStorageKey,
   mediaPathFromVitrineStorageKey,
   spaceTypeToVitrineHref,
+  type AboutPublicContent,
   type HomePublicContent,
   type ServicesFeaturedSpace,
   type ServicesPublicContent,
@@ -233,5 +240,60 @@ export {
   type VitrineContentResponse,
   type VitrineImageSlot,
   type VitrineMarquee,
+  type VitrineSiteContact,
   type VitrineServiceImages,
 } from "./vitrine-content.js";
+
+export {
+  CatalogBuildingSummarySchema,
+  CatalogBuildingDetailSchema,
+  CatalogSpaceCardSchema,
+  CatalogBuildingPageContentSchema,
+  CatalogBuildingsListSchema,
+  CatalogTariffLineSchema,
+  CatalogTariffSpaceGroupSchema,
+  CatalogTariffBuildingGroupSchema,
+  CatalogTariffsContentSchema,
+  computeStartingPriceHTCents,
+  pickStartingPriceVatRate,
+  durationClassLabel,
+  type CatalogBuildingSummary,
+  type CatalogBuildingDetail,
+  type CatalogSpaceCard,
+  type CatalogBuildingPageContent,
+  type CatalogBuildingsList,
+  type CatalogTariffLine,
+  type CatalogTariffSpaceGroup,
+  type CatalogTariffsContent,
+} from "./catalog-content.js";
+
+export {
+  BOOKING_ERROR_CODES,
+  BOOKING_PHASE1_DURATION_CLASSES,
+  BookingAvailabilityQuerySchema,
+  BookingAvailabilityResponseSchema,
+  BookingErrorResponseSchema,
+  BookingLockResponseSchema,
+  BookingPhase1DurationClassSchema,
+  type BookingPhase1DurationClass,
+  BookingSlotSchema,
+  BookingSpaceAvailabilityQuerySchema,
+  BookingSpaceAvailabilityResponseSchema,
+  BookingSpaceCardSchema,
+  BookingSpacesQuerySchema,
+  BookingSpacesResponseSchema,
+  CreateBookingLockRequestSchema,
+  ReleaseBookingLockQuerySchema,
+  bookingDurationClassLabel,
+  type BookingAvailabilityQuery,
+  type BookingAvailabilityResponse,
+  type BookingErrorCode,
+  type BookingLockResponse,
+  type BookingSlot,
+  type BookingSpaceAvailabilityQuery,
+  type BookingSpaceAvailabilityResponse,
+  type BookingSpaceCard,
+  type BookingSpacesQuery,
+  type BookingSpacesResponse,
+  type CreateBookingLockRequest,
+} from "./booking.js";
