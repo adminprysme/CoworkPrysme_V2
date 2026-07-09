@@ -1,6 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { permanentRedirect } from "next/navigation";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports("/tarifs");
+import { getDefaultCatalogBuildingSlug } from "@/lib/get-catalog-content";
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export default async function TarifsIndexPage() {
+  const slug = await getDefaultCatalogBuildingSlug();
+  if (!slug) {
+    permanentRedirect("/contact");
+  }
+  permanentRedirect(`/tarifs/${slug}`);
+}
