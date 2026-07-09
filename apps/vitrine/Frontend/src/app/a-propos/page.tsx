@@ -1,6 +1,9 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { AboutPageContent } from "@/components/about/AboutPageContent";
+import { ABOUT_PAGE_SEO } from "@/config/about-page";
+import { createPageMetadata } from "@/lib/metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports("/a-propos");
+export const metadata = createPageMetadata(ABOUT_PAGE_SEO);
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export default function AboutPage() {
+  return <AboutPageContent />;
+}

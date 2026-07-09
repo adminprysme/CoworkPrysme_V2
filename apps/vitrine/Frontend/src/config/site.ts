@@ -166,10 +166,10 @@ export const STUB_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/a-propos",
-    title: "À propos de Cowork Prysme",
+    title: "Notre histoire — Cowork Prysme, coworking à Lyon 7",
     description:
-      "Découvrez l'histoire, la vision et l'équipe de Cowork Prysme, coworking premium à Lyon 7.",
-    h1: "À propos",
+      "Vision, valeurs et lieu : découvrez l'histoire de Cowork Prysme, espace de travail flexible au bâtiment A1, 39 rue Saint Jean de Dieu, Lyon 7.",
+    h1: "Notre histoire",
   },
   {
     path: "/avis",
