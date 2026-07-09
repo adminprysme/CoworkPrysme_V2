@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AboutGroupAffiliation } from "@/components/about/AboutGroupAffiliation";
 import { PageIntro } from "@/components/pages/PageIntro";
 import { SeoLandingFooter } from "@/components/seo-landing/SeoLandingFooter";
 import layout from "@/components/seo-landing/seo-landing-layouts.module.css";
@@ -76,6 +77,8 @@ export function AboutPageContent() {
           </div>
         </Container>
       </Section>
+
+      <AboutGroupAffiliation />
 
       <SeoLandingFooter cta={cta} relatedLinks={[...relatedLinks]} />
     </>

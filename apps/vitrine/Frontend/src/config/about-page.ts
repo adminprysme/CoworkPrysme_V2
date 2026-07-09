@@ -47,6 +47,14 @@ export const ABOUT_PAGE = {
     imageAlt: "Façade du bâtiment A1 — CoworkPrysme, Lyon 7 (photo à venir)",
     imageCaption: "Galerie photos à venir",
   },
+  groupAffiliation: {
+    title: "CoworkPrysme fait partie du Groupe Prysme",
+    body: "CoworkPrysme s'inscrit dans une démarche plus large portée par Prysme le Groupe, qui accompagne les entreprises dans la création d'environnements de travail accueillants et performants. À travers ses 5 sociétés spécialisées — hospitalité, conciergerie, événementiel et restauration collective — le Groupe partage une vision commune : replacer l'humain au centre de l'expérience professionnelle.",
+    link: {
+      href: "https://prysme.eu",
+      label: "Découvrir Prysme le Groupe",
+    },
+  },
   cta: {
     label: "Découvrir nos espaces",
     href: "/bureaux-privatifs",
