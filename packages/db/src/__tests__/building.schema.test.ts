@@ -39,6 +39,11 @@ function minimalBuildingInput(): Omit<Building, "createdAt" | "updatedAt"> {
     status: "active" as const,
     visibleOnVitrine: false,
     isDefaultVitrineBuilding: false,
+    seo: {
+      slug: "cowork-part-dieu",
+      metaTitle: "Cowork Part-Dieu | Cowork Prysme",
+      metaDescription: "Cowork Part-Dieu — coworking Cowork Prysme à Lyon.",
+    },
   };
 }
 
@@ -57,6 +62,7 @@ describe("building schema", () => {
           { isDefaultVitrineBuilding: 1 },
           { unique: true, partialFilterExpression: { isDefaultVitrineBuilding: true } },
         ],
+        [{ "seo.slug": 1 }, { unique: true }],
       ]),
     );
     void connection.close();

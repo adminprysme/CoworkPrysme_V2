@@ -36,6 +36,9 @@ import {
   isBuildingInScope,
   mapBuildingToResponse,
   mapRequestToDbDocument,
+  baseSlugForBuildingName,
+  buildSeoForBuilding,
+  resolveUniqueBuildingSlug,
 } from "./buildings.mapper.js";
 import { resolveVitrineBuildingFlags } from "./buildings-vitrine.js";
 
@@ -84,6 +87,38 @@ function mapBuildingRequestToDbDocument(
   return mapRequestToDbDocument({ ...input, ...vitrineFlags }, coordinates);
 }
 
+async function resolveUniqueBuildingSeo(
+  name: string,
+  description?: string,
+  excludeBuildingId?: string,
+): Promise<ReturnType<typeof buildSeoForBuilding>> {
+  await connectMongo();
+  const Building = await getBuildingModel();
+  const baseSlug = baseSlugForBuildingName(name);
+  const takenSlugs = new Set<string>();
+
+  const existing = await Building.find(
+    excludeBuildingId ? { _id: { $ne: excludeBuildingId } } : {},
+    {
+      "seo.slug": 1,
+    },
+  )
+    .lean()
+    .exec();
+
+  for (const doc of existing) {
+    if (doc.seo?.slug) {
+      takenSlugs.add(doc.seo.slug);
+    }
+  }
+
+  const seoMeta = buildSeoForBuilding(name, description);
+  return {
+    ...seoMeta,
+    slug: resolveUniqueBuildingSlug(baseSlug, takenSlugs),
+  };
+}
+
 @Injectable()
 export class BuildingsService {
   constructor(
@@ -130,7 +165,8 @@ export class BuildingsService {
     }
 
     const coordinates = await this.geocoding.geocodeAddress(input.address);
-    const payload = mapBuildingRequestToDbDocument(input, coordinates);
+    const seo = await resolveUniqueBuildingSeo(input.name, input.description);
+    const payload = { ...mapBuildingRequestToDbDocument(input, coordinates), seo };
 
     await connectMongo();
     const Building = await getBuildingModel();
@@ -165,7 +201,12 @@ export class BuildingsService {
     }
 
     const coordinates = await this.geocoding.geocodeAddress(input.address);
-    const payload = mapBuildingRequestToDbDocument(input, coordinates);
+    const seo = await resolveUniqueBuildingSeo(
+      input.name,
+      input.description,
+      existing._id.toString(),
+    );
+    const payload = { ...mapBuildingRequestToDbDocument(input, coordinates), seo };
     const preservedPhotos = existing.photos.map((photo) => ({
       storageKey: photo.storageKey,
       alt: photo.alt,

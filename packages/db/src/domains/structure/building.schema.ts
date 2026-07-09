@@ -17,6 +17,8 @@ import {
   type BuildingFloor,
   type BuildingPhoto,
   type Coordinates,
+  type SeoMeta,
+  seoSchema,
 } from "../../lib/subdocuments.js";
 
 export interface Building {
@@ -37,6 +39,7 @@ export interface Building {
   status: (typeof ACTIVE_STATUSES)[number];
   visibleOnVitrine: boolean;
   isDefaultVitrineBuilding: boolean;
+  seo: SeoMeta;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,6 +67,7 @@ const buildingSchema = new Schema<Building>(
     status: { type: String, enum: ACTIVE_STATUSES, default: "active", required: true },
     visibleOnVitrine: { type: Boolean, default: false },
     isDefaultVitrineBuilding: { type: Boolean, default: false },
+    seo: { type: seoSchema, required: true },
   },
   { ...TIMESTAMP_OPTIONS, collection: "buildings" },
 );
@@ -74,6 +78,7 @@ buildingSchema.index(
   { isDefaultVitrineBuilding: 1 },
   { unique: true, partialFilterExpression: { isDefaultVitrineBuilding: true } },
 );
+buildingSchema.index({ "seo.slug": 1 }, { unique: true });
 
 export type BuildingModel = Model<Building>;
 

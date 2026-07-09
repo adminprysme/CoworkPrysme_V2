@@ -1,10 +1,9 @@
 import type { Building } from "@coworkprysme/db";
 import type { BuildingResponse, CreateBuildingRequest } from "@coworkprysme/shared";
 import {
-  BuildingResponseSchema,
-  normalizeCountryFromDb,
-  normalizeCountryToDb,
-  normalizeOptionalBuildingContactField,
+  buildBuildingSeoMeta,
+  resolveUniqueSlugFromSet,
+  slugifyBuildingName,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
 
@@ -101,9 +100,26 @@ export function mapBuildingToResponse(doc: BuildingLean): BuildingResponse {
     })),
     visibleOnVitrine: doc.visibleOnVitrine ?? false,
     isDefaultVitrineBuilding: doc.isDefaultVitrineBuilding ?? false,
+    seo: {
+      slug: doc.seo.slug,
+      metaTitle: doc.seo.metaTitle,
+      metaDescription: doc.seo.metaDescription,
+    },
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   });
+}
+
+export function buildSeoForBuilding(name: string, description?: string): BuildingLean["seo"] {
+  return buildBuildingSeoMeta(name, description);
+}
+
+export function resolveUniqueBuildingSlug(baseSlug: string, takenSlugs: Set<string>): string {
+  return resolveUniqueSlugFromSet(baseSlug, takenSlugs);
+}
+
+export function baseSlugForBuildingName(name: string): string {
+  return slugifyBuildingName(name);
 }
 
 export function buildScopeFilter(buildingIds: Types.ObjectId[]): Record<string, unknown> {

@@ -145,9 +145,11 @@ export {
 export {
   SEO_META_DESCRIPTION_MAX_LENGTH,
   buildSpaceSeoMeta,
+  buildBuildingSeoMeta,
   iterateSlugCandidates,
   resolveUniqueSlugFromSet,
   slugifySpaceName,
+  slugifyBuildingName,
   type SpaceSeoMeta,
 } from "./seo.js";
 

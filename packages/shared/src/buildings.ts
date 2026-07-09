@@ -96,6 +96,12 @@ export const BuildingPhotoResponseSchema = z.object({
   isPrimary: z.boolean(),
 });
 
+export const BuildingSeoResponseSchema = z.object({
+  slug: z.string(),
+  metaTitle: z.string(),
+  metaDescription: z.string(),
+});
+
 export const BuildingResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -112,6 +118,7 @@ export const BuildingResponseSchema = z.object({
   photos: z.array(BuildingPhotoResponseSchema),
   visibleOnVitrine: z.boolean(),
   isDefaultVitrineBuilding: z.boolean(),
+  seo: BuildingSeoResponseSchema,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

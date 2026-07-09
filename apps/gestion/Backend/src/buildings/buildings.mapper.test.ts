@@ -97,6 +97,11 @@ describe("buildings.mapper", () => {
       status: "active",
       visibleOnVitrine: true,
       isDefaultVitrineBuilding: false,
+      seo: {
+        slug: "cowork-test",
+        metaTitle: "Cowork Test | Cowork Prysme",
+        metaDescription: "Cowork Test — coworking Cowork Prysme à Lyon.",
+      },
       createdAt: now,
       updatedAt: now,
     });

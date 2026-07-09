@@ -38,6 +38,11 @@ function leanBuilding(photos: Array<{ storageKey: string; order: number; isPrima
     status: "active" as const,
     visibleOnVitrine: false,
     isDefaultVitrineBuilding: false,
+    seo: {
+      slug: "cowork-test",
+      metaTitle: "Cowork Test | Cowork Prysme",
+      metaDescription: "Cowork Test — coworking Cowork Prysme à Lyon.",
+    },
     createdAt: now,
     updatedAt: now,
   };
