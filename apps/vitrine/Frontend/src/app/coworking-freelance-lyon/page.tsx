@@ -1,8 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { FreelancePageContent } from "@/components/seo-landing/FreelancePageContent";
+import { getSeoLandingPage } from "@/config/seo-landing-pages";
+import { createSeoLandingMetadata } from "@/lib/seo-landing-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports(
-  "/coworking-freelance-lyon",
-);
+const page = getSeoLandingPage("/coworking-freelance-lyon")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createSeoLandingMetadata(page);
+
+export default function CoworkingFreelancePage() {
+  return <FreelancePageContent page={page} />;
+}

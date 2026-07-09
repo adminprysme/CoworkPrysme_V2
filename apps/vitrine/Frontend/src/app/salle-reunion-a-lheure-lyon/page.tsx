@@ -1,8 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { SalleReunionHeurePageContent } from "@/components/seo-landing/SalleReunionHeurePageContent";
+import { getSeoLandingPage } from "@/config/seo-landing-pages";
+import { createSeoLandingMetadata } from "@/lib/seo-landing-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports(
-  "/salle-reunion-a-lheure-lyon",
-);
+const page = getSeoLandingPage("/salle-reunion-a-lheure-lyon")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createSeoLandingMetadata(page);
+
+export default function SalleReunionHeurePage() {
+  return <SalleReunionHeurePageContent page={page} />;
+}

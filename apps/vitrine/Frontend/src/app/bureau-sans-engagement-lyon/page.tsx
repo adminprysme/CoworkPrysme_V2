@@ -1,8 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { SansEngagementPageContent } from "@/components/seo-landing/SansEngagementPageContent";
+import { getSeoLandingPage } from "@/config/seo-landing-pages";
+import { createSeoLandingMetadata } from "@/lib/seo-landing-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports(
-  "/bureau-sans-engagement-lyon",
-);
+const page = getSeoLandingPage("/bureau-sans-engagement-lyon")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createSeoLandingMetadata(page);
+
+export default function BureauSansEngagementPage() {
+  return <SansEngagementPageContent page={page} />;
+}

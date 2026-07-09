@@ -109,59 +109,59 @@ export const STUB_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/coworking-lyon-7-jean-mace",
-    title: "Coworking Lyon 7 Jean Macé",
+    title: "Coworking à Jean Macé, Lyon 7 — CoworkPrysme",
     description:
-      "Espace de coworking premium à Lyon 7, Jean Macé / Gerland. Bureaux flexibles et salles de réunion Cowork Prysme.",
-    h1: "Coworking Lyon 7 Jean Macé",
+      "Un espace de coworking en plein cœur de Lyon 7, quartier Jean Macé / Gerland. Bureaux, salles de réunion, accès tramway. Découvrez CoworkPrysme.",
+    h1: "Votre espace de coworking dans le quartier Jean Macé, Lyon 7",
   },
   {
     path: "/bureau-sans-engagement-lyon",
-    title: "Bureau sans engagement Lyon",
+    title: "Bureau sans engagement à Lyon — Location flexible | CoworkPrysme",
     description:
-      "Bureau flexible sans engagement à Lyon 7. Idéal freelances et TPE : formules adaptées à votre rythme.",
-    h1: "Bureau sans engagement à Lyon",
+      "Louez un bureau à Lyon sans engagement long terme : à la journée, à la semaine ou au mois. Résiliez librement. Découvrez nos formules flexibles.",
+    h1: "Un bureau à Lyon, sans vous engager sur la durée",
   },
   {
     path: "/salle-reunion-a-lheure-lyon",
-    title: "Salle de réunion à l'heure Lyon",
+    title: "Location salle de réunion à l'heure à Lyon | CoworkPrysme",
     description:
-      "Louez une salle de réunion à l'heure à Lyon 7. Équipement pro, accueil premium, quartier Gerland.",
-    h1: "Salle de réunion à l'heure à Lyon",
+      "Réservez une salle de réunion à l'heure à Lyon 7, équipée (vidéoprojecteur, visio, wifi fibre). Disponibilité en temps réel, réservation en 2 minutes.",
+    h1: "Louez une salle de réunion à l'heure, à Lyon 7",
   },
   {
     path: "/coworking-freelance-lyon",
-    title: "Coworking freelance Lyon",
+    title: "Coworking pour freelances à Lyon — Réseau & flexibilité | CoworkPrysme",
     description:
-      "Espace coworking pensé pour les freelances à Lyon 7 : réseau, flexibilité et cadre premium.",
-    h1: "Coworking pour freelances à Lyon",
+      "Espace de coworking pensé pour les freelances lyonnais : tarifs à la journée, réseau actif, cadre propice pour recevoir vos clients. Rejoignez la communauté.",
+    h1: "Le coworking des freelances lyonnais",
   },
   {
     path: "/bureau-teletravail-lyon",
-    title: "Bureau télétravail Lyon 7",
+    title: "Bureau télétravail à Lyon — Espace calme et connecté | CoworkPrysme",
     description:
-      "Un bureau pour télétravailler à Lyon 7, au calme et bien connecté. Cowork Prysme, Gerland / Jean Macé.",
-    h1: "Bureau télétravail Lyon",
+      "Un espace dédié pour télétravailler à Lyon 7 : wifi fibre, cadre calme, proche transports. Sortez de chez vous sans perdre en confort de travail.",
+    h1: "Télétravaillez dans un vrai cadre professionnel, à Lyon 7",
   },
   {
     path: "/domiciliation-entreprise-lyon-7",
-    title: "Domiciliation entreprise Lyon 7",
+    title: "Domiciliation d'entreprise à Lyon 7 — CoworkPrysme",
     description:
-      "Solution de domiciliation d'entreprise à Lyon 7. Adresse professionnelle et services Cowork Prysme.",
-    h1: "Domiciliation entreprise Lyon 7",
+      "Domiciliez votre entreprise à Lyon 7, quartier Jean Macé. Adresse professionnelle, gestion du courrier, inclus dès un mois de location de bureau.",
+    h1: "Domiciliez votre entreprise à Lyon 7",
   },
   {
     path: "/coworking-startup-lyon",
-    title: "Coworking startup Lyon",
+    title: "Coworking pour startups à Lyon — Écosystème & croissance | CoworkPrysme",
     description:
-      "Accueillez votre startup dans un coworking premium à Lyon 7. Bureaux évolutifs et salles de réunion.",
-    h1: "Coworking startup Lyon",
+      "Un espace de coworking pensé pour les startups lyonnaises : bureaux modulables, réseau d'entrepreneurs, salles pour vos événements. Grandissez avec nous.",
+    h1: "L'espace qui grandit avec votre startup",
   },
   {
     path: "/location-bureaux-equipes-lyon",
-    title: "Location bureaux équipes Lyon",
+    title: "Location de bureaux pour équipes à Lyon | CoworkPrysme",
     description:
-      "Louez des bureaux pour vos équipes à Lyon 7. Espaces modulables, services inclus, emplacement Gerland.",
-    h1: "Location de bureaux pour équipes à Lyon",
+      "Louez des bureaux pour votre équipe à Lyon 7 : capacité jusqu'à 100 personnes, facturation simplifiée, contrats entreprise. Un espace externe pour vos projets.",
+    h1: "Des bureaux et salles pour vos équipes, à Lyon 7",
   },
   {
     path: "/a-propos",

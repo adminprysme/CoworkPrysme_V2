@@ -1,7 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { StartupPageContent } from "@/components/seo-landing/StartupPageContent";
+import { getSeoLandingPage } from "@/config/seo-landing-pages";
+import { createSeoLandingMetadata } from "@/lib/seo-landing-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } =
-  createStubPageExports("/coworking-startup-lyon");
+const page = getSeoLandingPage("/coworking-startup-lyon")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createSeoLandingMetadata(page);
+
+export default function CoworkingStartupPage() {
+  return <StartupPageContent page={page} />;
+}

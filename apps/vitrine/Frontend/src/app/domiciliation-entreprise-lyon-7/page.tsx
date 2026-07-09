@@ -1,8 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { DomiciliationPageContent } from "@/components/seo-landing/DomiciliationPageContent";
+import { getSeoLandingPage } from "@/config/seo-landing-pages";
+import { createSeoLandingMetadata } from "@/lib/seo-landing-metadata";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports(
-  "/domiciliation-entreprise-lyon-7",
-);
+const page = getSeoLandingPage("/domiciliation-entreprise-lyon-7")!;
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export const metadata = createSeoLandingMetadata(page);
+
+export default function DomiciliationEntreprisePage() {
+  return <DomiciliationPageContent page={page} />;
+}
