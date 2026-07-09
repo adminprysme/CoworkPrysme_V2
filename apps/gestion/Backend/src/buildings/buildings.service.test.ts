@@ -203,6 +203,8 @@ describe("BuildingsService", () => {
         { day: "monday" as const, is24h: false, openTime: "08:00", closeTime: "19:00" },
       ],
       concierge: { link: "", accessCode: "" },
+      visibleOnVitrine: false,
+      isDefaultVitrineBuilding: false,
     };
 
     it("refuses creation for a scoped manager (no auto-assign)", async () => {

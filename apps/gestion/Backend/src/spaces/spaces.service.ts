@@ -26,6 +26,7 @@ import {
   getReservationModel,
   getSpaceModel,
   type BuildingPhoto,
+  type Space,
   type StaffProfileDocument,
 } from "@coworkprysme/db";
 import type { Types } from "mongoose";
@@ -43,6 +44,7 @@ import {
   mapSpaceToResponse,
   resolveUniqueSlug,
 } from "./spaces.mapper.js";
+import { resolveSpaceVitrineFlags } from "./spaces-vitrine.js";
 
 const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 
@@ -64,6 +66,20 @@ function normalizePhotoMetadata(photos: UpdateEntityPhotosRequest["photos"]): Bu
     order: index,
     isPrimary: primaryIndex === -1 ? index === 0 : index === primaryIndex,
   }));
+}
+
+function mapSpaceRequestToDbDocument(
+  input: CreateSpaceRequest,
+  buildingId: Types.ObjectId,
+  seo: Space["seo"],
+) {
+  const vitrineFlags = resolveSpaceVitrineFlags({
+    status: input.status,
+    featuredOnVitrine: input.featuredOnVitrine,
+    vitrineOrder: input.vitrineOrder,
+  });
+
+  return mapRequestToDbDocument({ ...input, ...vitrineFlags }, buildingId, seo);
 }
 
 function assertSpaceMutable(status: string): void {
@@ -185,7 +201,7 @@ export class SpacesService {
     }
 
     const seo = await this.resolveUniqueSpaceSeo(parsed.data.name, parsed.data.description);
-    const payload = mapRequestToDbDocument(parsed.data, building._id as Types.ObjectId, seo);
+    const payload = mapSpaceRequestToDbDocument(parsed.data, building._id as Types.ObjectId, seo);
 
     const Space = await getSpaceModel();
     const doc = await Space.create({ ...payload, photos: [] });
@@ -227,7 +243,7 @@ export class SpacesService {
       parsed.data.description,
       existing._id.toString(),
     );
-    const payload = mapRequestToDbDocument(parsed.data, existing.buildingId, seo);
+    const payload = mapSpaceRequestToDbDocument(parsed.data, existing.buildingId, seo);
 
     existing.set(payload);
     if (payload.description === undefined) {
@@ -235,6 +251,9 @@ export class SpacesService {
     }
     if (payload.accessCode === undefined) {
       existing.set("accessCode", undefined);
+    }
+    if (payload.vitrineOrder === undefined) {
+      existing.set("vitrineOrder", undefined);
     }
     await existing.save();
 

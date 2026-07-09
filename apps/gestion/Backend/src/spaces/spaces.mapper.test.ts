@@ -29,6 +29,7 @@ const sampleRequest: CreateSpaceRequest = {
   accessCode: "4821",
   status: "active",
   tariffs: [],
+  featuredOnVitrine: false,
 };
 
 describe("spaces.mapper", () => {
@@ -44,6 +45,7 @@ describe("spaces.mapper", () => {
     expect(dbDoc.openingHours[0]?.close).toBe("19:00");
     expect(dbDoc.accessCode).toBe("4821");
     expect(dbDoc.floor).toBe("RDC");
+    expect(dbDoc.featuredOnVitrine).toBe(false);
   });
 
   it("maps open/close back to openTime/closeTime for API responses", () => {
@@ -81,6 +83,8 @@ describe("spaces.mapper", () => {
         metaDescription: "Grande salle lumineuse.",
       },
       tariffs: [{ durationClass: "hourly", priceHT: 1999, vatRate: 20, enabled: true }],
+      featuredOnVitrine: true,
+      vitrineOrder: 3,
       createdAt: now,
       updatedAt: now,
     });
@@ -90,6 +94,8 @@ describe("spaces.mapper", () => {
     expect(response.seo.slug).toBe("salon-part-dieu");
     expect(response.photos[0]?.isPrimary).toBe(true);
     expect(response.tariffs[0]?.priceHT).toBe(1999);
+    expect(response.featuredOnVitrine).toBe(true);
+    expect(response.vitrineOrder).toBe(3);
   });
 
   it("maps tariff euros to centimes for MongoDB", () => {

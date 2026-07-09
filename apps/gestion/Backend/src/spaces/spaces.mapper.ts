@@ -54,6 +54,8 @@ export function mapRequestToDbDocument(
     status: input.status,
     seo,
     tariffs: mapTariffsToDb(input.tariffs),
+    featuredOnVitrine: input.featuredOnVitrine,
+    vitrineOrder: input.vitrineOrder,
   };
 }
 
@@ -104,6 +106,8 @@ export function mapSpaceToResponse(doc: SpaceLean): SpaceResponse {
       priceHT: tariff.priceHT,
       vatRate: tariff.vatRate,
     })),
+    featuredOnVitrine: doc.featuredOnVitrine ?? false,
+    vitrineOrder: doc.vitrineOrder,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   });
