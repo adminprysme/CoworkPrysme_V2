@@ -1,0 +1,235 @@
+.catalogSection {
+  padding-block: var(--v-space-12);
+}
+
+.selectorWrap {
+  margin-bottom: var(--v-space-8);
+}
+
+.selectorLabel {
+  display: block;
+  margin-bottom: var(--v-space-2);
+  font-size: var(--v-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--v-color-brand);
+}
+
+.selector {
+  width: min(100%, 24rem);
+  padding: var(--v-space-3) var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-surface);
+  color: var(--v-color-text);
+  font: inherit;
+}
+
+.hero {
+  display: grid;
+  gap: var(--v-space-8);
+  align-items: center;
+  margin-bottom: var(--v-space-10);
+}
+
+.heroCopy {
+  display: grid;
+  gap: var(--v-space-4);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: var(--v-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--v-color-brand);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--v-font-display);
+  font-size: var(--v-text-3xl);
+  line-height: 1.15;
+  color: var(--v-color-ink);
+}
+
+.lead {
+  margin: 0;
+  font-size: var(--v-text-lg);
+  line-height: 1.7;
+  color: var(--v-color-text-muted);
+}
+
+.heroImageWrap {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--v-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--v-color-border);
+  background: var(--v-color-surface-muted);
+}
+
+.heroImage {
+  object-fit: cover;
+}
+
+.intro {
+  max-width: 42rem;
+  margin: 0 0 var(--v-space-10);
+  font-size: var(--v-text-base);
+  line-height: 1.75;
+  color: var(--v-color-text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--v-space-6);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  overflow: hidden;
+  background: var(--v-color-surface);
+}
+
+.cardImageWrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--v-color-surface-muted);
+}
+
+.cardImage {
+  object-fit: cover;
+}
+
+.cardImagePlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--v-space-4);
+  text-align: center;
+  color: var(--v-color-text-muted);
+  font-size: var(--v-text-sm);
+}
+
+.cardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--v-space-4);
+  padding: var(--v-space-5);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--v-text-xl);
+  color: var(--v-color-ink);
+}
+
+.cardMeta,
+.cardEquipments,
+.priceNote {
+  margin: 0;
+  font-size: var(--v-text-sm);
+  line-height: 1.6;
+  color: var(--v-color-text-muted);
+}
+
+.price {
+  margin: 0;
+  font-size: var(--v-text-lg);
+  font-weight: 700;
+  color: var(--v-color-brand);
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-3);
+  margin-top: auto;
+}
+
+.emptyState {
+  padding: var(--v-space-10);
+  border: 1px dashed var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  text-align: center;
+  color: var(--v-color-text-muted);
+}
+
+.tariffsTableWrap {
+  overflow-x: auto;
+}
+
+.tariffsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tariffsTable th,
+.tariffsTable td {
+  padding: var(--v-space-3) var(--v-space-4);
+  border-bottom: 1px solid var(--v-color-border);
+  text-align: left;
+}
+
+.tariffsTable th {
+  font-size: var(--v-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v-color-brand);
+}
+
+.legalNote {
+  margin: var(--v-space-6) 0 0;
+  font-size: var(--v-text-sm);
+  color: var(--v-color-text-muted);
+}
+
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-3) var(--v-space-6);
+  margin-top: var(--v-space-10);
+}
+
+.footerLink {
+  font-weight: 600;
+  color: var(--v-color-ink);
+}
+
+.footerLink:hover {
+  color: var(--v-color-brand);
+}
+
+.apiFallback {
+  padding: var(--v-space-12) 0;
+  text-align: center;
+  color: var(--v-color-text-muted);
+}
+
+@media (min-width: 901px) {
+  .hero {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
