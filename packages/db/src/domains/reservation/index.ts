@@ -1,4 +1,13 @@
 export {
+  assertRangeAvailable,
+  findOverlappingActiveLock,
+  findOverlappingClosure,
+  findOverlappingReservation,
+  isRangeBlocked,
+  rangesOverlap,
+  type RangeAvailabilityContext,
+} from "./availability.js";
+export {
   createReservation,
   ensureReservationIndexes,
   type CreateReservationInput,
@@ -7,10 +16,19 @@ export {
   acquireLock,
   findActiveLock,
   releaseLock,
+  releaseLockById,
   SLOT_LOCK_DURATION_MS,
   type AcquireLockInput,
   type ReleaseLockInput,
 } from "./locks.js";
+export {
+  BOOKING_TIMEZONE,
+  isRangeWithinOpeningHours,
+  parisDateParts,
+  parisLocalToUtc,
+  parseTimeToMinutes,
+  type OpeningHoursCheckable,
+} from "./opening-hours.js";
 export {
   getReservationModel,
   registerReservationModel,

@@ -65,6 +65,19 @@ export async function releaseLock(input: ReleaseLockInput): Promise<boolean> {
   return result.deletedCount === 1;
 }
 
+/** Removes a lock by id, scoped to the owning anonymous session. */
+export async function releaseLockById(
+  lockId: Types.ObjectId | string,
+  sessionId: string,
+): Promise<boolean> {
+  const SlotLock = await getSlotLockModel();
+  const result = await SlotLock.deleteOne({
+    _id: lockId,
+    sessionId,
+  });
+  return result.deletedCount === 1;
+}
+
 /** Returns an active (non-expired) lock for the slot, if any. */
 export async function findActiveLock(
   spaceId: Types.ObjectId,

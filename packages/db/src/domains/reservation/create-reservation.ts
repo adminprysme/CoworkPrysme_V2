@@ -1,9 +1,7 @@
-import type { ClientSession, Types } from "mongoose";
-
 import { connectMongo, getCoworkDb } from "../../connection.js";
-import { BLOCKING_RESERVATION_STATUSES } from "../../lib/enums.js";
 import { ReservationOverlapError } from "../../lib/errors.js";
 import { assertReplicaSetForTransactions } from "../../lib/replica-set.js";
+import { findOverlappingReservation } from "./availability.js";
 import {
   getReservationModel,
   type Reservation,
@@ -11,23 +9,6 @@ import {
 } from "./reservation.schema.js";
 
 export type CreateReservationInput = Omit<Reservation, "createdAt" | "updatedAt">;
-
-async function findOverlappingReservation(
-  spaceId: Types.ObjectId,
-  startAt: Date,
-  endAt: Date,
-  session: ClientSession,
-): Promise<ReservationDocument | null> {
-  const Reservation = await getReservationModel();
-  return Reservation.findOne({
-    spaceId,
-    status: { $in: BLOCKING_RESERVATION_STATUSES },
-    startAt: { $lt: endAt },
-    endAt: { $gt: startAt },
-  })
-    .session(session)
-    .exec();
-}
 
 /**
  * Creates a reservation atomically after verifying no pending/confirmed overlap exists.

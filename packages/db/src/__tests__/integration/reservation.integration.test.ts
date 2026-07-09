@@ -4,10 +4,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { connectMongo, getCoworkDb } from "../../connection.js";
 import {
   acquireLock,
+  assertRangeAvailable,
   createReservation,
   ensureReservationIndexes,
+  findOverlappingActiveLock,
   registerReservationModel,
   registerSlotLockModel,
+  releaseLockById,
 } from "../../domains/reservation/index.js";
 import { ReservationOverlapError, SlotLockConflictError } from "../../lib/errors.js";
 import {
@@ -47,6 +50,46 @@ describe("integration: reservation core (replica set)", () => {
       await expect(
         acquireLock({ spaceId, startAt, endAt, sessionId: "session-b" }),
       ).rejects.toBeInstanceOf(SlotLockConflictError);
+    });
+
+    it("detects overlapping active locks even when tuples differ (10:00-11:00 vs 10:30-11:30)", async () => {
+      const spaceId = new Types.ObjectId();
+      const firstStart = new Date("2026-07-01T10:00:00.000Z");
+      const firstEnd = new Date("2026-07-01T11:00:00.000Z");
+      const overlapStart = new Date("2026-07-01T10:30:00.000Z");
+      const overlapEnd = new Date("2026-07-01T11:30:00.000Z");
+
+      await acquireLock({
+        spaceId,
+        startAt: firstStart,
+        endAt: firstEnd,
+        sessionId: "session-a",
+      });
+
+      const overlappingLock = await findOverlappingActiveLock(spaceId, overlapStart, overlapEnd);
+      expect(overlappingLock).not.toBeNull();
+
+      await expect(
+        assertRangeAvailable({
+          spaceId,
+          buildingId: new Types.ObjectId(),
+          spaceType: "meeting_room",
+          openingHours: [],
+          startAt: overlapStart,
+          endAt: overlapEnd,
+        }),
+      ).rejects.toMatchObject({ name: "SlotUnavailableError" });
+    });
+
+    it("releaseLockById only deletes locks owned by the session", async () => {
+      const spaceId = new Types.ObjectId();
+      const startAt = new Date("2026-07-01T10:00:00.000Z");
+      const endAt = new Date("2026-07-01T11:00:00.000Z");
+
+      const lock = await acquireLock({ spaceId, startAt, endAt, sessionId: "owner-session" });
+
+      await expect(releaseLockById(lock._id, "other-session")).resolves.toBe(false);
+      await expect(releaseLockById(lock._id, "owner-session")).resolves.toBe(true);
     });
   });
 

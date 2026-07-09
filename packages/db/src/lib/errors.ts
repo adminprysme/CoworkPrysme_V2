@@ -14,6 +14,14 @@ export class ReservationOverlapError extends Error {
   }
 }
 
+/** Thrown when a slot is unavailable (overlap, closure, or outside opening hours). */
+export class SlotUnavailableError extends Error {
+  constructor(message = "Slot is unavailable for the requested time range") {
+    super(message);
+    this.name = "SlotUnavailableError";
+  }
+}
+
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&

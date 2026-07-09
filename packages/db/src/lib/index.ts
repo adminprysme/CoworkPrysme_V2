@@ -16,4 +16,9 @@ export {
   warnIfNoReplicaSet,
   type ReplicaSetDetectionResult,
 } from "./replica-set.js";
-export { isDuplicateKeyError, ReservationOverlapError, SlotLockConflictError } from "./errors.js";
+export {
+  isDuplicateKeyError,
+  ReservationOverlapError,
+  SlotLockConflictError,
+  SlotUnavailableError,
+} from "./errors.js";
