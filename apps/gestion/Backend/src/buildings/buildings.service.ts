@@ -150,6 +150,12 @@ export class BuildingsService {
     if (payload.description === undefined) {
       existing.set("description", undefined);
     }
+    if (payload.phone === undefined) {
+      existing.set("phone", undefined);
+    }
+    if (payload.email === undefined) {
+      existing.set("email", undefined);
+    }
     await existing.save();
 
     const saved = await Building.findById(existing._id).lean().exec();

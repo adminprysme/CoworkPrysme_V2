@@ -39,7 +39,7 @@
 
 .secondary {
   background: var(--v-color-surface);
-  color: var(--v-color-ink);
+  color: var(--v-color-text);
   border-color: var(--v-color-border-strong);
 }
 
@@ -50,7 +50,7 @@
 
 .ghost {
   background: transparent;
-  color: var(--v-color-ink);
+  color: var(--v-color-text);
   border-color: transparent;
 }
 

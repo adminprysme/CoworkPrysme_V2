@@ -219,7 +219,12 @@ export function BuildingDetailPage() {
       </div>
 
       <div className={styles.pageBody}>
-        <div className={styles.panel} role="tabpanel">
+        <div
+          className={[styles.panel, tab === "building" ? styles.panelBuilding : ""]
+            .filter(Boolean)
+            .join(" ")}
+          role="tabpanel"
+        >
           {tab === "building" ? (
             <div className={styles.buildingTab}>
               <BuildingForm

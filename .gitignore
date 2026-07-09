@@ -35,3 +35,6 @@ pnpm-debug.log*
 # Testing
 # Local upload storage (repo root only — not src/uploads modules)
 /uploads/
+
+# Secrets / local tooling
+pushgithub.txt

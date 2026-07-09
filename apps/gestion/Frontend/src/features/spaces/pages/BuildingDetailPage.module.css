@@ -24,6 +24,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 1rem var(--app-content-padding, 1.5rem) var(--app-content-padding, 1.5rem);
+  background: var(--color-bg);
 }
 
 .breadcrumb {
@@ -135,14 +136,25 @@
   overflow: visible;
 }
 
+.panelBuilding {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .buildingTab {
   padding-bottom: 5rem;
   overflow: visible;
+  background: var(--color-bg);
 }
 
 .spacesTab {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .saveFab {

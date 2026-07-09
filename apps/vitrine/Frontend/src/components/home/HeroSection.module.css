@@ -1,8 +1,7 @@
 .hero {
   position: relative;
-  min-height: clamp(32rem, 78vh, 44rem);
-  display: flex;
-  align-items: flex-end;
+  margin-top: calc(-1 * var(--v-header-height));
+  min-height: calc(var(--v-hero-height) + var(--v-header-height));
   overflow: hidden;
   color: var(--v-color-text-inverse);
 }
@@ -10,6 +9,15 @@
 .media {
   object-fit: cover;
   z-index: 0;
+  transition: opacity 1.2s var(--v-ease-out);
+}
+
+.mediaActive {
+  opacity: 1;
+}
+
+.mediaHidden {
+  opacity: 0;
 }
 
 .overlay {
@@ -22,10 +30,12 @@
 }
 
 .content {
-  position: relative;
+  position: absolute;
+  inset: var(--v-header-height) 0 var(--v-space-8) 0;
   z-index: 2;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding-block: var(--v-space-16) var(--v-space-12);
 }
 
 .inner {
@@ -42,14 +52,14 @@
 }
 
 .title {
-  margin: 0 0 var(--v-space-5);
-  font-size: var(--v-text-hero);
+  margin: 0 0 var(--v-space-4);
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
   color: var(--v-color-text-inverse);
   text-wrap: balance;
 }
 
 .subtitle {
-  margin: 0 0 var(--v-space-8);
+  margin: 0 0 var(--v-space-6);
   max-width: 36rem;
   font-size: clamp(1.05rem, 2vw, 1.25rem);
   line-height: 1.7;
@@ -63,8 +73,12 @@
 }
 
 @media (max-width: 640px) {
+  .hero {
+    min-height: calc(var(--v-hero-height-mobile) + var(--v-header-height));
+  }
+
   .content {
-    padding-block: var(--v-space-12) var(--v-space-10);
+    inset: var(--v-header-height) 0 var(--v-space-6) 0;
   }
 
   .ctaRow {

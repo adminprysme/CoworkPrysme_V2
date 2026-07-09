@@ -1,11 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import type { SiteContact } from "@coworkprysme/shared";
+
 import { Container } from "@/components/ui/Container";
 import { FOOTER_NAV, SITE } from "@/config/site";
 import styles from "./SiteFooter.module.css";
 
-export function SiteFooter() {
+interface SiteFooterProps {
+  contact: SiteContact;
+}
+
+export function SiteFooter({ contact }: SiteFooterProps) {
   const year = new Date().getFullYear();
 
   return (
@@ -13,13 +19,15 @@ export function SiteFooter() {
       <Container>
         <div className={styles.top}>
           <div className={styles.brandBlock}>
-            <Image
-              src="/logo-cowork-prysme-full.png"
-              alt=""
-              width={180}
-              height={44}
-              className={styles.logo}
-            />
+            <Link href="/" className={styles.logoLink} aria-label="Cowork Prysme — Accueil">
+              <Image
+                src="/logo-cowork-prysme.png"
+                alt="Cowork Prysme"
+                width={1000}
+                height={500}
+                className={styles.logo}
+              />
+            </Link>
             <p className={styles.tagline}>{SITE.tagline}</p>
           </div>
 
@@ -53,10 +61,10 @@ export function SiteFooter() {
             <h2 className={styles.columnTitle}>Contact</h2>
             <ul className={styles.contactList}>
               <li>
-                <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a>
+                <a href={`mailto:${contact.email}`}>{contact.email}</a>
               </li>
               <li>
-                <a href={SITE.contact.phoneHref}>{SITE.contact.phone}</a>
+                <a href={contact.phoneHref ?? `tel:${contact.phone}`}>{contact.phone}</a>
               </li>
               <li>
                 {SITE.contact.addressLine1}

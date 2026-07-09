@@ -8,12 +8,14 @@ interface PhotoUploadGalleryProps {
   photos: BuildingPhoto[];
   onChange: (photos: BuildingPhoto[]) => void;
   onRemovePersisted?: (storageKey: string) => Promise<void>;
+  fill?: boolean;
 }
 
 export function PhotoUploadGallery({
   photos,
   onChange,
   onRemovePersisted,
+  fill = false,
 }: PhotoUploadGalleryProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -89,7 +91,7 @@ export function PhotoUploadGallery({
   }
 
   return (
-    <div className={styles.gallery}>
+    <div className={[styles.gallery, fill ? styles.galleryFill : ""].filter(Boolean).join(" ")}>
       <div
         className={[styles.dropzone, dragActive ? styles.dropzoneActive : ""]
           .filter(Boolean)

@@ -1,8 +1,11 @@
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://coworkprysme.eu";
 
-/** Placeholder until espace client URL is wired. */
-export const CLIENT_PORTAL_URL = "#espace-client";
+/** Base URL of the internal gestion-web app (client login). */
+export const GESTION_WEB_URL =
+  process.env.NEXT_PUBLIC_GESTION_WEB_URL?.replace(/\/$/, "") ?? "http://localhost:3002";
+
+export const CLIENT_PORTAL_URL = `${GESTION_WEB_URL}/login`;
 
 export const SITE = {
   name: "Cowork Prysme",

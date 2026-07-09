@@ -18,6 +18,82 @@ interface BuildingFormProps {
   section?: BuildingFormSection;
 }
 
+function generalFields(
+  idPrefix: string,
+  values: BuildingFormValues,
+  errors: BuildingFormErrors,
+  onChange: (values: BuildingFormValues) => void,
+  stretch = false,
+) {
+  return (
+    <div
+      className={[styles.fieldGrid, stretch ? styles.fieldGridFill : ""].filter(Boolean).join(" ")}
+    >
+      <label className={styles.field}>
+        <span className={styles.label}>Nom du bâtiment *</span>
+        <input
+          id={`${idPrefix}-name`}
+          className={styles.input}
+          value={values.name}
+          onChange={(event) => onChange({ ...values, name: event.target.value })}
+        />
+        {errors.name ? <p className={styles.fieldError}>{errors.name}</p> : null}
+      </label>
+
+      <label
+        className={[styles.field, stretch ? styles.fieldStretch : ""].filter(Boolean).join(" ")}
+      >
+        <span className={styles.label}>Description</span>
+        <textarea
+          id={`${idPrefix}-description`}
+          className={[styles.textarea, stretch ? styles.textareaFill : ""]
+            .filter(Boolean)
+            .join(" ")}
+          rows={4}
+          maxLength={BUILDING_DESCRIPTION_MAX_LENGTH}
+          placeholder="Texte affiché sur le site vitrine (texte brut, sans mise en forme HTML)"
+          value={values.description}
+          onChange={(event) => onChange({ ...values, description: event.target.value })}
+        />
+        <p className={styles.charCount}>
+          {values.description.length} / {BUILDING_DESCRIPTION_MAX_LENGTH}
+        </p>
+        {errors.description ? <p className={styles.fieldError}>{errors.description}</p> : null}
+      </label>
+
+      <div className={styles.fieldGrid2}>
+        <label className={styles.field}>
+          <span className={styles.label}>Téléphone</span>
+          <input
+            id={`${idPrefix}-phone`}
+            className={styles.input}
+            type="tel"
+            autoComplete="tel"
+            placeholder="04 78 86 92 55"
+            value={values.phone}
+            onChange={(event) => onChange({ ...values, phone: event.target.value })}
+          />
+          {errors.phone ? <p className={styles.fieldError}>{errors.phone}</p> : null}
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>E-mail</span>
+          <input
+            id={`${idPrefix}-email`}
+            className={styles.input}
+            type="email"
+            autoComplete="email"
+            placeholder="contact@prysme.eu"
+            value={values.email}
+            onChange={(event) => onChange({ ...values, email: event.target.value })}
+          />
+          {errors.email ? <p className={styles.fieldError}>{errors.email}</p> : null}
+        </label>
+      </div>
+    </div>
+  );
+}
+
 export function BuildingForm({
   idPrefix,
   values,
@@ -45,215 +121,232 @@ export function BuildingForm({
     onChange({ ...values, floors });
   }
 
-  const generalFields = (
-    <div className={styles.fieldGrid}>
-      <label className={styles.field}>
-        <span className={styles.label}>Nom du bâtiment *</span>
-        <input
-          id={`${idPrefix}-name`}
-          className={styles.input}
-          value={values.name}
-          onChange={(event) => onChange({ ...values, name: event.target.value })}
-        />
-        {errors.name ? <p className={styles.fieldError}>{errors.name}</p> : null}
-      </label>
-
-      <label className={styles.field}>
-        <span className={styles.label}>Description</span>
-        <textarea
-          id={`${idPrefix}-description`}
-          className={styles.textarea}
-          rows={4}
-          maxLength={BUILDING_DESCRIPTION_MAX_LENGTH}
-          placeholder="Texte affiché sur le site vitrine (texte brut, sans mise en forme HTML)"
-          value={values.description}
-          onChange={(event) => onChange({ ...values, description: event.target.value })}
-        />
-        <p className={styles.charCount}>
-          {values.description.length} / {BUILDING_DESCRIPTION_MAX_LENGTH}
-        </p>
-        {errors.description ? <p className={styles.fieldError}>{errors.description}</p> : null}
-      </label>
-    </div>
-  );
-
-  const photosSection = (
-    <section className={styles.section}>
-      <h3 className={styles.sectionTitle}>Photos du bâtiment</h3>
-      <PhotoUploadGallery
-        photos={values.photos}
-        onChange={(photos) => onChange({ ...values, photos })}
-        onRemovePersisted={onRemovePersistedPhoto}
-      />
-      {errors.photos ? <p className={styles.fieldError}>{errors.photos}</p> : null}
-    </section>
-  );
-
-  const floorsSection = (
-    <section className={styles.section}>
-      <div className={styles.floorsHeader}>
-        <h3 className={styles.sectionTitle}>Étages</h3>
-        <div className={styles.floorControls}>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            aria-label="Retirer un étage"
-            disabled={values.floors.length <= 1}
-            onClick={() => setFloorCount(values.floors.length - 1)}
-          >
-            −
-          </button>
-          <span>{values.floors.length}</span>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            aria-label="Ajouter un étage"
-            onClick={() => setFloorCount(values.floors.length + 1)}
-          >
-            +
-          </button>
+  function photosSection(paired = false) {
+    return (
+      <section
+        className={[styles.section, paired ? styles.sectionPaired : ""].filter(Boolean).join(" ")}
+      >
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Photos du bâtiment</h3>
         </div>
+        <div
+          className={[styles.sectionBody, paired ? styles.sectionBodyFill : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <PhotoUploadGallery
+            photos={values.photos}
+            onChange={(photos) => onChange({ ...values, photos })}
+            onRemovePersisted={onRemovePersistedPhoto}
+            fill={paired}
+          />
+          {errors.photos ? <p className={styles.fieldError}>{errors.photos}</p> : null}
+        </div>
+      </section>
+    );
+  }
+
+  function floorsSection(paired = false) {
+    return (
+      <section
+        className={[styles.section, paired ? styles.sectionPaired : ""].filter(Boolean).join(" ")}
+      >
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Étages</h3>
+          <div className={styles.floorControls}>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              aria-label="Retirer un étage"
+              disabled={values.floors.length <= 1}
+              onClick={() => setFloorCount(values.floors.length - 1)}
+            >
+              −
+            </button>
+            <span>{values.floors.length}</span>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              aria-label="Ajouter un étage"
+              onClick={() => setFloorCount(values.floors.length + 1)}
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div
+          className={[styles.sectionBody, paired ? styles.sectionBodyFill : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div
+            className={[styles.floorsList, paired ? styles.floorsListPaired : ""]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {values.floors.map((floor, index) => (
+              <label key={floor.id} className={styles.field}>
+                <span className={styles.label}>Étage {index + 1}</span>
+                <input
+                  className={styles.input}
+                  value={floor.name}
+                  onChange={(event) =>
+                    onChange({
+                      ...values,
+                      floors: values.floors.map((entry) =>
+                        entry.id === floor.id ? { ...entry, name: event.target.value } : entry,
+                      ),
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          {errors.floors ? <p className={styles.fieldError}>{errors.floors}</p> : null}
+        </div>
+      </section>
+    );
+  }
+
+  const conciergeSection = (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <h3 className={styles.sectionTitle}>Conciergerie</h3>
       </div>
-      <div className={styles.floorsList}>
-        {values.floors.map((floor, index) => (
-          <label key={floor.id} className={styles.field}>
-            <span className={styles.label}>Étage {index + 1}</span>
+      <div className={styles.sectionBody}>
+        <div className={styles.fieldGrid}>
+          <label className={styles.field}>
+            <span className={styles.label}>Lien de la conciergerie</span>
             <input
               className={styles.input}
-              value={floor.name}
+              type="url"
+              placeholder="https://…"
+              value={values.concierge.link}
               onChange={(event) =>
                 onChange({
                   ...values,
-                  floors: values.floors.map((entry) =>
-                    entry.id === floor.id ? { ...entry, name: event.target.value } : entry,
-                  ),
+                  concierge: { ...values.concierge, link: event.target.value },
+                })
+              }
+            />
+            {errors.conciergeLink ? (
+              <p className={styles.fieldError}>{errors.conciergeLink}</p>
+            ) : null}
+          </label>
+          <label className={styles.field}>
+            <span className={styles.label}>Code d&apos;accès</span>
+            <input
+              className={styles.input}
+              value={values.concierge.accessCode}
+              onChange={(event) =>
+                onChange({
+                  ...values,
+                  concierge: { ...values.concierge, accessCode: event.target.value },
                 })
               }
             />
           </label>
-        ))}
-      </div>
-      {errors.floors ? <p className={styles.fieldError}>{errors.floors}</p> : null}
-    </section>
-  );
-
-  const conciergeSection = (
-    <section className={styles.section}>
-      <h3 className={styles.sectionTitle}>Conciergerie</h3>
-      <div className={styles.fieldGrid}>
-        <label className={styles.field}>
-          <span className={styles.label}>Lien de la conciergerie</span>
-          <input
-            className={styles.input}
-            type="url"
-            placeholder="https://…"
-            value={values.concierge.link}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                concierge: { ...values.concierge, link: event.target.value },
-              })
-            }
-          />
-          {errors.conciergeLink ? (
-            <p className={styles.fieldError}>{errors.conciergeLink}</p>
-          ) : null}
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>Code d&apos;accès</span>
-          <input
-            className={styles.input}
-            value={values.concierge.accessCode}
-            onChange={(event) =>
-              onChange({
-                ...values,
-                concierge: { ...values.concierge, accessCode: event.target.value },
-              })
-            }
-          />
-        </label>
-      </div>
-    </section>
-  );
-
-  const addressSection = (
-    <section className={styles.section}>
-      <h3 className={styles.sectionTitle}>Adresse</h3>
-      <div className={styles.fieldGrid}>
-        <AddressAutocomplete
-          idPrefix={idPrefix}
-          address={values.address}
-          onSelect={(geocoded) =>
-            onChange({
-              ...values,
-              address: geocoded.address,
-              lat: geocoded.lat,
-              lng: geocoded.lng,
-            })
-          }
-        />
-
-        <label className={styles.field}>
-          <span className={styles.label}>Rue *</span>
-          <input
-            className={styles.input}
-            value={values.address.street}
-            onChange={(event) => patchAddress({ street: event.target.value })}
-          />
-          {errors.street ? <p className={styles.fieldError}>{errors.street}</p> : null}
-        </label>
-        <div className={styles.fieldGrid2}>
-          <label className={styles.field}>
-            <span className={styles.label}>Code postal *</span>
-            <input
-              className={styles.input}
-              value={values.address.postalCode}
-              onChange={(event) => patchAddress({ postalCode: event.target.value })}
-            />
-            {errors.postalCode ? <p className={styles.fieldError}>{errors.postalCode}</p> : null}
-          </label>
-          <label className={styles.field}>
-            <span className={styles.label}>Ville *</span>
-            <input
-              className={styles.input}
-              value={values.address.city}
-              onChange={(event) => patchAddress({ city: event.target.value })}
-            />
-            {errors.city ? <p className={styles.fieldError}>{errors.city}</p> : null}
-          </label>
         </div>
-        <label className={styles.field}>
-          <span className={styles.label}>Pays *</span>
-          <input
-            className={styles.input}
-            value={values.address.country}
-            onChange={(event) => patchAddress({ country: event.target.value })}
-          />
-          {errors.country ? <p className={styles.fieldError}>{errors.country}</p> : null}
-        </label>
-        {errors.coordinates ? <p className={styles.fieldError}>{errors.coordinates}</p> : null}
       </div>
     </section>
   );
+
+  function addressSection(paired = false) {
+    return (
+      <section
+        className={[styles.section, paired ? styles.sectionPaired : ""].filter(Boolean).join(" ")}
+      >
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Adresse</h3>
+        </div>
+        <div
+          className={[styles.sectionBody, paired ? styles.sectionBodyFill : ""]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div className={styles.fieldGrid}>
+            <AddressAutocomplete
+              idPrefix={idPrefix}
+              address={values.address}
+              onSelect={(geocoded) =>
+                onChange({
+                  ...values,
+                  address: geocoded.address,
+                  lat: geocoded.lat,
+                  lng: geocoded.lng,
+                })
+              }
+            />
+
+            <label className={styles.field}>
+              <span className={styles.label}>Rue *</span>
+              <input
+                className={styles.input}
+                value={values.address.street}
+                onChange={(event) => patchAddress({ street: event.target.value })}
+              />
+              {errors.street ? <p className={styles.fieldError}>{errors.street}</p> : null}
+            </label>
+            <div className={styles.fieldGrid2}>
+              <label className={styles.field}>
+                <span className={styles.label}>Code postal *</span>
+                <input
+                  className={styles.input}
+                  value={values.address.postalCode}
+                  onChange={(event) => patchAddress({ postalCode: event.target.value })}
+                />
+                {errors.postalCode ? (
+                  <p className={styles.fieldError}>{errors.postalCode}</p>
+                ) : null}
+              </label>
+              <label className={styles.field}>
+                <span className={styles.label}>Ville *</span>
+                <input
+                  className={styles.input}
+                  value={values.address.city}
+                  onChange={(event) => patchAddress({ city: event.target.value })}
+                />
+                {errors.city ? <p className={styles.fieldError}>{errors.city}</p> : null}
+              </label>
+            </div>
+            <label className={styles.field}>
+              <span className={styles.label}>Pays *</span>
+              <input
+                className={styles.input}
+                value={values.address.country}
+                onChange={(event) => patchAddress({ country: event.target.value })}
+              />
+              {errors.country ? <p className={styles.fieldError}>{errors.country}</p> : null}
+            </label>
+            {errors.coordinates ? <p className={styles.fieldError}>{errors.coordinates}</p> : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const schedulesSection = (
     <div className={styles.scheduleRow}>
-      <section className={styles.section}>
-        <WeeklyScheduleEditor
-          idPrefix={`${idPrefix}-accessibility`}
-          title="Horaires d'accessibilité"
-          schedules={values.accessibilityHours}
-          onChange={(accessibilityHours) => onChange({ ...values, accessibilityHours })}
-        />
+      <section className={[styles.section, styles.sectionPaired].join(" ")}>
+        <div className={styles.sectionBody}>
+          <WeeklyScheduleEditor
+            idPrefix={`${idPrefix}-accessibility`}
+            title="Horaires d'accessibilité"
+            schedules={values.accessibilityHours}
+            onChange={(accessibilityHours) => onChange({ ...values, accessibilityHours })}
+          />
+        </div>
       </section>
 
-      <section className={styles.section}>
-        <WeeklyScheduleEditor
-          idPrefix={`${idPrefix}-reception`}
-          title="Horaires d'accueil"
-          schedules={values.receptionHours}
-          onChange={(receptionHours) => onChange({ ...values, receptionHours })}
-        />
+      <section className={[styles.section, styles.sectionPaired].join(" ")}>
+        <div className={styles.sectionBody}>
+          <WeeklyScheduleEditor
+            idPrefix={`${idPrefix}-reception`}
+            title="Horaires d'accueil"
+            schedules={values.receptionHours}
+            onChange={(receptionHours) => onChange({ ...values, receptionHours })}
+          />
+        </div>
       </section>
     </div>
   );
@@ -262,12 +355,16 @@ export function BuildingForm({
     return (
       <div className={styles.form}>
         <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Informations générales</h3>
-          {generalFields}
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>Informations générales</h3>
+          </div>
+          <div className={styles.sectionBody}>
+            {generalFields(idPrefix, values, errors, onChange)}
+          </div>
         </section>
-        {floorsSection}
+        {floorsSection()}
         {conciergeSection}
-        {photosSection}
+        {photosSection()}
       </div>
     );
   }
@@ -275,24 +372,30 @@ export function BuildingForm({
   if (section === "accessibility") {
     return (
       <div className={styles.form}>
-        {addressSection}
+        {addressSection()}
         {schedulesSection}
       </div>
     );
   }
 
   return (
-    <div className={styles.form}>
+    <div className={[styles.form, styles.formPage].join(" ")}>
       <div className={styles.introRow}>
-        <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Informations générales</h3>
-          {generalFields}
+        <section className={[styles.section, styles.sectionPaired].join(" ")}>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>Informations générales</h3>
+          </div>
+          <div className={[styles.sectionBody, styles.sectionBodyFill].join(" ")}>
+            {generalFields(idPrefix, values, errors, onChange, true)}
+          </div>
         </section>
-        {photosSection}
+        {photosSection(true)}
       </div>
 
-      {addressSection}
-      {floorsSection}
+      <div className={styles.addressFloorsRow}>
+        {addressSection(true)}
+        {floorsSection(true)}
+      </div>
       {schedulesSection}
       {conciergeSection}
     </div>

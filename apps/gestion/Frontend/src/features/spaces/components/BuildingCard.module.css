@@ -6,17 +6,19 @@
   padding: 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
   text-align: left;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .card:hover {
-  border-color: var(--color-secondary);
+  border-color: color-mix(in srgb, var(--color-secondary) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-secondary) 4%, var(--color-surface));
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }

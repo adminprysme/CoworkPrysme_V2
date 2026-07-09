@@ -60,7 +60,7 @@ export const CONTACT_PAGE = {
   bikeWalk: {
     title: "Nous rejoindre à vélo ou à pied",
     description: "CoworkPrysme – Bellecour : 30 minutes via la piste V-L01",
-    href: "https://velo.lyon.fr",
+    href: "https://avelo.grandlyon.com/se-deplacer-a-velo/la-carto-du-velo",
     linkLabel: "Plan des pistes cyclables de Lyon",
   },
   car: {
@@ -70,7 +70,6 @@ export const CONTACT_PAGE = {
   },
   map: {
     title: "Plan d'accès",
-    placeholderLabel: "Carte interactive — bientôt disponible",
-    openLabel: "Ouvrir dans OpenStreetMap",
+    openLabel: "Ouvrir dans Google Maps",
   },
 } as const;

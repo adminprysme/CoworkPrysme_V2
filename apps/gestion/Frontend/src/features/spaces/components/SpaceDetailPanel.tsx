@@ -8,6 +8,7 @@ import styles from "./SpaceDetailPanel.module.css";
 
 interface SpaceDetailPanelProps {
   space: Space | null;
+  embedded?: boolean;
   onEdit?: (space: Space) => void;
   onArchive?: (space: Space) => void;
   onRestore?: (space: Space) => void;
@@ -33,6 +34,7 @@ function formatArchivedDate(isoDate: string): string {
 
 export function SpaceDetailPanel({
   space,
+  embedded = false,
   onEdit,
   onArchive,
   onRestore,
@@ -40,7 +42,10 @@ export function SpaceDetailPanel({
 }: SpaceDetailPanelProps) {
   if (!space) {
     return (
-      <aside className={styles.panel} aria-label="Détail de l'espace">
+      <aside
+        className={[styles.panel, embedded ? styles.panelEmbedded : ""].filter(Boolean).join(" ")}
+        aria-label="Détail de l'espace"
+      >
         <p className={styles.placeholder}>
           Sélectionnez un espace dans la liste pour afficher son détail.
         </p>
@@ -52,7 +57,10 @@ export function SpaceDetailPanel({
   const archived = isArchivedSpace(space.status);
 
   return (
-    <aside className={styles.panel} aria-label={`Détail de ${space.name}`}>
+    <aside
+      className={[styles.panel, embedded ? styles.panelEmbedded : ""].filter(Boolean).join(" ")}
+      aria-label={`Détail de ${space.name}`}
+    >
       <div className={styles.body}>
         {archived ? (
           <p className={styles.archiveNotice}>

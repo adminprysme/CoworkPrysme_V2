@@ -27,14 +27,14 @@ export function SiteHeader() {
 
   return (
     <header className={styles.header}>
-      <Container>
+      <Container className={styles.headerContainer}>
         <div className={styles.inner}>
           <Link href="/" className={styles.logoLink} aria-label="Cowork Prysme — Accueil">
             <Image
               src="/logo-cowork-prysme-full.png"
               alt="CoWork Prysme"
-              width={168}
-              height={40}
+              width={210}
+              height={48}
               className={styles.logoImage}
               priority
             />
@@ -58,10 +58,15 @@ export function SiteHeader() {
           </nav>
 
           <div className={styles.actions}>
-            <Button href={CLIENT_PORTAL_URL} variant="ghost" size="sm">
+            <Button
+              href={CLIENT_PORTAL_URL}
+              variant="ghost"
+              size="sm"
+              className={styles.actionButton}
+            >
               Se connecter
             </Button>
-            <Button href="/contact" variant="primary" size="sm">
+            <Button href="/contact" variant="primary" size="sm" className={styles.actionButton}>
               Réserver
             </Button>
           </div>

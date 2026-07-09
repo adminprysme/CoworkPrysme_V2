@@ -1,21 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { parseVitrineApiEnv } from "@coworkprysme/shared/server";
 
 @Injectable()
 export class GestionClientService {
-  private readonly baseUrl: string;
+  async pingHealth(): Promise<boolean> {
+    const baseUrl = process.env.GESTION_API_URL?.replace(/\/$/, "");
+    if (!baseUrl) {
+      return false;
+    }
 
-  constructor() {
-    this.baseUrl = parseVitrineApiEnv().GESTION_API_URL;
-  }
-
-  /** Placeholder — verifies gestion-api is reachable (no business logic). */
-  async pingGestionHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`);
+      const response = await fetch(`${baseUrl}/health`);
       return response.ok;
-    } catch (error) {
-      console.error("[gestion-client]", error instanceof Error ? error.message : "Unknown error");
+    } catch {
       return false;
     }
   }

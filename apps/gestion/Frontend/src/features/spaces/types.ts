@@ -42,6 +42,8 @@ export interface Building {
   id: string;
   name: string;
   description?: string;
+  phone?: string;
+  email?: string;
   address: BuildingAddress;
   lat: number;
   lng: number;
@@ -51,11 +53,15 @@ export interface Building {
   receptionHours: DaySchedule[];
   concierge: BuildingConcierge;
   photos: BuildingPhoto[];
+  /** Active (non-archived) space count — populated on list page. */
+  spaceCount?: number;
 }
 
 export interface BuildingFormValues {
   name: string;
   description: string;
+  phone: string;
+  email: string;
   address: BuildingAddress;
   lat: number | null;
   lng: number | null;

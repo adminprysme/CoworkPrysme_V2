@@ -41,6 +41,8 @@ export const BuildingConciergeInputSchema = z.object({
 });
 
 export const BUILDING_DESCRIPTION_MAX_LENGTH = 2000;
+export const BUILDING_PHONE_MAX_LENGTH = 32;
+export const BUILDING_EMAIL_MAX_LENGTH = 254;
 
 export const BuildingDescriptionSchema = z
   .string()
@@ -48,9 +50,22 @@ export const BuildingDescriptionSchema = z
   .max(BUILDING_DESCRIPTION_MAX_LENGTH)
   .optional();
 
+export const BuildingPhoneSchema = z.string().trim().max(BUILDING_PHONE_MAX_LENGTH).optional();
+
+export const BuildingEmailSchema = z
+  .string()
+  .trim()
+  .max(BUILDING_EMAIL_MAX_LENGTH)
+  .optional()
+  .refine((value) => !value || z.string().email().safeParse(value).success, {
+    message: "Invalid email address",
+  });
+
 export const CreateBuildingRequestSchema = z.object({
   name: z.string().trim().min(1),
   description: BuildingDescriptionSchema,
+  phone: BuildingPhoneSchema,
+  email: BuildingEmailSchema,
   address: BuildingAddressInputSchema,
   floors: z.array(BuildingFloorInputSchema).min(1),
   status: BuildingStatusSchema,
@@ -62,21 +77,16 @@ export const CreateBuildingRequestSchema = z.object({
 export const UpdateBuildingRequestSchema = CreateBuildingRequestSchema;
 
 export const BuildingAddressResponseSchema = BuildingAddressInputSchema;
-
 export const BuildingCoordinatesResponseSchema = z.object({
   lat: z.number(),
   lng: z.number(),
 });
-
 export const BuildingFloorResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
 });
-
 export const BuildingDayScheduleResponseSchema = BuildingDayScheduleInputSchema;
-
 export const BuildingConciergeResponseSchema = BuildingConciergeInputSchema;
-
 export const BuildingPhotoResponseSchema = z.object({
   storageKey: z.string(),
   alt: z.string().optional(),
@@ -88,6 +98,8 @@ export const BuildingResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: BuildingDescriptionSchema,
+  phone: z.string().optional(),
+  email: z.string().optional(),
   address: BuildingAddressResponseSchema,
   coordinates: BuildingCoordinatesResponseSchema,
   floors: z.array(BuildingFloorResponseSchema),
@@ -104,12 +116,19 @@ export const BuildingsListResponseSchema = z.object({
   buildings: z.array(BuildingResponseSchema),
 });
 
-export type BuildingAddressInput = z.infer<typeof BuildingAddressInputSchema>;
+export const SiteContactSchema = z.object({
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  phoneHref: z.string().nullable(),
+});
+
 export type CreateBuildingRequest = z.infer<typeof CreateBuildingRequestSchema>;
 export type UpdateBuildingRequest = z.infer<typeof UpdateBuildingRequestSchema>;
+export type BuildingAddressInput = z.infer<typeof BuildingAddressInputSchema>;
 export type BuildingResponse = z.infer<typeof BuildingResponseSchema>;
 export type BuildingPhotoResponse = z.infer<typeof BuildingPhotoResponseSchema>;
 export type BuildingsListResponse = z.infer<typeof BuildingsListResponseSchema>;
+export type SiteContact = z.infer<typeof SiteContactSchema>;
 
 /** Maps form/API country labels to ISO-style codes stored in MongoDB. */
 export function normalizeCountryToDb(country: string): string {
@@ -126,4 +145,22 @@ export function normalizeCountryFromDb(country: string): string {
     return "France";
   }
   return country;
+}
+
+export function normalizeOptionalBuildingContactField(
+  value: string | undefined,
+): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export function buildPhoneHref(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) {
+    return null;
+  }
+  if (digits.length === 10 && digits.startsWith("0")) {
+    return `tel:+33${digits.slice(1)}`;
+  }
+  return digits.startsWith("33") ? `tel:+${digits}` : `tel:+${digits}`;
 }

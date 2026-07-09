@@ -1,7 +1,11 @@
 import { NavLink } from "react-router-dom";
 
 import type { NavItem } from "../../config/navigation.js";
-import { getVisibleNavGroups, getVisibleStandaloneNavItems } from "../../config/navigation.js";
+import {
+  getNavItemEnd,
+  getVisibleNavGroups,
+  getVisibleStandaloneNavItems,
+} from "../../config/navigation.js";
 import { NavIcon } from "../../components/NavIcons.js";
 import { useAuth } from "../AuthProvider.js";
 import { useSidebar } from "./SidebarContext.js";
@@ -20,6 +24,7 @@ function NavItemLink({
     <li>
       <NavLink
         to={item.path}
+        end={getNavItemEnd(item)}
         title={collapsed ? item.label : undefined}
         className={({ isActive }) => (isActive ? `${styles.link} ${styles.active}` : styles.link)}
         onClick={onNavigate}

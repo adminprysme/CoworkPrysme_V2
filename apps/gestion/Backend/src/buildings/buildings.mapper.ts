@@ -4,6 +4,7 @@ import {
   BuildingResponseSchema,
   normalizeCountryFromDb,
   normalizeCountryToDb,
+  normalizeOptionalBuildingContactField,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
 
@@ -21,6 +22,8 @@ export function mapRequestToDbDocument(
   return {
     name: input.name.trim(),
     description: normalizeBuildingDescription(input.description),
+    phone: normalizeOptionalBuildingContactField(input.phone),
+    email: normalizeOptionalBuildingContactField(input.email),
     address: {
       street: input.address.street.trim(),
       zip: input.address.postalCode.trim(),
@@ -55,6 +58,8 @@ export function mapBuildingToResponse(doc: BuildingLean): BuildingResponse {
     id: doc._id.toString(),
     name: doc.name,
     description: normalizeBuildingDescription(doc.description),
+    phone: doc.phone,
+    email: doc.email,
     address: {
       street: doc.address.street,
       postalCode: doc.address.zip,

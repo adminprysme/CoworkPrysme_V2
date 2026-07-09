@@ -18,6 +18,8 @@ type CreateTab = "info" | "accessibility";
 const INFO_ERROR_KEYS = new Set<string>([
   "name",
   "description",
+  "phone",
+  "email",
   "floors",
   "conciergeLink",
   "photos",

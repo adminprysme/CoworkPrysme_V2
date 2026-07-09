@@ -20,6 +20,7 @@ export interface VitrineContentDocumentData {
   heroImages: string[];
   conceptImage: string | null;
   serviceImages: VitrineServiceImages;
+  featuredSpaceIds: string[];
   marquee: VitrineMarquee;
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +51,7 @@ const vitrineContentSchema = new Schema<VitrineContentDocumentData>(
     heroImages: { type: [String], default: [] },
     conceptImage: { type: String, default: null },
     serviceImages: { type: vitrineServiceImagesSchema, required: true },
+    featuredSpaceIds: { type: [String], default: [] },
     marquee: { type: vitrineMarqueeSchema, required: true },
   },
   { ...TIMESTAMP_OPTIONS, collection: "vitrineContent" },

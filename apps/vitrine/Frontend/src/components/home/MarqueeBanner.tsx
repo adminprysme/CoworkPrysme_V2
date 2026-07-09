@@ -1,8 +1,14 @@
-import { HOME_CONTENT } from "@/config/home";
 import styles from "./MarqueeBanner.module.css";
 
-export function MarqueeBanner() {
-  const text = HOME_CONTENT.marquee;
+interface MarqueeBannerProps {
+  enabled: boolean;
+  text: string;
+}
+
+export function MarqueeBanner({ enabled, text }: MarqueeBannerProps) {
+  if (!enabled || text.trim().length === 0) {
+    return null;
+  }
 
   return (
     <div className={styles.banner} aria-hidden="true">

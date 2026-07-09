@@ -1,11 +1,16 @@
-import type { INestApplication } from "@nestjs/common";
-
-export function configureCors(app: INestApplication, allowedOrigins: string[]): void {
+export function configureCors(
+  app: {
+    enableCors: (options: {
+      origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => void;
+    }) => void;
+  },
+  allowedOrigins: string[],
+) {
   app.enableCors({
-    origin: (
-      origin: string | undefined,
-      callback: (err: Error | null, allow?: boolean) => void,
-    ) => {
+    origin: (origin, callback) => {
       if (!origin) {
         callback(null, true);
         return;
@@ -27,7 +32,6 @@ export function getPort(): number {
   return port;
 }
 
-/** Dev-only: bind IPv4 so SSH port forwarding to 127.0.0.1 reaches the server. */
 export function getListenHost(): string | undefined {
   if (process.env.NODE_ENV === "production") {
     return undefined;

@@ -27,6 +27,7 @@ export default defineConfig({
     proxy: {
       "/auth": apiTarget,
       "/admin/permissions": apiTarget,
+      "/admin/vitrine-content": apiTarget,
       "/buildings": apiTarget,
       "/spaces": proxyApiOnly("/spaces"),
       "/media": apiTarget,

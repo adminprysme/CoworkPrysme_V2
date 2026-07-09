@@ -10,6 +10,8 @@ import {
 
 const sampleRequest: CreateBuildingRequest = {
   name: "Cowork Test",
+  phone: "04 78 86 92 55",
+  email: "contact@example.com",
   address: {
     street: "47 avenue Leclerc",
     postalCode: "69003",
@@ -44,6 +46,8 @@ describe("buildings.mapper", () => {
     const dbDoc = mapRequestToDbDocument(sampleRequest, { lat: 45.76, lng: 4.86 });
 
     expect(dbDoc.address.zip).toBe("69003");
+    expect(dbDoc.phone).toBe("04 78 86 92 55");
+    expect(dbDoc.email).toBe("contact@example.com");
     expect(dbDoc.address.country).toBe("FR");
     expect(dbDoc.concierge.url).toBe("https://example.com");
     expect(dbDoc.accessibilityHours[0]?.open).toBe("08:00");
@@ -56,6 +60,8 @@ describe("buildings.mapper", () => {
       _id: "507f1f77bcf86cd799439011" as never,
       name: "Cowork Test",
       description: "  Espace lumineux  ",
+      phone: "04 78 86 92 55",
+      email: "contact@example.com",
       address: {
         street: "47 avenue Leclerc",
         zip: "69003",

@@ -1,7 +1,8 @@
 .footer {
   margin-top: auto;
-  background: var(--v-color-bg-dark);
-  color: var(--v-color-text-inverse);
+  background: var(--v-color-bg);
+  color: var(--v-color-text);
+  border-top: 1px solid var(--v-color-border);
 }
 
 .top {
@@ -17,16 +18,23 @@
   gap: var(--v-space-4);
 }
 
+.logoLink {
+  display: inline-flex;
+  line-height: 0;
+}
+
 .logo {
+  display: block;
   width: auto;
-  height: 2.5rem;
-  filter: brightness(0) invert(1) sepia(1) saturate(2) hue-rotate(330deg) brightness(0.95);
+  height: 2.75rem;
+  max-width: min(100%, 12.5rem);
+  object-fit: contain;
 }
 
 .tagline {
   margin: 0;
   max-width: 22rem;
-  color: rgba(250, 248, 246, 0.72);
+  color: var(--v-color-text-muted);
   line-height: 1.65;
 }
 
@@ -37,7 +45,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(250, 248, 246, 0.55);
+  color: var(--v-color-text-muted);
 }
 
 .links {
@@ -47,7 +55,7 @@
 }
 
 .link {
-  color: rgba(250, 248, 246, 0.82);
+  color: var(--v-color-text);
   font-size: var(--v-text-sm);
   transition: color var(--v-duration-fast) var(--v-ease-out);
 }
@@ -60,14 +68,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--v-space-3);
-  color: rgba(250, 248, 246, 0.82);
+  color: var(--v-color-text);
   font-size: var(--v-text-sm);
 }
 
 .bottom {
   padding-block: var(--v-space-5);
-  border-top: 1px solid rgba(250, 248, 246, 0.12);
-  color: rgba(250, 248, 246, 0.55);
+  border-top: 1px solid var(--v-color-border);
+  color: var(--v-color-text-muted);
   font-size: var(--v-text-sm);
 }
 

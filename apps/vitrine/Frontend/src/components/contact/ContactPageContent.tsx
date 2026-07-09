@@ -4,13 +4,14 @@ import { Container } from "@/components/ui/Container";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Section, SectionHeading } from "@/components/ui/SectionHeading";
 import { CONTACT_PAGE } from "@/config/contact-page";
-import type { BuildingInfo } from "@/config/building-info";
+import type { PublicBuildingInfo } from "@coworkprysme/shared";
 import { DEFAULT_VITRINE_MARQUEE_TEXT } from "@coworkprysme/shared";
+import { ContactMapBlock } from "./ContactMapBlock";
 import { TransportIcon } from "./TransportIcon";
 import styles from "./ContactPageContent.module.css";
 
 interface ContactPageContentProps {
-  building: BuildingInfo;
+  building: PublicBuildingInfo;
 }
 
 export function ContactPageContent({ building }: ContactPageContentProps) {
@@ -32,7 +33,13 @@ export function ContactPageContent({ building }: ContactPageContentProps) {
                     <dd>
                       {building.name}
                       <br />
-                      {building.address.line2}
+                      {building.address.street}
+                      {building.address.accessInfo ? (
+                        <>
+                          <br />
+                          {building.address.accessInfo}
+                        </>
+                      ) : null}
                       <br />
                       {building.address.postalCode} {building.address.city}
                     </dd>
@@ -40,13 +47,19 @@ export function ContactPageContent({ building }: ContactPageContentProps) {
                   <div>
                     <dt>Téléphone</dt>
                     <dd>
-                      <a href={building.phoneHref}>{building.phone}</a>
+                      {building.phoneHref && building.phone ? (
+                        <a href={building.phoneHref}>{building.phone}</a>
+                      ) : (
+                        building.phone
+                      )}
                     </dd>
                   </div>
                   <div>
                     <dt>E-mail</dt>
                     <dd>
-                      <a href={`mailto:${building.email}`}>{building.email}</a>
+                      {building.email ? (
+                        <a href={`mailto:${building.email}`}>{building.email}</a>
+                      ) : null}
                     </dd>
                   </div>
                 </dl>
@@ -56,10 +69,11 @@ export function ContactPageContent({ building }: ContactPageContentProps) {
             <ScrollReveal delay={80}>
               <div className={styles.mapBlock}>
                 <h2 className={styles.mapTitle}>{CONTACT_PAGE.map.title}</h2>
-                <div className={styles.mapPlaceholder} aria-hidden="true">
-                  <span className={styles.mapPin} />
-                  <p className={styles.mapLabel}>{CONTACT_PAGE.map.placeholderLabel}</p>
-                </div>
+                <ContactMapBlock
+                  lat={building.coordinates.lat}
+                  lng={building.coordinates.lng}
+                  name={building.name}
+                />
                 <a
                   href={building.mapExternalUrl}
                   className={styles.mapLink}
@@ -130,7 +144,7 @@ export function ContactPageContent({ building }: ContactPageContentProps) {
                     ) : (
                       <p className={styles.transportDetail}>{line.detail}</p>
                     )}
-                    {line.note ? <p className={styles.transportNote}>{line.note}</p> : null}
+                    {line.note ? <span className={styles.transportBadge}>{line.note}</span> : null}
                   </div>
                 </li>
               </ScrollReveal>

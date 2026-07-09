@@ -1,5 +1,6 @@
 import { ServicesPageContent } from "@/components/services/ServicesPageContent";
 import { createPageMetadata } from "@/lib/metadata";
+import { getServicesContent } from "@/lib/get-services-content";
 
 export const metadata = createPageMetadata({
   title: "Nos Services — Room-service, Afterwork & Conciergerie Lyon 7",
@@ -8,6 +9,8 @@ export const metadata = createPageMetadata({
   path: "/services",
 });
 
-export default function ServicesPage() {
-  return <ServicesPageContent />;
+export default async function ServicesPage() {
+  const servicesContent = await getServicesContent();
+
+  return <ServicesPageContent featuredSpaces={servicesContent.featuredSpaces} />;
 }

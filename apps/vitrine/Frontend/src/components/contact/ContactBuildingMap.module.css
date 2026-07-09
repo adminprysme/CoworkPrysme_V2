@@ -1,0 +1,36 @@
+.mapContainer {
+  width: 100%;
+  min-height: 16rem;
+  height: 100%;
+  z-index: 0;
+}
+
+:global(.contact-map-marker) {
+  background: transparent;
+  border: 0;
+}
+
+:global(.contact-map-marker-dot) {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid var(--v-color-surface);
+  background: var(--v-color-brand);
+  box-shadow: var(--v-shadow-md);
+}
+
+:global(.leaflet-container) {
+  font: inherit;
+  background: var(--v-color-surface-muted);
+}
+
+:global(.leaflet-popup-content-wrapper) {
+  border-radius: var(--v-radius-md);
+}
+
+:global(.leaflet-popup-content) {
+  margin: 0.65rem 0.85rem;
+  font-size: var(--v-text-sm);
+  line-height: 1.4;
+}

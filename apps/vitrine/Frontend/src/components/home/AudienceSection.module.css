@@ -61,14 +61,15 @@
 .reasons {
   padding: var(--v-space-8);
   border-radius: var(--v-radius-xl);
-  background: linear-gradient(160deg, var(--v-color-bg-dark) 0%, #2f2925 100%);
-  color: var(--v-color-text-inverse);
+  background: linear-gradient(160deg, #1a1a1a 0%, #141414 100%);
+  border: 1px solid var(--v-color-border);
+  color: var(--v-color-text);
 }
 
 .reasonsTitle {
   margin: 0 0 var(--v-space-6);
   font-size: var(--v-text-2xl);
-  color: var(--v-color-text-inverse);
+  color: var(--v-color-text);
 }
 
 .reasonList {
@@ -79,7 +80,7 @@
 
 .reasonItem {
   padding-top: var(--v-space-5);
-  border-top: 1px solid rgba(250, 248, 246, 0.12);
+  border-top: 1px solid var(--v-color-border);
 }
 
 .reasonItem:first-child {
@@ -97,7 +98,7 @@
 
 .reasonText {
   margin: 0;
-  color: rgba(250, 248, 246, 0.78);
+  color: var(--v-color-text-muted);
   line-height: 1.65;
 }
 

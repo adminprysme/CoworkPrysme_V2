@@ -4,6 +4,7 @@ import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SITE, SITE_URL } from "@/config/site";
+import { getSiteContact } from "@/lib/get-building-info";
 
 import "./globals.css";
 
@@ -29,6 +30,10 @@ export const metadata: Metadata = {
   },
   description: SITE.defaultDescription,
   keywords: [...SITE.keywords],
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/favicon.png", type: "image/png" }],
+  },
   openGraph: {
     type: "website",
     locale: SITE.locale,
@@ -36,14 +41,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const contact = await getSiteContact();
+
   return (
     <html lang="fr" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body>
-        <div style={{ display: "flex", minHeight: "100dvh", flexDirection: "column" }}>
+        <div className="siteShell">
           <SiteHeader />
-          <main style={{ flex: 1 }}>{children}</main>
-          <SiteFooter />
+          <main className="siteMain">{children}</main>
+          <SiteFooter contact={contact} />
         </div>
       </body>
     </html>

@@ -12,10 +12,15 @@ import { SpacesLayout } from "../features/spaces/SpacesLayout.js";
 import { DashboardPage } from "../pages/DashboardPage.js";
 import { ModuleStubPage } from "../pages/ModuleStubPage.js";
 import { PermissionsPage } from "../pages/PermissionsPage.js";
+import { VitrineEditionPage } from "../pages/VitrineEditionPage.js";
 
 const STUB_PATHS = [
   ...NAV_ITEMS.filter(
-    (item) => item.id !== "dashboard" && item.id !== "administration" && item.id !== "spaces",
+    (item) =>
+      item.id !== "dashboard" &&
+      item.id !== "administration" &&
+      item.id !== "vitrine-edition" &&
+      item.id !== "spaces",
   ).map((item) => item.path),
   "/settings",
 ];
@@ -33,6 +38,7 @@ export function AppRouter() {
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/administration" element={<PermissionsPage />} />
+                <Route path="/administration/vitrine" element={<VitrineEditionPage />} />
                 <Route path="/spaces" element={<SpacesLayout />}>
                   <Route index element={<BuildingsPage />} />
                   <Route path=":buildingId" element={<BuildingDetailPage />} />

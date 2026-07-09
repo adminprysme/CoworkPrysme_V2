@@ -6,6 +6,8 @@ export interface NavItem {
   id: string;
   label: string;
   path: string;
+  /** Match the path exactly (not as a prefix). Auto-set when another nav item is nested under this path. */
+  end?: boolean;
   /** Always visible once authenticated. */
   always?: boolean;
   /** Visible to any staff member (authenticated). */
@@ -69,6 +71,12 @@ export const NAV_GROUPS: NavGroup[] = [
         path: "/administration",
         adminOnly: true,
       },
+      {
+        id: "vitrine-edition",
+        label: "Edition Vitrine",
+        path: "/administration/vitrine",
+        adminOnly: true,
+      },
     ],
   },
 ];
@@ -107,4 +115,14 @@ export function getVisibleNavGroups(user: AuthMeResponse): NavGroup[] {
 
 export function getNavItemByPath(pathname: string): NavItem | undefined {
   return NAV_ITEMS.find((item) => item.path === pathname);
+}
+
+export function getNavItemEnd(item: NavItem): boolean {
+  if (item.end !== undefined) {
+    return item.end;
+  }
+
+  return NAV_ITEMS.some(
+    (other) => other.path !== item.path && other.path.startsWith(`${item.path}/`),
+  );
 }

@@ -154,6 +154,21 @@ export function isSpaceArchived(status: SpaceStatus): boolean {
   return status === "archived";
 }
 
+export function pickPrimaryPhotoStorageKey(
+  photos: Array<{ storageKey: string; isPrimary: boolean; order: number }>,
+): string | null {
+  if (photos.length === 0) {
+    return null;
+  }
+
+  const primary = photos.find((photo) => photo.isPrimary);
+  if (primary) {
+    return primary.storageKey;
+  }
+
+  return [...photos].sort((left, right) => left.order - right.order)[0]?.storageKey ?? null;
+}
+
 /** Maps validated API tariff inputs to DB centimes (enabled lines only). */
 export function mapTariffInputsToDb(tariffs: SpaceTariffInput[]): Array<{
   durationClass: SpaceDurationClass;

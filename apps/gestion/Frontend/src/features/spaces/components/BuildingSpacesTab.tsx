@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   archiveSpace,
@@ -19,6 +19,7 @@ import type { Space, SpaceFormValues, SpaceStatusFilter, SpaceTypeFilter } from 
 import { isArchivedSpace } from "../utils/space-status.js";
 import { filterSpaces, SpaceCard, SpaceFilters } from "./SpaceCard.js";
 import { SpaceArchiveDialog } from "./SpaceArchiveDialog.js";
+import { BuildingSpacesStats, type BuildingSpacesStatsData } from "./BuildingSpacesStats.js";
 import { SpaceDetailPanel } from "./SpaceDetailPanel.js";
 import { SpaceFormPanel } from "./SpaceFormPanel.js";
 import styles from "./BuildingSpacesTab.module.css";
@@ -80,6 +81,21 @@ export function BuildingSpacesTab({
   }, [loadSpaces]);
 
   const operationalCount = spaces.filter((space) => !isArchivedSpace(space.status)).length;
+  const stats = useMemo<BuildingSpacesStatsData>(() => {
+    const activeSpaces = spaces.filter((space) => !isArchivedSpace(space.status));
+    return activeSpaces.reduce<BuildingSpacesStatsData>(
+      (acc, space) => {
+        acc.totalSpaces += 1;
+        if (space.type === "meeting_room") {
+          acc.meetingRooms += 1;
+        } else if (space.type === "private_office") {
+          acc.privateOffices += 1;
+        }
+        return acc;
+      },
+      { totalSpaces: 0, meetingRooms: 0, privateOffices: 0 },
+    );
+  }, [spaces]);
   const filteredSpaces = filterSpaces(spaces, typeFilter, statusFilter);
   const selectedSpace = filteredSpaces.find((space) => space.id === selectedId) ?? null;
   const editingSpace = spaces.find((space) => space.id === editingSpaceId) ?? null;
@@ -179,6 +195,8 @@ export function BuildingSpacesTab({
 
       {error ? <p className={styles.errorBanner}>{error}</p> : null}
 
+      <BuildingSpacesStats stats={stats} loading={loading} />
+
       <SpaceFilters
         typeFilter={typeFilter}
         statusFilter={statusFilter}
@@ -188,56 +206,77 @@ export function BuildingSpacesTab({
 
       <div className={styles.layout}>
         <section className={styles.listPanel} aria-label="Liste des espaces">
-          {loading ? (
-            <p className={styles.emptyState}>Chargement des espaces…</p>
-          ) : filteredSpaces.length === 0 ? (
-            <div className={styles.emptyState}>
-              <p>Aucun espace ne correspond à vos filtres.</p>
-              {operationalCount === 0 && statusFilter !== "archived" ? (
-                <button
-                  type="button"
-                  className={styles.primaryBtn}
-                  onClick={() => setFormOpen(true)}
-                >
-                  ＋ Créer le premier espace
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.secondaryBtn}
-                  onClick={() => {
-                    setTypeFilter("all");
-                    setStatusFilter("all");
-                  }}
-                >
-                  Réinitialiser les filtres
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className={styles.list}>
-              {filteredSpaces.map((space) => (
-                <SpaceCard
-                  key={space.id}
-                  space={space}
-                  selected={space.id === selectedId}
-                  onSelect={() => setSelectedId(space.id)}
-                />
-              ))}
-            </div>
-          )}
+          <div className={styles.panelHeader}>
+            <h3 className={styles.panelTitle}>Liste des espaces</h3>
+            {!loading ? (
+              <span className={styles.panelHint}>
+                {filteredSpaces.length} affiché{filteredSpaces.length > 1 ? "s" : ""}
+              </span>
+            ) : null}
+          </div>
+
+          <div className={styles.listBody}>
+            {loading ? (
+              <p className={styles.loadingState}>Chargement des espaces…</p>
+            ) : filteredSpaces.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p>Aucun espace ne correspond à vos filtres.</p>
+                {operationalCount === 0 && statusFilter !== "archived" ? (
+                  <button
+                    type="button"
+                    className={styles.primaryBtn}
+                    onClick={() => setFormOpen(true)}
+                  >
+                    ＋ Créer le premier espace
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.secondaryBtn}
+                    onClick={() => {
+                      setTypeFilter("all");
+                      setStatusFilter("all");
+                    }}
+                  >
+                    Réinitialiser les filtres
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className={styles.list}>
+                {filteredSpaces.map((space) => (
+                  <SpaceCard
+                    key={space.id}
+                    space={space}
+                    selected={space.id === selectedId}
+                    onSelect={() => setSelectedId(space.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
-        <SpaceDetailPanel
-          space={selectedSpace}
-          onEdit={openEdit}
-          onArchive={(space) => {
-            setArchiveError(null);
-            setArchivingSpace(space);
-          }}
-          onRestore={(space) => void handleRestore(space)}
-          restoring={restoring}
-        />
+        <section className={styles.detailPanel} aria-label="Détail de l'espace">
+          <div className={styles.panelHeader}>
+            <h3 className={styles.panelTitle}>Détail</h3>
+            {selectedSpace ? <span className={styles.panelHint}>{selectedSpace.name}</span> : null}
+          </div>
+
+          <div className={styles.detailBody}>
+            <SpaceDetailPanel
+              embedded
+              space={selectedSpace}
+              onEdit={openEdit}
+              onArchive={(space) => {
+                setArchiveError(null);
+                setArchivingSpace(space);
+              }}
+              onRestore={(space) => void handleRestore(space)}
+              restoring={restoring}
+            />
+          </div>
+        </section>
       </div>
 
       <SpaceFormPanel

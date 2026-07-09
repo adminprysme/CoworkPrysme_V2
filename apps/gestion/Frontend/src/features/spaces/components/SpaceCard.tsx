@@ -70,6 +70,27 @@ export function SpaceCard({ space, selected, onSelect }: SpaceCardProps) {
   );
 }
 
+interface FilterPillProps {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}
+
+function FilterPill({ active, label, onClick }: FilterPillProps) {
+  return (
+    <button
+      type="button"
+      className={[styles.filterPill, active ? styles.filterPillActive : ""]
+        .filter(Boolean)
+        .join(" ")}
+      aria-pressed={active}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 interface SpaceFiltersProps {
   typeFilter: SpaceTypeFilter;
   statusFilter: SpaceStatusFilter;
@@ -84,33 +105,65 @@ export function SpaceFilters({
   onStatusChange,
 }: SpaceFiltersProps) {
   return (
-    <div className={styles.filters} role="group" aria-label="Filtres des espaces">
-      <label className={styles.filterField}>
-        <span className={styles.filterLabel}>Type</span>
-        <select
-          className={styles.filterSelect}
-          value={typeFilter}
-          onChange={(event) => onTypeChange(event.target.value as SpaceTypeFilter)}
-        >
-          <option value="all">Tous les types</option>
-          <option value="meeting_room">Salles de réunion</option>
-          <option value="private_office">Bureaux privatifs</option>
-        </select>
-      </label>
+    <div className={styles.filtersBar} role="group" aria-label="Filtres des espaces">
+      <div className={styles.filterGroup}>
+        <span className={styles.filterGroupLabel} id="space-filter-type-label">
+          Type
+        </span>
+        <div className={styles.filterPills} role="group" aria-labelledby="space-filter-type-label">
+          <FilterPill
+            active={typeFilter === "all"}
+            label="Tous"
+            onClick={() => onTypeChange("all")}
+          />
+          <FilterPill
+            active={typeFilter === "meeting_room"}
+            label="Salle de réunion"
+            onClick={() => onTypeChange("meeting_room")}
+          />
+          <FilterPill
+            active={typeFilter === "private_office"}
+            label="Bureau"
+            onClick={() => onTypeChange("private_office")}
+          />
+        </div>
+      </div>
 
-      <label className={styles.filterField}>
-        <span className={styles.filterLabel}>Statut</span>
-        <select
-          className={styles.filterSelect}
-          value={statusFilter}
-          onChange={(event) => onStatusChange(event.target.value as SpaceStatusFilter)}
+      <span className={styles.filterDivider} aria-hidden="true">
+        |
+      </span>
+
+      <div className={styles.filterGroup}>
+        <span className={styles.filterGroupLabel} id="space-filter-status-label">
+          Statut
+        </span>
+        <div
+          className={styles.filterPills}
+          role="group"
+          aria-labelledby="space-filter-status-label"
         >
-          <option value="all">Tous</option>
-          <option value="active">Actifs</option>
-          <option value="inactive">Inactifs</option>
-          <option value="archived">Archivés</option>
-        </select>
-      </label>
+          <FilterPill
+            active={statusFilter === "all"}
+            label="Tous"
+            onClick={() => onStatusChange("all")}
+          />
+          <FilterPill
+            active={statusFilter === "active"}
+            label="Actif"
+            onClick={() => onStatusChange("active")}
+          />
+          <FilterPill
+            active={statusFilter === "inactive"}
+            label="Inactif"
+            onClick={() => onStatusChange("inactive")}
+          />
+          <FilterPill
+            active={statusFilter === "archived"}
+            label="Archivé"
+            onClick={() => onStatusChange("archived")}
+          />
+        </div>
+      </div>
     </div>
   );
 }

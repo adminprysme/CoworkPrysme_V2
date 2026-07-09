@@ -32,6 +32,7 @@ const mockDoc = {
     enabled: true,
     text: "Le Tramway T9 arrive au pied de l'immeuble à la fin de l'automne 2026",
   },
+  featuredSpaceIds: [],
 };
 
 const mockVitrineContentModel = {

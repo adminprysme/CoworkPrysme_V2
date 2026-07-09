@@ -35,6 +35,8 @@ export function BuildingCard({ building, onOpen }: BuildingCardProps) {
         <p className={styles.address}>{formatAddressSummary(building.address)}</p>
         <p className={styles.meta}>
           {building.floors.length} étage{building.floors.length > 1 ? "s" : ""}
+          {" · "}
+          {building.spaceCount ?? 0} espace{(building.spaceCount ?? 0) > 1 ? "s" : ""}
         </p>
       </div>
     </button>

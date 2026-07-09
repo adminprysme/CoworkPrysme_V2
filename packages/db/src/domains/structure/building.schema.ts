@@ -22,6 +22,8 @@ import {
 export interface Building {
   name: string;
   description?: string;
+  phone?: string;
+  email?: string;
   address: Address;
   coordinates: Coordinates;
   accessCode?: string;
@@ -43,6 +45,8 @@ const buildingSchema = new Schema<Building>(
   {
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    email: { type: String, trim: true },
     address: { type: addressSchema, required: true },
     coordinates: { type: coordinatesSchema, required: true },
     accessCode: { type: String, trim: true },

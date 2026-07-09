@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   UpdateVitrineContentRequestSchema,
+  VITRINE_FEATURED_SPACES_MAX,
   VITRINE_HERO_MAX_IMAGES,
   VITRINE_IMAGE_SLOTS,
   isValidVitrineImageStorageKey,
   type VitrineContentResponse,
   type VitrineImageSlot,
 } from "@coworkprysme/shared";
-import { connectMongo, getVitrineContentModel } from "@coworkprysme/db";
+import { connectMongo, getSpaceModel, getVitrineContentModel } from "@coworkprysme/db";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { UploadsService } from "../uploads/uploads.service.js";
@@ -23,6 +24,38 @@ function parseSlot(slot: string): VitrineImageSlot {
     throw new NotFoundException();
   }
   return slot as VitrineImageSlot;
+}
+
+async function assertFeaturedSpaceIds(spaceIds: string[]): Promise<void> {
+  if (spaceIds.length > VITRINE_FEATURED_SPACES_MAX) {
+    throw new BadRequestException(`Maximum ${VITRINE_FEATURED_SPACES_MAX} featured spaces`);
+  }
+
+  const uniqueIds = new Set(spaceIds);
+  if (uniqueIds.size !== spaceIds.length) {
+    throw new BadRequestException("Duplicate featured space ids");
+  }
+
+  if (spaceIds.length === 0) {
+    return;
+  }
+
+  await connectMongo();
+  const Space = await getSpaceModel();
+  const spaces = await Space.find({ _id: { $in: spaceIds } })
+    .select({ _id: 1, status: 1 })
+    .lean()
+    .exec();
+
+  if (spaces.length !== spaceIds.length) {
+    throw new BadRequestException("Unknown featured space id");
+  }
+
+  for (const space of spaces) {
+    if (space.status === "archived") {
+      throw new BadRequestException("Archived spaces cannot be featured");
+    }
+  }
 }
 
 @Injectable()
@@ -61,6 +94,11 @@ export class VitrineContentService {
       };
     }
 
+    if (payload.featuredSpaceIds) {
+      await assertFeaturedSpaceIds(payload.featuredSpaceIds);
+      doc.featuredSpaceIds = payload.featuredSpaceIds;
+    }
+
     await connectMongo();
     const VitrineContent = await getVitrineContentModel();
     const updated = await VitrineContent.findByIdAndUpdate(
@@ -68,6 +106,7 @@ export class VitrineContentService {
       {
         heroImages: doc.heroImages,
         marquee: doc.marquee,
+        featuredSpaceIds: doc.featuredSpaceIds,
       },
       { new: true, runValidators: true },
     )

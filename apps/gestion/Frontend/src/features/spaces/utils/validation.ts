@@ -8,6 +8,8 @@ export type BuildingFormErrors = Partial<
   Record<
     | "name"
     | "description"
+    | "phone"
+    | "email"
     | "street"
     | "postalCode"
     | "city"
@@ -20,6 +22,9 @@ export type BuildingFormErrors = Partial<
   >
 >;
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^[\d\s+().-]{6,32}$/;
+
 export function validateBuildingForm(values: BuildingFormValues): BuildingFormErrors {
   const errors: BuildingFormErrors = {};
 
@@ -29,6 +34,16 @@ export function validateBuildingForm(values: BuildingFormValues): BuildingFormEr
 
   if (values.description.length > BUILDING_DESCRIPTION_MAX_LENGTH) {
     errors.description = `La description ne peut pas dépasser ${BUILDING_DESCRIPTION_MAX_LENGTH} caractères.`;
+  }
+
+  const phone = values.phone.trim();
+  if (phone && !PHONE_PATTERN.test(phone)) {
+    errors.phone = "Le numéro de téléphone n'est pas valide.";
+  }
+
+  const email = values.email.trim();
+  if (email && !EMAIL_PATTERN.test(email)) {
+    errors.email = "L'adresse e-mail n'est pas valide.";
   }
 
   if (!values.address.street.trim()) {
@@ -65,15 +80,19 @@ export function validateBuildingForm(values: BuildingFormValues): BuildingFormEr
   return errors;
 }
 
-export function validatePhotoFile(file: File): string | null {
+export function validatePhotoFile(
+  file: File,
+  maxBytes: number = MAX_PHOTO_SIZE_BYTES,
+): string | null {
   if (file.size === 0) {
     return "Le fichier image est vide.";
   }
   if (!ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number])) {
     return "Format non pris en charge. Utilisez JPG, PNG ou WebP.";
   }
-  if (file.size > MAX_PHOTO_SIZE_BYTES) {
-    return "L'image dépasse 5 Mo.";
+  if (file.size > maxBytes) {
+    const maxMo = Math.round(maxBytes / (1024 * 1024));
+    return `L'image dépasse ${maxMo} Mo.`;
   }
   return null;
 }
@@ -82,6 +101,8 @@ export function createEmptyFormValues(): BuildingFormValues {
   return {
     name: "",
     description: "",
+    phone: "",
+    email: "",
     address: {
       street: "",
       postalCode: "",

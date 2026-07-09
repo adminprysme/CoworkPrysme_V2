@@ -27,6 +27,15 @@ export class MediaController {
     await this.servePhoto(`spaces/${spaceId}/${filename}`, response);
   }
 
+  @Get("vitrine/:slot/:filename")
+  async serveVitrinePhoto(
+    @Param("slot") slot: string,
+    @Param("filename") filename: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.servePhoto(`vitrine/${slot}/${filename}`, response);
+  }
+
   private async servePhoto(storageKey: string, response: Response): Promise<void> {
     const absolutePath = await this.uploads.assertReadableFile(storageKey);
 

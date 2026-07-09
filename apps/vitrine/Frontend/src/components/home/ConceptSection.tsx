@@ -6,10 +6,11 @@ import { Section, SectionHeading } from "@/components/ui/SectionHeading";
 import { HOME_CONTENT } from "@/config/home";
 import styles from "./ConceptSection.module.css";
 
-const CONCEPT_IMAGE =
-  "https://images.unsplash.com/photo-1497215728101-856f4fd90354?auto=format&fit=crop&w=1200&q=80";
+interface ConceptSectionProps {
+  conceptImage: string;
+}
 
-export function ConceptSection() {
+export function ConceptSection({ conceptImage }: ConceptSectionProps) {
   const { concept } = HOME_CONTENT;
 
   return (
@@ -24,7 +25,7 @@ export function ConceptSection() {
             <div className={styles.visual}>
               <div className={styles.accent} aria-hidden="true" />
               <Image
-                src={CONCEPT_IMAGE}
+                src={conceptImage}
                 alt="Espace de coworking lumineux et chaleureux"
                 fill
                 sizes="(max-width: 900px) 100vw, 45vw"

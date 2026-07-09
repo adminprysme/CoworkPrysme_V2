@@ -1,40 +1,84 @@
 .form {
   display: grid;
-  gap: 1.25rem;
+  gap: 1.5rem;
   container-type: inline-size;
 }
 
+.formPage {
+  gap: 1.5rem;
+}
+
 .section {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: var(--color-surface-muted);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.sectionPaired {
+  height: 100%;
+  min-height: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  background: color-mix(in srgb, var(--color-secondary) 8%, var(--color-surface-muted));
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--color-text);
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.1rem;
+}
+
+.sectionBodyFill {
+  flex: 1;
+  min-height: 0;
 }
 
 .fieldGrid {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.85rem;
+}
+
+.fieldGridFill {
+  flex: 1;
+  min-height: 0;
 }
 
 .fieldGrid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.fieldStretch {
+  flex: 1;
+  min-height: 0;
 }
 
 .label {
@@ -66,6 +110,12 @@
   min-height: 5.5rem;
 }
 
+.textareaFill {
+  flex: 1;
+  min-height: 10rem;
+  resize: none;
+}
+
 .input:focus-visible,
 .textarea:focus-visible {
   outline: 2px solid var(--color-secondary);
@@ -83,13 +133,6 @@
   margin: 0;
   font-size: 0.8rem;
   color: var(--color-danger);
-}
-
-.floorsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
 }
 
 .floorControls {
@@ -118,12 +161,36 @@
   gap: 0.45rem;
 }
 
+.floorsListPaired {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
 .introRow,
-.scheduleRow {
+.scheduleRow,
+.addressFloorsRow {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
-  align-items: start;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.introRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.addressFloorsRow {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+}
+
+.addressFloorsRow .section {
+  min-width: 0;
+}
+
+.addressFloorsRow .sectionHeader {
+  flex-wrap: wrap;
 }
 
 @container (min-width: 720px) {
@@ -132,9 +199,24 @@
   }
 }
 
-@container (min-width: 900px) {
+@media (max-width: 900px) {
   .introRow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .sectionPaired {
+    height: auto;
+  }
+
+  .textareaFill {
+    min-height: 8rem;
+    resize: vertical;
+  }
+}
+
+@media (max-width: 768px) {
+  .addressFloorsRow {
+    grid-template-columns: 1fr;
   }
 }
 

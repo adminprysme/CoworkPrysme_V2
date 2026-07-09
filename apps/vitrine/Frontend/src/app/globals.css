@@ -8,6 +8,9 @@
 
 html {
   scroll-behavior: smooth;
+  background: #0f0f0f;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -77,6 +80,18 @@ ul {
 :focus-visible {
   outline: 2px solid var(--v-color-brand);
   outline-offset: 2px;
+}
+
+.siteShell {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--v-color-bg);
+}
+
+.siteMain {
+  flex: 1;
+  padding-top: var(--v-header-height);
 }
 
 .sr-only {

@@ -46,6 +46,8 @@ export function formValuesToCreateRequest(values: BuildingFormValues): CreateBui
   return {
     name: values.name,
     description: values.description.trim(),
+    phone: values.phone.trim(),
+    email: values.email.trim(),
     address: { ...values.address },
     floors: values.floors.map((floor) => ({ name: floor.name })),
     status: values.status,
@@ -55,11 +57,13 @@ export function formValuesToCreateRequest(values: BuildingFormValues): CreateBui
   };
 }
 
-export function buildingResponseToBuilding(response: BuildingResponse): Building {
+export function buildingResponseToBuilding(response: BuildingResponse, spaceCount = 0): Building {
   return {
     id: response.id,
     name: response.name,
     description: response.description,
+    phone: response.phone,
+    email: response.email,
     address: { ...response.address },
     lat: response.coordinates.lat,
     lng: response.coordinates.lng,
@@ -69,6 +73,7 @@ export function buildingResponseToBuilding(response: BuildingResponse): Building
     receptionHours: response.receptionHours.map((entry) => ({ ...entry })),
     concierge: { ...response.concierge },
     photos: mapApiPhotosToFormPhotos(response.photos),
+    spaceCount,
   };
 }
 
@@ -76,6 +81,8 @@ export function buildingResponseToFormValues(response: BuildingResponse): Buildi
   return {
     name: response.name,
     description: response.description ?? "",
+    phone: response.phone ?? "",
+    email: response.email ?? "",
     address: { ...response.address },
     lat: response.coordinates.lat,
     lng: response.coordinates.lng,
@@ -92,6 +99,8 @@ export function createEmptyBuildingFormValues(): BuildingFormValues {
   return {
     name: "",
     description: "",
+    phone: "",
+    email: "",
     address: {
       street: "",
       postalCode: "",
