@@ -1,6 +1,11 @@
-import { createStubPageExports } from "@/lib/stub-page";
+import { permanentRedirect } from "next/navigation";
 
-const { metadata: pageMetadata, Page: StubRoutePage } = createStubPageExports("/salle-de-reunion");
+import { getDefaultCatalogBuildingSlug } from "@/lib/get-catalog-content";
 
-export const metadata = pageMetadata;
-export default StubRoutePage;
+export default async function SalleDeReunionIndexPage() {
+  const slug = await getDefaultCatalogBuildingSlug();
+  if (!slug) {
+    permanentRedirect("/contact");
+  }
+  permanentRedirect(`/salle-de-reunion/${slug}`);
+}
