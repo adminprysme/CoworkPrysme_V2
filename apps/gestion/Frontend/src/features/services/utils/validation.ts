@@ -1,5 +1,11 @@
-import type { ServiceStatus } from "@coworkprysme/shared";
-import { DEFAULT_SERVICE_VAT_RATE, SERVICE_DESCRIPTION_MAX_LENGTH } from "@coworkprysme/shared";
+import type { ServiceCustomQuestionInput, ServiceStatus } from "@coworkprysme/shared";
+import {
+  DEFAULT_SERVICE_VAT_RATE,
+  MAX_SERVICE_CUSTOM_QUESTIONS,
+  SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS,
+  SERVICE_DESCRIPTION_MAX_LENGTH,
+  ServiceCustomQuestionsInputSchema,
+} from "@coworkprysme/shared";
 
 export interface ServiceFormValues {
   label: string;
@@ -8,9 +14,18 @@ export interface ServiceFormValues {
   vatRate: string;
   promoEligible: boolean;
   status: ServiceStatus;
+  customQuestions: ServiceCustomQuestionInput[];
 }
 
-export type ServiceFormErrors = Partial<Record<keyof ServiceFormValues, string>>;
+export interface ServiceFormErrors {
+  label?: string;
+  description?: string;
+  priceEurosHT?: string;
+  vatRate?: string;
+  customQuestions?: string;
+  customQuestionByIndex?: Record<number, string>;
+  customQuestionOptionsByIndex?: Record<number, string>;
+}
 
 export function createEmptyServiceFormValues(): ServiceFormValues {
   return {
@@ -20,6 +35,7 @@ export function createEmptyServiceFormValues(): ServiceFormValues {
     vatRate: String(DEFAULT_SERVICE_VAT_RATE),
     promoEligible: false,
     status: "active",
+    customQuestions: [],
   };
 }
 
@@ -30,6 +46,7 @@ export function serviceResponseToFormValues(service: {
   vatRate: number;
   promoEligible: boolean;
   status: ServiceStatus;
+  customQuestions?: ServiceCustomQuestionInput[];
 }): ServiceFormValues {
   return {
     label: service.label,
@@ -38,6 +55,20 @@ export function serviceResponseToFormValues(service: {
     vatRate: String(service.vatRate),
     promoEligible: service.promoEligible,
     status: service.status,
+    customQuestions: (service.customQuestions ?? []).map((question, index) => {
+      if (question.type === "select") {
+        return {
+          ...question,
+          order: index,
+          options: [...(question.options ?? [])],
+        };
+      }
+
+      return {
+        ...question,
+        order: index,
+      };
+    }),
   };
 }
 
@@ -64,6 +95,66 @@ export function validateServiceForm(values: ServiceFormValues): ServiceFormError
     errors.vatRate = "Taux de TVA invalide";
   }
 
+  if (values.customQuestions.length > MAX_SERVICE_CUSTOM_QUESTIONS) {
+    errors.customQuestions = `Maximum ${MAX_SERVICE_CUSTOM_QUESTIONS} questions par service`;
+  }
+
+  const customQuestionByIndex: Record<number, string> = {};
+  const customQuestionOptionsByIndex: Record<number, string> = {};
+
+  values.customQuestions.forEach((question, index) => {
+    if (!question.label.trim()) {
+      customQuestionByIndex[index] = "Le libellé est obligatoire";
+    }
+
+    if (question.type === "select") {
+      const options = question.options ?? [];
+      const filledOptions = options.map((option) => option.trim()).filter(Boolean);
+      if (filledOptions.length < SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS) {
+        customQuestionOptionsByIndex[index] =
+          `Au moins ${SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS} options sont requises`;
+      } else if (new Set(filledOptions).size !== filledOptions.length) {
+        customQuestionOptionsByIndex[index] = "Les options doivent être uniques";
+      }
+    }
+  });
+
+  const parsedQuestions = ServiceCustomQuestionsInputSchema.safeParse(
+    values.customQuestions.map((question, index) => ({
+      ...question,
+      label: question.label.trim(),
+      order: index,
+      ...(question.type === "select"
+        ? {
+            options: (question.options ?? []).map((option) => option.trim()).filter(Boolean),
+          }
+        : {}),
+    })),
+  );
+
+  if (!parsedQuestions.success) {
+    for (const issue of parsedQuestions.error.issues) {
+      const index = typeof issue.path[0] === "number" ? issue.path[0] : undefined;
+      if (index === undefined) {
+        errors.customQuestions = issue.message;
+        continue;
+      }
+
+      if (issue.path[1] === "options") {
+        customQuestionOptionsByIndex[index] = issue.message;
+      } else if (!customQuestionByIndex[index]) {
+        customQuestionByIndex[index] = issue.message;
+      }
+    }
+  }
+
+  if (Object.keys(customQuestionByIndex).length > 0) {
+    errors.customQuestionByIndex = customQuestionByIndex;
+  }
+  if (Object.keys(customQuestionOptionsByIndex).length > 0) {
+    errors.customQuestionOptionsByIndex = customQuestionOptionsByIndex;
+  }
+
   return errors;
 }
 
@@ -75,5 +166,31 @@ export function serviceFormValuesToCreateRequest(values: ServiceFormValues) {
     vatRate: Number.parseFloat(values.vatRate),
     promoEligible: values.promoEligible,
     status: values.status,
+    customQuestions: values.customQuestions.map((question, index) => ({
+      ...question,
+      id: question.id,
+      label: question.label.trim(),
+      order: index,
+      ...(question.type === "select"
+        ? {
+            options: (question.options ?? []).map((option) => option.trim()).filter(Boolean),
+          }
+        : {}),
+    })),
   };
+}
+
+export function hasServiceFormErrors(errors: ServiceFormErrors): boolean {
+  return (
+    Boolean(errors.label) ||
+    Boolean(errors.description) ||
+    Boolean(errors.priceEurosHT) ||
+    Boolean(errors.vatRate) ||
+    Boolean(errors.customQuestions) ||
+    Boolean(errors.customQuestionByIndex && Object.keys(errors.customQuestionByIndex).length > 0) ||
+    Boolean(
+      errors.customQuestionOptionsByIndex &&
+      Object.keys(errors.customQuestionOptionsByIndex).length > 0,
+    )
+  );
 }

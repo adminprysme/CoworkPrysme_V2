@@ -7,6 +7,7 @@ import {
   serviceFormValuesToCreateRequest,
   serviceResponseToFormValues,
   validateServiceForm,
+  hasServiceFormErrors,
   type ServiceFormErrors,
   type ServiceFormValues,
 } from "../utils/validation.js";
@@ -50,7 +51,7 @@ export function ServiceFormPanel({ open, editing, onClose, onSubmit }: ServiceFo
     event.preventDefault();
     const nextErrors = validateServiceForm(values);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
+    if (hasServiceFormErrors(nextErrors)) {
       return;
     }
 

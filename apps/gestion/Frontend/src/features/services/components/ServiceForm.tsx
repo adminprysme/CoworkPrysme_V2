@@ -1,5 +1,6 @@
 import type { ServiceFormErrors, ServiceFormValues } from "../utils/validation.js";
 import { StatusToggle } from "../../spaces/components/StatusToggle.js";
+import { ServiceCustomQuestionsSection } from "./ServiceCustomQuestionsSection.js";
 import styles from "./ServiceForm.module.css";
 
 interface ServiceFormProps {
@@ -87,6 +88,16 @@ export function ServiceForm({ values, errors, onChange }: ServiceFormProps) {
           ariaLabel="Statut du service"
         />
       </div>
+
+      <ServiceCustomQuestionsSection
+        questions={values.customQuestions}
+        errors={errors.customQuestionByIndex ?? {}}
+        optionErrors={errors.customQuestionOptionsByIndex ?? {}}
+        onChange={(customQuestions) => patch({ customQuestions })}
+      />
+      {errors.customQuestions ? (
+        <span className={styles.error}>{errors.customQuestions}</span>
+      ) : null}
     </div>
   );
 }
