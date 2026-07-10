@@ -5,6 +5,7 @@ import type { BuildingResponse, SpaceResponse } from "@coworkprysme/shared";
 import { fetchBuildings } from "../../lib/buildings-api.js";
 import { fetchSpacesByBuilding, updateSpace } from "../../lib/spaces-api.js";
 import { spaceResponseToUpdateRequest } from "../../lib/spaces-mappers.js";
+import { spacePrimaryPhotoUrl } from "./vitrine-catalog-photos.js";
 import styles from "./VitrineCatalogSpacesField.module.css";
 
 interface BuildingSpaces {
@@ -16,6 +17,21 @@ const SPACE_TYPE_LABEL: Record<SpaceResponse["type"], string> = {
   private_office: "Bureau privatif",
   meeting_room: "Salle de réunion",
 };
+
+function SpaceFallbackIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden="true"
+    >
+      <rect x="4" y="8" width="16" height="12" rx="1.5" />
+      <path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export function VitrineCatalogSpacesField() {
   const [groups, setGroups] = useState<BuildingSpaces[]>([]);
@@ -114,55 +130,105 @@ export function VitrineCatalogSpacesField() {
 
       {groups.map(({ building, spaces }) => (
         <section key={building.id} className={styles.buildingBlock}>
-          <h3 className={styles.buildingTitle}>{building.name}</h3>
-          <ul className={styles.spaceList}>
+          <div className={styles.buildingHeader}>
+            <span className={styles.buildingAccent} aria-hidden="true" />
+            <h3 className={styles.buildingTitle}>{building.name}</h3>
+          </div>
+
+          <ul className={styles.spaceGrid}>
             {spaces.map((space) => {
               const isSaving = savingId === space.id;
+              const photoUrl = spacePrimaryPhotoUrl(space.photos);
+              const switchId = `space-featured-${space.id}`;
+              const orderId = `space-order-${space.id}`;
+
               return (
-                <li key={space.id} className={styles.spaceRow}>
-                  <div>
-                    <p className={styles.spaceName}>{space.name}</p>
-                    <p className={styles.spaceMeta}>
-                      {SPACE_TYPE_LABEL[space.type]} — {space.floor} — {space.capacity} pers.
-                    </p>
+                <li
+                  key={space.id}
+                  className={[
+                    styles.spaceCard,
+                    space.featuredOnVitrine ? styles.spaceCardFeatured : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <div className={styles.cardBody}>
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="" className={styles.thumbnail} />
+                    ) : (
+                      <span className={styles.thumbnailFallback} aria-hidden="true">
+                        <SpaceFallbackIcon />
+                      </span>
+                    )}
+
+                    <div className={styles.spaceInfo}>
+                      <div className={styles.spaceNameRow}>
+                        <p className={styles.spaceName}>{space.name}</p>
+                        {space.featuredOnVitrine ? (
+                          <span className={styles.featuredBadge}>En avant</span>
+                        ) : null}
+                      </div>
+                      <p className={styles.spaceMeta}>
+                        <strong>{SPACE_TYPE_LABEL[space.type]}</strong>
+                        {" · "}
+                        {space.floor}
+                        {" · "}
+                        {space.capacity} pers.
+                      </p>
+                      {isSaving ? <span className={styles.savingHint}>Enregistrement…</span> : null}
+                    </div>
                   </div>
 
-                  <label className={styles.toggleLabel}>
-                    <input
-                      type="checkbox"
-                      checked={space.featuredOnVitrine}
-                      disabled={isSaving}
-                      onChange={(event) =>
-                        void persistSpace(space, { featuredOnVitrine: event.target.checked })
-                      }
-                    />
-                    Mettre en avant
-                  </label>
-
-                  <label className={styles.orderField}>
-                    Ordre
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={space.vitrineOrder ?? ""}
-                      disabled={isSaving}
-                      placeholder="—"
-                      onChange={(event) => {
-                        const raw = event.target.value.trim();
-                        const nextOrder = raw === "" ? undefined : Number(raw);
-                        replaceSpace({ ...space, vitrineOrder: nextOrder });
-                      }}
-                      onBlur={(event) => {
-                        const raw = event.target.value.trim();
-                        const nextOrder = raw === "" ? undefined : Number(raw);
-                        if (nextOrder === space.vitrineOrder) {
-                          return;
+                  <div className={styles.footer}>
+                    <div className={styles.featureControl}>
+                      <label className={styles.featureLabel} htmlFor={switchId}>
+                        Mettre en avant
+                      </label>
+                      <button
+                        id={switchId}
+                        type="button"
+                        role="switch"
+                        aria-checked={space.featuredOnVitrine}
+                        className={[styles.switch, space.featuredOnVitrine ? styles.switchOn : ""]
+                          .filter(Boolean)
+                          .join(" ")}
+                        disabled={isSaving}
+                        onClick={() =>
+                          void persistSpace(space, {
+                            featuredOnVitrine: !space.featuredOnVitrine,
+                          })
                         }
-                        void persistSpace(space, { vitrineOrder: nextOrder });
-                      }}
-                    />
-                  </label>
+                      >
+                        <span className={styles.knob} aria-hidden="true" />
+                      </button>
+                    </div>
+
+                    <label className={styles.orderField} htmlFor={orderId}>
+                      Ordre
+                      <input
+                        id={orderId}
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={space.vitrineOrder ?? ""}
+                        disabled={isSaving}
+                        placeholder="—"
+                        onChange={(event) => {
+                          const raw = event.target.value.trim();
+                          const nextOrder = raw === "" ? undefined : Number(raw);
+                          replaceSpace({ ...space, vitrineOrder: nextOrder });
+                        }}
+                        onBlur={(event) => {
+                          const raw = event.target.value.trim();
+                          const nextOrder = raw === "" ? undefined : Number(raw);
+                          if (nextOrder === space.vitrineOrder) {
+                            return;
+                          }
+                          void persistSpace(space, { vitrineOrder: nextOrder });
+                        }}
+                      />
+                    </label>
+                  </div>
                 </li>
               );
             })}

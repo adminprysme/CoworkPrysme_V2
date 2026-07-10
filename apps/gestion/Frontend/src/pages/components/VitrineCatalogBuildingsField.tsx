@@ -4,7 +4,26 @@ import type { BuildingResponse } from "@coworkprysme/shared";
 
 import { fetchBuildings, updateBuilding } from "../../lib/buildings-api.js";
 import { buildingResponseToUpdateRequest } from "../../lib/buildings-mappers.js";
+import { buildingPrimaryPhotoUrl } from "./vitrine-catalog-photos.js";
 import styles from "./VitrineCatalogBuildingsField.module.css";
+
+function BuildingFallbackIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export function VitrineCatalogBuildingsField() {
   const [buildings, setBuildings] = useState<BuildingResponse[]>([]);
@@ -94,62 +113,99 @@ export function VitrineCatalogBuildingsField() {
 
       {actionError ? <p className={styles.error}>{actionError}</p> : null}
 
-      <ul className={styles.list}>
+      <ul className={styles.grid}>
         {buildings.map((building) => {
           const isInactive = building.status === "inactive";
           const isSaving = savingId === building.id;
+          const isDefault = defaultBuildingId === building.id;
+          const photoUrl = buildingPrimaryPhotoUrl(building.photos);
+          const switchId = `building-visible-${building.id}`;
+          const radioId = `building-default-${building.id}`;
 
           return (
             <li
               key={building.id}
-              className={[styles.row, isInactive ? styles.rowInactive : ""]
+              className={[
+                styles.card,
+                isDefault ? styles.cardDefault : "",
+                isInactive ? styles.cardInactive : "",
+              ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              <div className={styles.rowHeader}>
-                <div>
+              <div className={styles.media}>
+                {photoUrl ? (
+                  <img src={photoUrl} alt="" className={styles.photo} />
+                ) : (
+                  <div className={styles.mediaFallback}>
+                    <span className={styles.fallbackIcon}>
+                      <BuildingFallbackIcon />
+                    </span>
+                    <span className={styles.fallbackLabel}>Bâtiment</span>
+                  </div>
+                )}
+
+                {isDefault ? <span className={styles.defaultBadge}>Par défaut</span> : null}
+                {isSaving ? <span className={styles.saving}>Enregistrement…</span> : null}
+
+                <div className={styles.mediaCaption}>
                   <p className={styles.buildingName}>{building.name}</p>
                   <p className={styles.buildingMeta}>
                     {building.address.city}
                     {isInactive ? " — inactif" : ""}
                   </p>
                 </div>
-                {isSaving ? <span className={styles.saving}>Enregistrement…</span> : null}
               </div>
 
-              <div className={styles.controls}>
-                <label className={styles.toggleLabel}>
-                  <input
-                    type="checkbox"
-                    checked={building.visibleOnVitrine}
+              <div className={styles.footer}>
+                <div className={styles.controlRow}>
+                  <label className={styles.controlLabel} htmlFor={switchId}>
+                    Visible sur la vitrine
+                  </label>
+                  <button
+                    id={switchId}
+                    type="button"
+                    role="switch"
+                    aria-checked={building.visibleOnVitrine}
+                    className={[styles.switch, building.visibleOnVitrine ? styles.switchOn : ""]
+                      .filter(Boolean)
+                      .join(" ")}
                     disabled={isInactive || isSaving}
-                    onChange={(event) =>
+                    onClick={() =>
                       void persistBuilding(building, {
-                        visibleOnVitrine: event.target.checked,
-                        isDefaultVitrineBuilding: event.target.checked
+                        visibleOnVitrine: !building.visibleOnVitrine,
+                        isDefaultVitrineBuilding: building.visibleOnVitrine
                           ? building.isDefaultVitrineBuilding
                           : false,
                       })
                     }
-                  />
-                  Visible sur la vitrine
-                </label>
+                  >
+                    <span className={styles.knob} aria-hidden="true" />
+                  </button>
+                </div>
 
-                <label className={styles.radioLabel}>
-                  <input
-                    type="radio"
-                    name="vitrine-default-building"
-                    checked={defaultBuildingId === building.id}
-                    disabled={isInactive || !building.visibleOnVitrine || isSaving}
-                    onChange={() =>
-                      void persistBuilding(building, {
-                        visibleOnVitrine: true,
-                        isDefaultVitrineBuilding: true,
-                      })
-                    }
-                  />
-                  Bâtiment par défaut
-                </label>
+                <div className={styles.controlRow}>
+                  <label className={styles.controlLabel} htmlFor={radioId}>
+                    Bâtiment par défaut
+                  </label>
+                  <label className={styles.radioOption}>
+                    <input
+                      id={radioId}
+                      type="radio"
+                      name="vitrine-default-building"
+                      className={styles.radioInput}
+                      checked={isDefault}
+                      disabled={isInactive || !building.visibleOnVitrine || isSaving}
+                      onChange={() =>
+                        void persistBuilding(building, {
+                          visibleOnVitrine: true,
+                          isDefaultVitrineBuilding: true,
+                        })
+                      }
+                    />
+                    <span className={styles.radioVisual} aria-hidden="true" />
+                  </label>
+                </div>
               </div>
             </li>
           );

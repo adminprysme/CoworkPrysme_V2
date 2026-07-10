@@ -1,11 +1,14 @@
 .wrapper {
+  --vitrine-accent: #3b6fa8;
+  --vitrine-accent-soft: color-mix(in srgb, var(--vitrine-accent) 14%, transparent);
+  --vitrine-accent-border: color-mix(in srgb, var(--vitrine-accent) 42%, var(--color-border));
+
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .intro,
-.hint,
-.statusMuted {
+.hint {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 0.9rem;
@@ -18,68 +21,268 @@
   font-size: 0.9rem;
 }
 
-.list {
+.grid {
   display: grid;
-  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.row {
-  display: grid;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--color-surface);
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.rowInactive {
+.cardDefault {
+  border-color: var(--vitrine-accent-border);
+  box-shadow: 0 0 0 1px var(--vitrine-accent-soft);
+  background: color-mix(in srgb, var(--vitrine-accent) 4%, var(--color-surface));
+}
+
+.cardInactive {
   opacity: 0.72;
 }
 
-.rowHeader {
+.media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--vitrine-accent) 18%, var(--color-surface-muted)),
+    var(--color-surface-muted)
+  );
+}
+
+.photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mediaFallback {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  height: 100%;
+  color: color-mix(in srgb, var(--vitrine-accent) 55%, var(--color-text-muted));
+}
+
+.fallbackIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--vitrine-accent) 12%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--vitrine-accent) 22%, var(--color-border));
+}
+
+.fallbackIcon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.fallbackLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mediaCaption {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.15rem;
+  padding: 2.25rem 0.85rem 0.75rem;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.72), transparent);
+  color: #fff;
 }
 
 .buildingName {
   margin: 0;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .buildingMeta {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
+  margin: 0;
+  font-size: 0.82rem;
+  opacity: 0.92;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.5rem;
-}
-
-.toggleLabel,
-.radioLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.toggleLabel input:disabled,
-.radioLabel input:disabled {
-  cursor: not-allowed;
+.defaultBadge {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--vitrine-accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .saving {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 0.72rem;
+}
+
+.footer {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.controlLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+}
+
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.switchOn {
+  background: var(--vitrine-accent);
+}
+
+.switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.5rem - 4px);
+  height: calc(1.5rem - 4px);
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.switchOn .knob {
+  transform: translateX(1.25rem);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--vitrine-accent);
+  outline-offset: 2px;
+}
+
+.radioOption {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.radioInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.radioVisual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.radioInput:checked + .radioVisual {
+  border-color: var(--vitrine-accent);
+  background: var(--vitrine-accent);
+  box-shadow: inset 0 0 0 3px var(--color-surface);
+}
+
+.radioInput:focus-visible + .radioVisual {
+  outline: 2px solid var(--vitrine-accent);
+  outline-offset: 2px;
+}
+
+.radioInput:disabled + .radioVisual {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .controlRow {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch,
+  .knob,
+  .card {
+    transition: none;
+  }
 }

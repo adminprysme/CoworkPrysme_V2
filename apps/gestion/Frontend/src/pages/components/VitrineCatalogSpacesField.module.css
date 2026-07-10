@@ -1,6 +1,10 @@
 .wrapper {
+  --vitrine-accent: #3b6fa8;
+  --vitrine-accent-soft: color-mix(in srgb, var(--vitrine-accent) 14%, transparent);
+  --vitrine-accent-border: color-mix(in srgb, var(--vitrine-accent) 42%, var(--color-border));
+
   display: grid;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .intro,
@@ -20,75 +24,280 @@
 
 .buildingBlock {
   display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-surface-muted);
+  gap: 0.85rem;
+}
+
+.buildingHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--vitrine-accent-soft);
+}
+
+.buildingAccent {
+  flex-shrink: 0;
+  width: 4px;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: var(--vitrine-accent);
 }
 
 .buildingTitle {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
 }
 
-.spaceList {
+.spaceGrid {
   display: grid;
-  gap: 0.55rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.spaceRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.75rem 0.85rem;
+.spaceCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--color-surface);
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.spaceCardFeatured {
+  border-color: var(--vitrine-accent-border);
+  box-shadow: 0 0 0 1px var(--vitrine-accent-soft);
+  background: color-mix(in srgb, var(--vitrine-accent) 4%, var(--color-surface));
+}
+
+.cardBody {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 0.65rem;
+  padding: 0.75rem;
+  align-items: start;
+}
+
+.thumbnail,
+.thumbnailFallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--vitrine-accent) 16%, var(--color-surface-muted)),
+    var(--color-surface-muted)
+  );
+  border: 1px solid var(--color-border);
+}
+
+.thumbnailFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--vitrine-accent) 55%, var(--color-text-muted));
+}
+
+.thumbnailFallback svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.spaceInfo {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.spaceNameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .spaceName {
   margin: 0;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.featuredBadge {
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--vitrine-accent);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .spaceMeta {
-  margin: 0.15rem 0 0;
+  margin: 0;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
-.toggleLabel {
+.spaceMeta strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.featureControl {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.9rem;
+  gap: 0.55rem;
+}
+
+.featureLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
   white-space: nowrap;
+}
+
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.switchOn {
+  background: var(--vitrine-accent);
+}
+
+.switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.35rem - 4px);
+  height: calc(1.35rem - 4px);
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.switchOn .knob {
+  transform: translateX(1.15rem);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--vitrine-accent);
+  outline-offset: 2px;
 }
 
 .orderField {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--color-text-muted);
 }
 
 .orderField input {
-  width: 4rem;
-  padding: 0.35rem 0.45rem;
+  width: 3.5rem;
+  padding: 0.3rem 0.4rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.orderField input:focus-visible {
+  outline: 2px solid var(--vitrine-accent);
+  outline-offset: 1px;
+}
+
+.orderField input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.savingHint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 1100px) {
+  .spaceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
-  .spaceRow {
+  .spaceGrid {
     grid-template-columns: 1fr;
+  }
+
+  .cardBody {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .thumbnail,
+  .thumbnailFallback {
+    width: 64px;
+    height: 64px;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .featureControl {
+    justify-content: space-between;
+  }
+
+  .orderField {
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch,
+  .knob,
+  .spaceCard {
+    transition: none;
   }
 }
