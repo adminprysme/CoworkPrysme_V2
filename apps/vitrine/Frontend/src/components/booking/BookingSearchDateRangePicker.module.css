@@ -7,6 +7,32 @@
   background: var(--v-color-bg);
 }
 
+.calendarTopBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--v-space-3);
+}
+
+.todayButton {
+  flex-shrink: 0;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.todayButton:focus-visible {
+  outline: 2px solid var(--v-color-brand);
+  outline-offset: 2px;
+}
+
 .calendarHeader {
   display: flex;
   align-items: center;
@@ -36,11 +62,14 @@
 .monthsRow {
   display: grid;
   gap: var(--v-space-5);
+  align-items: stretch;
 }
 
 .monthPanel {
   display: grid;
+  grid-template-rows: auto auto 1fr;
   gap: var(--v-space-2);
+  min-width: 0;
 }
 
 .monthTitle {
@@ -69,18 +98,20 @@
 .daysGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(2.25rem, 1fr));
   gap: 0.15rem;
+  min-height: calc(6 * 2.25rem + 5 * 0.15rem);
 }
 
 .dayCell {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 2.4rem;
+  min-height: 2.25rem;
 }
 
 .dayCellEmpty {
-  min-height: 2.4rem;
+  min-height: 2.25rem;
 }
 
 .dayButton {
@@ -89,8 +120,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
+  width: min(100%, 2.2rem);
+  height: min(100%, 2.2rem);
+  max-width: 2.2rem;
+  max-height: 2.2rem;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -142,6 +175,8 @@
 
 .rangeSummary {
   margin: 0;
+  flex: 1;
+  min-width: 0;
   font-size: var(--v-text-sm);
   color: var(--v-color-text-muted);
 }
@@ -193,5 +228,31 @@
 
   .monthPanelSecond {
     display: none;
+  }
+
+  .calendarTopBar {
+    flex-wrap: wrap;
+  }
+
+  .todayButton {
+    margin-left: auto;
+  }
+
+  .dayButton {
+    width: min(100%, 2rem);
+    height: min(100%, 2rem);
+    max-width: 2rem;
+    max-height: 2rem;
+    font-size: 0.8rem;
+  }
+
+  .daysGrid {
+    grid-template-rows: repeat(6, minmax(2rem, 1fr));
+    min-height: calc(6 * 2rem + 5 * 0.15rem);
+  }
+
+  .dayCell,
+  .dayCellEmpty {
+    min-height: 2rem;
   }
 }

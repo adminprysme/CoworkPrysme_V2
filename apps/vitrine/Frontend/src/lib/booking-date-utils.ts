@@ -48,6 +48,9 @@ export function buildMonthGrid(year: number, month: number): Array<Date | null> 
   while (cells.length % 7 !== 0) {
     cells.push(null);
   }
+  while (cells.length < 42) {
+    cells.push(null);
+  }
 
   return cells;
 }

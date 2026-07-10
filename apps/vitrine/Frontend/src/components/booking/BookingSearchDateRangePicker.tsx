@@ -225,11 +225,27 @@ export function BookingSearchDateRangePicker({
     }
   }, [startDate]);
 
+  const handleGoToToday = useCallback(() => {
+    const today = startOfDay(new Date());
+    setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setFocusedDay(today);
+  }, []);
+
   return (
     <div className={styles.bookingSearchCalendar}>
-      <p className={styles.rangeSummary} aria-live="polite">
-        {rangeSummary}
-      </p>
+      <div className={styles.calendarTopBar}>
+        <p className={styles.rangeSummary} aria-live="polite">
+          {rangeSummary}
+        </p>
+        <button
+          type="button"
+          className={styles.todayButton}
+          aria-label="Revenir à la date d'aujourd'hui"
+          onClick={handleGoToToday}
+        >
+          Aujourd&apos;hui
+        </button>
+      </div>
 
       <div className={styles.calendarHeader}>
         <button
