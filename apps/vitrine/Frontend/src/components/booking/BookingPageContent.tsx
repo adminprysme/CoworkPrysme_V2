@@ -3,21 +3,22 @@
 import type { BookingLockResponse, BookingSpaceCard, SpaceType } from "@coworkprysme/shared";
 import { formatCentsAsEuroString } from "@coworkprysme/shared";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Container } from "@/components/ui/Container";
 import {
-  combineDateAndTime,
-  defaultSearchEndTime,
-  defaultSearchStartTime,
+  buildSearchWindowForRangeMode,
+  defaultTimesForRangeMode,
   flexibleDurationClassHint,
   formatAvailabilityWindow,
   formatMonthHeading,
   monthRange,
+  resolveDateRangeInputMode,
   type BookingFlexibleDuration,
   type BookingSearchMode,
   type CalendarDurationFilter,
 } from "@/lib/booking-date-utils";
+import { buildRecurringReservationMailto } from "@/lib/booking-recurring-contact";
 import { formatCountdown, useBookingLockCountdown } from "@/hooks/useBookingLock";
 import { getBookingSessionId } from "@/lib/booking-session";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/lib/get-booking-api";
 
 import { BookingFlexibleSearchPanel } from "./BookingFlexibleSearchPanel";
+import { BookingSearchDateTimeFields } from "./BookingSearchDateTimeFields";
 import { BookingSearchDateRangePicker } from "./BookingSearchDateRangePicker";
 import { BookingProgressBar } from "./BookingProgressBar";
 import styles from "./booking.module.css";
@@ -46,29 +48,21 @@ function formatSlotLabel(startAt: string, endAt: string): string {
   return formatAvailabilityWindow(startAt, endAt);
 }
 
-function buildSearchWindow(
-  startDate: Date,
-  endDate: Date,
-  startTime: string,
-  endTime: string,
-): { startAt: string; endAt: string } {
-  const startAt = combineDateAndTime(startDate, startTime);
-  const endAt = combineDateAndTime(endDate, endTime);
-  return {
-    startAt: startAt.toISOString(),
-    endAt: endAt.toISOString(),
-  };
+interface BookingPageContentProps {
+  contactEmail: string;
 }
 
-export function BookingPageContent() {
+export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [view, setView] = useState<BookingView>("search");
   const [searchMode, setSearchMode] = useState<BookingSearchMode>("dates");
   const [spaceType, setSpaceType] = useState<SpaceType>("meeting_room");
   const [partySize, setPartySize] = useState(4);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [startTime, setStartTime] = useState(defaultSearchStartTime);
-  const [endTime, setEndTime] = useState(() => defaultSearchEndTime(defaultSearchStartTime()));
+  const initialTimes = defaultTimesForRangeMode("same_day");
+  const [startTime, setStartTime] = useState(initialTimes.startTime);
+  const [endTime, setEndTime] = useState(initialTimes.endTime);
+  const previousRangeModeRef = useRef(resolveDateRangeInputMode(null, null));
   const [flexDuration, setFlexDuration] = useState<BookingFlexibleDuration | null>(null);
   const [flexMonth, setFlexMonth] = useState<Date | null>(null);
   const [spaces, setSpaces] = useState<BookingSpaceCard[]>([]);
@@ -84,6 +78,31 @@ export function BookingPageContent() {
   const [lockExpiredMessage, setLockExpiredMessage] = useState<string | null>(null);
 
   const remainingMs = useBookingLockCountdown(lock?.expiresAt ?? null);
+
+  const dateRangeMode = useMemo(
+    () => resolveDateRangeInputMode(startDate, endDate),
+    [startDate, endDate],
+  );
+
+  const recurringReservationMailto = useMemo(
+    () =>
+      buildRecurringReservationMailto(contactEmail, {
+        spaceType,
+        partySize,
+      }),
+    [contactEmail, partySize, spaceType],
+  );
+
+  useEffect(() => {
+    if (previousRangeModeRef.current === dateRangeMode) {
+      return;
+    }
+
+    const defaults = defaultTimesForRangeMode(dateRangeMode);
+    setStartTime(defaults.startTime);
+    setEndTime(defaults.endTime);
+    previousRangeModeRef.current = dateRangeMode;
+  }, [dateRangeMode]);
 
   const selectedRangeLabel = useMemo(() => {
     if (!selectedSlot) {
@@ -146,7 +165,13 @@ export function BookingPageContent() {
         return;
       }
 
-      const window = buildSearchWindow(startDate, endDate, startTime, endTime);
+      const window = buildSearchWindowForRangeMode(
+        startDate,
+        endDate,
+        dateRangeMode,
+        startTime,
+        endTime,
+      );
       if (new Date(window.endAt) <= new Date(window.startAt)) {
         setError("L'heure de fin doit être postérieure à l'heure de début.");
         setView("search");
@@ -204,7 +229,13 @@ export function BookingPageContent() {
       return;
     }
 
-    const window = buildSearchWindow(startDate, endDate, startTime, endTime);
+    const window = buildSearchWindowForRangeMode(
+      startDate,
+      endDate,
+      dateRangeMode,
+      startTime,
+      endTime,
+    );
     await handleCreateLock(space, window.startAt, window.endAt);
   }
 
@@ -347,35 +378,22 @@ export function BookingPageContent() {
                   <BookingSearchDateRangePicker
                     startDate={startDate}
                     endDate={endDate}
+                    recurringReservationMailto={recurringReservationMailto}
                     onRangeChange={(start, end) => {
                       setStartDate(start);
                       setEndDate(end);
                     }}
                   />
 
-                  <div className={styles.timeRow}>
-                    <label className={styles.field}>
-                      <span className={styles.fieldLabel}>Heure de début</span>
-                      <input
-                        className={styles.fieldInput}
-                        type="time"
-                        value={startTime}
-                        onChange={(event) => {
-                          setStartTime(event.target.value);
-                          setEndTime(defaultSearchEndTime(event.target.value));
-                        }}
-                      />
-                    </label>
-                    <label className={styles.field}>
-                      <span className={styles.fieldLabel}>Heure de fin</span>
-                      <input
-                        className={styles.fieldInput}
-                        type="time"
-                        value={endTime}
-                        onChange={(event) => setEndTime(event.target.value)}
-                      />
-                    </label>
-                  </div>
+                  <BookingSearchDateTimeFields
+                    mode={dateRangeMode}
+                    startDate={startDate}
+                    endDate={endDate}
+                    startTime={startTime}
+                    endTime={endTime}
+                    onStartTimeChange={setStartTime}
+                    onEndTimeChange={setEndTime}
+                  />
                 </>
               ) : (
                 <BookingFlexibleSearchPanel

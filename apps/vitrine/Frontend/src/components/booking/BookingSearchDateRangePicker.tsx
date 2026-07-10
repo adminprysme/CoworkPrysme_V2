@@ -22,6 +22,7 @@ interface BookingSearchDateRangePickerProps {
   startDate: Date | null;
   endDate: Date | null;
   onRangeChange: (start: Date | null, end: Date | null) => void;
+  recurringReservationMailto: string;
 }
 
 function MonthGrid({
@@ -131,6 +132,7 @@ export function BookingSearchDateRangePicker({
   startDate,
   endDate,
   onRangeChange,
+  recurringReservationMailto,
 }: BookingSearchDateRangePickerProps) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfDay(new Date()));
   const [focusedDay, setFocusedDay] = useState<Date | null>(() => startOfDay(new Date()));
@@ -275,6 +277,13 @@ export function BookingSearchDateRangePicker({
           panelClassName={styles.monthPanelSecond}
         />
       </div>
+
+      <p className={styles.recurringHint}>
+        Besoin d&apos;une réservation récurrente (ex. tous les lundis pendant plusieurs semaines) ?{" "}
+        <a className={styles.recurringLink} href={recurringReservationMailto}>
+          Contactez notre équipe
+        </a>
+      </p>
     </div>
   );
 }

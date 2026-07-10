@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
+import { DEFAULT_SITE_CONTACT } from "@coworkprysme/shared";
+
 import { BookingPageContent } from "@/components/booking/BookingPageContent";
+import { getSiteContact } from "@/lib/get-building-info";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -10,6 +13,8 @@ export const metadata: Metadata = createPageMetadata({
   path: "/reservation",
 });
 
-export default function ReservationPage() {
-  return <BookingPageContent />;
+export default async function ReservationPage() {
+  const contact = await getSiteContact();
+
+  return <BookingPageContent contactEmail={contact.email ?? DEFAULT_SITE_CONTACT.email} />;
 }

@@ -152,6 +152,30 @@
   gap: var(--v-space-3);
 }
 
+.rangeModePanel {
+  display: grid;
+  gap: var(--v-space-3);
+}
+
+.rangeModeHelp {
+  margin: 0;
+  font-size: var(--v-text-sm);
+  color: var(--v-color-text-muted);
+  line-height: 1.55;
+}
+
+.rangeModeDates {
+  margin: 0;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  color: var(--v-color-ink);
+}
+
+.fieldHint {
+  font-size: var(--v-text-xs);
+  color: var(--v-color-text-muted);
+}
+
 .calendarFilters {
   display: flex;
   flex-wrap: wrap;
