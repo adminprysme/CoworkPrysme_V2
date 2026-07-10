@@ -18,7 +18,6 @@ import {
   DURATION_CLASS_LABELS,
   pickPrimaryPhotoStorageKey,
   type BookingAvailabilityQuery,
-  type BookingAvailabilityResultSpace,
   type BookingSpaceAvailabilityQuery,
   type BookingSpaceCard,
   type BookingSpacesQuery,
@@ -32,11 +31,6 @@ import { buildPublicImageUrl } from "../home-content/home-content.controller.js"
 import { AvailabilityService } from "./availability.service.js";
 import { SlotGenerationService } from "./slot-generation.service.js";
 import { isObjectId } from "./object-id.util.js";
-import {
-  buildFlexibilityOffsets,
-  mergeAvailabilityWindows,
-  shiftInstantByDays,
-} from "./flexibility.util.js";
 
 type BuildingLean = Building & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
@@ -123,74 +117,14 @@ export class BookingService {
   }
 
   async searchAvailability(query: BookingAvailabilityQuery) {
-    const baseStart = new Date(query.startAt);
-    const baseEnd = new Date(query.endAt);
+    const startAt = new Date(query.startAt);
+    const endAt = new Date(query.endAt);
     const candidates = await this.availability.getCandidateSpaces(query);
+    const available = await this.availability.filterAvailableSpaces(candidates, startAt, endAt);
 
-    if (!query.flexibilityDays) {
-      const available = await this.availability.filterAvailableSpaces(
-        candidates,
-        baseStart,
-        baseEnd,
-      );
-
-      return BookingAvailabilityResponseSchema.parse({
-        spaces: await this.mapSpacesToCards(available),
-      });
-    }
-
-    const offsets = buildFlexibilityOffsets(query.flexibilityDays);
-    const now = new Date();
-    const windowsBySpaceId = new Map<
-      string,
-      { space: SpaceLean; windows: Array<{ startAt: string; endAt: string }> }
-    >();
-
-    for (const offset of offsets) {
-      const startAt = shiftInstantByDays(baseStart, offset);
-      const endAt = shiftInstantByDays(baseEnd, offset);
-      if (endAt <= startAt || endAt <= now) {
-        continue;
-      }
-
-      for (const space of candidates) {
-        if (!(await this.availability.isSpaceAvailable(space, startAt, endAt, now))) {
-          continue;
-        }
-
-        const spaceId = space._id.toString();
-        const entry = windowsBySpaceId.get(spaceId) ?? { space, windows: [] };
-        entry.windows.push({
-          startAt: startAt.toISOString(),
-          endAt: endAt.toISOString(),
-        });
-        windowsBySpaceId.set(spaceId, entry);
-      }
-    }
-
-    const apiOrigin = this.getApiOrigin();
-    const buildingMap = await this.getBuildingMap([
-      ...new Set([...windowsBySpaceId.values()].map((entry) => entry.space.buildingId)),
-    ]);
-
-    const spaces: BookingAvailabilityResultSpace[] = [...windowsBySpaceId.values()]
-      .flatMap((entry) => {
-        const building = buildingMap.get(entry.space.buildingId.toString());
-        if (!building) {
-          return [];
-        }
-
-        const card = this.mapSpaceCard(entry.space, building, apiOrigin);
-        return [
-          {
-            ...card,
-            availableWindows: mergeAvailabilityWindows(entry.windows),
-          },
-        ];
-      })
-      .sort((left, right) => left.name.localeCompare(right.name, "fr"));
-
-    return BookingAvailabilityResponseSchema.parse({ spaces });
+    return BookingAvailabilityResponseSchema.parse({
+      spaces: await this.mapSpacesToCards(available),
+    });
   }
 
   async listSpaces(query: BookingSpacesQuery) {
