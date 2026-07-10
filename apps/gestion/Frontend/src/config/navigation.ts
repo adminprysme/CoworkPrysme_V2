@@ -45,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: "clients", label: "Clients", path: "/clients", permission: "clients" },
       { id: "billing", label: "Facturation", path: "/billing", permission: "billing" },
+      { id: "services", label: "Services", path: "/services", permission: "services" },
       { id: "promo", label: "Codes promo", path: "/promo", permission: "promo" },
     ],
   },

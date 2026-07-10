@@ -64,6 +64,13 @@ export function NavIcon({ id, className }: { id: string; className?: string }) {
           <path d="M9 9h6M9 13h6M9 17h4" />
         </svg>
       );
+    case "services":
+      return (
+        <svg {...p}>
+          <path d="M8 6h8M8 12h8M8 18h5" />
+          <rect x="4" y="4" width="16" height="16" rx="2" />
+        </svg>
+      );
     case "promo":
       return (
         <svg {...p}>

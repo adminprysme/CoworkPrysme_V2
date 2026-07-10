@@ -9,6 +9,10 @@ import { LoginPage } from "../features/auth/LoginPage.js";
 import { BuildingsPage } from "../features/spaces/pages/BuildingsPage.js";
 import { BuildingDetailPage } from "../features/spaces/pages/BuildingDetailPage.js";
 import { SpacesLayout } from "../features/spaces/SpacesLayout.js";
+import { ServicesLayout } from "../features/services/ServicesLayout.js";
+import { ServicesPage } from "../features/services/pages/ServicesPage.js";
+import { PromoLayout } from "../features/promo/PromoLayout.js";
+import { PromoCodesPage } from "../features/promo/pages/PromoCodesPage.js";
 import { DashboardPage } from "../pages/DashboardPage.js";
 import { ModuleStubPage } from "../pages/ModuleStubPage.js";
 import { PermissionsPage } from "../pages/PermissionsPage.js";
@@ -20,7 +24,9 @@ const STUB_PATHS = [
       item.id !== "dashboard" &&
       item.id !== "administration" &&
       item.id !== "vitrine-edition" &&
-      item.id !== "spaces",
+      item.id !== "spaces" &&
+      item.id !== "services" &&
+      item.id !== "promo",
   ).map((item) => item.path),
   "/settings",
 ];
@@ -42,6 +48,12 @@ export function AppRouter() {
                 <Route path="/spaces" element={<SpacesLayout />}>
                   <Route index element={<BuildingsPage />} />
                   <Route path=":buildingId" element={<BuildingDetailPage />} />
+                </Route>
+                <Route path="/services" element={<ServicesLayout />}>
+                  <Route index element={<ServicesPage />} />
+                </Route>
+                <Route path="/promo" element={<PromoLayout />}>
+                  <Route index element={<PromoCodesPage />} />
                 </Route>
                 {STUB_PATHS.map((path) => (
                   <Route key={path} path={path} element={<ModuleStubPage />} />
