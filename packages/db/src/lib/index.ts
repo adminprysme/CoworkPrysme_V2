@@ -18,6 +18,7 @@ export {
 } from "./replica-set.js";
 export {
   isDuplicateKeyError,
+  RangeOpeningHoursError,
   ReservationOverlapError,
   SlotLockConflictError,
   SlotUnavailableError,

@@ -22,6 +22,17 @@ export class SlotUnavailableError extends Error {
   }
 }
 
+/** Thrown when one or more calendar days in a range are fully closed (hours or closure). */
+export class RangeOpeningHoursError extends Error {
+  readonly closedDays: string[];
+
+  constructor(closedDays: string[], message?: string) {
+    super(message ?? `Opening hours unavailable on: ${closedDays.join(", ")}`);
+    this.name = "RangeOpeningHoursError";
+    this.closedDays = closedDays;
+  }
+}
+
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&

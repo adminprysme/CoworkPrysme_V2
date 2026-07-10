@@ -10,6 +10,7 @@ export {
   isRangeBlocked,
   isRangeBlockedWithCache,
   rangesOverlap,
+  validateRangeAccessibility,
   type RangeAvailabilityContext,
   type RangeBlockingCache,
 } from "./availability.js";
@@ -29,11 +30,16 @@ export {
 } from "./locks.js";
 export {
   BOOKING_TIMEZONE,
+  eachParisIsoDateBetween,
+  getOpeningWindowForDay,
+  getStaySegmentForDay,
   isRangeWithinOpeningHours,
   parisDateParts,
   parisLocalToUtc,
   parseTimeToMinutes,
+  validateRangeOpeningHours,
   type OpeningHoursCheckable,
+  type OpeningHoursValidationResult,
 } from "./opening-hours.js";
 export {
   getReservationModel,

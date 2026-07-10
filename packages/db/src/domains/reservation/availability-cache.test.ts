@@ -4,6 +4,7 @@ import type { Types } from "mongoose";
 import {
   isRangeBlockedWithCache,
   rangesOverlap,
+  validateRangeAccessibility,
   type RangeAvailabilityContext,
   type RangeBlockingCache,
 } from "./availability.js";
@@ -83,5 +84,73 @@ describe("isRangeBlockedWithCache", () => {
     };
 
     expect(isRangeBlockedWithCache(buildContext(startAt, endAt), cache)).toBe(false);
+  });
+});
+
+describe("validateRangeAccessibility — closures per day (T6-T8)", () => {
+  it("T6: rejects when a closure fully covers an intermediate day's accessible window", () => {
+    const startAt = parisLocalToUtc("2026-07-15", "08:00");
+    const endAt = parisLocalToUtc("2026-07-24", "19:00");
+    const context = buildContext(startAt, endAt);
+
+    const result = validateRangeAccessibility(context, [
+      {
+        startAt: parisLocalToUtc("2026-07-16", "08:00"),
+        endAt: parisLocalToUtc("2026-07-16", "19:00"),
+      },
+    ]);
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.closedDays).toContain("2026-07-16");
+    }
+  });
+
+  it("T7: multi-day range stays available when only a partial closure overlaps one day", () => {
+    const startAt = parisLocalToUtc("2026-07-15", "08:00");
+    const endAt = parisLocalToUtc("2026-07-24", "19:00");
+    const context = buildContext(startAt, endAt);
+
+    expect(
+      validateRangeAccessibility(context, [
+        {
+          startAt: parisLocalToUtc("2026-07-16", "14:00"),
+          endAt: parisLocalToUtc("2026-07-16", "16:00"),
+        },
+      ]),
+    ).toEqual({ valid: true });
+
+    expect(
+      isRangeBlockedWithCache(context, {
+        reservations: [],
+        locks: [],
+        closures: [
+          {
+            startAt: parisLocalToUtc("2026-07-16", "14:00"),
+            endAt: parisLocalToUtc("2026-07-16", "16:00"),
+          } as RangeBlockingCache["closures"][number],
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("T8: multi-day range is blocked when a reservation overlaps despite valid opening hours", () => {
+    const startAt = parisLocalToUtc("2026-07-15", "08:00");
+    const endAt = parisLocalToUtc("2026-07-24", "19:00");
+    const context = buildContext(startAt, endAt);
+
+    expect(validateRangeAccessibility(context, [])).toEqual({ valid: true });
+    expect(
+      isRangeBlockedWithCache(context, {
+        reservations: [
+          {
+            startAt: parisLocalToUtc("2026-07-18", "10:00"),
+            endAt: parisLocalToUtc("2026-07-18", "12:00"),
+          } as RangeBlockingCache["reservations"][number],
+        ],
+        locks: [],
+        closures: [],
+      }),
+    ).toBe(true);
   });
 });

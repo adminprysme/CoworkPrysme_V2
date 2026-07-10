@@ -1,7 +1,7 @@
 import type { ClientSession, Types } from "mongoose";
 
 import { BLOCKING_RESERVATION_STATUSES } from "../../lib/enums.js";
-import { SlotUnavailableError } from "../../lib/errors.js";
+import { RangeOpeningHoursError, SlotUnavailableError } from "../../lib/errors.js";
 import { getSlotClosureModel, type SlotClosure } from "../structure/slot-closure.schema.js";
 import type { SpaceType } from "../../lib/enums.js";
 import {
@@ -10,7 +10,17 @@ import {
   type ReservationDocument,
 } from "./reservation.schema.js";
 import { getSlotLockModel, isSlotLockValid, type SlotLock } from "./slot-lock.schema.js";
-import { isRangeWithinOpeningHours, type OpeningHoursCheckable } from "./opening-hours.js";
+import {
+  eachParisIsoDateBetween,
+  getOpeningWindowForDay,
+  getStaySegmentForDay,
+  rangesOverlap,
+  validateRangeOpeningHours,
+  parisDateParts,
+  parisLocalToUtc,
+  type OpeningHoursCheckable,
+  type OpeningHoursValidationResult,
+} from "./opening-hours.js";
 
 export interface RangeBlockingCache {
   reservations: Reservation[];
@@ -28,15 +38,7 @@ export interface RangeAvailabilityContext {
   now?: Date;
 }
 
-/** Standard interval overlap: [startAt, endAt) intersects existing range. */
-export function rangesOverlap(
-  leftStart: Date,
-  leftEnd: Date,
-  rightStart: Date,
-  rightEnd: Date,
-): boolean {
-  return leftStart < rightEnd && leftEnd > rightStart;
-}
+export { rangesOverlap };
 
 export async function findOverlappingReservation(
   spaceId: Types.ObjectId,
@@ -188,6 +190,113 @@ export async function fetchRangeBlockingCache(
   return { reservations, locks, closures };
 }
 
+function isSegmentFullyCoveredByClosures(
+  segmentStart: Date,
+  segmentEnd: Date,
+  closures: Array<{ startAt: Date; endAt: Date }>,
+): boolean {
+  const relevant = closures
+    .filter((closure) => rangesOverlap(segmentStart, segmentEnd, closure.startAt, closure.endAt))
+    .map((closure) => ({
+      start: closure.startAt > segmentStart ? closure.startAt : segmentStart,
+      end: closure.endAt < segmentEnd ? closure.endAt : segmentEnd,
+    }))
+    .sort((left, right) => left.start.getTime() - right.start.getTime());
+
+  if (relevant.length === 0) {
+    return false;
+  }
+
+  let cursor = segmentStart.getTime();
+  for (const interval of relevant) {
+    if (interval.start.getTime() > cursor) {
+      return false;
+    }
+    cursor = Math.max(cursor, interval.end.getTime());
+  }
+
+  return cursor >= segmentEnd.getTime();
+}
+
+export function validateRangeAccessibility(
+  context: RangeAvailabilityContext,
+  closures: Array<{ startAt: Date; endAt: Date }> = [],
+): OpeningHoursValidationResult {
+  if (context.endAt <= context.startAt) {
+    return { valid: false, closedDays: [] };
+  }
+
+  if (context.openingHours.length === 0) {
+    const isoDates = eachParisIsoDateBetween(context.startAt, context.endAt);
+    const closedDays: string[] = [];
+
+    for (const isoDate of isoDates) {
+      const staySegment = getStaySegmentForDay(isoDate, isoDates, context.startAt, context.endAt);
+      if (!staySegment) {
+        closedDays.push(isoDate);
+        continue;
+      }
+
+      if (isSegmentFullyCoveredByClosures(staySegment.start, staySegment.end, closures)) {
+        closedDays.push(isoDate);
+      }
+    }
+
+    if (closedDays.length > 0) {
+      return { valid: false, closedDays };
+    }
+
+    return { valid: true };
+  }
+
+  const openingResult = validateRangeOpeningHours(context, context.startAt, context.endAt);
+  if (!openingResult.valid) {
+    return openingResult;
+  }
+
+  const isoDates = eachParisIsoDateBetween(context.startAt, context.endAt);
+  const closedDays: string[] = [];
+
+  for (const isoDate of isoDates) {
+    const staySegment = getStaySegmentForDay(isoDate, isoDates, context.startAt, context.endAt);
+    if (!staySegment) {
+      closedDays.push(isoDate);
+      continue;
+    }
+
+    const weekday = parisDateParts(parisLocalToUtc(isoDate, "12:00")).day;
+    const schedule = context.openingHours.find((entry) => entry.day === weekday);
+    if (!schedule) {
+      closedDays.push(isoDate);
+      continue;
+    }
+
+    const openingWindow = getOpeningWindowForDay(schedule, isoDate);
+    if (!openingWindow) {
+      closedDays.push(isoDate);
+      continue;
+    }
+
+    const accessibleStart =
+      staySegment.start > openingWindow.start ? staySegment.start : openingWindow.start;
+    const accessibleEnd = staySegment.end < openingWindow.end ? staySegment.end : openingWindow.end;
+    if (accessibleEnd <= accessibleStart) {
+      closedDays.push(isoDate);
+      continue;
+    }
+
+    if (isSegmentFullyCoveredByClosures(accessibleStart, accessibleEnd, closures)) {
+      closedDays.push(isoDate);
+    }
+  }
+
+  if (closedDays.length > 0) {
+    return { valid: false, closedDays };
+  }
+
+  return { valid: true };
+}
+
 export function isRangeBlockedWithCache(
   context: RangeAvailabilityContext,
   cache: RangeBlockingCache,
@@ -196,7 +305,8 @@ export function isRangeBlockedWithCache(
     return true;
   }
 
-  if (!isRangeWithinOpeningHours(context, context.startAt, context.endAt)) {
+  const accessibility = validateRangeAccessibility(context, cache.closures);
+  if (!accessibility.valid) {
     return true;
   }
 
@@ -207,41 +317,39 @@ export function isRangeBlockedWithCache(
   const hasLock = cache.locks.some((lock) =>
     rangesOverlap(startAt, endAt, lock.startAt, lock.endAt),
   );
-  const hasClosure = cache.closures.some((closure) =>
-    rangesOverlap(startAt, endAt, closure.startAt, closure.endAt),
-  );
 
-  return hasReservation || hasLock || hasClosure;
+  return hasReservation || hasLock;
 }
 
 export async function isRangeBlocked(context: RangeAvailabilityContext): Promise<boolean> {
-  const now = context.now ?? new Date();
-
   if (context.endAt <= context.startAt) {
     return true;
   }
 
-  if (!isRangeWithinOpeningHours(context, context.startAt, context.endAt)) {
-    return true;
-  }
-
-  const [reservation, lock, hasClosure] = await Promise.all([
-    findOverlappingReservation(context.spaceId, context.startAt, context.endAt),
-    findOverlappingActiveLock(context.spaceId, context.startAt, context.endAt, now),
-    findOverlappingClosure(
-      context.spaceId,
-      context.buildingId,
-      context.spaceType,
-      context.startAt,
-      context.endAt,
-    ),
-  ]);
-
-  return reservation !== null || lock !== null || hasClosure;
+  const cache = await fetchRangeBlockingCache(context);
+  return isRangeBlockedWithCache(context, cache);
 }
 
 export async function assertRangeAvailable(context: RangeAvailabilityContext): Promise<void> {
-  if (await isRangeBlocked(context)) {
+  if (context.endAt <= context.startAt) {
+    throw new SlotUnavailableError();
+  }
+
+  const cache = await fetchRangeBlockingCache(context);
+  const accessibility = validateRangeAccessibility(context, cache.closures);
+  if (!accessibility.valid) {
+    throw new RangeOpeningHoursError(accessibility.closedDays);
+  }
+
+  const { startAt, endAt } = context;
+  const hasReservation = cache.reservations.some((reservation) =>
+    rangesOverlap(startAt, endAt, reservation.startAt, reservation.endAt),
+  );
+  const hasLock = cache.locks.some((lock) =>
+    rangesOverlap(startAt, endAt, lock.startAt, lock.endAt),
+  );
+
+  if (hasReservation || hasLock) {
     throw new SlotUnavailableError();
   }
 }
