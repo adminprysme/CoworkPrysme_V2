@@ -15,12 +15,20 @@ export interface VitrineMarquee {
   text: string;
 }
 
+export interface VitrineSiteContact {
+  email: string | null;
+  phone: string | null;
+}
+
 export interface VitrineContentDocumentData {
   _id: string;
   heroImages: string[];
   conceptImage: string | null;
+  placeImage: string | null;
   serviceImages: VitrineServiceImages;
   featuredSpaceIds: string[];
+  featuredBuildingIds: string[];
+  siteContact: VitrineSiteContact;
   marquee: VitrineMarquee;
   createdAt: Date;
   updatedAt: Date;
@@ -45,13 +53,28 @@ const vitrineMarqueeSchema = new Schema<VitrineMarquee>(
   { _id: false },
 );
 
+const vitrineSiteContactSchema = new Schema<VitrineSiteContact>(
+  {
+    email: { type: String, default: null },
+    phone: { type: String, default: null },
+  },
+  { _id: false },
+);
+
 const vitrineContentSchema = new Schema<VitrineContentDocumentData>(
   {
     _id: { type: String, required: true },
     heroImages: { type: [String], default: [] },
     conceptImage: { type: String, default: null },
+    placeImage: { type: String, default: null },
     serviceImages: { type: vitrineServiceImagesSchema, required: true },
     featuredSpaceIds: { type: [String], default: [] },
+    featuredBuildingIds: { type: [String], default: [] },
+    siteContact: {
+      type: vitrineSiteContactSchema,
+      required: true,
+      default: () => ({ email: null, phone: null }),
+    },
     marquee: { type: vitrineMarqueeSchema, required: true },
   },
   { ...TIMESTAMP_OPTIONS, collection: "vitrineContent" },
