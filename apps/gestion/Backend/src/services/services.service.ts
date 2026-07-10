@@ -13,6 +13,7 @@ import {
   mapCreateServiceRequestToDb,
   mapServicePriceEurosToDb,
   mapServiceToResponse,
+  normalizeServiceCustomQuestions,
   resolveUniqueServiceKey,
   type CreateServiceRequest,
   type UpdateServiceRequest,
@@ -127,6 +128,9 @@ export class ServicesService {
     }
     if (parsed.status !== undefined) {
       existing.status = parsed.status;
+    }
+    if (parsed.customQuestions !== undefined) {
+      existing.customQuestions = normalizeServiceCustomQuestions(parsed.customQuestions);
     }
 
     await existing.save();
