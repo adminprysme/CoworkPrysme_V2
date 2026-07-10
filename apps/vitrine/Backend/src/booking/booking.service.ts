@@ -4,6 +4,7 @@ import {
   acquireLock,
   connectMongo,
   getBuildingModel,
+  RangeOpeningHoursError,
   releaseLockById,
   SlotLockConflictError,
   SlotUnavailableError,
@@ -34,6 +35,22 @@ import { isObjectId } from "./object-id.util.js";
 
 type BuildingLean = Building & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
+
+function formatClosedDaysFr(closedDays: string[]): string {
+  return closedDays
+    .map((isoDate) => {
+      const [yearText, monthText, dayText] = isoDate.split("-");
+      const date = new Date(Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText), 12));
+      return date.toLocaleDateString("fr-FR", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    })
+    .join(", ");
+}
 
 @Injectable()
 export class BookingService {
@@ -190,6 +207,13 @@ export class BookingService {
         endAt: lock.endAt.toISOString(),
       });
     } catch (error) {
+      if (error instanceof RangeOpeningHoursError) {
+        throw new ConflictException({
+          code: BOOKING_ERROR_CODES.VALIDATION_ERROR,
+          message: `Accès impossible le(s) ${formatClosedDaysFr(error.closedDays)} : horaires ou fermeture exceptionnelle.`,
+          closedDays: error.closedDays,
+        });
+      }
       if (error instanceof SlotUnavailableError) {
         throw new ConflictException({
           code: BOOKING_ERROR_CODES.SLOT_UNAVAILABLE,

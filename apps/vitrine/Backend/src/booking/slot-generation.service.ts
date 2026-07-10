@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import type { Space } from "@coworkprysme/db";
 import type { BuildingDaySchedule, RangeBlockingCache } from "@coworkprysme/db";
-import { parisDateParts, parisLocalToUtc, parseTimeToMinutes } from "@coworkprysme/db";
+import {
+  eachParisIsoDateBetween,
+  parisDateParts,
+  parisLocalToUtc,
+  parseTimeToMinutes,
+} from "@coworkprysme/db";
 import {
   BOOKING_PHASE1_DURATION_CLASSES,
   DURATION_CLASS_LABELS,
@@ -14,20 +19,6 @@ import type { Types } from "mongoose";
 import { AvailabilityService } from "./availability.service.js";
 
 type SpaceLean = Space & { _id: Types.ObjectId };
-
-function eachParisDateBetween(rangeStart: Date, rangeEnd: Date): string[] {
-  const dates = new Set<string>();
-  let cursor = new Date(rangeStart.getTime());
-  const endMs = rangeEnd.getTime();
-
-  while (cursor.getTime() <= endMs) {
-    dates.add(parisDateParts(cursor).isoDate);
-    cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
-  }
-
-  dates.add(parisDateParts(rangeEnd).isoDate);
-  return [...dates];
-}
 
 function scheduleForDay(
   openingHours: BuildingDaySchedule[],
@@ -77,7 +68,7 @@ export class SlotGenerationService {
     const slots: BookingSlot[] = [];
     const seen = new Set<string>();
 
-    for (const isoDate of eachParisDateBetween(rangeStart, rangeEnd)) {
+    for (const isoDate of eachParisIsoDateBetween(rangeStart, rangeEnd)) {
       const day = parisDateParts(parisLocalToUtc(isoDate, "12:00")).day;
       const schedule = scheduleForDay(space.openingHours, day);
       if (!schedule || (!schedule.is24h && schedule.open >= schedule.close)) {
