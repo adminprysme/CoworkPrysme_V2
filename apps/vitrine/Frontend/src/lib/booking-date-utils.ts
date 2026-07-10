@@ -177,3 +177,88 @@ export function flexibleDurationClassHint(
 export function isSameMonth(left: Date, right: Date): boolean {
   return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
 }
+
+/** Inclusive calendar days between start and end (same day = 1). */
+export function countInclusiveDays(start: Date, end: Date): number {
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.round((startOfDay(end).getTime() - startOfDay(start).getTime()) / dayMs) + 1;
+}
+
+export const BOOKING_MONTHLY_MIN_DAYS = 28;
+
+export type BookingDateRangeInputMode = "incomplete" | "same_day" | "short_stay" | "monthly";
+
+export function resolveDateRangeInputMode(
+  startDate: Date | null,
+  endDate: Date | null,
+): BookingDateRangeInputMode {
+  if (!startDate || !endDate) {
+    return "incomplete";
+  }
+
+  const days = countInclusiveDays(startDate, endDate);
+  if (days <= 1) {
+    return "same_day";
+  }
+  if (days >= BOOKING_MONTHLY_MIN_DAYS) {
+    return "monthly";
+  }
+  return "short_stay";
+}
+
+export const DEFAULT_SHORT_STAY_ARRIVAL_TIME = "08:00";
+export const DEFAULT_SHORT_STAY_DEPARTURE_TIME = "19:00";
+export const DEFAULT_MONTHLY_ACCESS_START_TIME = "08:00";
+export const DEFAULT_MONTHLY_ACCESS_END_TIME = "19:00";
+
+export function defaultTimesForRangeMode(mode: BookingDateRangeInputMode): {
+  startTime: string;
+  endTime: string;
+} {
+  switch (mode) {
+    case "same_day":
+      return {
+        startTime: defaultSearchStartTime(),
+        endTime: defaultSearchEndTime(defaultSearchStartTime()),
+      };
+    case "short_stay":
+    case "monthly":
+      return {
+        startTime: DEFAULT_SHORT_STAY_ARRIVAL_TIME,
+        endTime: DEFAULT_SHORT_STAY_DEPARTURE_TIME,
+      };
+    case "incomplete":
+      return {
+        startTime: defaultSearchStartTime(),
+        endTime: defaultSearchEndTime(defaultSearchStartTime()),
+      };
+  }
+}
+
+export function formatShortFrenchDate(date: Date): string {
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+export function buildSearchWindowForRangeMode(
+  startDate: Date,
+  endDate: Date,
+  mode: BookingDateRangeInputMode,
+  startTime: string,
+  endTime: string,
+): { startAt: string; endAt: string } {
+  if (mode === "monthly") {
+    return {
+      startAt: combineDateAndTime(startDate, DEFAULT_MONTHLY_ACCESS_START_TIME).toISOString(),
+      endAt: combineDateAndTime(endDate, DEFAULT_MONTHLY_ACCESS_END_TIME).toISOString(),
+    };
+  }
+
+  return {
+    startAt: combineDateAndTime(startDate, startTime).toISOString(),
+    endAt: combineDateAndTime(endDate, endTime).toISOString(),
+  };
+}
