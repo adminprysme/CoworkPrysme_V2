@@ -106,17 +106,12 @@ export function VitrineFeaturedSpacesField({
   }
 
   return (
-    <section className={styles.section}>
-      <div className={styles.header}>
-        <div>
-          <h3 className={styles.title}>Fiches produits — page Services</h3>
-          <p className={styles.description}>
-            Choisissez jusqu&apos;à {VITRINE_FEATURED_SPACES_MAX} espaces affichés sur la page
-            publique /services. Les informations (nom, capacité, équipements, photo) proviennent
-            directement de la fiche espace.
-          </p>
-        </div>
-      </div>
+    <div className={styles.section}>
+      <p className={styles.description}>
+        Choisissez jusqu&apos;à {VITRINE_FEATURED_SPACES_MAX} espaces affichés sur la page publique
+        /services. Les informations (nom, capacité, équipements, photo) proviennent directement de
+        la fiche espace.
+      </p>
 
       {loading ? <p className={styles.hint}>Chargement des espaces…</p> : null}
       {loadError ? <p className={styles.error}>{loadError}</p> : null}
@@ -161,6 +156,6 @@ export function VitrineFeaturedSpacesField({
           {saving ? "Enregistrement…" : "Enregistrer les fiches produits"}
         </button>
       </div>
-    </section>
+    </div>
   );
 }
