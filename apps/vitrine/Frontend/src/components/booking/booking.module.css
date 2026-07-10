@@ -121,43 +121,30 @@
   gap: var(--v-space-3);
 }
 
-.dateSectionHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--v-space-2);
-}
-
-.catalogFirstToggle {
+.searchModeToggle {
   display: inline-flex;
-  align-items: center;
-  gap: var(--v-space-2);
-  width: fit-content;
-  padding: 0.45rem 0.75rem;
+  padding: 0.2rem;
   border: 1px solid var(--v-color-border);
   border-radius: var(--v-radius-full);
   background: var(--v-color-surface-muted);
-  color: var(--v-color-text);
+  width: fit-content;
+}
+
+.searchModeToggleButton {
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-radius: var(--v-radius-full);
+  background: transparent;
+  color: var(--v-color-text-muted);
+  font: inherit;
   font-size: var(--v-text-sm);
   font-weight: 600;
   cursor: pointer;
 }
 
-.catalogFirstToggleActive {
-  border-color: var(--v-color-brand);
-  background: var(--v-color-brand-muted);
-  color: var(--v-color-brand-hover);
-}
-
-.catalogFirstHint {
-  margin: 0;
-  padding: var(--v-space-3);
-  border-radius: var(--v-radius-md);
-  background: var(--v-color-surface-muted);
-  color: var(--v-color-text-muted);
-  font-size: var(--v-text-sm);
-  line-height: 1.55;
+.searchModeToggleButtonActive {
+  background: var(--v-color-brand);
+  color: #fff;
 }
 
 .timeRow {
@@ -165,61 +152,26 @@
   gap: var(--v-space-3);
 }
 
-.availableWindows {
-  display: grid;
-  gap: var(--v-space-2);
-}
-
-.availableWindowsLabel {
-  margin: 0;
-  font-size: var(--v-text-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--v-color-brand);
-}
-
-.availableWindowsPills {
+.calendarFilters {
   display: flex;
   flex-wrap: wrap;
   gap: var(--v-space-2);
+  margin-bottom: var(--v-space-3);
 }
 
-.availableWindowPill {
-  padding: 0.35rem 0.65rem;
+.calendarFilterPill {
+  padding: 0.35rem 0.75rem;
   border: 1px solid var(--v-color-border);
   border-radius: var(--v-radius-full);
-  background: var(--v-color-surface-muted);
-  color: var(--v-color-ink);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-}
-
-.availableWindowPillActive {
-  border-color: var(--v-color-brand);
-  background: var(--v-color-brand-muted);
-  color: var(--v-color-brand-hover);
-}
-
-.flexToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--v-space-2);
-  width: fit-content;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-full);
-  background: var(--v-color-surface-muted);
+  background: var(--v-color-surface);
   color: var(--v-color-text);
+  font: inherit;
   font-size: var(--v-text-sm);
   font-weight: 600;
   cursor: pointer;
 }
 
-.flexToggleActive {
+.calendarFilterPillActive {
   border-color: var(--v-color-brand);
   background: var(--v-color-brand-muted);
   color: var(--v-color-brand-hover);
@@ -408,6 +360,10 @@
 .slotButtonSelected {
   border-color: var(--v-color-brand);
   background: var(--v-color-brand-muted);
+}
+
+.slotButtonEmphasized {
+  border-color: var(--v-color-brand-soft);
 }
 
 .slotDuration {

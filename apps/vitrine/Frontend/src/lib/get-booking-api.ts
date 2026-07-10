@@ -4,8 +4,6 @@ import {
   BookingSpaceAvailabilityResponseSchema,
   BookingSpacesResponseSchema,
   type BookingAvailabilityQuery,
-  type BookingAvailabilityResultSpace,
-  type BookingFlexibilityDays,
   type BookingLockResponse,
   type BookingSpaceAvailabilityQuery,
   type BookingSpaceCard,
@@ -59,7 +57,7 @@ function buildQuery(params: Record<string, string | number | undefined>): string
 
 export async function fetchBookingAvailability(
   query: BookingAvailabilityQuery,
-): Promise<BookingAvailabilityResultSpace[]> {
+): Promise<BookingSpaceCard[]> {
   const qs = buildQuery({
     spaceType: query.spaceType,
     startAt: query.startAt,
@@ -67,13 +65,10 @@ export async function fetchBookingAvailability(
     partySize: query.partySize,
     buildingId: query.buildingId,
     floor: query.floor,
-    flexibilityDays: query.flexibilityDays,
   });
   const data = await bookingFetch(`/booking/availability?${qs}`, BookingAvailabilityResponseSchema);
   return data.spaces;
 }
-
-export type { BookingAvailabilityResultSpace, BookingFlexibilityDays };
 
 export async function fetchBookingSpaces(query: BookingSpacesQuery): Promise<BookingSpaceCard[]> {
   const qs = buildQuery({
@@ -121,13 +116,4 @@ export function toDatetimeLocalValue(date: Date): string {
   const offset = date.getTimezoneOffset();
   const local = new Date(date.getTime() - offset * 60_000);
   return local.toISOString().slice(0, 16);
-}
-
-export function monthRange(date: Date): { rangeStart: string; rangeEnd: string } {
-  const start = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
-  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-  return {
-    rangeStart: start.toISOString(),
-    rangeEnd: end.toISOString(),
-  };
 }

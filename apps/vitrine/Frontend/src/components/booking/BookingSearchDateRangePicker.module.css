@@ -7,32 +7,6 @@
   background: var(--v-color-bg);
 }
 
-.modeToggle {
-  display: inline-flex;
-  padding: 0.2rem;
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-full);
-  background: var(--v-color-surface-muted);
-  width: fit-content;
-}
-
-.modeToggleButton {
-  padding: 0.45rem 0.85rem;
-  border: none;
-  border-radius: var(--v-radius-full);
-  background: transparent;
-  color: var(--v-color-text-muted);
-  font: inherit;
-  font-size: var(--v-text-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.modeToggleButtonActive {
-  background: var(--v-color-brand);
-  color: #fff;
-}
-
 .calendarHeader {
   display: flex;
   align-items: center;
@@ -164,46 +138,6 @@
 .daySelected {
   background: var(--v-color-brand);
   color: #fff;
-}
-
-.flexSection {
-  display: grid;
-  gap: var(--v-space-2);
-  padding-top: var(--v-space-2);
-  border-top: 1px solid var(--v-color-border);
-}
-
-.flexLabel {
-  margin: 0;
-  font-size: var(--v-text-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--v-color-brand);
-}
-
-.flexPills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--v-space-2);
-}
-
-.flexPill {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-full);
-  background: var(--v-color-surface);
-  color: var(--v-color-text);
-  font: inherit;
-  font-size: var(--v-text-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.flexPillActive {
-  border-color: var(--v-color-brand);
-  background: var(--v-color-brand-muted);
-  color: var(--v-color-brand-hover);
 }
 
 .rangeSummary {

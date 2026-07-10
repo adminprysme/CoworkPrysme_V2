@@ -1,0 +1,125 @@
+.flexiblePanel {
+  display: grid;
+  gap: var(--v-space-5);
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-bg);
+}
+
+.section {
+  display: grid;
+  gap: var(--v-space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--v-text-base);
+  font-weight: 700;
+  color: var(--v-color-ink);
+}
+
+.durationPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-2);
+}
+
+.durationPill {
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface);
+  color: var(--v-color-text);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.durationPillActive {
+  border-color: var(--v-color-brand);
+  background: var(--v-color-brand);
+  color: #fff;
+}
+
+.monthHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v-space-2);
+}
+
+.monthNavButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.monthNavButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.monthTrack {
+  display: flex;
+  gap: var(--v-space-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-block: 0.15rem 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.monthTrack::-webkit-scrollbar {
+  height: 6px;
+}
+
+.monthTrack::-webkit-scrollbar-thumb {
+  background: var(--v-color-border);
+  border-radius: 999px;
+}
+
+.monthCard {
+  flex: 0 0 auto;
+  min-width: 7.5rem;
+  scroll-snap-align: start;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.monthCardActive {
+  border-color: var(--v-color-brand);
+  background: var(--v-color-brand-muted);
+  box-shadow: 0 0 0 1px var(--v-color-brand-soft);
+}
+
+.monthCardMonth {
+  font-size: var(--v-text-sm);
+  font-weight: 700;
+}
+
+.monthCardYear {
+  font-size: var(--v-text-xs);
+  color: var(--v-color-text-muted);
+}
+
+.monthCardActive .monthCardYear {
+  color: var(--v-color-brand-hover);
+}

@@ -10,7 +10,13 @@ import {
   combineDateAndTime,
   defaultSearchEndTime,
   defaultSearchStartTime,
+  flexibleDurationClassHint,
   formatAvailabilityWindow,
+  formatMonthHeading,
+  monthRange,
+  type BookingFlexibleDuration,
+  type BookingSearchMode,
+  type CalendarDurationFilter,
 } from "@/lib/booking-date-utils";
 import { formatCountdown, useBookingLockCountdown } from "@/hooks/useBookingLock";
 import { getBookingSessionId } from "@/lib/booking-session";
@@ -19,20 +25,22 @@ import {
   fetchBookingAvailability,
   fetchBookingSpaces,
   fetchSpaceAvailability,
-  monthRange,
   releaseBookingLock,
-  type BookingAvailabilityResultSpace,
-  type BookingFlexibilityDays,
 } from "@/lib/get-booking-api";
 
-import {
-  BookingSearchDateRangePicker,
-  type BookingDatePickerMode,
-} from "./BookingSearchDateRangePicker";
+import { BookingFlexibleSearchPanel } from "./BookingFlexibleSearchPanel";
+import { BookingSearchDateRangePicker } from "./BookingSearchDateRangePicker";
 import { BookingProgressBar } from "./BookingProgressBar";
 import styles from "./booking.module.css";
 
 type BookingView = "search" | "results" | "calendar" | "locked";
+
+type CalendarSlot = {
+  startAt: string;
+  endAt: string;
+  durationClass: string;
+  selectable: boolean;
+};
 
 function formatSlotLabel(startAt: string, endAt: string): string {
   return formatAvailabilityWindow(startAt, endAt);
@@ -54,23 +62,21 @@ function buildSearchWindow(
 
 export function BookingPageContent() {
   const [view, setView] = useState<BookingView>("search");
-  const [catalogFirstMode, setCatalogFirstMode] = useState(false);
+  const [searchMode, setSearchMode] = useState<BookingSearchMode>("dates");
   const [spaceType, setSpaceType] = useState<SpaceType>("meeting_room");
   const [partySize, setPartySize] = useState(4);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [startTime, setStartTime] = useState(defaultSearchStartTime);
   const [endTime, setEndTime] = useState(() => defaultSearchEndTime(defaultSearchStartTime()));
-  const [dateMode, setDateMode] = useState<BookingDatePickerMode>("exact");
-  const [flexibilityDays, setFlexibilityDays] = useState<BookingFlexibilityDays | null>(null);
-  const [spaces, setSpaces] = useState<BookingAvailabilityResultSpace[]>([]);
-  const [selectedWindowBySpace, setSelectedWindowBySpace] = useState<
-    Record<string, { startAt: string; endAt: string }>
-  >({});
+  const [flexDuration, setFlexDuration] = useState<BookingFlexibleDuration | null>(null);
+  const [flexMonth, setFlexMonth] = useState<Date | null>(null);
+  const [spaces, setSpaces] = useState<BookingSpaceCard[]>([]);
   const [selectedSpace, setSelectedSpace] = useState<BookingSpaceCard | null>(null);
-  const [calendarSlots, setCalendarSlots] = useState<
-    Array<{ startAt: string; endAt: string; durationClass: string; selectable: boolean }>
-  >([]);
+  const [calendarMonth, setCalendarMonth] = useState<Date | null>(null);
+  const [calendarDurationFilter, setCalendarDurationFilter] =
+    useState<CalendarDurationFilter>("all");
+  const [calendarSlots, setCalendarSlots] = useState<CalendarSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<{ startAt: string; endAt: string } | null>(null);
   const [lock, setLock] = useState<BookingLockResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,10 +92,24 @@ export function BookingPageContent() {
     return formatSlotLabel(selectedSlot.startAt, selectedSlot.endAt);
   }, [selectedSlot]);
 
-  function handleRangeChange(start: Date | null, end: Date | null) {
-    setStartDate(start);
-    setEndDate(end);
-  }
+  const visibleCalendarSlots = useMemo(() => {
+    const filtered =
+      calendarDurationFilter === "all"
+        ? calendarSlots
+        : calendarSlots.filter((slot) => slot.durationClass === calendarDurationFilter);
+
+    return [...filtered].sort((left, right) => {
+      if (calendarDurationFilter !== "all") {
+        return new Date(left.startAt).getTime() - new Date(right.startAt).getTime();
+      }
+      const leftPreferred = left.durationClass === "daily" ? 0 : 1;
+      const rightPreferred = right.durationClass === "daily" ? 0 : 1;
+      if (leftPreferred !== rightPreferred) {
+        return leftPreferred - rightPreferred;
+      }
+      return new Date(left.startAt).getTime() - new Date(right.startAt).getTime();
+    });
+  }, [calendarDurationFilter, calendarSlots]);
 
   async function handleSearch() {
     setLoading(true);
@@ -99,10 +119,21 @@ export function BookingPageContent() {
     setSelectedSpace(null);
     setSelectedSlot(null);
     setCalendarSlots([]);
-    setSelectedWindowBySpace({});
+    setCalendarMonth(null);
 
     try {
-      if (catalogFirstMode) {
+      if (searchMode === "flexible") {
+        if (!flexDuration) {
+          setError("Choisissez une durée de réservation.");
+          setView("search");
+          return;
+        }
+        if (!flexMonth) {
+          setError("Choisissez un mois de réservation.");
+          setView("search");
+          return;
+        }
+
         const result = await fetchBookingSpaces({ spaceType, partySize });
         setSpaces(result);
         setView("results");
@@ -111,12 +142,6 @@ export function BookingPageContent() {
 
       if (!startDate || !endDate) {
         setError("Sélectionnez une plage de dates dans le calendrier.");
-        setView("search");
-        return;
-      }
-
-      if (dateMode === "flexible" && !flexibilityDays) {
-        setError("Choisissez une tolérance (± N jours) pour une recherche flexible.");
         setView("search");
         return;
       }
@@ -133,16 +158,7 @@ export function BookingPageContent() {
         partySize,
         startAt: window.startAt,
         endAt: window.endAt,
-        flexibilityDays: dateMode === "flexible" ? (flexibilityDays ?? undefined) : undefined,
       });
-
-      const initialWindows: Record<string, { startAt: string; endAt: string }> = {};
-      for (const space of result) {
-        if (space.availableWindows?.length) {
-          initialWindows[space.spaceId] = space.availableWindows[0]!;
-        }
-      }
-      setSelectedWindowBySpace(initialWindows);
       setSpaces(result);
       setView("results");
     } catch (searchError) {
@@ -153,31 +169,23 @@ export function BookingPageContent() {
     }
   }
 
-  function resolveBookingWindow(space: BookingAvailabilityResultSpace): {
-    startAt: string;
-    endAt: string;
-  } | null {
-    if (space.availableWindows?.length) {
-      return selectedWindowBySpace[space.spaceId] ?? space.availableWindows[0] ?? null;
-    }
-
-    if (!startDate || !endDate) {
-      return null;
-    }
-
-    return buildSearchWindow(startDate, endDate, startTime, endTime);
-  }
-
-  async function handleSelectSpace(space: BookingAvailabilityResultSpace) {
+  async function handleSelectSpace(space: BookingSpaceCard) {
     setError(null);
     setSelectedSpace(space);
     setSelectedSlot(null);
     setLock(null);
 
-    if (catalogFirstMode) {
+    if (searchMode === "flexible") {
+      if (!flexMonth || !flexDuration) {
+        setError("Sélectionnez une durée et un mois avant de choisir un espace.");
+        return;
+      }
+
       setLoading(true);
       try {
-        const range = monthRange(new Date());
+        setCalendarMonth(flexMonth);
+        setCalendarDurationFilter(flexibleDurationClassHint(flexDuration));
+        const range = monthRange(flexMonth);
         const availability = await fetchSpaceAvailability(space.spaceId, range);
         setCalendarSlots(availability.slots);
         setView("calendar");
@@ -191,12 +199,12 @@ export function BookingPageContent() {
       return;
     }
 
-    const window = resolveBookingWindow(space);
-    if (!window) {
-      setError("Sélectionnez une date de disponibilité pour cet espace.");
+    if (!startDate || !endDate) {
+      setError("Sélectionnez une plage de dates dans le calendrier.");
       return;
     }
 
+    const window = buildSearchWindow(startDate, endDate, startTime, endTime);
     await handleCreateLock(space, window.startAt, window.endAt);
   }
 
@@ -235,7 +243,7 @@ export function BookingPageContent() {
     const sessionId = getBookingSessionId();
     await releaseBookingLock(lock.lockId, sessionId);
     setLock(null);
-    setView(catalogFirstMode ? "calendar" : "results");
+    setView(searchMode === "flexible" ? "calendar" : "results");
   }
 
   useEffect(() => {
@@ -250,17 +258,14 @@ export function BookingPageContent() {
     setView("search");
   }, [remainingMs, lock]);
 
-  const usingFlexibleSearch =
-    !catalogFirstMode && dateMode === "flexible" && flexibilityDays !== null;
-
   return (
     <section className={styles.bookingSection}>
       <Container>
         <div className={styles.header}>
           <h1 className={styles.title}>Réserver un espace</h1>
           <p className={styles.lead}>
-            Choisissez vos dates puis recherchez un espace disponible (Parcours A), ou parcourez
-            d&apos;abord le catalogue pour choisir un espace puis un créneau (Parcours B).
+            Choisissez vos dates puis recherchez un espace disponible (Parcours A), ou indiquez une
+            durée et un mois pour parcourir le catalogue puis choisir un créneau (Parcours B).
           </p>
         </div>
 
@@ -300,33 +305,52 @@ export function BookingPageContent() {
             </div>
 
             <div className={styles.dateSection}>
-              <div className={styles.dateSectionHeader}>
-                <span className={styles.fieldLabel}>Dates et horaires</span>
+              <span className={styles.fieldLabel}>Dates et horaires</span>
+
+              <div
+                className={styles.searchModeToggle}
+                role="tablist"
+                aria-label="Mode de recherche"
+              >
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={searchMode === "dates"}
                   className={[
-                    styles.catalogFirstToggle,
-                    catalogFirstMode ? styles.catalogFirstToggleActive : "",
+                    styles.searchModeToggleButton,
+                    searchMode === "dates" ? styles.searchModeToggleButtonActive : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  aria-pressed={catalogFirstMode}
-                  onClick={() => setCatalogFirstMode((value) => !value)}
+                  onClick={() => setSearchMode("dates")}
                 >
-                  Voir tous les espaces
+                  Dates
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={searchMode === "flexible"}
+                  className={[
+                    styles.searchModeToggleButton,
+                    searchMode === "flexible" ? styles.searchModeToggleButtonActive : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => setSearchMode("flexible")}
+                >
+                  Flexible
                 </button>
               </div>
 
-              {!catalogFirstMode ? (
+              {searchMode === "dates" ? (
                 <>
                   <BookingSearchDateRangePicker
                     startDate={startDate}
                     endDate={endDate}
-                    onRangeChange={handleRangeChange}
-                    dateMode={dateMode}
-                    onDateModeChange={setDateMode}
-                    flexibilityDays={flexibilityDays}
-                    onFlexibilityDaysChange={setFlexibilityDays}
+                    onRangeChange={(start, end) => {
+                      setStartDate(start);
+                      setEndDate(end);
+                    }}
                   />
 
                   <div className={styles.timeRow}>
@@ -354,16 +378,22 @@ export function BookingPageContent() {
                   </div>
                 </>
               ) : (
-                <p className={styles.catalogFirstHint}>
-                  Parcours B : explorez le catalogue sans filtrer par dates, puis choisissez un
-                  créneau dans le calendrier de l&apos;espace.
-                </p>
+                <BookingFlexibleSearchPanel
+                  duration={flexDuration}
+                  onDurationChange={setFlexDuration}
+                  selectedMonth={flexMonth}
+                  onMonthChange={setFlexMonth}
+                />
               )}
             </div>
 
             <div className={styles.searchActions}>
               <button className={styles.primaryButton} type="submit" disabled={loading}>
-                {loading ? "Recherche…" : catalogFirstMode ? "Explorer le catalogue" : "Rechercher"}
+                {loading
+                  ? "Recherche…"
+                  : searchMode === "flexible"
+                    ? "Voir les espaces"
+                    : "Rechercher"}
               </button>
               {view !== "search" ? (
                 <button
@@ -392,11 +422,7 @@ export function BookingPageContent() {
           <>
             <div className={styles.resultsHeader}>
               <h2 className={styles.resultsTitle}>
-                {catalogFirstMode
-                  ? "Espaces du catalogue"
-                  : usingFlexibleSearch
-                    ? `Espaces disponibles (± ${flexibilityDays} j.)`
-                    : "Espaces disponibles"}
+                {searchMode === "flexible" ? "Espaces disponibles" : "Espaces disponibles"}
               </h2>
               <span>
                 {spaces.length} espace{spaces.length > 1 ? "s" : ""}
@@ -450,48 +476,13 @@ export function BookingPageContent() {
                     </div>
                   </div>
 
-                  {space.availableWindows?.length ? (
-                    <div className={styles.availableWindows}>
-                      <p className={styles.availableWindowsLabel}>Dates disponibles</p>
-                      <div className={styles.availableWindowsPills} role="list">
-                        {space.availableWindows.map((window) => {
-                          const selected =
-                            selectedWindowBySpace[space.spaceId]?.startAt === window.startAt &&
-                            selectedWindowBySpace[space.spaceId]?.endAt === window.endAt;
-                          return (
-                            <button
-                              key={`${window.startAt}-${window.endAt}`}
-                              type="button"
-                              role="listitem"
-                              className={[
-                                styles.availableWindowPill,
-                                selected ? styles.availableWindowPillActive : "",
-                              ]
-                                .filter(Boolean)
-                                .join(" ")}
-                              aria-pressed={selected}
-                              onClick={() =>
-                                setSelectedWindowBySpace((current) => ({
-                                  ...current,
-                                  [space.spaceId]: window,
-                                }))
-                              }
-                            >
-                              {formatAvailabilityWindow(window.startAt, window.endAt)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
-
                   <button
                     type="button"
                     className={styles.primaryButton}
                     disabled={loading}
                     onClick={() => void handleSelectSpace(space)}
                   >
-                    {catalogFirstMode ? "Voir les créneaux" : "Réserver ce créneau"}
+                    {searchMode === "flexible" ? "Voir les créneaux" : "Réserver ce créneau"}
                   </button>
                 </article>
               ))}
@@ -499,13 +490,42 @@ export function BookingPageContent() {
           </>
         ) : null}
 
-        {view === "calendar" && selectedSpace ? (
+        {view === "calendar" && selectedSpace && calendarMonth ? (
           <div className={styles.calendarPanel}>
-            <h3 className={styles.calendarTitle}>Créneaux — {selectedSpace.name}</h3>
+            <h3 className={styles.calendarTitle}>
+              Créneaux — {selectedSpace.name} · {formatMonthHeading(calendarMonth)}
+            </h3>
+
+            <div className={styles.calendarFilters} role="group" aria-label="Type de créneau">
+              {(
+                [
+                  { value: "all", label: "Tous" },
+                  { value: "hourly", label: "Horaire" },
+                  { value: "daily", label: "Journée" },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={[
+                    styles.calendarFilterPill,
+                    calendarDurationFilter === option.value ? styles.calendarFilterPillActive : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-pressed={calendarDurationFilter === option.value}
+                  onClick={() => setCalendarDurationFilter(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
             <div className={styles.slotGrid}>
-              {calendarSlots.map((slot) => {
+              {visibleCalendarSlots.map((slot) => {
                 const selected =
                   selectedSlot?.startAt === slot.startAt && selectedSlot.endAt === slot.endAt;
+                const emphasized = slot.durationClass === "daily";
                 return (
                   <button
                     key={`${slot.startAt}-${slot.endAt}`}
@@ -515,6 +535,7 @@ export function BookingPageContent() {
                       styles.slotButton,
                       !slot.selectable ? styles.slotButtonDisabled : "",
                       selected ? styles.slotButtonSelected : "",
+                      emphasized ? styles.slotButtonEmphasized : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}

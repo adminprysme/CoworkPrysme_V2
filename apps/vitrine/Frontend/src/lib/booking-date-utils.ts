@@ -119,3 +119,61 @@ export function addDays(date: Date, count: number): Date {
   result.setDate(result.getDate() + count);
   return result;
 }
+
+export function monthRange(date: Date): { rangeStart: string; rangeEnd: string } {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  return {
+    rangeStart: start.toISOString(),
+    rangeEnd: end.toISOString(),
+  };
+}
+
+export type BookingFlexibleDuration = "day" | "week" | "month_plus";
+
+export type BookingSearchMode = "dates" | "flexible";
+
+export type CalendarDurationFilter = "all" | "hourly" | "daily";
+
+export const FLEXIBLE_DURATION_OPTIONS: Array<{
+  value: BookingFlexibleDuration;
+  label: string;
+}> = [
+  { value: "day", label: "Un jour" },
+  { value: "week", label: "Une semaine" },
+  { value: "month_plus", label: "Un mois et plus" },
+];
+
+export function upcomingMonths(count: number, from: Date = new Date()): Date[] {
+  const anchor = new Date(from.getFullYear(), from.getMonth(), 1);
+  return Array.from(
+    { length: count },
+    (_, index) => new Date(anchor.getFullYear(), anchor.getMonth() + index, 1),
+  );
+}
+
+export function formatMonthCardLabel(date: Date): { month: string; year: string } {
+  const month = date.toLocaleDateString("fr-FR", { month: "long" });
+  return {
+    month: month.charAt(0).toUpperCase() + month.slice(1),
+    year: String(date.getFullYear()),
+  };
+}
+
+export function formatMonthHeading(date: Date): string {
+  const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+export function flexibleDurationClassHint(
+  duration: BookingFlexibleDuration,
+): CalendarDurationFilter {
+  if (duration === "day") {
+    return "daily";
+  }
+  return "all";
+}
+
+export function isSameMonth(left: Date, right: Date): boolean {
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
+}

@@ -1,6 +1,5 @@
 "use client";
 
-import { BOOKING_FLEXIBILITY_DAY_OPTIONS, type BookingFlexibilityDays } from "@coworkprysme/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -19,16 +18,10 @@ import {
 
 import styles from "./BookingSearchDateRangePicker.module.css";
 
-export type BookingDatePickerMode = "exact" | "flexible";
-
 interface BookingSearchDateRangePickerProps {
   startDate: Date | null;
   endDate: Date | null;
   onRangeChange: (start: Date | null, end: Date | null) => void;
-  dateMode: BookingDatePickerMode;
-  onDateModeChange: (mode: BookingDatePickerMode) => void;
-  flexibilityDays: BookingFlexibilityDays | null;
-  onFlexibilityDaysChange: (days: BookingFlexibilityDays | null) => void;
 }
 
 function MonthGrid({
@@ -138,10 +131,6 @@ export function BookingSearchDateRangePicker({
   startDate,
   endDate,
   onRangeChange,
-  dateMode,
-  onDateModeChange,
-  flexibilityDays,
-  onFlexibilityDaysChange,
 }: BookingSearchDateRangePickerProps) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfDay(new Date()));
   const [focusedDay, setFocusedDay] = useState<Date | null>(() => startOfDay(new Date()));
@@ -236,44 +225,6 @@ export function BookingSearchDateRangePicker({
 
   return (
     <div className={styles.bookingSearchCalendar}>
-      <div
-        className={styles.modeToggle}
-        role="tablist"
-        aria-label="Mode de sélection des dates de recherche"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={dateMode === "exact"}
-          className={[
-            styles.modeToggleButton,
-            dateMode === "exact" ? styles.modeToggleButtonActive : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => {
-            onDateModeChange("exact");
-            onFlexibilityDaysChange(null);
-          }}
-        >
-          Dates exactes
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={dateMode === "flexible"}
-          className={[
-            styles.modeToggleButton,
-            dateMode === "flexible" ? styles.modeToggleButtonActive : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => onDateModeChange("flexible")}
-        >
-          Dates flexibles
-        </button>
-      </div>
-
       <p className={styles.rangeSummary} aria-live="polite">
         {rangeSummary}
       </p>
@@ -324,28 +275,6 @@ export function BookingSearchDateRangePicker({
           panelClassName={styles.monthPanelSecond}
         />
       </div>
-
-      {dateMode === "flexible" && startDate && endDate ? (
-        <div className={styles.flexSection}>
-          <p className={styles.flexLabel}>Tolérance sur les dates</p>
-          <div className={styles.flexPills} role="group" aria-label="Tolérance en jours">
-            {BOOKING_FLEXIBILITY_DAY_OPTIONS.map((days: BookingFlexibilityDays) => (
-              <button
-                key={days}
-                type="button"
-                className={[styles.flexPill, flexibilityDays === days ? styles.flexPillActive : ""]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-pressed={flexibilityDays === days}
-                onClick={() => onFlexibilityDaysChange(flexibilityDays === days ? null : days)}
-              >
-                ±{"\u00a0"}
-                {days} jour{days > 1 ? "s" : ""}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
