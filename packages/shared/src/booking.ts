@@ -27,28 +27,6 @@ export const isoDateTimeSchema = z
     message: "Invalid datetime",
   });
 
-export const BOOKING_FLEXIBILITY_DAY_OPTIONS = [1, 2, 3, 7, 14] as const;
-
-export const BookingFlexibilityDaysSchema = z.coerce
-  .number()
-  .int()
-  .refine(
-    (value) =>
-      BOOKING_FLEXIBILITY_DAY_OPTIONS.includes(
-        value as (typeof BOOKING_FLEXIBILITY_DAY_OPTIONS)[number],
-      ),
-    { message: "Invalid flexibilityDays" },
-  );
-
-export type BookingFlexibilityDays = (typeof BOOKING_FLEXIBILITY_DAY_OPTIONS)[number];
-
-export const BookingTimeWindowSchema = z.object({
-  startAt: z.string().datetime(),
-  endAt: z.string().datetime(),
-});
-
-export type BookingTimeWindow = z.infer<typeof BookingTimeWindowSchema>;
-
 export const BookingAvailabilityQuerySchema = z
   .object({
     spaceType: SpaceTypeSchema,
@@ -57,7 +35,6 @@ export const BookingAvailabilityQuerySchema = z
     partySize: z.coerce.number().int().min(1),
     buildingId: z.string().trim().min(1).optional(),
     floor: z.string().trim().min(1).optional(),
-    flexibilityDays: BookingFlexibilityDaysSchema.optional(),
   })
   .superRefine((value, context) => {
     const startAt = new Date(value.startAt);
@@ -114,12 +91,8 @@ export const BookingSpaceCardSchema = z.object({
   priceFromLabel: z.string().nullable(),
 });
 
-export const BookingAvailabilityResultSpaceSchema = BookingSpaceCardSchema.extend({
-  availableWindows: z.array(BookingTimeWindowSchema).optional(),
-});
-
 export const BookingAvailabilityResponseSchema = z.object({
-  spaces: z.array(BookingAvailabilityResultSpaceSchema),
+  spaces: z.array(BookingSpaceCardSchema),
 });
 
 export const BookingSpacesResponseSchema = z.object({
@@ -186,7 +159,6 @@ export type BookingAvailabilityQuery = z.infer<typeof BookingAvailabilityQuerySc
 export type BookingSpacesQuery = z.infer<typeof BookingSpacesQuerySchema>;
 export type BookingSpaceAvailabilityQuery = z.infer<typeof BookingSpaceAvailabilityQuerySchema>;
 export type BookingSpaceCard = z.infer<typeof BookingSpaceCardSchema>;
-export type BookingAvailabilityResultSpace = z.infer<typeof BookingAvailabilityResultSpaceSchema>;
 export type BookingAvailabilityResponse = z.infer<typeof BookingAvailabilityResponseSchema>;
 export type BookingSpacesResponse = z.infer<typeof BookingSpacesResponseSchema>;
 export type BookingSlot = z.infer<typeof BookingSlotSchema>;
