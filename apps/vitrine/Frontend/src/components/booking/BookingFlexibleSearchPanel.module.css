@@ -45,9 +45,22 @@
 
 .monthHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--v-space-2);
+}
+
+.monthHeaderText {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.monthSummary {
+  margin: 0;
+  font-size: var(--v-text-sm);
+  color: var(--v-color-text-muted);
+  line-height: 1.45;
 }
 
 .monthNavButton {
@@ -89,6 +102,7 @@
 }
 
 .monthCard {
+  position: relative;
   flex: 0 0 auto;
   min-width: 7.5rem;
   scroll-snap-align: start;
@@ -102,6 +116,35 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  isolation: isolate;
+}
+
+.monthCardInRange {
+  border-color: rgba(197, 131, 105, 0.45);
+}
+
+.monthCardInRange::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(197, 131, 105, 0.14);
+}
+
+.monthCardRangeStart::before {
+  left: 50%;
+  border-top-left-radius: var(--v-radius-md);
+  border-bottom-left-radius: var(--v-radius-md);
+}
+
+.monthCardRangeEnd::before {
+  right: 50%;
+  border-top-right-radius: var(--v-radius-md);
+  border-bottom-right-radius: var(--v-radius-md);
+}
+
+.monthCardRangeSingle::before {
+  display: none;
 }
 
 .monthCardActive {

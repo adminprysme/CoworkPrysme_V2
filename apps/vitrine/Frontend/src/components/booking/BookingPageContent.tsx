@@ -12,7 +12,9 @@ import {
   flexibleDurationClassHint,
   formatAvailabilityWindow,
   formatMonthHeading,
+  isSameMonth,
   monthRange,
+  multiMonthRange,
   resolveDateRangeInputMode,
   type BookingFlexibleDuration,
   type BookingSearchMode,
@@ -64,7 +66,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [endTime, setEndTime] = useState(initialTimes.endTime);
   const previousRangeModeRef = useRef(resolveDateRangeInputMode(null, null));
   const [flexDuration, setFlexDuration] = useState<BookingFlexibleDuration | null>(null);
-  const [flexMonth, setFlexMonth] = useState<Date | null>(null);
+  const [flexStartMonth, setFlexStartMonth] = useState<Date | null>(null);
+  const [flexEndMonth, setFlexEndMonth] = useState<Date | null>(null);
   const [spaces, setSpaces] = useState<BookingSpaceCard[]>([]);
   const [selectedSpace, setSelectedSpace] = useState<BookingSpaceCard | null>(null);
   const [calendarMonth, setCalendarMonth] = useState<Date | null>(null);
@@ -111,6 +114,39 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     return formatSlotLabel(selectedSlot.startAt, selectedSlot.endAt);
   }, [selectedSlot]);
 
+  const flexibleMonthHeading = useMemo(() => {
+    if (!flexStartMonth) {
+      return null;
+    }
+
+    if (
+      flexDuration === "month_plus" &&
+      flexEndMonth &&
+      !isSameMonth(flexStartMonth, flexEndMonth)
+    ) {
+      return `${formatMonthHeading(flexStartMonth)} – ${formatMonthHeading(flexEndMonth)}`;
+    }
+
+    return formatMonthHeading(flexStartMonth);
+  }, [flexDuration, flexEndMonth, flexStartMonth]);
+
+  function handleFlexDurationChange(duration: BookingFlexibleDuration) {
+    setFlexDuration(duration);
+    if (duration === "month_plus") {
+      setFlexEndMonth(null);
+      return;
+    }
+
+    if (flexStartMonth) {
+      setFlexEndMonth(flexStartMonth);
+    }
+  }
+
+  function handleFlexMonthRangeChange(start: Date | null, end: Date | null) {
+    setFlexStartMonth(start);
+    setFlexEndMonth(end);
+  }
+
   const visibleCalendarSlots = useMemo(() => {
     const filtered =
       calendarDurationFilter === "all"
@@ -147,8 +183,13 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           setView("search");
           return;
         }
-        if (!flexMonth) {
+        if (!flexStartMonth) {
           setError("Choisissez un mois de réservation.");
+          setView("search");
+          return;
+        }
+        if (flexDuration === "month_plus" && !flexEndMonth) {
+          setError("Choisissez la plage de mois (début et fin).");
           setView("search");
           return;
         }
@@ -201,16 +242,23 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     setLock(null);
 
     if (searchMode === "flexible") {
-      if (!flexMonth || !flexDuration) {
+      if (!flexStartMonth || !flexDuration) {
         setError("Sélectionnez une durée et un mois avant de choisir un espace.");
+        return;
+      }
+      if (flexDuration === "month_plus" && !flexEndMonth) {
+        setError("Sélectionnez la plage de mois avant de choisir un espace.");
         return;
       }
 
       setLoading(true);
       try {
-        setCalendarMonth(flexMonth);
+        setCalendarMonth(flexStartMonth);
         setCalendarDurationFilter(flexibleDurationClassHint(flexDuration));
-        const range = monthRange(flexMonth);
+        const range =
+          flexDuration === "month_plus" && flexEndMonth
+            ? multiMonthRange(flexStartMonth, flexEndMonth)
+            : monthRange(flexStartMonth);
         const availability = await fetchSpaceAvailability(space.spaceId, range);
         setCalendarSlots(availability.slots);
         setView("calendar");
@@ -398,9 +446,10 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
               ) : (
                 <BookingFlexibleSearchPanel
                   duration={flexDuration}
-                  onDurationChange={setFlexDuration}
-                  selectedMonth={flexMonth}
-                  onMonthChange={setFlexMonth}
+                  onDurationChange={handleFlexDurationChange}
+                  selectedStartMonth={flexStartMonth}
+                  selectedEndMonth={flexEndMonth}
+                  onMonthRangeChange={handleFlexMonthRangeChange}
                 />
               )}
             </div>
@@ -511,7 +560,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         {view === "calendar" && selectedSpace && calendarMonth ? (
           <div className={styles.calendarPanel}>
             <h3 className={styles.calendarTitle}>
-              Créneaux — {selectedSpace.name} · {formatMonthHeading(calendarMonth)}
+              Créneaux — {selectedSpace.name} ·{" "}
+              {flexibleMonthHeading ?? formatMonthHeading(calendarMonth)}
             </h3>
 
             <div className={styles.calendarFilters} role="group" aria-label="Type de créneau">

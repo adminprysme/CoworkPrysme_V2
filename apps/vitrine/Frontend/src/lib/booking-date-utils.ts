@@ -132,6 +132,58 @@ export function monthRange(date: Date): { rangeStart: string; rangeEnd: string }
   };
 }
 
+export function monthAnchor(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export function isBeforeMonth(left: Date, right: Date): boolean {
+  return monthAnchor(left).getTime() < monthAnchor(right).getTime();
+}
+
+export function isMonthInRange(month: Date, start: Date | null, end: Date | null): boolean {
+  if (!start || !end) {
+    return false;
+  }
+  const time = monthAnchor(month).getTime();
+  return time >= monthAnchor(start).getTime() && time <= monthAnchor(end).getTime();
+}
+
+export function multiMonthRange(
+  startMonth: Date,
+  endMonth: Date,
+): { rangeStart: string; rangeEnd: string } {
+  const start = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(endMonth.getFullYear(), endMonth.getMonth() + 1, 0, 23, 59, 59, 999);
+  return {
+    rangeStart: start.toISOString(),
+    rangeEnd: end.toISOString(),
+  };
+}
+
+export function formatFlexibleMonthSelection(
+  startMonth: Date | null,
+  endMonth: Date | null,
+  allowRange: boolean,
+): string {
+  if (!startMonth) {
+    return allowRange ? "Sélectionnez le premier mois." : "Sélectionnez un mois.";
+  }
+
+  if (!allowRange) {
+    return `${formatMonthHeading(startMonth)} sélectionné.`;
+  }
+
+  if (!endMonth) {
+    return `Début : ${formatMonthHeading(startMonth)} — choisissez le mois de fin.`;
+  }
+
+  if (isSameMonth(startMonth, endMonth)) {
+    return `${formatMonthHeading(startMonth)} sélectionné.`;
+  }
+
+  return `Du ${formatMonthHeading(startMonth)} au ${formatMonthHeading(endMonth)}.`;
+}
+
 export type BookingFlexibleDuration = "day" | "week" | "month_plus";
 
 export type BookingSearchMode = "dates" | "flexible";
