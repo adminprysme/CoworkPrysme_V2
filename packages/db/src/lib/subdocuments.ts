@@ -330,6 +330,7 @@ export interface StaffPermissions {
   clients: boolean;
   stats: boolean;
   spaces: boolean;
+  services: boolean;
   promo: boolean;
 }
 
@@ -340,6 +341,7 @@ export const staffPermissionsSchema = new Schema<StaffPermissions>(
     clients: { type: Boolean, default: false },
     stats: { type: Boolean, default: false },
     spaces: { type: Boolean, default: false },
+    services: { type: Boolean, default: false },
     promo: { type: Boolean, default: false },
   },
   { _id: false },

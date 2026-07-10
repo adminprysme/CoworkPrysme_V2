@@ -8,6 +8,7 @@ import { centsField, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
 export interface Service {
   key: string;
   label: string;
+  description?: string;
   priceHT: number;
   vatRate: number;
   promoEligible: boolean;
@@ -22,6 +23,7 @@ const serviceSchema = new Schema<Service>(
   {
     key: { type: String, required: true },
     label: { type: String, required: true },
+    description: { type: String, trim: true },
     priceHT: centsField({ min: 0 }),
     vatRate: { type: Number, required: true },
     promoEligible: { type: Boolean, default: false, required: true },
