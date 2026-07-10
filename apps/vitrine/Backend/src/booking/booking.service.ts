@@ -23,6 +23,7 @@ import {
   type BookingSpaceCard,
   type BookingSpacesQuery,
   type CreateBookingLockRequest,
+  type DiscountCodeTargetInput,
   type SpaceType,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
@@ -30,6 +31,7 @@ import type { Types } from "mongoose";
 import { buildPublicImageUrl } from "../home-content/home-content.controller.js";
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { AvailabilityService } from "./availability.service.js";
+import { DiscountCodeValidationService } from "../discount-codes/discount-code-validation.service.js";
 import { SlotGenerationService } from "./slot-generation.service.js";
 import { isObjectId } from "./object-id.util.js";
 
@@ -57,6 +59,7 @@ export class BookingService {
   constructor(
     private readonly availability: AvailabilityService,
     private readonly slotGeneration: SlotGenerationService,
+    private readonly discountCodeValidation: DiscountCodeValidationService,
   ) {}
 
   private getApiOrigin(): string {
@@ -245,5 +248,10 @@ export class BookingService {
         message: "Lock not found",
       });
     }
+  }
+
+  /** Shared promo guard — used by Phase 2 discount application in the booking tunnel. */
+  async validateDiscountCodeTargets(input: DiscountCodeTargetInput): Promise<void> {
+    await this.discountCodeValidation.assertServiceTargets(input);
   }
 }
