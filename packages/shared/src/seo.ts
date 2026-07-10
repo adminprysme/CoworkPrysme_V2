@@ -16,6 +16,11 @@ export function slugifyBuildingName(name: string): string {
   return slugifyEntityName(name, "batiment");
 }
 
+/** Converts a service label to a stable catalog key (kebab-case). */
+export function slugifyServiceKey(label: string): string {
+  return slugifyEntityName(label, "service");
+}
+
 function slugifyEntityName(name: string, fallback: string): string {
   const slug = name
     .normalize("NFD")

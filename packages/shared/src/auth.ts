@@ -23,6 +23,7 @@ export const StaffPermissionsSchema = z.object({
   clients: z.boolean(),
   stats: z.boolean(),
   spaces: z.boolean(),
+  services: z.boolean(),
   promo: z.boolean(),
 });
 export type StaffPermissions = z.infer<typeof StaffPermissionsSchema>;
@@ -102,6 +103,7 @@ export const ALL_STAFF_PERMISSIONS: StaffPermissions = {
   clients: true,
   stats: true,
   spaces: true,
+  services: true,
   promo: true,
 };
 
@@ -111,5 +113,6 @@ export const NO_STAFF_PERMISSIONS: StaffPermissions = {
   clients: false,
   stats: false,
   spaces: false,
+  services: false,
   promo: false,
 };
