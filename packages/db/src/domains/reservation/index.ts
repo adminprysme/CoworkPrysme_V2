@@ -1,11 +1,17 @@
 export {
   assertRangeAvailable,
+  fetchRangeBlockingCache,
   findOverlappingActiveLock,
+  findOverlappingActiveLocksInRange,
   findOverlappingClosure,
+  findOverlappingClosuresInRange,
   findOverlappingReservation,
+  findOverlappingReservationsInRange,
   isRangeBlocked,
+  isRangeBlockedWithCache,
   rangesOverlap,
   type RangeAvailabilityContext,
+  type RangeBlockingCache,
 } from "./availability.js";
 export {
   createReservation,

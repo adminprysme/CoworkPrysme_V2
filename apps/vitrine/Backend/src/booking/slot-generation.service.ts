@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import type { Space } from "@coworkprysme/db";
+import type { BuildingDaySchedule, RangeBlockingCache } from "@coworkprysme/db";
+import { parisDateParts, parisLocalToUtc, parseTimeToMinutes } from "@coworkprysme/db";
 import {
   BOOKING_PHASE1_DURATION_CLASSES,
   DURATION_CLASS_LABELS,
   type BookingPhase1DurationClass,
   type BookingSlot,
 } from "@coworkprysme/shared";
-import type { BuildingDaySchedule } from "@coworkprysme/db";
-import { parisDateParts, parisLocalToUtc, parseTimeToMinutes } from "@coworkprysme/db";
-
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
@@ -69,6 +68,12 @@ export class SlotGenerationService {
       return [];
     }
 
+    const blockingCache = await this.availability.loadBlockingCache(
+      space,
+      rangeStart,
+      rangeEnd,
+      now,
+    );
     const slots: BookingSlot[] = [];
     const seen = new Set<string>();
 
@@ -103,7 +108,7 @@ export class SlotGenerationService {
           isoDate,
           schedule.is24h && parsedClose <= parsedOpen ? "23:59" : schedule.close,
         );
-        await this.pushSlot(space, slots, seen, {
+        this.pushSlot(space, slots, seen, blockingCache, {
           startAt,
           endAt,
           durationClass: "daily",
@@ -121,7 +126,7 @@ export class SlotGenerationService {
             isoDate,
             endMinutes >= 24 * 60 ? "23:59" : formatMinutesAsTime(endMinutes),
           );
-          await this.pushSlot(space, slots, seen, {
+          this.pushSlot(space, slots, seen, blockingCache, {
             startAt,
             endAt,
             durationClass: "hourly",
@@ -138,10 +143,11 @@ export class SlotGenerationService {
     );
   }
 
-  private async pushSlot(
+  private pushSlot(
     space: SpaceLean,
     slots: BookingSlot[],
     seen: Set<string>,
+    blockingCache: RangeBlockingCache,
     input: {
       startAt: Date;
       endAt: Date;
@@ -150,7 +156,7 @@ export class SlotGenerationService {
       rangeStart: Date;
       rangeEnd: Date;
     },
-  ): Promise<void> {
+  ): void {
     if (input.endAt <= input.startAt) {
       return;
     }
@@ -167,10 +173,11 @@ export class SlotGenerationService {
     }
     seen.add(key);
 
-    const selectable = await this.availability.isSpaceAvailable(
+    const selectable = this.availability.isSpaceAvailableWithCache(
       space,
       input.startAt,
       input.endAt,
+      blockingCache,
       input.now,
     );
 

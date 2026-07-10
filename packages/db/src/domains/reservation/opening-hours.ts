@@ -3,22 +3,25 @@ import type { BuildingDaySchedule } from "../../lib/subdocuments.js";
 
 const BOOKING_TIMEZONE = "Europe/Paris";
 
+const PARIS_DATE_PARTS_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: BOOKING_TIMEZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  weekday: "long",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+const parisLocalToUtcCache = new Map<string, Date>();
+
 export interface OpeningHoursCheckable {
   openingHours: BuildingDaySchedule[];
 }
 
 export function parisDateParts(date: Date): { isoDate: string; day: WeekDay; minutes: number } {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: BOOKING_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(date);
+  const parts = PARIS_DATE_PARTS_FORMATTER.formatToParts(date);
   const year = parts.find((part) => part.type === "year")?.value ?? "1970";
   const month = parts.find((part) => part.type === "month")?.value ?? "01";
   const dayOfMonth = parts.find((part) => part.type === "day")?.value ?? "01";
@@ -35,6 +38,12 @@ export function parisDateParts(date: Date): { isoDate: string; day: WeekDay; min
 }
 
 export function parisLocalToUtc(isoDate: string, hhmm: string): Date {
+  const cacheKey = `${isoDate}|${hhmm}`;
+  const cached = parisLocalToUtcCache.get(cacheKey);
+  if (cached) {
+    return new Date(cached.getTime());
+  }
+
   const targetMinutes = parseTimeToMinutes(hhmm);
   const [yearText, monthText, dayText] = isoDate.split("-");
   const year = Number(yearText);
@@ -42,11 +51,24 @@ export function parisLocalToUtc(isoDate: string, hhmm: string): Date {
   const day = Number(dayText);
   const base = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
 
-  // Paris local times for isoDate span roughly UTC-2h .. UTC+22h relative to UTC midnight.
+  const guessOffsets = [targetMinutes - 120, targetMinutes - 60];
+  for (const guessOffset of guessOffsets) {
+    for (let delta = -90; delta <= 90; delta += 1) {
+      const candidate = new Date(base + (guessOffset + delta) * 60_000);
+      const parts = parisDateParts(candidate);
+      if (parts.isoDate === isoDate && parts.minutes === targetMinutes) {
+        parisLocalToUtcCache.set(cacheKey, candidate);
+        return candidate;
+      }
+    }
+  }
+
+  // Fallback: full scan (DST edge cases, 24h schedules).
   for (let offsetMinutes = -180; offsetMinutes <= 24 * 60; offsetMinutes += 1) {
     const candidate = new Date(base + offsetMinutes * 60_000);
     const parts = parisDateParts(candidate);
     if (parts.isoDate === isoDate && parts.minutes === targetMinutes) {
+      parisLocalToUtcCache.set(cacheKey, candidate);
       return candidate;
     }
   }

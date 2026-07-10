@@ -3,10 +3,13 @@ import type { Space } from "@coworkprysme/db";
 import {
   assertRangeAvailable,
   connectMongo,
+  fetchRangeBlockingCache,
   getBuildingModel,
   getSpaceModel,
   isRangeBlocked,
+  isRangeBlockedWithCache,
   type RangeAvailabilityContext,
+  type RangeBlockingCache,
 } from "@coworkprysme/db";
 import type { SpaceType } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
@@ -84,6 +87,32 @@ export class AvailabilityService {
     now?: Date,
   ): Promise<boolean> {
     return !(await isRangeBlocked(this.buildContext(space, startAt, endAt, now)));
+  }
+
+  async loadBlockingCache(
+    space: SpaceLean,
+    rangeStart: Date,
+    rangeEnd: Date,
+    now: Date = new Date(),
+  ): Promise<RangeBlockingCache> {
+    return fetchRangeBlockingCache({
+      spaceId: space._id,
+      buildingId: space.buildingId,
+      spaceType: space.type,
+      startAt: rangeStart,
+      endAt: rangeEnd,
+      now,
+    });
+  }
+
+  isSpaceAvailableWithCache(
+    space: SpaceLean,
+    startAt: Date,
+    endAt: Date,
+    cache: RangeBlockingCache,
+    now?: Date,
+  ): boolean {
+    return !isRangeBlockedWithCache(this.buildContext(space, startAt, endAt, now), cache);
   }
 
   async assertSpaceAvailable(
