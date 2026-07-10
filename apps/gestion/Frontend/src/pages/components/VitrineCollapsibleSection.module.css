@@ -1,0 +1,57 @@
+.section {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 0;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trigger:hover {
+  background: color-mix(in srgb, var(--color-secondary) 8%, var(--color-surface-muted));
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: -2px;
+}
+
+.title {
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.body {
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+  border-top: 1px solid var(--color-border);
+}

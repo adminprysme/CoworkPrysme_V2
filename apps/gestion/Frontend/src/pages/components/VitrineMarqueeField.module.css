@@ -1,0 +1,150 @@
+.section {
+  display: grid;
+  gap: 1rem;
+}
+
+.intro {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggleOption {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.toggleOptionSelected {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.toggleOptionSelectedOff {
+  background: var(--color-text-muted);
+  color: var(--color-surface);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.charCount {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.previewMarquee {
+  overflow: hidden;
+  padding: 0.65rem 0;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.previewMarqueeTrack {
+  display: inline-block;
+  padding-left: 100%;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 600;
+  animation: marqueePreview 18s linear infinite;
+}
+
+@keyframes marqueePreview {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.primaryBtn {
+  padding: 0.65rem 1.1rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .previewMarqueeTrack {
+    animation: none;
+    padding-left: 0;
+    text-align: center;
+    width: 100%;
+  }
+}
