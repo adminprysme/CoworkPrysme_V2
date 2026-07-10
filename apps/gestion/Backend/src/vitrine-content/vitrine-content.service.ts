@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   UpdateVitrineContentRequestSchema,
+  VITRINE_FEATURED_BUILDINGS_MAX,
   VITRINE_FEATURED_SPACES_MAX,
   VITRINE_HERO_MAX_IMAGES,
   VITRINE_IMAGE_SLOTS,
@@ -8,7 +9,12 @@ import {
   type VitrineContentResponse,
   type VitrineImageSlot,
 } from "@coworkprysme/shared";
-import { connectMongo, getSpaceModel, getVitrineContentModel } from "@coworkprysme/db";
+import {
+  connectMongo,
+  getBuildingModel,
+  getSpaceModel,
+  getVitrineContentModel,
+} from "@coworkprysme/db";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { UploadsService } from "../uploads/uploads.service.js";
@@ -17,6 +23,7 @@ import {
   getOrCreateVitrineContentDocument,
   getServiceImageField,
   mapVitrineContentToResponse,
+  normalizeVitrineSiteContact,
 } from "./vitrine-content.mapper.js";
 
 function parseSlot(slot: string): VitrineImageSlot {
@@ -54,6 +61,38 @@ async function assertFeaturedSpaceIds(spaceIds: string[]): Promise<void> {
   for (const space of spaces) {
     if (space.status === "archived") {
       throw new BadRequestException("Archived spaces cannot be featured");
+    }
+  }
+}
+
+async function assertFeaturedBuildingIds(buildingIds: string[]): Promise<void> {
+  if (buildingIds.length > VITRINE_FEATURED_BUILDINGS_MAX) {
+    throw new BadRequestException(`Maximum ${VITRINE_FEATURED_BUILDINGS_MAX} featured buildings`);
+  }
+
+  const uniqueIds = new Set(buildingIds);
+  if (uniqueIds.size !== buildingIds.length) {
+    throw new BadRequestException("Duplicate featured building ids");
+  }
+
+  if (buildingIds.length === 0) {
+    return;
+  }
+
+  await connectMongo();
+  const Building = await getBuildingModel();
+  const buildings = await Building.find({ _id: { $in: buildingIds } })
+    .select({ _id: 1, status: 1 })
+    .lean()
+    .exec();
+
+  if (buildings.length !== buildingIds.length) {
+    throw new BadRequestException("Unknown featured building id");
+  }
+
+  for (const building of buildings) {
+    if (building.status !== "active") {
+      throw new BadRequestException("Inactive buildings cannot be featured on the vitrine");
     }
   }
 }
@@ -99,6 +138,21 @@ export class VitrineContentService {
       doc.featuredSpaceIds = payload.featuredSpaceIds;
     }
 
+    if (payload.featuredBuildingIds) {
+      await assertFeaturedBuildingIds(payload.featuredBuildingIds);
+      doc.featuredBuildingIds = payload.featuredBuildingIds;
+    }
+
+    if (payload.siteContact) {
+      doc.siteContact = {
+        email: payload.siteContact.email,
+        phone: payload.siteContact.phone,
+      };
+    }
+
+    const siteContact = normalizeVitrineSiteContact(doc.siteContact);
+    const featuredBuildingIds = doc.featuredBuildingIds ?? [];
+
     await connectMongo();
     const VitrineContent = await getVitrineContentModel();
     const updated = await VitrineContent.findByIdAndUpdate(
@@ -107,6 +161,8 @@ export class VitrineContentService {
         heroImages: doc.heroImages,
         marquee: doc.marquee,
         featuredSpaceIds: doc.featuredSpaceIds,
+        featuredBuildingIds,
+        siteContact,
       },
       { new: true, runValidators: true },
     )
@@ -141,6 +197,9 @@ export class VitrineContentService {
     } else if (slot === "concept") {
       replacedStorageKey = doc.conceptImage;
       doc.conceptImage = storageKey;
+    } else if (slot === "place") {
+      replacedStorageKey = doc.placeImage ?? null;
+      doc.placeImage = storageKey;
     } else {
       const field = getServiceImageField(slot);
       if (!field) {
@@ -199,6 +258,11 @@ export class VitrineContentService {
         throw new NotFoundException();
       }
       doc.conceptImage = null;
+    } else if (slot === "place") {
+      if (doc.placeImage !== storageKey) {
+        throw new NotFoundException();
+      }
+      doc.placeImage = null;
     } else {
       const field = getServiceImageField(slot);
       if (!field || doc.serviceImages[field] !== storageKey) {

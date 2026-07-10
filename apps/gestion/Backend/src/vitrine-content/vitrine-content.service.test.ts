@@ -23,6 +23,7 @@ const mockDoc = {
   _id: "singleton",
   heroImages: [] as string[],
   conceptImage: null as string | null,
+  placeImage: null as string | null,
   serviceImages: {
     roomService: null as string | null,
     afterwork: null,
@@ -33,6 +34,11 @@ const mockDoc = {
     text: "Le Tramway T9 arrive au pied de l'immeuble à la fin de l'automne 2026",
   },
   featuredSpaceIds: [],
+  featuredBuildingIds: [],
+  siteContact: {
+    email: null,
+    phone: null,
+  },
 };
 
 const mockVitrineContentModel = {
@@ -99,6 +105,7 @@ describe("VitrineContentService upload rollback", () => {
 
     mockDoc.heroImages = [];
     mockDoc.conceptImage = null;
+    mockDoc.placeImage = null;
     mockDoc.serviceImages = {
       roomService: null,
       afterwork: null,
