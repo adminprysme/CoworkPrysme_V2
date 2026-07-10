@@ -54,6 +54,18 @@ export function buildGoogleMapsUrl(options: {
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
+/** Opens Google Maps directions; omitting origin uses the user's current location. */
+export function buildGoogleMapsDirectionsUrl(options: {
+  lat: number;
+  lng: number;
+  address?: string;
+}): string {
+  const destination = options.address
+    ? encodeURIComponent(options.address)
+    : `${options.lat},${options.lng}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+}
+
 export const DEFAULT_PUBLIC_BUILDING_INFO: PublicBuildingInfo = {
   name: "Cowork Prysme — Technopark, Bâtiment A1",
   email: DEFAULT_SITE_CONTACT.email,

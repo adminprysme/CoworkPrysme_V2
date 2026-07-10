@@ -1,10 +1,13 @@
 import { z } from "zod";
 
+import { BUILDING_EMAIL_MAX_LENGTH, BUILDING_PHONE_MAX_LENGTH } from "./buildings.js";
+
 export const VITRINE_CONTENT_SINGLETON_ID = "singleton";
 
 export const VITRINE_IMAGE_SLOTS = [
   "hero",
   "concept",
+  "place",
   "room-service",
   "afterwork",
   "conciergerie",
@@ -13,13 +16,15 @@ export const VITRINE_IMAGE_SLOTS = [
 export type VitrineImageSlot = (typeof VITRINE_IMAGE_SLOTS)[number];
 
 export const VITRINE_IMAGE_STORAGE_KEY_PATTERN =
-  /^vitrine\/(hero|concept|room-service|afterwork|conciergerie)\/[0-9a-f-]{36}\.webp$/;
+  /^vitrine\/(hero|concept|place|room-service|afterwork|conciergerie)\/[0-9a-f-]{36}\.webp$/;
 
 export const VITRINE_HERO_MAX_IMAGES = 8;
 export const VITRINE_FEATURED_SPACES_MAX = 3;
+export const VITRINE_FEATURED_BUILDINGS_MAX = 10;
 export const VITRINE_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
 
 export const VitrineFeaturedSpaceIdSchema = z.string().regex(/^[a-f0-9]{24}$/i);
+export const VitrineFeaturedBuildingIdSchema = VitrineFeaturedSpaceIdSchema;
 
 export const VitrineMarqueeSchema = z.object({
   enabled: z.boolean(),
@@ -32,11 +37,35 @@ export const VitrineServiceImagesSchema = z.object({
   conciergerie: z.string().nullable(),
 });
 
+export const VitrineSiteContactSchema = z.object({
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+});
+
+export const VitrineSiteContactInputSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .max(BUILDING_EMAIL_MAX_LENGTH)
+    .transform((value) => value || null)
+    .refine((value) => value === null || z.string().email().safeParse(value).success, {
+      message: "Invalid email address",
+    }),
+  phone: z
+    .string()
+    .trim()
+    .max(BUILDING_PHONE_MAX_LENGTH)
+    .transform((value) => value || null),
+});
+
 export const VitrineContentResponseSchema = z.object({
   heroImages: z.array(z.string()),
   conceptImage: z.string().nullable(),
+  placeImage: z.string().nullable(),
   serviceImages: VitrineServiceImagesSchema,
   featuredSpaceIds: z.array(VitrineFeaturedSpaceIdSchema),
+  featuredBuildingIds: z.array(VitrineFeaturedBuildingIdSchema),
+  siteContact: VitrineSiteContactSchema,
   marquee: VitrineMarqueeSchema,
 });
 
@@ -47,6 +76,11 @@ export const UpdateVitrineContentRequestSchema = z.object({
     .array(VitrineFeaturedSpaceIdSchema)
     .max(VITRINE_FEATURED_SPACES_MAX)
     .optional(),
+  featuredBuildingIds: z
+    .array(VitrineFeaturedBuildingIdSchema)
+    .max(VITRINE_FEATURED_BUILDINGS_MAX)
+    .optional(),
+  siteContact: VitrineSiteContactInputSchema.optional(),
 });
 
 export const ServicesFeaturedSpaceSchema = z.object({
@@ -61,6 +95,7 @@ export const ServicesFeaturedSpaceSchema = z.object({
 });
 
 export const ServicesPublicContentSchema = z.object({
+  serviceImages: VitrineServiceImagesSchema,
   featuredSpaces: z.array(ServicesFeaturedSpaceSchema),
 });
 
@@ -71,11 +106,17 @@ export const HomePublicContentSchema = z.object({
   marquee: VitrineMarqueeSchema,
 });
 
+export const AboutPublicContentSchema = z.object({
+  placeImage: z.string().nullable(),
+});
+
 export type VitrineMarquee = z.infer<typeof VitrineMarqueeSchema>;
+export type VitrineSiteContact = z.infer<typeof VitrineSiteContactSchema>;
 export type VitrineServiceImages = z.infer<typeof VitrineServiceImagesSchema>;
 export type VitrineContentResponse = z.infer<typeof VitrineContentResponseSchema>;
 export type UpdateVitrineContentRequest = z.infer<typeof UpdateVitrineContentRequestSchema>;
 export type HomePublicContent = z.infer<typeof HomePublicContentSchema>;
+export type AboutPublicContent = z.infer<typeof AboutPublicContentSchema>;
 export type ServicesFeaturedSpace = z.infer<typeof ServicesFeaturedSpaceSchema>;
 export type ServicesPublicContent = z.infer<typeof ServicesPublicContentSchema>;
 
@@ -133,13 +174,13 @@ export const DEFAULT_SERVICES_FEATURED_SPACES: ServicesFeaturedSpace[] = [
   },
 ];
 
-export const DEFAULT_SERVICES_PUBLIC_CONTENT: ServicesPublicContent = {
-  featuredSpaces: DEFAULT_SERVICES_FEATURED_SPACES,
-};
-
 export function spaceTypeToVitrineHref(type: ServicesFeaturedSpace["type"]): string {
   return type === "private_office" ? "/bureaux-privatifs" : "/salle-de-reunion";
 }
+
+export const DEFAULT_ABOUT_PUBLIC_CONTENT: AboutPublicContent = {
+  placeImage: null,
+};
 
 export const DEFAULT_HOME_PUBLIC_CONTENT: HomePublicContent = {
   heroImages: [
@@ -159,4 +200,9 @@ export const DEFAULT_HOME_PUBLIC_CONTENT: HomePublicContent = {
     enabled: true,
     text: DEFAULT_VITRINE_MARQUEE_TEXT,
   },
+};
+
+export const DEFAULT_SERVICES_PUBLIC_CONTENT: ServicesPublicContent = {
+  serviceImages: DEFAULT_HOME_PUBLIC_CONTENT.serviceImages,
+  featuredSpaces: DEFAULT_SERVICES_FEATURED_SPACES,
 };

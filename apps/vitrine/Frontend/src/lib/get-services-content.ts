@@ -1,4 +1,8 @@
-import { ServicesPublicContentSchema, type ServicesPublicContent } from "@coworkprysme/shared";
+import {
+  DEFAULT_SERVICES_PUBLIC_CONTENT,
+  ServicesPublicContentSchema,
+  type ServicesPublicContent,
+} from "@coworkprysme/shared";
 
 function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8002";
@@ -11,12 +15,12 @@ export async function getServicesContent(): Promise<ServicesPublicContent> {
     });
 
     if (!response.ok) {
-      return { featuredSpaces: [] };
+      return DEFAULT_SERVICES_PUBLIC_CONTENT;
     }
 
     const json: unknown = await response.json();
     return ServicesPublicContentSchema.parse(json);
   } catch {
-    return { featuredSpaces: [] };
+    return DEFAULT_SERVICES_PUBLIC_CONTENT;
   }
 }

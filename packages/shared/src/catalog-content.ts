@@ -56,6 +56,7 @@ export const CatalogTariffLineSchema = z.object({
 export const CatalogTariffSpaceGroupSchema = z.object({
   spaceId: z.string(),
   spaceName: z.string(),
+  capacity: z.number().int().min(1),
   type: SpaceTypeSchema,
   lines: z.array(CatalogTariffLineSchema),
 });

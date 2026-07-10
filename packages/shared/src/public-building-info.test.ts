@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPublicBuildingAddress, mapDbBuildingToPublicInfo } from "./public-building-info.js";
+import {
+  formatPublicBuildingAddress,
+  mapDbBuildingToPublicInfo,
+  buildGoogleMapsDirectionsUrl,
+} from "./public-building-info.js";
 
 describe("public-building-info", () => {
   it("formats address with optional access info", () => {
@@ -37,5 +41,17 @@ describe("public-building-info", () => {
     expect(result.address.accessInfo).toBe("Rue Saint-Jean-de-Dieu");
     expect(result.address.full).toContain("69007 Lyon");
     expect(result.mapExternalUrl).toContain("google.com/maps");
+  });
+
+  it("builds a Google Maps directions URL without origin", () => {
+    const url = buildGoogleMapsDirectionsUrl({
+      lat: 45.7284,
+      lng: 4.8378,
+      address: "Technopark Lyon, 69007 Lyon",
+    });
+
+    expect(url).toBe(
+      "https://www.google.com/maps/dir/?api=1&destination=Technopark%20Lyon%2C%2069007%20Lyon",
+    );
   });
 });

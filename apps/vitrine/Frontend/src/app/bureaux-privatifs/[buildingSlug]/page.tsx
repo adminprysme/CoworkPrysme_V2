@@ -5,13 +5,10 @@ import { CatalogApiFallback } from "@/components/catalog/CatalogApiFallback";
 import { CatalogSpacesPageContent } from "@/components/catalog/CatalogSpacesPageContent";
 import { PRIVATE_OFFICES_CATALOG } from "@/config/catalog-pages";
 import { createPageMetadata } from "@/lib/metadata";
-import {
-  CATALOG_REVALIDATE_SECONDS,
-  getCatalogBuildings,
-  getPrivateOfficesCatalog,
-} from "@/lib/get-catalog-content";
+import { getCatalogBuildings, getPrivateOfficesCatalog } from "@/lib/get-catalog-content";
 
-export const revalidate = CATALOG_REVALIDATE_SECONDS;
+/** Must be a literal — Next.js segment config does not accept imported values. */
+export const revalidate = 3600;
 
 interface PageProps {
   params: Promise<{ buildingSlug: string }>;
