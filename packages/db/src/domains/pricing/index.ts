@@ -8,10 +8,14 @@ export {
 export {
   getServiceModel,
   registerServiceModel,
+  SERVICE_CUSTOM_QUESTION_TYPES,
   type Service,
+  type ServiceCustomQuestion,
+  type ServiceCustomQuestionType,
   type ServiceDocument,
   type ServiceModel,
 } from "./service.schema.js";
+export { serviceCustomQuestionSchema } from "./service-custom-question.schema.js";
 export {
   getTariffModel,
   registerTariffModel,

@@ -33,4 +33,42 @@ describe("service schema", () => {
     expect(doc.priceHT).toBe(1999);
     void connection.close();
   });
+
+  it("persists customQuestions subdocuments with default empty array", () => {
+    const connection = mongoose.createConnection();
+    const Service = registerServiceModel(connection);
+    const doc = new Service({
+      key: "restauration",
+      label: "Restauration événementielle",
+      priceHT: 5000,
+      vatRate: 20,
+      promoEligible: false,
+      status: "active",
+      customQuestions: [
+        {
+          id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+          label: "Nombre de personnes ?",
+          type: "number",
+          required: true,
+          order: 0,
+        },
+      ],
+    });
+
+    const error = doc.validateSync();
+    expect(error).toBeUndefined();
+    expect(doc.customQuestions).toHaveLength(1);
+    expect(doc.customQuestions[0]?.type).toBe("number");
+
+    const empty = new Service({
+      key: "parking",
+      label: "Parking",
+      priceHT: 1250,
+      vatRate: 20,
+      promoEligible: false,
+      status: "active",
+    });
+    expect(empty.customQuestions).toEqual([]);
+    void connection.close();
+  });
 });

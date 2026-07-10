@@ -4,6 +4,16 @@ import { getCoworkDb } from "../../connection.js";
 import { SERVICE_STATUSES } from "../../lib/enums.js";
 import { registerModel } from "../../lib/register-model.js";
 import { centsField, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
+import {
+  serviceCustomQuestionSchema,
+  type ServiceCustomQuestion,
+} from "./service-custom-question.schema.js";
+
+export type {
+  ServiceCustomQuestion,
+  ServiceCustomQuestionType,
+} from "./service-custom-question.schema.js";
+export { SERVICE_CUSTOM_QUESTION_TYPES } from "./service-custom-question.schema.js";
 
 export interface Service {
   key: string;
@@ -13,6 +23,7 @@ export interface Service {
   vatRate: number;
   promoEligible: boolean;
   status: (typeof SERVICE_STATUSES)[number];
+  customQuestions: ServiceCustomQuestion[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +39,7 @@ const serviceSchema = new Schema<Service>(
     vatRate: { type: Number, required: true },
     promoEligible: { type: Boolean, default: false, required: true },
     status: { type: String, enum: SERVICE_STATUSES, default: "active", required: true },
+    customQuestions: { type: [serviceCustomQuestionSchema], default: [] },
   },
   { ...TIMESTAMP_OPTIONS, collection: "services" },
 );
