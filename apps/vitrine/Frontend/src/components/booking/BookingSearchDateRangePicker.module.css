@@ -1,0 +1,241 @@
+.bookingSearchCalendar {
+  display: grid;
+  gap: var(--v-space-4);
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-bg);
+}
+
+.modeToggle {
+  display: inline-flex;
+  padding: 0.2rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface-muted);
+  width: fit-content;
+}
+
+.modeToggleButton {
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-radius: var(--v-radius-full);
+  background: transparent;
+  color: var(--v-color-text-muted);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modeToggleButtonActive {
+  background: var(--v-color-brand);
+  color: #fff;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v-space-3);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.navButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.monthsRow {
+  display: grid;
+  gap: var(--v-space-5);
+}
+
+.monthPanel {
+  display: grid;
+  gap: var(--v-space-2);
+}
+
+.monthTitle {
+  margin: 0;
+  font-size: var(--v-text-base);
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--v-color-ink);
+}
+
+.weekdayRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.15rem;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v-color-text-muted);
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.15rem;
+}
+
+.dayCell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 2.4rem;
+}
+
+.dayCellEmpty {
+  min-height: 2.4rem;
+}
+
+.dayButton {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v-color-ink);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dayButton:focus-visible {
+  outline: 2px solid var(--v-color-brand);
+  outline-offset: 2px;
+}
+
+.dayPast {
+  color: var(--v-color-text-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dayInRange::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(197, 131, 105, 0.18);
+}
+
+.dayRangeStart::before {
+  left: 50%;
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.dayRangeEnd::before {
+  right: 50%;
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.dayRangeSingle::before {
+  display: none;
+}
+
+.daySelected {
+  background: var(--v-color-brand);
+  color: #fff;
+}
+
+.flexSection {
+  display: grid;
+  gap: var(--v-space-2);
+  padding-top: var(--v-space-2);
+  border-top: 1px solid var(--v-color-border);
+}
+
+.flexLabel {
+  margin: 0;
+  font-size: var(--v-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-color-brand);
+}
+
+.flexPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-2);
+}
+
+.flexPill {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface);
+  color: var(--v-color-text);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.flexPillActive {
+  border-color: var(--v-color-brand);
+  background: var(--v-color-brand-muted);
+  color: var(--v-color-brand-hover);
+}
+
+.rangeSummary {
+  margin: 0;
+  font-size: var(--v-text-sm);
+  color: var(--v-color-text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 768px) {
+  .monthsRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .monthsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .monthPanelSecond {
+    display: none;
+  }
+}
