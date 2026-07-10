@@ -327,6 +327,31 @@ export {
 } from "./services.js";
 
 export {
+  MAX_SERVICE_CUSTOM_QUESTIONS,
+  SERVICE_CUSTOM_QUESTION_LABEL_MAX_LENGTH,
+  SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS,
+  SERVICE_CUSTOM_QUESTION_TYPE_LABELS,
+  SERVICE_CUSTOM_QUESTION_TYPES,
+  ServiceCustomAnswerSchema,
+  ServiceCustomAnswerValueSchemas,
+  ServiceCustomQuestionInputSchema,
+  ServiceCustomQuestionSchema,
+  ServiceCustomQuestionTypeSchema,
+  ServiceCustomQuestionsInputSchema,
+  ServiceCustomQuestionsSchema,
+  ensureServiceCustomQuestionIds,
+  mapServiceCustomQuestionsToResponse,
+  normalizeServiceCustomQuestions,
+  type ServiceCustomAnswer,
+  type ServiceCustomQuestion,
+  type ServiceCustomQuestionDbShape,
+  type ServiceCustomQuestionInput,
+  type ServiceCustomQuestionType,
+  type ServiceCustomQuestions,
+  type ServiceCustomQuestionsInput,
+} from "./service-custom-questions.js";
+
+export {
   DISCOUNT_APPLIES_TO,
   DISCOUNT_CODE_DISPLAY_STATUSES,
   DISCOUNT_CODE_KINDS,

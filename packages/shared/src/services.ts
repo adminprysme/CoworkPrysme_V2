@@ -3,6 +3,39 @@ import { z } from "zod";
 import { eurosToCents, centsToEuros } from "./money.js";
 import { euroAmountSchema } from "./spaces.js";
 import { slugifyServiceKey, resolveUniqueSlugFromSet } from "./seo.js";
+import {
+  ServiceCustomQuestionsInputSchema,
+  ServiceCustomQuestionsSchema,
+  mapServiceCustomQuestionsToResponse,
+  normalizeServiceCustomQuestions,
+  type ServiceCustomQuestionDbShape,
+  type ServiceCustomQuestionInput,
+} from "./service-custom-questions.js";
+
+export {
+  MAX_SERVICE_CUSTOM_QUESTIONS,
+  SERVICE_CUSTOM_QUESTION_LABEL_MAX_LENGTH,
+  SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS,
+  SERVICE_CUSTOM_QUESTION_TYPE_LABELS,
+  SERVICE_CUSTOM_QUESTION_TYPES,
+  ServiceCustomAnswerSchema,
+  ServiceCustomAnswerValueSchemas,
+  ServiceCustomQuestionInputSchema,
+  ServiceCustomQuestionSchema,
+  ServiceCustomQuestionTypeSchema,
+  ServiceCustomQuestionsInputSchema,
+  ServiceCustomQuestionsSchema,
+  ensureServiceCustomQuestionIds,
+  mapServiceCustomQuestionsToResponse,
+  normalizeServiceCustomQuestions,
+  type ServiceCustomAnswer,
+  type ServiceCustomQuestion,
+  type ServiceCustomQuestionDbShape,
+  type ServiceCustomQuestionInput,
+  type ServiceCustomQuestionType,
+  type ServiceCustomQuestions,
+  type ServiceCustomQuestionsInput,
+} from "./service-custom-questions.js";
 
 export const SERVICE_STATUSES = ["active", "inactive"] as const;
 export const ServiceStatusSchema = z.enum(SERVICE_STATUSES);
@@ -25,6 +58,7 @@ export const CreateServiceRequestSchema = z.object({
   vatRate: z.number().min(0).default(DEFAULT_SERVICE_VAT_RATE),
   promoEligible: z.boolean().default(false),
   status: ServiceStatusSchema.default("active"),
+  customQuestions: ServiceCustomQuestionsInputSchema,
 });
 
 export const UpdateServiceRequestSchema = CreateServiceRequestSchema.partial();
@@ -39,6 +73,7 @@ export const ServiceResponseSchema = z.object({
   vatRate: z.number().min(0),
   promoEligible: z.boolean(),
   status: ServiceStatusSchema,
+  customQuestions: ServiceCustomQuestionsSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -47,8 +82,13 @@ export const ServicesListResponseSchema = z.object({
   services: z.array(ServiceResponseSchema),
 });
 
-export type CreateServiceRequest = z.infer<typeof CreateServiceRequestSchema>;
-export type UpdateServiceRequest = z.infer<typeof UpdateServiceRequestSchema>;
+export type CreateServiceRequest = Omit<
+  z.infer<typeof CreateServiceRequestSchema>,
+  "customQuestions"
+> & {
+  customQuestions?: ServiceCustomQuestionInput[];
+};
+export type UpdateServiceRequest = Partial<CreateServiceRequest>;
 export type ServiceResponse = z.infer<typeof ServiceResponseSchema>;
 export type ServicesListResponse = z.infer<typeof ServicesListResponseSchema>;
 
@@ -60,6 +100,7 @@ export interface ServiceDbShape {
   vatRate: number;
   promoEligible: boolean;
   status: ServiceStatus;
+  customQuestions: ServiceCustomQuestionDbShape[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -104,6 +145,7 @@ export function mapCreateServiceRequestToDb(
     vatRate: input.vatRate,
     promoEligible: input.promoEligible,
     status: input.status,
+    customQuestions: normalizeServiceCustomQuestions(input.customQuestions ?? []),
   };
 }
 
@@ -120,6 +162,7 @@ export function mapServiceToResponse(
     vatRate: doc.vatRate,
     promoEligible: doc.promoEligible,
     status: doc.status,
+    customQuestions: mapServiceCustomQuestionsToResponse(doc.customQuestions),
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   });
