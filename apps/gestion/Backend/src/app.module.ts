@@ -5,8 +5,10 @@ import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module.js";
 import { BuildingsModule } from "./buildings/buildings.module.js";
 import { DbModule } from "./db/db.module.js";
+import { DiscountCodesModule } from "./discount-codes/discount-codes.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { PermissionsModule } from "./permissions/permissions.module.js";
+import { ServicesModule } from "./services/services.module.js";
 import { SpacesModule } from "./spaces/spaces.module.js";
 import { UploadsModule } from "./uploads/uploads.module.js";
 import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.js";
@@ -21,6 +23,8 @@ import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.j
     UploadsModule,
     BuildingsModule,
     SpacesModule,
+    ServicesModule,
+    DiscountCodesModule,
     VitrineContentModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

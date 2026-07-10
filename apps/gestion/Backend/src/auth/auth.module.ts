@@ -5,7 +5,9 @@ import { AuthConfigService } from "./auth-config.service.js";
 import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
 import { CentraleClient } from "./centrale.client.js";
+import { PromoPermissionGuard } from "./promo-permission.guard.js";
 import { PrysmaUserReadService } from "./prysma-user.read.service.js";
+import { ServicesPermissionGuard } from "./services-permission.guard.js";
 import { SessionGuard } from "./session.guard.js";
 import { SessionService } from "./session.service.js";
 import { SpacesPermissionGuard } from "./spaces-permission.guard.js";
@@ -25,6 +27,8 @@ import { StaffContextService } from "./staff-context.service.js";
     AdminGuard,
     StaffContextService,
     SpacesPermissionGuard,
+    ServicesPermissionGuard,
+    PromoPermissionGuard,
   ],
   exports: [
     AuthService,
@@ -33,6 +37,8 @@ import { StaffContextService } from "./staff-context.service.js";
     AdminGuard,
     StaffContextService,
     SpacesPermissionGuard,
+    ServicesPermissionGuard,
+    PromoPermissionGuard,
   ],
 })
 export class AuthModule {}
