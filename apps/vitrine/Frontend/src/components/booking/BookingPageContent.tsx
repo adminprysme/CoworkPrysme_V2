@@ -1,7 +1,17 @@
 "use client";
 
-import type { BookingLockResponse, BookingSpaceCard, SpaceType } from "@coworkprysme/shared";
-import { formatCentsAsEuroString } from "@coworkprysme/shared";
+import type {
+  BookingLockResponse,
+  BookingPhase1DurationClass,
+  BookingPriceRequest,
+  BookingServiceCatalogItem,
+  BookingSpaceCard,
+  SpaceType,
+} from "@coworkprysme/shared";
+import {
+  DISCOUNT_CODE_PREFERENTIAL_PENDING_MESSAGE,
+  formatCentsAsEuroString,
+} from "@coworkprysme/shared";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -21,7 +31,9 @@ import {
   type CalendarDurationFilter,
 } from "@/lib/booking-date-utils";
 import { buildRecurringReservationMailto } from "@/lib/booking-recurring-contact";
-import { formatCountdown, useBookingLockCountdown } from "@/hooks/useBookingLock";
+import { useBookingLockCountdown } from "@/hooks/useBookingLock";
+import { useBookingPrice } from "@/hooks/useBookingPrice";
+import { fetchBookingServices } from "@/lib/booking-price-api";
 import { getBookingSessionId } from "@/lib/booking-session";
 import {
   createBookingLock,
@@ -39,10 +51,12 @@ import {
   formatBookingDatesSearchSummary,
   formatBookingFlexibleSearchSummary,
 } from "./BookingSearchSummary";
-import { BookingProgressBar } from "./BookingProgressBar";
+import { BookingProgressBar, type BookingProgressStepId } from "./BookingProgressBar";
+import { BookingFloatingSummary } from "./BookingFloatingSummary";
+import { BookingServicesStep, type BookingCartItem } from "./BookingServicesStep";
 import styles from "./booking.module.css";
 
-type BookingView = "search" | "results" | "calendar" | "locked";
+type BookingView = "search" | "results" | "calendar" | "services";
 
 type CalendarSlot = {
   startAt: string;
@@ -85,6 +99,12 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [error, setError] = useState<string | null>(null);
   const [lockExpiredMessage, setLockExpiredMessage] = useState<string | null>(null);
   const [searchFormExpanded, setSearchFormExpanded] = useState(true);
+  const shouldScrollAfterSearchRef = useRef(false);
+  const [durationClass, setDurationClass] = useState<BookingPhase1DurationClass | null>(null);
+  const [catalogServices, setCatalogServices] = useState<BookingServiceCatalogItem[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [cart, setCart] = useState<BookingCartItem[]>([]);
+  const [discountCode, setDiscountCode] = useState("");
 
   const remainingMs = useBookingLockCountdown(lock?.expiresAt ?? null);
 
@@ -138,6 +158,63 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
   const searchCollapsed =
     (view === "results" || view === "calendar") && spaces.length > 0 && !searchFormExpanded;
+
+  const progressStep = useMemo<BookingProgressStepId>(() => {
+    if (view === "services") {
+      return "services";
+    }
+    return "space";
+  }, [view]);
+
+  const showFloatingSummary = Boolean(
+    selectedSpace && (view === "results" || view === "calendar" || view === "services"),
+  );
+
+  const priceRequest = useMemo<BookingPriceRequest | null>(() => {
+    if (!lock || !selectedSpace || !durationClass) {
+      return null;
+    }
+
+    return {
+      spaceId: selectedSpace.spaceId,
+      startAt: lock.startAt,
+      endAt: lock.endAt,
+      durationClass,
+      services: cart.map((item) => ({
+        serviceId: item.serviceId,
+        qty: item.qty,
+        customAnswers: item.customAnswers,
+      })),
+      discountCode: discountCode.trim() || undefined,
+    };
+  }, [cart, discountCode, durationClass, lock, selectedSpace]);
+
+  const { price, loading: priceLoading, error: priceError } = useBookingPrice(priceRequest);
+
+  const promoMessage =
+    priceError === DISCOUNT_CODE_PREFERENTIAL_PENDING_MESSAGE ? priceError : null;
+  const promoError =
+    priceError && priceError !== DISCOUNT_CODE_PREFERENTIAL_PENDING_MESSAGE ? priceError : null;
+
+  const cartSummaryLines = useMemo(
+    () =>
+      cart.map((item) => ({
+        serviceId: item.serviceId,
+        label: item.label,
+        qty: item.qty,
+        answerSummary: item.customAnswers?.map(
+          (answer) => `${answer.label} : ${String(answer.value)}`,
+        ),
+      })),
+    [cart],
+  );
+
+  function showSearchResults(result: BookingSpaceCard[]) {
+    shouldScrollAfterSearchRef.current = true;
+    setSpaces(result);
+    setSearchFormExpanded(false);
+    setView("results");
+  }
 
   const searchSummaryLabel = useMemo(() => {
     if (searchMode === "flexible") {
@@ -246,9 +323,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         }
 
         const result = await fetchBookingSpaces({ spaceType, partySize });
-        setSpaces(result);
-        setSearchFormExpanded(false);
-        setView("results");
+        showSearchResults(result);
         return;
       }
 
@@ -277,9 +352,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         startAt: window.startAt,
         endAt: window.endAt,
       });
-      setSpaces(result);
-      setSearchFormExpanded(false);
-      setView("results");
+      showSearchResults(result);
     } catch (searchError) {
       setError(searchError instanceof Error ? searchError.message : "Recherche impossible");
       setView("search");
@@ -337,10 +410,20 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       startTime,
       endTime,
     );
-    await handleCreateLock(space, window.startAt, window.endAt);
+    await handleCreateLock(
+      space,
+      window.startAt,
+      window.endAt,
+      dateRangeMode === "same_day" ? "hourly" : "daily",
+    );
   }
 
-  async function handleCreateLock(space: BookingSpaceCard, slotStartAt: string, slotEndAt: string) {
+  async function handleCreateLock(
+    space: BookingSpaceCard,
+    slotStartAt: string,
+    slotEndAt: string,
+    slotDurationClass: BookingPhase1DurationClass,
+  ) {
     setLoading(true);
     setError(null);
     setLockExpiredMessage(null);
@@ -356,7 +439,10 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       });
       setLock(response);
       setSelectedSlot({ startAt: slotStartAt, endAt: slotEndAt });
-      setView("locked");
+      setDurationClass(slotDurationClass);
+      setCart([]);
+      setDiscountCode("");
+      setView("services");
     } catch (lockError) {
       setError(
         lockError instanceof Error
@@ -368,15 +454,33 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     }
   }
 
-  async function handleReleaseLock() {
-    if (!lock) {
+  useEffect(() => {
+    if (view !== "services" || !selectedSpace) {
       return;
     }
-    const sessionId = getBookingSessionId();
-    await releaseBookingLock(lock.lockId, sessionId);
-    setLock(null);
-    setView(searchMode === "flexible" ? "calendar" : "results");
-  }
+
+    setServicesLoading(true);
+    void fetchBookingServices({ buildingId: selectedSpace.buildingId })
+      .then(setCatalogServices)
+      .catch((servicesError: unknown) => {
+        setError(servicesError instanceof Error ? servicesError.message : "Services indisponibles");
+      })
+      .finally(() => setServicesLoading(false));
+  }, [selectedSpace, view]);
+
+  useEffect(() => {
+    if (!shouldScrollAfterSearchRef.current || !searchCollapsed) {
+      return;
+    }
+
+    shouldScrollAfterSearchRef.current = false;
+
+    if (typeof window === "undefined" || !window.matchMedia("(max-width: 640px)").matches) {
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [searchCollapsed]);
 
   useEffect(() => {
     if (remainingMs !== 0 || !lock) {
@@ -401,325 +505,361 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           </p>
         </div>
 
-        <BookingProgressBar />
+        <BookingProgressBar activeStep={progressStep} />
 
-        {(view === "search" || view === "results" || view === "calendar") && (
-          <form
-            className={[styles.searchForm, searchCollapsed ? styles.searchFormCompact : ""]
-              .filter(Boolean)
-              .join(" ")}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleSearch();
-            }}
-          >
-            <div
-              className={[
-                styles.searchFormPanel,
-                searchCollapsed ? styles.searchFormPanelHidden : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-hidden={searchCollapsed}
-            >
-              <div className={styles.searchGrid}>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Type d&apos;espace</span>
-                  <select
-                    className={styles.fieldSelect}
-                    value={spaceType}
-                    onChange={(event) => setSpaceType(event.target.value as SpaceType)}
-                  >
-                    <option value="meeting_room">Salle de réunion</option>
-                    <option value="private_office">Bureau privatif</option>
-                  </select>
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Nombre de personnes</span>
-                  <input
-                    className={styles.fieldInput}
-                    type="number"
-                    min={1}
-                    value={partySize}
-                    onChange={(event) => setPartySize(Number(event.target.value))}
-                  />
-                </label>
-              </div>
-
-              <div className={styles.dateSection}>
-                <span className={styles.fieldLabel}>Dates et horaires</span>
-
+        <div
+          className={[
+            styles.bookingLayout,
+            showFloatingSummary ? styles.bookingLayoutWithSummary : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div className={styles.bookingMain}>
+            {(view === "search" || view === "results" || view === "calendar") && (
+              <form
+                className={[styles.searchForm, searchCollapsed ? styles.searchFormCompact : ""]
+                  .filter(Boolean)
+                  .join(" ")}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSearch();
+                }}
+              >
                 <div
-                  className={styles.searchModeToggle}
-                  role="tablist"
-                  aria-label="Mode de recherche"
-                >
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={searchMode === "dates"}
-                    className={[
-                      styles.searchModeToggleButton,
-                      searchMode === "dates" ? styles.searchModeToggleButtonActive : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={() => setSearchMode("dates")}
-                  >
-                    Dates
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={searchMode === "flexible"}
-                    className={[
-                      styles.searchModeToggleButton,
-                      searchMode === "flexible" ? styles.searchModeToggleButtonActive : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={() => setSearchMode("flexible")}
-                  >
-                    Flexible
-                  </button>
-                </div>
-
-                {searchMode === "dates" ? (
-                  <>
-                    <BookingSearchDateRangePicker
-                      startDate={startDate}
-                      endDate={endDate}
-                      recurringReservationMailto={recurringReservationMailto}
-                      onRangeChange={(start, end) => {
-                        setStartDate(start);
-                        setEndDate(end);
-                      }}
-                    />
-
-                    <BookingSearchDateTimeFields
-                      mode={dateRangeMode}
-                      startDate={startDate}
-                      endDate={endDate}
-                      startTime={startTime}
-                      endTime={endTime}
-                      onStartTimeChange={setStartTime}
-                      onEndTimeChange={setEndTime}
-                    />
-                  </>
-                ) : (
-                  <BookingFlexibleSearchPanel
-                    duration={flexDuration}
-                    onDurationChange={handleFlexDurationChange}
-                    selectedStartMonth={flexStartMonth}
-                    selectedEndMonth={flexEndMonth}
-                    onMonthRangeChange={handleFlexMonthRangeChange}
-                  />
-                )}
-              </div>
-
-              <div className={styles.searchActions}>
-                <button className={styles.primaryButton} type="submit" disabled={loading}>
-                  {loading
-                    ? "Recherche…"
-                    : searchMode === "flexible"
-                      ? "Voir les espaces"
-                      : "Rechercher"}
-                </button>
-                {view !== "search" ? (
-                  <button
-                    type="button"
-                    className={styles.secondaryButton}
-                    onClick={() => {
-                      setSearchFormExpanded(true);
-                      setView("search");
-                      setSpaces([]);
-                      setSelectedSpace(null);
-                      setCalendarSlots([]);
-                    }}
-                  >
-                    Nouvelle recherche
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {searchCollapsed && searchSummaryLabel ? (
-              <div className={styles.searchFormSummaryPanel}>
-                <BookingSearchSummary
-                  summary={searchSummaryLabel}
-                  onEdit={() => setSearchFormExpanded(true)}
-                  recurringMailto={searchMode === "dates" ? recurringReservationMailto : undefined}
-                />
-              </div>
-            ) : null}
-
-            {error ? <p className={`${styles.message} ${styles.messageError}`}>{error}</p> : null}
-            {lockExpiredMessage ? (
-              <p className={`${styles.message} ${styles.messageInfo}`}>{lockExpiredMessage}</p>
-            ) : null}
-          </form>
-        )}
-
-        {(view === "results" || view === "calendar") && spaces.length > 0 ? (
-          <>
-            <div
-              className={[styles.resultsHeader, searchCollapsed ? styles.resultsHeaderCompact : ""]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <h2 className={styles.resultsTitle}>
-                {searchMode === "flexible" ? "Espaces disponibles" : "Espaces disponibles"}
-              </h2>
-              <span>
-                {spaces.length} espace{spaces.length > 1 ? "s" : ""}
-              </span>
-            </div>
-
-            <div className={styles.spaceGrid}>
-              {spaces.map((space) => (
-                <article
-                  key={space.spaceId}
                   className={[
-                    styles.spaceCard,
-                    selectedSpace?.spaceId === space.spaceId ? styles.spaceCardSelected : "",
+                    styles.searchFormPanel,
+                    searchCollapsed ? styles.searchFormPanelHidden : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
+                  aria-hidden={searchCollapsed}
                 >
-                  <div className={styles.spaceCardTop}>
-                    <div className={styles.spaceImageWrap}>
-                      {space.primaryPhotoUrl ? (
-                        <Image
-                          src={space.primaryPhotoUrl}
-                          alt={space.name}
-                          fill
-                          sizes="7rem"
-                          className={styles.spaceImage}
-                        />
-                      ) : (
-                        <div className={styles.spaceImagePlaceholder}>Photo</div>
-                      )}
-                    </div>
+                  <div className={styles.searchGrid}>
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Type d&apos;espace</span>
+                      <select
+                        className={styles.fieldSelect}
+                        value={spaceType}
+                        onChange={(event) => setSpaceType(event.target.value as SpaceType)}
+                      >
+                        <option value="meeting_room">Salle de réunion</option>
+                        <option value="private_office">Bureau privatif</option>
+                      </select>
+                    </label>
 
-                    <div>
-                      <h3 className={styles.spaceName}>{space.name}</h3>
-                      <p className={styles.spaceMeta}>
-                        {space.buildingName} · {space.city} · {space.capacity} pers.
-                      </p>
-                      <ul className={styles.equipments}>
-                        {space.equipments.map((equipment) => (
-                          <li key={equipment} className={styles.equipmentTag}>
-                            {equipment}
-                          </li>
-                        ))}
-                      </ul>
-                      {space.priceFromHTCents !== null ? (
-                        <p className={styles.priceFrom}>
-                          À partir de {formatCentsAsEuroString(space.priceFromHTCents)} € HT
-                          {space.priceFromLabel ? ` / ${space.priceFromLabel.toLowerCase()}` : ""}
-                        </p>
-                      ) : null}
-                    </div>
+                    <label className={styles.field}>
+                      <span className={styles.fieldLabel}>Nombre de personnes</span>
+                      <input
+                        className={styles.fieldInput}
+                        type="number"
+                        min={1}
+                        value={partySize}
+                        onChange={(event) => setPartySize(Number(event.target.value))}
+                      />
+                    </label>
                   </div>
 
-                  <button
-                    type="button"
-                    className={styles.primaryButton}
-                    disabled={loading}
-                    onClick={() => void handleSelectSpace(space)}
-                  >
-                    {searchMode === "flexible" ? "Voir les créneaux" : "Réserver ce créneau"}
-                  </button>
-                </article>
-              ))}
-            </div>
-          </>
-        ) : null}
+                  <div className={styles.dateSection}>
+                    <span className={styles.fieldLabel}>Dates et horaires</span>
 
-        {view === "calendar" && selectedSpace && calendarMonth ? (
-          <div className={styles.calendarPanel}>
-            <h3 className={styles.calendarTitle}>
-              Créneaux — {selectedSpace.name} ·{" "}
-              {flexibleMonthHeading ?? formatMonthHeading(calendarMonth)}
-            </h3>
+                    <div
+                      className={styles.searchModeToggle}
+                      role="tablist"
+                      aria-label="Mode de recherche"
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={searchMode === "dates"}
+                        className={[
+                          styles.searchModeToggleButton,
+                          searchMode === "dates" ? styles.searchModeToggleButtonActive : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => setSearchMode("dates")}
+                      >
+                        Dates
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={searchMode === "flexible"}
+                        className={[
+                          styles.searchModeToggleButton,
+                          searchMode === "flexible" ? styles.searchModeToggleButtonActive : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => setSearchMode("flexible")}
+                      >
+                        Flexible
+                      </button>
+                    </div>
 
-            <div className={styles.calendarFilters} role="group" aria-label="Type de créneau">
-              {(
-                [
-                  { value: "all", label: "Tous" },
-                  { value: "hourly", label: "Horaire" },
-                  { value: "daily", label: "Journée" },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
+                    {searchMode === "dates" ? (
+                      <>
+                        <BookingSearchDateRangePicker
+                          startDate={startDate}
+                          endDate={endDate}
+                          recurringReservationMailto={recurringReservationMailto}
+                          onRangeChange={(start, end) => {
+                            setStartDate(start);
+                            setEndDate(end);
+                          }}
+                        />
+
+                        <BookingSearchDateTimeFields
+                          mode={dateRangeMode}
+                          startDate={startDate}
+                          endDate={endDate}
+                          startTime={startTime}
+                          endTime={endTime}
+                          onStartTimeChange={setStartTime}
+                          onEndTimeChange={setEndTime}
+                        />
+                      </>
+                    ) : (
+                      <BookingFlexibleSearchPanel
+                        duration={flexDuration}
+                        onDurationChange={handleFlexDurationChange}
+                        selectedStartMonth={flexStartMonth}
+                        selectedEndMonth={flexEndMonth}
+                        onMonthRangeChange={handleFlexMonthRangeChange}
+                      />
+                    )}
+                  </div>
+
+                  <div className={styles.searchActions}>
+                    <button className={styles.primaryButton} type="submit" disabled={loading}>
+                      {loading
+                        ? "Recherche…"
+                        : searchMode === "flexible"
+                          ? "Voir les espaces"
+                          : "Rechercher"}
+                    </button>
+                    {view !== "search" ? (
+                      <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        onClick={() => {
+                          setSearchFormExpanded(true);
+                          setView("search");
+                          setSpaces([]);
+                          setSelectedSpace(null);
+                          setCalendarSlots([]);
+                        }}
+                      >
+                        Nouvelle recherche
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {searchCollapsed && searchSummaryLabel ? (
+                  <div className={styles.searchFormSummaryPanel}>
+                    <BookingSearchSummary
+                      summary={searchSummaryLabel}
+                      onEdit={() => setSearchFormExpanded(true)}
+                      recurringMailto={
+                        searchMode === "dates" ? recurringReservationMailto : undefined
+                      }
+                    />
+                  </div>
+                ) : null}
+
+                {error ? (
+                  <p className={`${styles.message} ${styles.messageError}`}>{error}</p>
+                ) : null}
+                {lockExpiredMessage ? (
+                  <p className={`${styles.message} ${styles.messageInfo}`}>{lockExpiredMessage}</p>
+                ) : null}
+              </form>
+            )}
+
+            {(view === "results" || view === "calendar") && spaces.length > 0 ? (
+              <>
+                <div
                   className={[
-                    styles.calendarFilterPill,
-                    calendarDurationFilter === option.value ? styles.calendarFilterPillActive : "",
+                    styles.resultsHeader,
+                    searchCollapsed ? styles.resultsHeaderCompact : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  aria-pressed={calendarDurationFilter === option.value}
-                  onClick={() => setCalendarDurationFilter(option.value)}
                 >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+                  <h2 className={styles.resultsTitle}>
+                    {searchMode === "flexible" ? "Espaces disponibles" : "Espaces disponibles"}
+                  </h2>
+                  <span>
+                    {spaces.length} espace{spaces.length > 1 ? "s" : ""}
+                  </span>
+                </div>
 
-            <div className={styles.slotGrid}>
-              {visibleCalendarSlots.map((slot) => {
-                const selected =
-                  selectedSlot?.startAt === slot.startAt && selectedSlot.endAt === slot.endAt;
-                const emphasized = slot.durationClass === "daily";
-                return (
-                  <button
-                    key={`${slot.startAt}-${slot.endAt}`}
-                    type="button"
-                    disabled={!slot.selectable || loading}
-                    className={[
-                      styles.slotButton,
-                      !slot.selectable ? styles.slotButtonDisabled : "",
-                      selected ? styles.slotButtonSelected : "",
-                      emphasized ? styles.slotButtonEmphasized : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={() => void handleCreateLock(selectedSpace, slot.startAt, slot.endAt)}
-                  >
-                    <span className={styles.slotDuration}>{slot.durationClass}</span>
-                    <span className={styles.slotWhen}>
-                      {formatSlotLabel(slot.startAt, slot.endAt)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
+                <div className={styles.spaceGrid}>
+                  {spaces.map((space) => (
+                    <article
+                      key={space.spaceId}
+                      className={[
+                        styles.spaceCard,
+                        selectedSpace?.spaceId === space.spaceId ? styles.spaceCardSelected : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      <div className={styles.spaceCardTop}>
+                        <div className={styles.spaceImageWrap}>
+                          {space.primaryPhotoUrl ? (
+                            <Image
+                              src={space.primaryPhotoUrl}
+                              alt={space.name}
+                              fill
+                              sizes="7rem"
+                              className={styles.spaceImage}
+                            />
+                          ) : (
+                            <div className={styles.spaceImagePlaceholder}>Photo</div>
+                          )}
+                        </div>
 
-        {view === "locked" && lock && selectedSpace ? (
-          <div className={styles.lockPanel}>
-            <h2 className={styles.lockTitle}>Créneau réservé temporairement</h2>
-            <p className={styles.lockCountdown}>{formatCountdown(remainingMs)}</p>
-            <p className={styles.lockDetails}>
-              {selectedSpace.name} — {selectedRangeLabel}
-              <br />
-              Finalisez votre réservation avant expiration du verrou (10 minutes).
-            </p>
-            <div className={styles.searchActions}>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => void handleReleaseLock()}
-              >
-                Libérer le créneau
-              </button>
-            </div>
+                        <div>
+                          <h3 className={styles.spaceName}>{space.name}</h3>
+                          <p className={styles.spaceMeta}>
+                            {space.buildingName} · {space.city} · {space.capacity} pers.
+                          </p>
+                          <ul className={styles.equipments}>
+                            {space.equipments.map((equipment) => (
+                              <li key={equipment} className={styles.equipmentTag}>
+                                {equipment}
+                              </li>
+                            ))}
+                          </ul>
+                          {space.priceFromHTCents !== null ? (
+                            <p className={styles.priceFrom}>
+                              À partir de {formatCentsAsEuroString(space.priceFromHTCents)} € HT
+                              {space.priceFromLabel
+                                ? ` / ${space.priceFromLabel.toLowerCase()}`
+                                : ""}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={styles.primaryButton}
+                        disabled={loading}
+                        onClick={() => void handleSelectSpace(space)}
+                      >
+                        {searchMode === "flexible" ? "Voir les créneaux" : "Réserver ce créneau"}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {view === "calendar" && selectedSpace && calendarMonth ? (
+              <div className={styles.calendarPanel}>
+                <h3 className={styles.calendarTitle}>
+                  Créneaux — {selectedSpace.name} ·{" "}
+                  {flexibleMonthHeading ?? formatMonthHeading(calendarMonth)}
+                </h3>
+
+                <div className={styles.calendarFilters} role="group" aria-label="Type de créneau">
+                  {(
+                    [
+                      { value: "all", label: "Tous" },
+                      { value: "hourly", label: "Horaire" },
+                      { value: "daily", label: "Journée" },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={[
+                        styles.calendarFilterPill,
+                        calendarDurationFilter === option.value
+                          ? styles.calendarFilterPillActive
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      aria-pressed={calendarDurationFilter === option.value}
+                      onClick={() => setCalendarDurationFilter(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={styles.slotGrid}>
+                  {visibleCalendarSlots.map((slot) => {
+                    const selected =
+                      selectedSlot?.startAt === slot.startAt && selectedSlot.endAt === slot.endAt;
+                    const emphasized = slot.durationClass === "daily";
+                    return (
+                      <button
+                        key={`${slot.startAt}-${slot.endAt}`}
+                        type="button"
+                        disabled={!slot.selectable || loading}
+                        className={[
+                          styles.slotButton,
+                          !slot.selectable ? styles.slotButtonDisabled : "",
+                          selected ? styles.slotButtonSelected : "",
+                          emphasized ? styles.slotButtonEmphasized : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() =>
+                          void handleCreateLock(
+                            selectedSpace,
+                            slot.startAt,
+                            slot.endAt,
+                            slot.durationClass as BookingPhase1DurationClass,
+                          )
+                        }
+                      >
+                        <span className={styles.slotDuration}>{slot.durationClass}</span>
+                        <span className={styles.slotWhen}>
+                          {formatSlotLabel(slot.startAt, slot.endAt)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {view === "services" && lock && selectedSpace ? (
+              <BookingServicesStep
+                services={catalogServices}
+                cart={cart}
+                loading={servicesLoading}
+                discountCode={discountCode}
+                promoMessage={promoMessage}
+                promoError={promoError}
+                onCartChange={setCart}
+                onDiscountCodeChange={setDiscountCode}
+                onBack={() => setView(searchMode === "flexible" ? "calendar" : "results")}
+              />
+            ) : null}
           </div>
-        ) : null}
+
+          {showFloatingSummary ? (
+            <BookingFloatingSummary
+              searchSummary={searchSummaryLabel}
+              spaceLabel={selectedSpace?.name ?? null}
+              slotLabel={selectedRangeLabel}
+              services={cartSummaryLines}
+              price={price}
+              priceLoading={priceLoading}
+              priceError={promoError}
+              lockCountdownMs={lock ? remainingMs : null}
+              expandedByDefault={view === "services"}
+            />
+          ) : null}
+        </div>
       </Container>
     </section>
   );
