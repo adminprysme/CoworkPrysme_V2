@@ -38,6 +38,7 @@ export interface Reservation {
   discountCodeId?: Types.ObjectId;
   pricing: ReservationPricingSnapshot;
   cgvAcceptedAt?: Date;
+  withdrawalAcknowledgedAt?: Date;
   createdChannel: (typeof CREATED_CHANNELS)[number];
   createdAt: Date;
   updatedAt: Date;
@@ -64,6 +65,7 @@ const reservationSchema = new Schema<Reservation>(
     discountCodeId: optionalObjectIdRef("DiscountCode"),
     pricing: { type: reservationPricingSnapshotSchema, required: true },
     cgvAcceptedAt: { type: Date },
+    withdrawalAcknowledgedAt: { type: Date },
     createdChannel: { type: String, enum: CREATED_CHANNELS, required: true },
   },
   { ...TIMESTAMP_OPTIONS, collection: "reservations" },

@@ -325,6 +325,31 @@ export {
 } from "./booking.js";
 
 export {
+  BOOKING_CONFIRM_ERROR_CODES,
+  BookingAccountModeSchema,
+  BookingCardexIdentityInputSchema,
+  BookingCheckEmailRequestSchema,
+  BookingCheckEmailResponseSchema,
+  BookingConfirmErrorResponseSchema,
+  BookingConfirmRequestSchema,
+  BookingConfirmResponseSchema,
+  BookingPaymentMethodSchema,
+  BookingVerifyAccountRequestSchema,
+  BookingVerifyAccountResponseSchema,
+  PRIVACY_POLICY_VERSION,
+  type BookingAccountMode,
+  type BookingCardexIdentityInput,
+  type BookingCheckEmailRequest,
+  type BookingCheckEmailResponse,
+  type BookingConfirmErrorCode,
+  type BookingConfirmRequest,
+  type BookingConfirmResponse,
+  type BookingPaymentMethod,
+  type BookingVerifyAccountRequest,
+  type BookingVerifyAccountResponse,
+} from "./booking-confirm.js";
+
+export {
   DEFAULT_SERVICE_VAT_RATE,
   SERVICE_DESCRIPTION_MAX_LENGTH,
   SERVICE_LABEL_MAX_LENGTH,

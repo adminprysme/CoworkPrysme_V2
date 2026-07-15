@@ -18,8 +18,19 @@ export {
 } from "./replica-set.js";
 export {
   isDuplicateKeyError,
+  EmailAlreadyRegisteredError,
+  InvalidCredentialsError,
+  LockMismatchError,
+  LockNotAvailableError,
   RangeOpeningHoursError,
   ReservationOverlapError,
   SlotLockConflictError,
   SlotUnavailableError,
 } from "./errors.js";
+export {
+  getReferenceSequenceModel,
+  nextReference,
+  registerReferenceSequenceModel,
+  type ReferenceSequence,
+  type ReferenceSequenceModel,
+} from "./reference-sequences.js";

@@ -33,6 +33,38 @@ export class RangeOpeningHoursError extends Error {
   }
 }
 
+/** Thrown when a booking lock is missing, expired, or already consumed. */
+export class LockNotAvailableError extends Error {
+  constructor(message = "Booking lock is not available") {
+    super(message);
+    this.name = "LockNotAvailableError";
+  }
+}
+
+/** Thrown when lock data does not match the confirm request payload. */
+export class LockMismatchError extends Error {
+  constructor(message = "Booking lock does not match the requested slot") {
+    super(message);
+    this.name = "LockMismatchError";
+  }
+}
+
+/** Thrown when client credentials are invalid during booking confirm. */
+export class InvalidCredentialsError extends Error {
+  constructor(message = "Invalid email or password") {
+    super(message);
+    this.name = "InvalidCredentialsError";
+  }
+}
+
+/** Thrown when a new account email is already registered. */
+export class EmailAlreadyRegisteredError extends Error {
+  constructor(message = "An account with this email already exists") {
+    super(message);
+    this.name = "EmailAlreadyRegisteredError";
+  }
+}
+
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&
