@@ -37,23 +37,15 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 0.85rem;
+  gap: 1rem;
+  align-items: stretch;
 }
 
-.cardWrap {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.deleteBtn {
-  justify-self: start;
-  padding: 0.35rem 0.65rem;
-  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
-  border-radius: 8px;
-  background: transparent;
-  color: var(--color-danger);
-  font-size: 0.82rem;
-  cursor: pointer;
+@media (min-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.1rem;
+  }
 }
 
 .errorBanner {

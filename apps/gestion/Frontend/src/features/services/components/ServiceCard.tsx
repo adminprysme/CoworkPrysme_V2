@@ -7,56 +7,108 @@ import styles from "./ServiceCard.module.css";
 interface ServiceCardProps {
   service: ServiceResponse;
   onEdit: () => void;
+  onDelete?: () => void;
 }
 
-export function ServiceCard({ service, onEdit }: ServiceCardProps) {
+function ServicePhotoFallback() {
+  return (
+    <div className={styles.mediaFallback} aria-hidden="true">
+      <svg className={styles.mediaIcon} viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="9" cy="10.5" r="1.75" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M6.5 16.5L10.2 12.8L13.1 15.7L16.4 12.4L18.5 14.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+export function ServiceCard({ service, onEdit, onDelete }: ServiceCardProps) {
   const ttc = formatCentsAsEuroString(computeTtcCents(service.priceHTCents, service.vatRate));
+  const scopeTags: string[] = [];
+
+  if (service.isGlobal) {
+    scopeTags.push("Global");
+  } else if (service.buildings?.length) {
+    scopeTags.push(
+      `${service.buildings.length} bâtiment${service.buildings.length > 1 ? "s" : ""}`,
+    );
+  }
 
   return (
-    <button type="button" className={styles.card} onClick={onEdit}>
-      {service.photo?.url ? (
-        <img
-          className={styles.thumbnail}
-          src={servicePhotoUrl(service.photo.url)}
-          alt={service.photo.alt ?? service.label}
-        />
-      ) : null}
-      <div className={styles.header}>
-        <h3 className={styles.title}>{service.label}</h3>
-        <span
-          className={[
-            styles.badge,
-            service.status === "active" ? styles.badgeActive : styles.badgeInactive,
-          ].join(" ")}
+    <article className={styles.cardShell}>
+      <button type="button" className={styles.card} onClick={onEdit}>
+        <div className={styles.media}>
+          {service.photo?.url ? (
+            <img
+              className={styles.mediaImage}
+              src={servicePhotoUrl(service.photo.url)}
+              alt={service.photo.alt ?? service.label}
+            />
+          ) : (
+            <ServicePhotoFallback />
+          )}
+        </div>
+
+        <div className={styles.body}>
+          <div className={styles.header}>
+            <h3 className={styles.title}>{service.label}</h3>
+            <span
+              className={[
+                styles.statusBadge,
+                service.status === "active" ? styles.statusActive : styles.statusInactive,
+              ].join(" ")}
+            >
+              {service.status === "active" ? "Actif" : "Inactif"}
+            </span>
+          </div>
+
+          <p className={styles.description}>{service.description || "\u00A0"}</p>
+
+          <div className={styles.priceBlock}>
+            <div className={styles.pricePrimary}>
+              <span className={styles.pricePrimaryLabel}>TTC indicatif</span>
+              <span className={styles.pricePrimaryValue}>{ttc} €</span>
+            </div>
+            <p className={styles.priceSecondary}>
+              HT {service.priceEurosHT.toFixed(2)} € · TVA {service.vatRate} %
+            </p>
+          </div>
+
+          {scopeTags.length > 0 || service.promoEligible ? (
+            <div className={styles.tags}>
+              {scopeTags.map((tag) => (
+                <span key={tag} className={styles.tag}>
+                  {tag}
+                </span>
+              ))}
+              {service.promoEligible ? <span className={styles.tag}>Éligible 1+1</span> : null}
+            </div>
+          ) : null}
+
+          <p className={styles.keyLine}>
+            <code className={styles.key}>{service.key}</code>
+          </p>
+        </div>
+      </button>
+
+      {onDelete ? (
+        <button
+          type="button"
+          className={styles.deleteBtn}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
         >
-          {service.status === "active" ? "Actif" : "Inactif"}
-        </span>
-      </div>
-      {service.description ? <p className={styles.description}>{service.description}</p> : null}
-      <dl className={styles.meta}>
-        <div>
-          <dt>Prix HT</dt>
-          <dd>{service.priceEurosHT.toFixed(2)} €</dd>
-        </div>
-        <div>
-          <dt>TVA</dt>
-          <dd>{service.vatRate} %</dd>
-        </div>
-        <div>
-          <dt>TTC indicatif</dt>
-          <dd>{ttc} €</dd>
-        </div>
-      </dl>
-      <p className={styles.footer}>
-        <code>{service.key}</code>
-        {service.isGlobal ? <span className={styles.scopeTag}>Global</span> : null}
-        {!service.isGlobal && service.buildings?.length ? (
-          <span className={styles.scopeTag}>
-            {service.buildings.length} bâtiment{service.buildings.length > 1 ? "s" : ""}
-          </span>
-        ) : null}
-        {service.promoEligible ? <span className={styles.promoTag}>Éligible 1+1</span> : null}
-      </p>
-    </button>
+          Supprimer
+        </button>
+      ) : null}
+    </article>
   );
 }

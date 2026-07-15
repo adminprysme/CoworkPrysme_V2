@@ -134,24 +134,15 @@ export function ServicesPage() {
 
       <div className={styles.grid}>
         {services.map((service) => (
-          <div key={service.id} className={styles.cardWrap}>
-            <ServiceCard
-              service={service}
-              onEdit={() => {
-                setEditing(service);
-                setFormOpen(true);
-              }}
-            />
-            {isAdmin ? (
-              <button
-                type="button"
-                className={styles.deleteBtn}
-                onClick={() => void handleDelete(service)}
-              >
-                Supprimer
-              </button>
-            ) : null}
-          </div>
+          <ServiceCard
+            key={service.id}
+            service={service}
+            onEdit={() => {
+              setEditing(service);
+              setFormOpen(true);
+            }}
+            onDelete={isAdmin ? () => void handleDelete(service) : undefined}
+          />
         ))}
       </div>
 
