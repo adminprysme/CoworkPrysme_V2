@@ -1,0 +1,213 @@
+.step {
+  display: grid;
+  gap: var(--v-space-5);
+  align-content: start;
+}
+
+.stepHeader {
+  display: grid;
+  gap: var(--v-space-3);
+}
+
+.backButton {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v-color-brand);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--v-font-display);
+  font-size: clamp(1.45rem, 3vw, 1.75rem);
+  color: var(--v-color-ink);
+}
+
+.lead {
+  margin: 0.35rem 0 0;
+  color: var(--v-color-text-muted);
+  line-height: 1.55;
+}
+
+.form {
+  display: grid;
+  gap: var(--v-space-4);
+  max-width: 32rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--v-color-ink);
+}
+
+.input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  font: inherit;
+}
+
+.input:focus {
+  outline: 2px solid color-mix(in srgb, var(--v-color-brand) 35%, transparent);
+  border-color: var(--v-color-brand);
+}
+
+.checkboxRow {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--v-color-text-muted);
+}
+
+.checkboxRow input {
+  margin-top: 0.2rem;
+}
+
+.link {
+  color: var(--v-color-brand);
+  text-decoration: underline;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--v-space-3);
+  border-radius: var(--v-radius-md);
+  background: color-mix(in srgb, var(--v-color-brand-muted) 35%, var(--v-color-surface));
+  color: var(--v-color-ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.noticeWarning {
+  border: 1px solid color-mix(in srgb, var(--v-color-brand) 25%, transparent);
+}
+
+.error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.88rem;
+}
+
+.success {
+  margin: 0;
+  color: #027a48;
+  font-size: 0.88rem;
+}
+
+.modeSwitch {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v-color-brand);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-space-3);
+}
+
+.primaryButton {
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-brand);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.paymentOptions {
+  display: grid;
+  gap: var(--v-space-3);
+  max-width: 36rem;
+}
+
+.paymentOption {
+  display: grid;
+  gap: 0.35rem;
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.paymentOptionSelected {
+  border-color: var(--v-color-brand);
+  box-shadow: 0 0 0 1px var(--v-color-brand);
+}
+
+.paymentOptionTitle {
+  margin: 0;
+  font-weight: 700;
+  color: var(--v-color-ink);
+}
+
+.paymentOptionText {
+  margin: 0;
+  color: var(--v-color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.recapBlock {
+  display: grid;
+  gap: var(--v-space-3);
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-surface);
+}
+
+.lineRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--v-space-3);
+  font-size: 0.92rem;
+}
+
+.lineRowStrong {
+  font-weight: 700;
+  color: var(--v-color-ink);
+}
+
+.vatList {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--v-color-text-muted);
+  font-size: 0.88rem;
+}
+
+.confirmedCard {
+  display: grid;
+  gap: var(--v-space-4);
+  max-width: 40rem;
+  padding: var(--v-space-5);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: color-mix(in srgb, var(--v-color-brand-muted) 18%, var(--v-color-surface));
+}
