@@ -7,9 +7,15 @@ interface ServiceFormProps {
   values: ServiceFormValues;
   errors: ServiceFormErrors;
   onChange: (values: ServiceFormValues) => void;
+  contentReadOnly?: boolean;
 }
 
-export function ServiceForm({ values, errors, onChange }: ServiceFormProps) {
+export function ServiceForm({
+  values,
+  errors,
+  onChange,
+  contentReadOnly = false,
+}: ServiceFormProps) {
   function patch(patch: Partial<ServiceFormValues>) {
     onChange({ ...values, ...patch });
   }
@@ -21,6 +27,7 @@ export function ServiceForm({ values, errors, onChange }: ServiceFormProps) {
         <input
           className={styles.input}
           value={values.label}
+          disabled={contentReadOnly}
           onChange={(event) => patch({ label: event.target.value })}
         />
         {errors.label ? <span className={styles.error}>{errors.label}</span> : null}
@@ -32,6 +39,7 @@ export function ServiceForm({ values, errors, onChange }: ServiceFormProps) {
           className={styles.textarea}
           rows={3}
           value={values.description}
+          disabled={contentReadOnly}
           onChange={(event) => patch({ description: event.target.value })}
         />
         {errors.description ? <span className={styles.error}>{errors.description}</span> : null}
@@ -69,14 +77,11 @@ export function ServiceForm({ values, errors, onChange }: ServiceFormProps) {
         <input
           type="checkbox"
           checked={values.promoEligible}
+          disabled={contentReadOnly}
           onChange={(event) => patch({ promoEligible: event.target.checked })}
         />
         <span>
           <strong>Éligible aux remises « 1 acheté = 1 offert »</strong>
-          <small>
-            Autorise les remises type « 1 acheté = 1 offert » sur ce service. Ne JAMAIS activer pour
-            des espaces, du parking ou des prestations similaires.
-          </small>
         </span>
       </label>
 
@@ -84,19 +89,24 @@ export function ServiceForm({ values, errors, onChange }: ServiceFormProps) {
         <span>Statut</span>
         <StatusToggle
           value={values.status}
+          disabled={contentReadOnly}
           onChange={(status) => patch({ status })}
           ariaLabel="Statut du service"
         />
       </div>
 
-      <ServiceCustomQuestionsSection
-        questions={values.customQuestions}
-        errors={errors.customQuestionByIndex ?? {}}
-        optionErrors={errors.customQuestionOptionsByIndex ?? {}}
-        onChange={(customQuestions) => patch({ customQuestions })}
-      />
-      {errors.customQuestions ? (
-        <span className={styles.error}>{errors.customQuestions}</span>
+      {!contentReadOnly ? (
+        <>
+          <ServiceCustomQuestionsSection
+            questions={values.customQuestions}
+            errors={errors.customQuestionByIndex ?? {}}
+            optionErrors={errors.customQuestionOptionsByIndex ?? {}}
+            onChange={(customQuestions) => patch({ customQuestions })}
+          />
+          {errors.customQuestions ? (
+            <span className={styles.error}>{errors.customQuestions}</span>
+          ) : null}
+        </>
       ) : null}
     </div>
   );

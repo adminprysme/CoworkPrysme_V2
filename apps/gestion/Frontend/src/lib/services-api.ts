@@ -13,8 +13,8 @@ async function servicesFetch<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: "include",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
       ...(init?.headers ?? {}),
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     },
   });
 
@@ -33,7 +33,15 @@ async function servicesFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
+}
+
+export function servicePhotoUrl(urlPath: string): string {
+  return API_URL ? `${API_URL}${urlPath}` : urlPath;
 }
 
 export function fetchServices(
@@ -58,5 +66,26 @@ export function updateService(id: string, payload: UpdateServiceRequest): Promis
   return servicesFetch<ServiceResponse>(`/services/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
+  });
+}
+
+export function deleteService(id: string): Promise<{ ok: true }> {
+  return servicesFetch<{ ok: true }>(`/services/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function uploadServicePhoto(serviceId: string, file: File): Promise<ServiceResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return servicesFetch<ServiceResponse>(`/services/${serviceId}/photos`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export function deleteServicePhoto(serviceId: string): Promise<ServiceResponse> {
+  return servicesFetch<ServiceResponse>(`/services/${serviceId}/photos`, {
+    method: "DELETE",
   });
 }

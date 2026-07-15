@@ -1,16 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { ServiceResponse } from "@coworkprysme/shared";
+import { getServiceEditMode } from "@coworkprysme/shared";
 
-import { createService, fetchServices, updateService } from "../../../lib/services-api.js";
-import { ServiceCard } from "../components/ServiceCard.js";
+import { useAuth } from "../../../app/AuthProvider.js";
 import {
-  ServiceFormPanel,
+  createService,
+  deleteService,
+  deleteServicePhoto,
+  fetchServices,
+  updateService,
+  uploadServicePhoto,
+} from "../../../lib/services-api.js";
+import { ServiceCard } from "../components/ServiceCard.js";
+import { ServiceFormPanel } from "../components/ServiceFormPanel.js";
+import {
   serviceFormValuesToCreateRequest,
-} from "../components/ServiceFormPanel.js";
+  serviceFormValuesToUpdateRequest,
+  type ServiceFormValues,
+} from "../utils/validation.js";
 import styles from "./ServicesPage.module.css";
 
 export function ServicesPage() {
+  const { user } = useAuth();
   const [services, setServices] = useState<ServiceResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,15 +47,60 @@ export function ServicesPage() {
     void loadServices();
   }, [loadServices]);
 
-  async function handleSubmit(values: Parameters<typeof serviceFormValuesToCreateRequest>[0]) {
-    const payload = serviceFormValuesToCreateRequest(values);
-    if (editing) {
-      await updateService(editing.id, payload);
-    } else {
-      await createService(payload);
+  async function handleSubmit(
+    values: ServiceFormValues,
+    currentEditing: ServiceResponse | undefined,
+    options: {
+      pendingPhoto: File | null;
+      removePhoto: boolean;
+      onPhotoUploaded: (service: ServiceResponse) => void;
+    },
+  ) {
+    if (!user) {
+      return;
     }
+
+    if (currentEditing) {
+      const editMode = getServiceEditMode(
+        {
+          role: user.profile.role,
+          scopeBuildingIds: user.profile.scope.buildingIds,
+        },
+        {
+          id: currentEditing.id,
+          isGlobal: currentEditing.isGlobal,
+          buildingIds: currentEditing.buildingIds,
+        },
+      );
+      const payload = serviceFormValuesToUpdateRequest(values, editMode);
+      let updated = await updateService(currentEditing.id, payload);
+
+      if (options.removePhoto && currentEditing.photo && editMode === "all") {
+        updated = await deleteServicePhoto(currentEditing.id);
+      } else if (options.pendingPhoto && editMode === "all") {
+        updated = await uploadServicePhoto(currentEditing.id, options.pendingPhoto);
+      }
+
+      options.onPhotoUploaded(updated);
+    } else {
+      const created = await createService(serviceFormValuesToCreateRequest(values));
+      if (options.pendingPhoto) {
+        await uploadServicePhoto(created.id, options.pendingPhoto);
+      }
+    }
+
     await loadServices();
   }
+
+  async function handleDelete(service: ServiceResponse) {
+    if (!window.confirm(`Supprimer le service « ${service.label} » ?`)) {
+      return;
+    }
+    await deleteService(service.id);
+    await loadServices();
+  }
+
+  const isAdmin = user?.profile.role === "admin";
 
   return (
     <div className={styles.page}>
@@ -77,14 +134,24 @@ export function ServicesPage() {
 
       <div className={styles.grid}>
         {services.map((service) => (
-          <ServiceCard
-            key={service.id}
-            service={service}
-            onEdit={() => {
-              setEditing(service);
-              setFormOpen(true);
-            }}
-          />
+          <div key={service.id} className={styles.cardWrap}>
+            <ServiceCard
+              service={service}
+              onEdit={() => {
+                setEditing(service);
+                setFormOpen(true);
+              }}
+            />
+            {isAdmin ? (
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={() => void handleDelete(service)}
+              >
+                Supprimer
+              </button>
+            ) : null}
+          </div>
         ))}
       </div>
 

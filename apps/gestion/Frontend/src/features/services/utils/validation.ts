@@ -1,4 +1,8 @@
-import type { ServiceCustomQuestionInput, ServiceStatus } from "@coworkprysme/shared";
+import type {
+  ServiceCustomQuestionInput,
+  ServiceEditMode,
+  ServiceStatus,
+} from "@coworkprysme/shared";
 import {
   DEFAULT_SERVICE_VAT_RATE,
   MAX_SERVICE_CUSTOM_QUESTIONS,
@@ -15,6 +19,8 @@ export interface ServiceFormValues {
   promoEligible: boolean;
   status: ServiceStatus;
   customQuestions: ServiceCustomQuestionInput[];
+  isGlobal: boolean;
+  buildingIds: string[];
 }
 
 export interface ServiceFormErrors {
@@ -23,11 +29,12 @@ export interface ServiceFormErrors {
   priceEurosHT?: string;
   vatRate?: string;
   customQuestions?: string;
+  buildingIds?: string;
   customQuestionByIndex?: Record<number, string>;
   customQuestionOptionsByIndex?: Record<number, string>;
 }
 
-export function createEmptyServiceFormValues(): ServiceFormValues {
+export function createEmptyServiceFormValues(isAdmin = false): ServiceFormValues {
   return {
     label: "",
     description: "",
@@ -36,6 +43,8 @@ export function createEmptyServiceFormValues(): ServiceFormValues {
     promoEligible: false,
     status: "active",
     customQuestions: [],
+    isGlobal: isAdmin,
+    buildingIds: [],
   };
 }
 
@@ -47,6 +56,8 @@ export function serviceResponseToFormValues(service: {
   promoEligible: boolean;
   status: ServiceStatus;
   customQuestions?: ServiceCustomQuestionInput[];
+  isGlobal: boolean;
+  buildingIds: string[];
 }): ServiceFormValues {
   return {
     label: service.label,
@@ -69,10 +80,15 @@ export function serviceResponseToFormValues(service: {
         order: index,
       };
     }),
+    isGlobal: service.isGlobal,
+    buildingIds: [...service.buildingIds],
   };
 }
 
-export function validateServiceForm(values: ServiceFormValues): ServiceFormErrors {
+export function validateServiceForm(
+  values: ServiceFormValues,
+  options?: { skipAvailability?: boolean },
+): ServiceFormErrors {
   const errors: ServiceFormErrors = {};
   const label = values.label.trim();
   if (!label) {
@@ -93,6 +109,10 @@ export function validateServiceForm(values: ServiceFormValues): ServiceFormError
   const vatRate = Number.parseFloat(values.vatRate);
   if (!Number.isFinite(vatRate) || vatRate < 0) {
     errors.vatRate = "Taux de TVA invalide";
+  }
+
+  if (!options?.skipAvailability && !values.isGlobal && values.buildingIds.length === 0) {
+    errors.buildingIds = "Sélectionnez au moins un bâtiment";
   }
 
   if (values.customQuestions.length > MAX_SERVICE_CUSTOM_QUESTIONS) {
@@ -158,6 +178,20 @@ export function validateServiceForm(values: ServiceFormValues): ServiceFormError
   return errors;
 }
 
+function mapCustomQuestions(values: ServiceFormValues) {
+  return values.customQuestions.map((question, index) => ({
+    ...question,
+    id: question.id,
+    label: question.label.trim(),
+    order: index,
+    ...(question.type === "select"
+      ? {
+          options: (question.options ?? []).map((option) => option.trim()).filter(Boolean),
+        }
+      : {}),
+  }));
+}
+
 export function serviceFormValuesToCreateRequest(values: ServiceFormValues) {
   return {
     label: values.label.trim(),
@@ -166,18 +200,24 @@ export function serviceFormValuesToCreateRequest(values: ServiceFormValues) {
     vatRate: Number.parseFloat(values.vatRate),
     promoEligible: values.promoEligible,
     status: values.status,
-    customQuestions: values.customQuestions.map((question, index) => ({
-      ...question,
-      id: question.id,
-      label: question.label.trim(),
-      order: index,
-      ...(question.type === "select"
-        ? {
-            options: (question.options ?? []).map((option) => option.trim()).filter(Boolean),
-          }
-        : {}),
-    })),
+    customQuestions: mapCustomQuestions(values),
+    isGlobal: values.isGlobal,
+    buildingIds: values.isGlobal ? [] : values.buildingIds,
   };
+}
+
+export function serviceFormValuesToUpdateRequest(
+  values: ServiceFormValues,
+  editMode: ServiceEditMode,
+) {
+  if (editMode === "price_only") {
+    return {
+      priceEurosHT: Number.parseFloat(values.priceEurosHT),
+      vatRate: Number.parseFloat(values.vatRate),
+    };
+  }
+
+  return serviceFormValuesToCreateRequest(values);
 }
 
 export function hasServiceFormErrors(errors: ServiceFormErrors): boolean {
@@ -186,6 +226,7 @@ export function hasServiceFormErrors(errors: ServiceFormErrors): boolean {
     Boolean(errors.description) ||
     Boolean(errors.priceEurosHT) ||
     Boolean(errors.vatRate) ||
+    Boolean(errors.buildingIds) ||
     Boolean(errors.customQuestions) ||
     Boolean(errors.customQuestionByIndex && Object.keys(errors.customQuestionByIndex).length > 0) ||
     Boolean(

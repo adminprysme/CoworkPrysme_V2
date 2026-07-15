@@ -1,6 +1,7 @@
 import type { ServiceResponse } from "@coworkprysme/shared";
 import { computeTtcCents, formatCentsAsEuroString } from "@coworkprysme/shared";
 
+import { servicePhotoUrl } from "../../../lib/services-api.js";
 import styles from "./ServiceCard.module.css";
 
 interface ServiceCardProps {
@@ -13,6 +14,13 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
 
   return (
     <button type="button" className={styles.card} onClick={onEdit}>
+      {service.photo?.url ? (
+        <img
+          className={styles.thumbnail}
+          src={servicePhotoUrl(service.photo.url)}
+          alt={service.photo.alt ?? service.label}
+        />
+      ) : null}
       <div className={styles.header}>
         <h3 className={styles.title}>{service.label}</h3>
         <span
@@ -41,6 +49,12 @@ export function ServiceCard({ service, onEdit }: ServiceCardProps) {
       </dl>
       <p className={styles.footer}>
         <code>{service.key}</code>
+        {service.isGlobal ? <span className={styles.scopeTag}>Global</span> : null}
+        {!service.isGlobal && service.buildings?.length ? (
+          <span className={styles.scopeTag}>
+            {service.buildings.length} bâtiment{service.buildings.length > 1 ? "s" : ""}
+          </span>
+        ) : null}
         {service.promoEligible ? <span className={styles.promoTag}>Éligible 1+1</span> : null}
       </p>
     </button>

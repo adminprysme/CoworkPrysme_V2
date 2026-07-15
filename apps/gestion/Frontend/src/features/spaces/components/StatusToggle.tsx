@@ -5,17 +5,24 @@ interface StatusToggleProps {
   value: BuildingStatus;
   onChange: (status: BuildingStatus) => void;
   ariaLabel?: string;
+  disabled?: boolean;
 }
 
 const OPTIONS: BuildingStatus[] = ["active", "inactive"];
 
-export function StatusToggle({ value, onChange, ariaLabel = "Statut" }: StatusToggleProps) {
+export function StatusToggle({
+  value,
+  onChange,
+  ariaLabel = "Statut",
+  disabled = false,
+}: StatusToggleProps) {
   return (
     <div className={styles.toggle} role="group" aria-label={ariaLabel}>
       {OPTIONS.map((status) => (
         <button
           key={status}
           type="button"
+          disabled={disabled}
           className={[
             styles.option,
             value === status ? styles.optionSelected : "",

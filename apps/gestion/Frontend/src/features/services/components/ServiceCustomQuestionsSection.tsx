@@ -124,11 +124,6 @@ export function ServiceCustomQuestionsSection({
       <div className={styles.header}>
         <div>
           <h3>Questions de spécificité</h3>
-          <p className={styles.intro}>
-            Ces questions seront posées au client lorsqu&apos;il choisira ce service dans le tunnel
-            de réservation vitrine. Limite produit : {MAX_SERVICE_CUSTOM_QUESTIONS} questions pour
-            préserver la conversion.
-          </p>
         </div>
         <button
           type="button"
