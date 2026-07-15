@@ -103,8 +103,10 @@ export class UploadsService implements OnModuleInit {
     entityType: UploadEntityType,
     entityId: string,
     buffer: Buffer,
+    options?: { maxBytes?: number },
   ): Promise<{ storageKey: string }> {
     const limits = this.getLimits();
+    const maxBytes = options?.maxBytes ?? limits.UPLOAD_MAX_BYTES;
 
     const fileId = crypto.randomUUID();
     const storageKey = buildEntityPhotoStorageKey(entityType, entityId, fileId);
@@ -117,7 +119,7 @@ export class UploadsService implements OnModuleInit {
       throw new BadRequestException("Invalid storage key");
     }
 
-    await this.storeImageBuffer(buffer, limits.UPLOAD_MAX_BYTES, absolutePath);
+    await this.storeImageBuffer(buffer, maxBytes, absolutePath);
 
     return { storageKey };
   }
@@ -128,6 +130,13 @@ export class UploadsService implements OnModuleInit {
 
   async storeSpacePhoto(spaceId: string, buffer: Buffer): Promise<{ storageKey: string }> {
     return this.storePhoto("spaces", spaceId, buffer);
+  }
+
+  async storeServicePhoto(serviceId: string, buffer: Buffer): Promise<{ storageKey: string }> {
+    const limits = this.getLimits();
+    return this.storePhoto("services", serviceId, buffer, {
+      maxBytes: limits.UPLOAD_MAX_BYTES_SERVICE,
+    });
   }
 
   async storeVitrineImage(
@@ -207,5 +216,9 @@ export class UploadsService implements OnModuleInit {
 
   async deleteSpaceDirectory(spaceId: string): Promise<void> {
     return this.deleteEntityDirectory("spaces", spaceId);
+  }
+
+  async deleteServiceDirectory(serviceId: string): Promise<void> {
+    return this.deleteEntityDirectory("services", serviceId);
   }
 }
