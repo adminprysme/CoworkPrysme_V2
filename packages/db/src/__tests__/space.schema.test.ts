@@ -22,6 +22,30 @@ function defaultDaySchedules() {
   }));
 }
 
+function minimalBuildingInput(overrides: { name?: string; slug?: string } = {}) {
+  const slug =
+    overrides.slug ??
+    `cowork-test-${overrides.name?.toLowerCase().replace(/\s+/g, "-") ?? "default"}`;
+  return {
+    name: overrides.name ?? "Cowork Test",
+    address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
+    coordinates: { lat: 45.76, lng: 4.86 },
+    floors: [{ name: "RDC" }],
+    accessibilityHours: defaultDaySchedules(),
+    receptionHours: defaultDaySchedules(),
+    concierge: { url: "", accessCode: "" },
+    photos: [],
+    status: "active" as const,
+    visibleOnVitrine: false,
+    isDefaultVitrineBuilding: false,
+    seo: {
+      slug,
+      metaTitle: `${overrides.name ?? "Cowork Test"} | Cowork Prysme`,
+      metaDescription: "Bâtiment de test.",
+    },
+  };
+}
+
 function minimalSpaceInput(
   buildingId: mongoose.Types.ObjectId,
 ): Omit<Space, "createdAt" | "updatedAt"> {
@@ -199,17 +223,7 @@ describe("space persistence on cowork_bdd", () => {
     const Building = registerBuildingModel(cowork);
     const Space = registerSpaceModel(cowork);
 
-    const building = await Building.create({
-      name: "Cowork Test",
-      address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
-      coordinates: { lat: 45.76, lng: 4.86 },
-      floors: [{ name: "RDC" }],
-      accessibilityHours: defaultDaySchedules(),
-      receptionHours: defaultDaySchedules(),
-      concierge: { url: "", accessCode: "" },
-      photos: [],
-      status: "active",
-    });
+    const building = await Building.create(minimalBuildingInput());
 
     const input = minimalSpaceInput(building._id as mongoose.Types.ObjectId);
     const created = await Space.create(input);
@@ -245,17 +259,7 @@ describe("space persistence on cowork_bdd", () => {
     const Building = registerBuildingModel(cowork);
     const Space = registerSpaceModel(cowork);
 
-    const building = await Building.create({
-      name: "Cowork Test",
-      address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
-      coordinates: { lat: 45.76, lng: 4.86 },
-      floors: [{ name: "RDC" }],
-      accessibilityHours: defaultDaySchedules(),
-      receptionHours: defaultDaySchedules(),
-      concierge: { url: "", accessCode: "" },
-      photos: [],
-      status: "active",
-    });
+    const building = await Building.create(minimalBuildingInput());
 
     const input = minimalSpaceInput(building._id as mongoose.Types.ObjectId);
     input.tariffs = [
@@ -278,28 +282,12 @@ describe("space persistence on cowork_bdd", () => {
     const Building = registerBuildingModel(cowork);
     const Space = registerSpaceModel(cowork);
 
-    const buildingA = await Building.create({
-      name: "Site A",
-      address: { street: "1 rue A", zip: "69001", city: "Lyon", country: "FR" },
-      coordinates: { lat: 45.76, lng: 4.86 },
-      floors: [{ name: "RDC" }],
-      accessibilityHours: defaultDaySchedules(),
-      receptionHours: defaultDaySchedules(),
-      concierge: { url: "", accessCode: "" },
-      photos: [],
-      status: "active",
-    });
-    const buildingB = await Building.create({
-      name: "Site B",
-      address: { street: "2 rue B", zip: "69002", city: "Lyon", country: "FR" },
-      coordinates: { lat: 45.77, lng: 4.87 },
-      floors: [{ name: "RDC" }],
-      accessibilityHours: defaultDaySchedules(),
-      receptionHours: defaultDaySchedules(),
-      concierge: { url: "", accessCode: "" },
-      photos: [],
-      status: "active",
-    });
+    const buildingA = await Building.create(
+      minimalBuildingInput({ name: "Site A", slug: "site-a-test" }),
+    );
+    const buildingB = await Building.create(
+      minimalBuildingInput({ name: "Site B", slug: "site-b-test" }),
+    );
 
     const slug = "salon-identique";
     await Space.createIndexes();
@@ -331,17 +319,7 @@ describe("space persistence on cowork_bdd", () => {
     const Building = registerBuildingModel(cowork);
     const Space = registerSpaceModel(cowork);
 
-    const building = await Building.create({
-      name: "Cowork Test",
-      address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
-      coordinates: { lat: 45.76, lng: 4.86 },
-      floors: [{ name: "RDC" }],
-      accessibilityHours: defaultDaySchedules(),
-      receptionHours: defaultDaySchedules(),
-      concierge: { url: "", accessCode: "" },
-      photos: [],
-      status: "active",
-    });
+    const building = await Building.create(minimalBuildingInput());
 
     const staffId = new mongoose.Types.ObjectId();
     const input = minimalSpaceInput(building._id as mongoose.Types.ObjectId);
@@ -368,17 +346,7 @@ describe("space persistence on cowork_bdd", () => {
     const Building = registerBuildingModel(cowork);
     const Space = registerSpaceModel(cowork);
 
-    const building = await Building.create({
-      name: "Cowork Test",
-      address: { street: "1 rue Test", zip: "69003", city: "Lyon", country: "FR" },
-      coordinates: { lat: 45.76, lng: 4.86 },
-      floors: [{ name: "RDC" }],
-      accessibilityHours: defaultDaySchedules(),
-      receptionHours: defaultDaySchedules(),
-      concierge: { url: "", accessCode: "" },
-      photos: [],
-      status: "active",
-    });
+    const building = await Building.create(minimalBuildingInput());
 
     await Space.create(minimalSpaceInput(building._id as mongoose.Types.ObjectId));
 
