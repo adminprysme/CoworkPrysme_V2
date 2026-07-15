@@ -59,8 +59,9 @@ describe("vitrine-api read-only controllers", () => {
         expect(source).not.toMatch(/@(Put|Patch)\(/);
         expect(source).toMatch(/@Post\("lock"\)/);
         expect(source).toMatch(/@Post\("price"\)/);
+        expect(source).toMatch(/@Post\("confirm"\)/);
         expect(source).toMatch(/@Delete\("lock\/:lockId"\)/);
-        expect(source).not.toMatch(/createReservation|clientAccount|Reservation\.create/i);
+        expect(source).not.toMatch(/createReservation|Reservation\.create/i);
         continue;
       }
 

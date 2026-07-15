@@ -4,6 +4,10 @@ import {
   ActiveBookingLockResponseSchema,
   BookingAvailabilityQuerySchema,
   BookingAvailabilityResponseSchema,
+  BookingCheckEmailRequestSchema,
+  BookingCheckEmailResponseSchema,
+  BookingConfirmRequestSchema,
+  BookingConfirmResponseSchema,
   BookingLockResponseSchema,
   BookingPriceRequestSchema,
   BookingPriceResponseSchema,
@@ -13,12 +17,16 @@ import {
   BookingSpaceAvailabilityResponseSchema,
   BookingSpacesQuerySchema,
   BookingSpacesResponseSchema,
+  BookingVerifyAccountRequestSchema,
+  BookingVerifyAccountResponseSchema,
   CreateBookingLockRequestSchema,
   ReleaseBookingLockQuerySchema,
 } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { BookingAccountService } from "./booking-account.service.js";
 import { BookingCatalogService } from "./booking-catalog.service.js";
+import { BookingConfirmService } from "./booking-confirm.service.js";
 import { BookingPriceService } from "./booking-price.service.js";
 import { BookingService } from "./booking.service.js";
 
@@ -28,6 +36,8 @@ export class BookingController {
     private readonly booking: BookingService,
     private readonly bookingCatalog: BookingCatalogService,
     private readonly bookingPrice: BookingPriceService,
+    private readonly bookingAccount: BookingAccountService,
+    private readonly bookingConfirm: BookingConfirmService,
   ) {}
 
   @Get("availability")
@@ -87,5 +97,26 @@ export class BookingController {
     const parsed = BookingPriceRequestSchema.parse(body);
     const payload = await this.bookingPrice.computePrice(parsed);
     return BookingPriceResponseSchema.parse(payload);
+  }
+
+  @Post("account/check-email")
+  async checkEmail(@Body() body: unknown) {
+    const parsed = BookingCheckEmailRequestSchema.parse(body);
+    const payload = await this.bookingAccount.checkEmail(parsed);
+    return BookingCheckEmailResponseSchema.parse(payload);
+  }
+
+  @Post("account/verify")
+  async verifyAccount(@Body() body: unknown) {
+    const parsed = BookingVerifyAccountRequestSchema.parse(body);
+    const payload = await this.bookingAccount.verifyAccount(parsed);
+    return BookingVerifyAccountResponseSchema.parse(payload);
+  }
+
+  @Post("confirm")
+  async confirmBooking(@Body() body: unknown) {
+    const parsed = BookingConfirmRequestSchema.parse(body);
+    const payload = await this.bookingConfirm.confirm(parsed);
+    return BookingConfirmResponseSchema.parse(payload);
   }
 }
