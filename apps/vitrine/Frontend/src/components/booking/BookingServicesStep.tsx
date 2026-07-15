@@ -10,6 +10,7 @@ import {
   buildCustomAnswersFromForm,
   validateCustomQuestionForm,
 } from "./BookingCustomQuestionsForm";
+import { BOOKING_SERVICE_CARD_IMAGE_SIZES } from "./booking-image-sizes";
 import styles from "./BookingServicesStep.module.css";
 
 export type BookingCartItem = {
@@ -115,7 +116,7 @@ export function BookingServicesStep({
                       src={service.photo.url}
                       alt={service.photo.alt ?? service.label}
                       fill
-                      sizes="6rem"
+                      sizes={BOOKING_SERVICE_CARD_IMAGE_SIZES}
                       className={styles.serviceImage}
                     />
                   ) : (
