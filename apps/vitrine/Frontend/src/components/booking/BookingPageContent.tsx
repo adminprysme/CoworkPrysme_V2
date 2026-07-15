@@ -115,6 +115,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [cart, setCart] = useState<BookingCartItem[]>([]);
   const [discountCode, setDiscountCode] = useState("");
   const [resumePending, setResumePending] = useState(true);
+  const [releaseLoading, setReleaseLoading] = useState(false);
 
   const remainingMs = useBookingLockCountdown(lock?.expiresAt ?? null);
 
@@ -576,6 +577,37 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     }
   }
 
+  async function handleReleaseLock() {
+    if (!lock || releaseLoading) {
+      return;
+    }
+
+    setReleaseLoading(true);
+    setError(null);
+
+    try {
+      const sessionId = getBookingSessionId();
+      await releaseBookingLock(lock.lockId, sessionId);
+    } catch (releaseError) {
+      setError(
+        releaseError instanceof Error
+          ? releaseError.message
+          : "Impossible de libérer le créneau pour le moment",
+      );
+      setReleaseLoading(false);
+      return;
+    }
+
+    clearBookingRestoreSnapshot();
+    setLock(null);
+    setCart([]);
+    setDiscountCode("");
+    setSelectedSlot(null);
+    setDurationClass(null);
+    setView(searchMode === "flexible" ? "calendar" : "results");
+    setReleaseLoading(false);
+  }
+
   useEffect(() => {
     if (view !== "services" || !selectedSpace) {
       return;
@@ -997,6 +1029,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 onDiscountCodeChange={setDiscountCode}
                 promoMessage={promoMessage}
                 promoError={promoError}
+                onReleaseLock={lock ? () => void handleReleaseLock() : undefined}
+                releaseLoading={releaseLoading}
               />
             ) : null}
           </div>

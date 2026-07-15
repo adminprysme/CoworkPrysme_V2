@@ -31,6 +31,8 @@ interface BookingFloatingSummaryProps {
   onDiscountCodeChange?: (code: string) => void;
   promoMessage?: string | null;
   promoError?: string | null;
+  onReleaseLock?: () => void;
+  releaseLoading?: boolean;
 }
 
 export function BookingFloatingSummary({
@@ -48,6 +50,8 @@ export function BookingFloatingSummary({
   onDiscountCodeChange,
   promoMessage = null,
   promoError = null,
+  onReleaseLock,
+  releaseLoading = false,
 }: BookingFloatingSummaryProps) {
   const [mobileExpanded, setMobileExpanded] = useState(expandedByDefault);
 
@@ -68,6 +72,8 @@ export function BookingFloatingSummary({
           onDiscountCodeChange={onDiscountCodeChange}
           promoMessage={promoMessage}
           promoError={promoError}
+          onReleaseLock={onReleaseLock}
+          releaseLoading={releaseLoading}
         />
       </div>
 
@@ -108,6 +114,8 @@ export function BookingFloatingSummary({
               onDiscountCodeChange={onDiscountCodeChange}
               promoMessage={promoMessage}
               promoError={promoError}
+              onReleaseLock={onReleaseLock}
+              releaseLoading={releaseLoading}
             />
           </div>
         ) : null}
@@ -130,6 +138,8 @@ function SummaryContent({
   onDiscountCodeChange,
   promoMessage,
   promoError,
+  onReleaseLock,
+  releaseLoading,
 }: Omit<BookingFloatingSummaryProps, "expandedByDefault">) {
   const [promoDraft, setPromoDraft] = useState(discountCode ?? "");
   const hasAppliedDiscount = Boolean(price?.discount && price.discountTotal > 0);
@@ -271,6 +281,17 @@ function SummaryContent({
             <span className={styles.countdownValue}>{formatCountdown(lockCountdownMs)}</span>
           </div>
         </div>
+      ) : null}
+
+      {onReleaseLock ? (
+        <button
+          type="button"
+          className={styles.releaseLockButton}
+          disabled={releaseLoading}
+          onClick={onReleaseLock}
+        >
+          {releaseLoading ? "Libération…" : "Libérer le créneau"}
+        </button>
       ) : null}
     </div>
   );
