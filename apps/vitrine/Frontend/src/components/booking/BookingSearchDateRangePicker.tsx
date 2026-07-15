@@ -16,6 +16,7 @@ import {
   WEEKDAY_LABELS,
 } from "@/lib/booking-date-utils";
 
+import { BookingRecurringReservationHint } from "./BookingRecurringReservationHint";
 import styles from "./BookingSearchDateRangePicker.module.css";
 
 interface BookingSearchDateRangePickerProps {
@@ -294,12 +295,7 @@ export function BookingSearchDateRangePicker({
         />
       </div>
 
-      <p className={styles.recurringHint}>
-        Besoin d&apos;une réservation récurrente (ex. tous les lundis pendant plusieurs semaines) ?{" "}
-        <a className={styles.recurringLink} href={recurringReservationMailto}>
-          Contactez notre équipe
-        </a>
-      </p>
+      <BookingRecurringReservationHint mailto={recurringReservationMailto} />
     </div>
   );
 }

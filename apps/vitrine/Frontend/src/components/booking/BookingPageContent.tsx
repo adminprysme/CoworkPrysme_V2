@@ -34,6 +34,11 @@ import {
 import { BookingFlexibleSearchPanel } from "./BookingFlexibleSearchPanel";
 import { BookingSearchDateTimeFields } from "./BookingSearchDateTimeFields";
 import { BookingSearchDateRangePicker } from "./BookingSearchDateRangePicker";
+import {
+  BookingSearchSummary,
+  formatBookingDatesSearchSummary,
+  formatBookingFlexibleSearchSummary,
+} from "./BookingSearchSummary";
 import { BookingProgressBar } from "./BookingProgressBar";
 import styles from "./booking.module.css";
 
@@ -79,6 +84,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lockExpiredMessage, setLockExpiredMessage] = useState<string | null>(null);
+  const [searchFormExpanded, setSearchFormExpanded] = useState(true);
 
   const remainingMs = useBookingLockCountdown(lock?.expiresAt ?? null);
 
@@ -129,6 +135,51 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
     return formatMonthHeading(flexStartMonth);
   }, [flexDuration, flexEndMonth, flexStartMonth]);
+
+  const searchCollapsed =
+    (view === "results" || view === "calendar") && spaces.length > 0 && !searchFormExpanded;
+
+  const searchSummaryLabel = useMemo(() => {
+    if (searchMode === "flexible") {
+      if (!flexDuration || !flexStartMonth) {
+        return null;
+      }
+      if (flexDuration === "month_plus" && !flexEndMonth) {
+        return null;
+      }
+      return formatBookingFlexibleSearchSummary({
+        spaceType,
+        partySize,
+        duration: flexDuration,
+        startMonth: flexStartMonth,
+        endMonth: flexEndMonth,
+      });
+    }
+
+    if (!startDate || !endDate) {
+      return null;
+    }
+
+    return formatBookingDatesSearchSummary({
+      spaceType,
+      partySize,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+    });
+  }, [
+    endDate,
+    endTime,
+    flexDuration,
+    flexEndMonth,
+    flexStartMonth,
+    partySize,
+    searchMode,
+    spaceType,
+    startDate,
+    startTime,
+  ]);
 
   function handleFlexDurationChange(duration: BookingFlexibleDuration) {
     setFlexDuration(duration);
@@ -196,6 +247,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
         const result = await fetchBookingSpaces({ spaceType, partySize });
         setSpaces(result);
+        setSearchFormExpanded(false);
         setView("results");
         return;
       }
@@ -226,6 +278,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         endAt: window.endAt,
       });
       setSpaces(result);
+      setSearchFormExpanded(false);
       setView("results");
     } catch (searchError) {
       setError(searchError instanceof Error ? searchError.message : "Recherche impossible");
@@ -352,131 +405,154 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
         {(view === "search" || view === "results" || view === "calendar") && (
           <form
-            className={styles.searchForm}
+            className={[styles.searchForm, searchCollapsed ? styles.searchFormCompact : ""]
+              .filter(Boolean)
+              .join(" ")}
             onSubmit={(event) => {
               event.preventDefault();
               void handleSearch();
             }}
           >
-            <div className={styles.searchGrid}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Type d&apos;espace</span>
-                <select
-                  className={styles.fieldSelect}
-                  value={spaceType}
-                  onChange={(event) => setSpaceType(event.target.value as SpaceType)}
-                >
-                  <option value="meeting_room">Salle de réunion</option>
-                  <option value="private_office">Bureau privatif</option>
-                </select>
-              </label>
+            <div
+              className={[
+                styles.searchFormPanel,
+                searchCollapsed ? styles.searchFormPanelHidden : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-hidden={searchCollapsed}
+            >
+              <div className={styles.searchGrid}>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Type d&apos;espace</span>
+                  <select
+                    className={styles.fieldSelect}
+                    value={spaceType}
+                    onChange={(event) => setSpaceType(event.target.value as SpaceType)}
+                  >
+                    <option value="meeting_room">Salle de réunion</option>
+                    <option value="private_office">Bureau privatif</option>
+                  </select>
+                </label>
 
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Nombre de personnes</span>
-                <input
-                  className={styles.fieldInput}
-                  type="number"
-                  min={1}
-                  value={partySize}
-                  onChange={(event) => setPartySize(Number(event.target.value))}
-                />
-              </label>
-            </div>
-
-            <div className={styles.dateSection}>
-              <span className={styles.fieldLabel}>Dates et horaires</span>
-
-              <div
-                className={styles.searchModeToggle}
-                role="tablist"
-                aria-label="Mode de recherche"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={searchMode === "dates"}
-                  className={[
-                    styles.searchModeToggleButton,
-                    searchMode === "dates" ? styles.searchModeToggleButtonActive : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => setSearchMode("dates")}
-                >
-                  Dates
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={searchMode === "flexible"}
-                  className={[
-                    styles.searchModeToggleButton,
-                    searchMode === "flexible" ? styles.searchModeToggleButtonActive : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => setSearchMode("flexible")}
-                >
-                  Flexible
-                </button>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Nombre de personnes</span>
+                  <input
+                    className={styles.fieldInput}
+                    type="number"
+                    min={1}
+                    value={partySize}
+                    onChange={(event) => setPartySize(Number(event.target.value))}
+                  />
+                </label>
               </div>
 
-              {searchMode === "dates" ? (
-                <>
-                  <BookingSearchDateRangePicker
-                    startDate={startDate}
-                    endDate={endDate}
-                    recurringReservationMailto={recurringReservationMailto}
-                    onRangeChange={(start, end) => {
-                      setStartDate(start);
-                      setEndDate(end);
-                    }}
-                  />
+              <div className={styles.dateSection}>
+                <span className={styles.fieldLabel}>Dates et horaires</span>
 
-                  <BookingSearchDateTimeFields
-                    mode={dateRangeMode}
-                    startDate={startDate}
-                    endDate={endDate}
-                    startTime={startTime}
-                    endTime={endTime}
-                    onStartTimeChange={setStartTime}
-                    onEndTimeChange={setEndTime}
-                  />
-                </>
-              ) : (
-                <BookingFlexibleSearchPanel
-                  duration={flexDuration}
-                  onDurationChange={handleFlexDurationChange}
-                  selectedStartMonth={flexStartMonth}
-                  selectedEndMonth={flexEndMonth}
-                  onMonthRangeChange={handleFlexMonthRangeChange}
-                />
-              )}
-            </div>
-
-            <div className={styles.searchActions}>
-              <button className={styles.primaryButton} type="submit" disabled={loading}>
-                {loading
-                  ? "Recherche…"
-                  : searchMode === "flexible"
-                    ? "Voir les espaces"
-                    : "Rechercher"}
-              </button>
-              {view !== "search" ? (
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={() => {
-                    setView("search");
-                    setSpaces([]);
-                    setSelectedSpace(null);
-                    setCalendarSlots([]);
-                  }}
+                <div
+                  className={styles.searchModeToggle}
+                  role="tablist"
+                  aria-label="Mode de recherche"
                 >
-                  Nouvelle recherche
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={searchMode === "dates"}
+                    className={[
+                      styles.searchModeToggleButton,
+                      searchMode === "dates" ? styles.searchModeToggleButtonActive : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => setSearchMode("dates")}
+                  >
+                    Dates
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={searchMode === "flexible"}
+                    className={[
+                      styles.searchModeToggleButton,
+                      searchMode === "flexible" ? styles.searchModeToggleButtonActive : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    onClick={() => setSearchMode("flexible")}
+                  >
+                    Flexible
+                  </button>
+                </div>
+
+                {searchMode === "dates" ? (
+                  <>
+                    <BookingSearchDateRangePicker
+                      startDate={startDate}
+                      endDate={endDate}
+                      recurringReservationMailto={recurringReservationMailto}
+                      onRangeChange={(start, end) => {
+                        setStartDate(start);
+                        setEndDate(end);
+                      }}
+                    />
+
+                    <BookingSearchDateTimeFields
+                      mode={dateRangeMode}
+                      startDate={startDate}
+                      endDate={endDate}
+                      startTime={startTime}
+                      endTime={endTime}
+                      onStartTimeChange={setStartTime}
+                      onEndTimeChange={setEndTime}
+                    />
+                  </>
+                ) : (
+                  <BookingFlexibleSearchPanel
+                    duration={flexDuration}
+                    onDurationChange={handleFlexDurationChange}
+                    selectedStartMonth={flexStartMonth}
+                    selectedEndMonth={flexEndMonth}
+                    onMonthRangeChange={handleFlexMonthRangeChange}
+                  />
+                )}
+              </div>
+
+              <div className={styles.searchActions}>
+                <button className={styles.primaryButton} type="submit" disabled={loading}>
+                  {loading
+                    ? "Recherche…"
+                    : searchMode === "flexible"
+                      ? "Voir les espaces"
+                      : "Rechercher"}
                 </button>
-              ) : null}
+                {view !== "search" ? (
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={() => {
+                      setSearchFormExpanded(true);
+                      setView("search");
+                      setSpaces([]);
+                      setSelectedSpace(null);
+                      setCalendarSlots([]);
+                    }}
+                  >
+                    Nouvelle recherche
+                  </button>
+                ) : null}
+              </div>
             </div>
+
+            {searchCollapsed && searchSummaryLabel ? (
+              <div className={styles.searchFormSummaryPanel}>
+                <BookingSearchSummary
+                  summary={searchSummaryLabel}
+                  onEdit={() => setSearchFormExpanded(true)}
+                  recurringMailto={searchMode === "dates" ? recurringReservationMailto : undefined}
+                />
+              </div>
+            ) : null}
 
             {error ? <p className={`${styles.message} ${styles.messageError}`}>{error}</p> : null}
             {lockExpiredMessage ? (
@@ -487,7 +563,11 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
         {(view === "results" || view === "calendar") && spaces.length > 0 ? (
           <>
-            <div className={styles.resultsHeader}>
+            <div
+              className={[styles.resultsHeader, searchCollapsed ? styles.resultsHeaderCompact : ""]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <h2 className={styles.resultsTitle}>
                 {searchMode === "flexible" ? "Espaces disponibles" : "Espaces disponibles"}
               </h2>
