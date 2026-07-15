@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import {
+  ActiveBookingLockQuerySchema,
+  ActiveBookingLockResponseSchema,
   BookingAvailabilityQuerySchema,
   BookingAvailabilityResponseSchema,
   BookingLockResponseSchema,
@@ -57,6 +59,13 @@ export class BookingController {
     const parsed = CreateBookingLockRequestSchema.parse(body);
     const payload = await this.booking.createLock(parsed);
     return BookingLockResponseSchema.parse(payload);
+  }
+
+  @Get("lock/active")
+  async getActiveLock(@Query() query: Record<string, unknown>) {
+    const parsed = ActiveBookingLockQuerySchema.parse(query);
+    const payload = await this.booking.getActiveLock(parsed.sessionId);
+    return ActiveBookingLockResponseSchema.parse(payload);
   }
 
   @Delete("lock/:lockId")

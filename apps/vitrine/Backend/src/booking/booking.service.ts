@@ -4,6 +4,7 @@ import {
   acquireLock,
   connectMongo,
   getBuildingModel,
+  findActiveLockBySessionId,
   RangeOpeningHoursError,
   releaseLockById,
   SlotLockConflictError,
@@ -11,6 +12,7 @@ import {
 } from "@coworkprysme/db";
 import {
   BOOKING_ERROR_CODES,
+  ActiveBookingLockResponseSchema,
   BookingAvailabilityResponseSchema,
   BookingLockResponseSchema,
   BookingSpaceAvailabilityResponseSchema,
@@ -200,6 +202,8 @@ export class BookingService {
         startAt,
         endAt,
         sessionId: input.sessionId,
+        partySize: input.partySize,
+        durationClass: input.durationClass,
       });
 
       return BookingLockResponseSchema.parse({
@@ -248,6 +252,49 @@ export class BookingService {
         message: "Lock not found",
       });
     }
+  }
+
+  async getActiveLock(sessionId: string) {
+    await connectMongo();
+    const lockDoc = await findActiveLockBySessionId(sessionId);
+    if (!lockDoc) {
+      return ActiveBookingLockResponseSchema.parse({
+        lock: null,
+        space: null,
+      });
+    }
+
+    const space = await this.availability.getSpaceById(lockDoc.spaceId.toString());
+    if (!space) {
+      return ActiveBookingLockResponseSchema.parse({
+        lock: null,
+        space: null,
+      });
+    }
+
+    const buildingMap = await this.getBuildingMap([space.buildingId]);
+    const building = buildingMap.get(space.buildingId.toString());
+    if (!building) {
+      return ActiveBookingLockResponseSchema.parse({
+        lock: null,
+        space: null,
+      });
+    }
+
+    const apiOrigin = this.getApiOrigin();
+
+    return ActiveBookingLockResponseSchema.parse({
+      lock: {
+        lockId: lockDoc._id.toString(),
+        expiresAt: lockDoc.expiresAt.toISOString(),
+        spaceId: lockDoc.spaceId.toString(),
+        startAt: lockDoc.startAt.toISOString(),
+        endAt: lockDoc.endAt.toISOString(),
+      },
+      space: this.mapSpaceCard(space, building, apiOrigin),
+      partySize: lockDoc.partySize,
+      durationClass: lockDoc.durationClass,
+    });
   }
 
   /** Shared promo guard — Phase 2 POST /booking/price should call DiscountCodeValidationService.assertApplicable after lookup. */
