@@ -1,4 +1,6 @@
-import styles from "./booking.module.css";
+import styles from "./BookingFloatingSummary.module.css";
+
+export type BookingProgressStepId = "space" | "services" | "account" | "summary" | "payment";
 
 const STEPS = [
   { id: "space", label: "Espace" },
@@ -6,22 +8,39 @@ const STEPS = [
   { id: "account", label: "Compte" },
   { id: "summary", label: "Récapitulatif" },
   { id: "payment", label: "Paiement" },
-] as const;
+] as const satisfies ReadonlyArray<{ id: BookingProgressStepId; label: string }>;
 
-export function BookingProgressBar() {
+interface BookingProgressBarProps {
+  activeStep: BookingProgressStepId;
+}
+
+export function BookingProgressBar({ activeStep }: BookingProgressBarProps) {
+  const activeIndex = STEPS.findIndex((step) => step.id === activeStep);
+
   return (
     <ol className={styles.progressBar} aria-label="Étapes de réservation">
-      {STEPS.map((step, index) => (
-        <li
-          key={step.id}
-          className={[styles.progressStep, index === 0 ? styles.progressStepActive : ""]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <span className={styles.progressIndex}>{index + 1}</span>
-          <span className={styles.progressLabel}>{step.label}</span>
-        </li>
-      ))}
+      {STEPS.map((step, index) => {
+        const isActive = index === activeIndex;
+        const isComplete = index < activeIndex;
+
+        return (
+          <li
+            key={step.id}
+            className={[
+              styles.progressStep,
+              isActive ? styles.progressStepActive : "",
+              isComplete ? styles.progressStepComplete : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <span className={styles.progressIndex}>{index + 1}</span>
+            <span className={styles.progressLabel}>{step.label}</span>
+          </li>
+        );
+      })}
     </ol>
   );
 }
+
+export { STEPS as BOOKING_PROGRESS_STEPS };

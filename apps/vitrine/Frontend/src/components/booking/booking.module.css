@@ -2,6 +2,27 @@
   padding-block: var(--v-space-12);
 }
 
+.bookingLayout {
+  display: grid;
+  gap: var(--v-space-6);
+}
+
+.bookingLayoutWithSummary {
+  align-items: start;
+}
+
+.bookingMain {
+  display: grid;
+  gap: var(--v-space-4);
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .bookingLayoutWithSummary {
+    grid-template-columns: minmax(0, 1fr) 18.5rem;
+  }
+}
+
 .header {
   display: grid;
   gap: var(--v-space-4);
