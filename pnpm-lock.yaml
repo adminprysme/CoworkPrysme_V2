@@ -295,6 +295,9 @@ importers:
       '@coworkprysme/shared':
         specifier: workspace:*
         version: link:../shared
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       mongoose:
         specifier: ^9.7.3
         version: 9.7.3
@@ -302,6 +305,9 @@ importers:
       '@coworkprysme/config':
         specifier: workspace:*
         version: link:../config
+      '@types/bcryptjs':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@types/node':
         specifier: ^22.15.29
         version: 22.20.0

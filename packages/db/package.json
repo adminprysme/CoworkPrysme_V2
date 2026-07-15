@@ -19,10 +19,12 @@
   },
   "dependencies": {
     "@coworkprysme/shared": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "mongoose": "^9.7.3"
   },
   "devDependencies": {
     "@coworkprysme/config": "workspace:*",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^22.15.29",
     "eslint": "^9.39.1",
     "mongodb-memory-server": "10.1.4",

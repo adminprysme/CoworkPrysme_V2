@@ -11,6 +11,7 @@ export * from "./domains/reservation/index.js";
 export * from "./domains/client/index.js";
 export * from "./domains/staff/index.js";
 export * from "./domains/pricing/index.js";
+export * from "./domains/booking/index.js";
 export * from "./domains/billing/index.js";
 export * from "./domains/peripheral/index.js";
 
