@@ -14,6 +14,7 @@ export interface DiscountCode {
   perimeter: DiscountPerimeter;
   cardexId?: Types.ObjectId;
   stackable: boolean;
+  startsAt?: Date;
   expiresAt: Date;
   maxUses?: number;
   usedCount: number;
@@ -33,6 +34,7 @@ const discountCodeSchema = new Schema<DiscountCode>(
     perimeter: { type: discountPerimeterSchema, required: true },
     cardexId: optionalObjectIdRef("Cardex"),
     stackable: { type: Boolean, default: false, required: true },
+    startsAt: { type: Date },
     expiresAt: { type: Date, required: true },
     maxUses: { type: Number, min: 1 },
     usedCount: { type: Number, default: 0, required: true, min: 0 },
@@ -44,6 +46,7 @@ const discountCodeSchema = new Schema<DiscountCode>(
 discountCodeSchema.index({ code: 1 }, { unique: true });
 discountCodeSchema.index({ cardexId: 1 });
 discountCodeSchema.index({ expiresAt: 1 });
+discountCodeSchema.index({ startsAt: 1 });
 
 export type DiscountCodeModel = Model<DiscountCode>;
 
