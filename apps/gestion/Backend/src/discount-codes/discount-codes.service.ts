@@ -10,6 +10,7 @@ import {
   DiscountCodesListResponseSchema,
   DiscountCodeResponseSchema,
   UpdateDiscountCodeRequestSchema,
+  assertDiscountCodeDateRange,
   assertDiscountCodeServiceTargets,
   mapDiscountCodeToResponse,
   mapDiscountValueToDb,
@@ -83,6 +84,23 @@ export class DiscountCodesService {
       throw new BadRequestException("La date d'expiration doit être dans le futur");
     }
 
+    let startsAt: Date | undefined;
+    if (parsed.startsAt) {
+      startsAt = new Date(parsed.startsAt);
+      if (Number.isNaN(startsAt.getTime())) {
+        throw new BadRequestException("Date de début invalide");
+      }
+    }
+
+    try {
+      assertDiscountCodeDateRange(startsAt, expiresAt);
+    } catch (error) {
+      if (error instanceof DiscountCodeValidationError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+
     await connectMongo();
     const DiscountCode = await getDiscountCodeModel();
 
@@ -98,6 +116,7 @@ export class DiscountCodesService {
             parsed.perimeter.appliesTo === "service" ? parsed.perimeter.serviceKeys : undefined,
         },
         stackable: parsed.stackable,
+        startsAt,
         expiresAt,
         maxUses: parsed.maxUses,
         usedCount: 0,
@@ -167,6 +186,17 @@ export class DiscountCodesService {
     if (parsed.stackable !== undefined) {
       existing.stackable = parsed.stackable;
     }
+    if (parsed.startsAt !== undefined) {
+      if (parsed.startsAt === null) {
+        existing.startsAt = undefined;
+      } else {
+        const startsAt = new Date(parsed.startsAt);
+        if (Number.isNaN(startsAt.getTime())) {
+          throw new BadRequestException("Date de début invalide");
+        }
+        existing.startsAt = startsAt;
+      }
+    }
     if (parsed.expiresAt !== undefined) {
       const expiresAt = new Date(parsed.expiresAt);
       if (Number.isNaN(expiresAt.getTime())) {
@@ -179,6 +209,15 @@ export class DiscountCodesService {
     }
     if (parsed.status !== undefined) {
       existing.status = parsed.status;
+    }
+
+    try {
+      assertDiscountCodeDateRange(existing.startsAt, existing.expiresAt);
+    } catch (error) {
+      if (error instanceof DiscountCodeValidationError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
     }
 
     try {
