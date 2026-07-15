@@ -250,7 +250,7 @@ export class BookingService {
     }
   }
 
-  /** Shared promo guard — used by Phase 2 discount application in the booking tunnel. */
+  /** Shared promo guard — Phase 2 POST /booking/price should call DiscountCodeValidationService.assertApplicable after lookup. */
   async validateDiscountCodeTargets(input: DiscountCodeTargetInput): Promise<void> {
     await this.discountCodeValidation.assertServiceTargets(input);
   }
