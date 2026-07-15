@@ -27,6 +27,15 @@ export class MediaController {
     await this.servePhoto(`spaces/${spaceId}/${filename}`, response);
   }
 
+  @Get("services/:serviceId/:filename")
+  async serveServicePhoto(
+    @Param("serviceId") serviceId: string,
+    @Param("filename") filename: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.servePhoto(`services/${serviceId}/${filename}`, response);
+  }
+
   @Get("vitrine/:slot/:filename")
   async serveVitrinePhoto(
     @Param("slot") slot: string,
