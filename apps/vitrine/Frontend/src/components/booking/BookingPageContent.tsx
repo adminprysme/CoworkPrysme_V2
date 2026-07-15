@@ -200,15 +200,22 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
   const cartSummaryLines = useMemo(
     () =>
-      cart.map((item) => ({
-        serviceId: item.serviceId,
-        label: item.label,
-        qty: item.qty,
-        answerSummary: item.customAnswers?.map(
-          (answer) => `${answer.label} : ${String(answer.value)}`,
-        ),
-      })),
-    [cart],
+      cart.map((item) => {
+        const priceLine = price?.lines.find(
+          (line) => line.kind === "service" && line.refId === item.serviceId,
+        );
+
+        return {
+          serviceId: item.serviceId,
+          label: item.label,
+          qty: item.qty,
+          lineTotalTTC: priceLine?.totalTTC,
+          answerSummary: item.customAnswers?.map(
+            (answer) => `${answer.label} : ${String(answer.value)}`,
+          ),
+        };
+      }),
+    [cart, price],
   );
 
   function showSearchResults(result: BookingSpaceCard[]) {
@@ -505,8 +512,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         <div className={styles.header}>
           <h1 className={styles.title}>Réserver un espace</h1>
           <p className={styles.lead}>
-            Choisissez vos dates puis recherchez un espace disponible (Parcours A), ou indiquez une
-            durée et un mois pour parcourir le catalogue puis choisir un créneau (Parcours B).
+            Indiquez le type d&apos;espace, le nombre de personnes et vos disponibilités pour
+            découvrir les lieux disponibles et finaliser votre réservation.
           </p>
         </div>
 
@@ -851,11 +858,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 services={catalogServices}
                 cart={cart}
                 loading={servicesLoading}
-                discountCode={discountCode}
-                promoMessage={promoMessage}
-                promoError={promoError}
                 onCartChange={setCart}
-                onDiscountCodeChange={setDiscountCode}
                 onBack={() => setView(searchMode === "flexible" ? "calendar" : "results")}
               />
             ) : null}
@@ -869,9 +872,13 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
               services={cartSummaryLines}
               price={price}
               priceLoading={priceLoading}
-              priceError={promoError}
               lockCountdownMs={lock ? remainingMs : null}
               expandedByDefault={view === "services"}
+              showPromoField={view === "services"}
+              discountCode={discountCode}
+              onDiscountCodeChange={setDiscountCode}
+              promoMessage={promoMessage}
+              promoError={promoError}
             />
           ) : null}
         </div>

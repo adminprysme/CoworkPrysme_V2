@@ -31,13 +31,20 @@
 }
 
 .mobileCountdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-variant-numeric: tabular-nums;
-  color: var(--v-color-brand);
+  color: var(--v-color-brand-hover);
   font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .mobilePanel {
   margin-top: var(--v-space-2);
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .summaryCard {
@@ -46,42 +53,49 @@
   padding: var(--v-space-4);
   border: 1px solid var(--v-color-border);
   border-radius: var(--v-radius-lg);
-  background: var(--v-color-surface);
+  background: color-mix(in srgb, var(--v-color-surface) 92%, var(--v-color-brand-muted));
   box-shadow: var(--v-shadow-sm);
-}
-
-.summaryHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--v-space-3);
 }
 
 .summaryTitle {
   margin: 0;
   font-family: var(--v-font-display);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   color: var(--v-color-ink);
 }
 
-.countdown {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--v-color-brand);
+.summaryDetails {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .summaryLine,
 .summaryLineStrong {
   margin: 0;
   color: var(--v-color-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .summaryLineStrong {
   color: var(--v-color-ink);
   font-weight: 600;
+}
+
+.sectionLabel {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v-color-brand);
+}
+
+.cartSection {
+  display: grid;
+  gap: 0.25rem;
+  padding-top: var(--v-space-2);
+  border-top: 1px solid var(--v-color-border);
 }
 
 .serviceList {
@@ -95,17 +109,36 @@
 .serviceItem {
   display: grid;
   gap: 0.15rem;
+}
+
+.serviceItemRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--v-space-2);
   font-size: 0.86rem;
+}
+
+.serviceItemName {
+  color: var(--v-color-ink);
+  font-weight: 600;
+}
+
+.serviceItemAmount {
+  font-variant-numeric: tabular-nums;
+  color: var(--v-color-text-muted);
+  white-space: nowrap;
 }
 
 .answerLine {
   color: var(--v-color-text-muted);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .totals {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.55rem;
   padding-top: var(--v-space-2);
   border-top: 1px solid var(--v-color-border);
 }
@@ -121,8 +154,108 @@
 
 .totalRowStrong {
   color: var(--v-color-ink);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
+}
+
+.promoSection {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.promoForm {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.promoField {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.promoFieldLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-color-text-muted);
+}
+
+.promoInputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+}
+
+.promoInput {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-bg);
+  color: var(--v-color-ink);
+  font-size: 0.86rem;
+  text-transform: uppercase;
+}
+
+.promoApplyButton {
+  padding: 0.55rem 0.85rem;
+  border: none;
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-brand);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.promoApplyButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.appliedPromoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--v-space-2);
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-brand-muted);
+}
+
+.appliedPromoLabel {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--v-color-brand-hover);
+}
+
+.promoRemoveButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v-color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.promoInfo {
+  margin: 0;
+  color: var(--v-color-brand-hover);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.promoError {
+  margin: 0;
+  color: #ffb4b4;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .pricePending,
@@ -132,7 +265,46 @@
 }
 
 .priceError {
-  color: #b42318;
+  color: #ffb4b4;
+}
+
+.countdownBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--v-space-3);
+  margin-top: var(--v-space-1);
+  padding: 0.75rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--v-color-brand) 35%, var(--v-color-border));
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-brand-muted);
+}
+
+.clockIcon {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  color: var(--v-color-brand-hover);
+}
+
+.countdownCopy {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.countdownLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-color-brand-hover);
+}
+
+.countdownValue {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--v-color-ink);
 }
 
 @media (min-width: 960px) {
