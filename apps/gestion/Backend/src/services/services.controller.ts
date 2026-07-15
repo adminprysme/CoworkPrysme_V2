@@ -68,8 +68,10 @@ export class ServicesController {
     if (!parsed.success) {
       throw new BadRequestException();
     }
+    const requestedKeys =
+      body !== null && typeof body === "object" ? Object.keys(body as Record<string, unknown>) : [];
     const profile = await this.staffContext.requireProfileFromRequest(request);
-    return this.services.update(id, parsed.data, profile);
+    return this.services.update(id, parsed.data, profile, requestedKeys);
   }
 
   @Delete(":id")

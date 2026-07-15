@@ -91,11 +91,13 @@ if (!adminProfile) {
 }
 
 const Building = await getBuildingModel();
-const buildings = await Building.find({ status: "active" }).limit(2).lean().exec();
-if (buildings.length < 2) {
-  throw new Error("Need at least 2 active buildings for demo");
+const activeBuildings = await Building.find({ status: "active" }).limit(1).lean().exec();
+if (activeBuildings.length === 0) {
+  throw new Error("Need at least 1 active building for demo");
 }
-const [buildingA, buildingB] = buildings.map((doc) => doc._id.toString());
+const buildingA = activeBuildings[0]._id.toString();
+/** Valid ObjectId outside manager scope — access check runs before building lookup. */
+const buildingB = "507f1f77bcf86cd799439099";
 
 const adminToken = await createSessionForProfile(adminProfile);
 const managerProfile = await ensureScopedManager(buildingA, buildingB);

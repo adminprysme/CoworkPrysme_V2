@@ -199,12 +199,16 @@ export class ServicesService {
     }
   }
 
-  async update(id: string, input: UpdateServiceRequest, profile: StaffProfileDocument) {
+  async update(
+    id: string,
+    input: UpdateServiceRequest,
+    profile: StaffProfileDocument,
+    requestedKeys: string[] = Object.keys(input),
+  ) {
     if (!isObjectId(id)) {
       throw new NotFoundException();
     }
 
-    const requestedKeys = Object.keys(input);
     if (requestedKeys.length === 0) {
       throw new BadRequestException("Empty update payload");
     }
