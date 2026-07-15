@@ -22,11 +22,16 @@ export type DiscountCodeStatus = z.infer<typeof DiscountCodeStatusSchema>;
 
 export const DISCOUNT_CODE_DISPLAY_STATUSES = [
   "active",
+  "scheduled",
   "expired",
   "exhausted",
   "disabled",
 ] as const;
 export type DiscountCodeDisplayStatus = (typeof DISCOUNT_CODE_DISPLAY_STATUSES)[number];
+
+export const DISCOUNT_CODE_INVALID_MESSAGE = "Code non valide";
+export const DISCOUNT_CODE_DATE_RANGE_ERROR =
+  "La date de début doit être antérieure à la date d'expiration";
 
 export const PROMO_CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{2,31}$/;
 
@@ -64,6 +69,7 @@ const discountCodeBaseSchema = z.object({
     }),
   perimeter: DiscountPerimeterInputSchema,
   stackable: z.boolean().default(false),
+  startsAt: z.string().datetime({ offset: true }).optional(),
   expiresAt: z.string().datetime({ offset: true }),
   maxUses: z.number().int().min(1).optional(),
   status: DiscountCodeStatusSchema.default("active"),
@@ -120,7 +126,50 @@ function refineDiscountPerimeter<T extends z.ZodTypeAny>(schema: T): T {
         path: ["perimeter", "appliesTo"],
       });
     }
+
+    validateDiscountCodeDateRangeInput(
+      (input as { startsAt?: string; expiresAt: string }).startsAt,
+      (input as { expiresAt: string }).expiresAt,
+      context,
+    );
   }) as T;
+}
+
+function validateDiscountCodeDateRangeInput(
+  startsAt: string | undefined,
+  expiresAt: string,
+  context: z.RefinementCtx,
+  expiresAtPath: (string | number)[] = ["expiresAt"],
+): void {
+  if (!startsAt) {
+    return;
+  }
+
+  const startsAtDate = new Date(startsAt);
+  const expiresAtDate = new Date(expiresAt);
+  if (Number.isNaN(startsAtDate.getTime())) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Date de début invalide",
+      path: ["startsAt"],
+    });
+    return;
+  }
+  if (Number.isNaN(expiresAtDate.getTime())) {
+    return;
+  }
+
+  try {
+    assertDiscountCodeDateRange(startsAtDate, expiresAtDate);
+  } catch (error) {
+    if (error instanceof DiscountCodeValidationError) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error.message,
+        path: expiresAtPath,
+      });
+    }
+  }
 }
 
 const createDiscountCodeCommonSchema = discountCodeBaseSchema.extend({
@@ -153,6 +202,7 @@ export const UpdateDiscountCodeRequestSchema = z
     valueEuros: euroAmountSchema.optional(),
     perimeter: DiscountPerimeterInputSchema.optional(),
     stackable: z.boolean().optional(),
+    startsAt: z.string().datetime({ offset: true }).nullable().optional(),
     expiresAt: z.string().datetime({ offset: true }).optional(),
     maxUses: z.number().int().min(1).nullable().optional(),
     status: DiscountCodeStatusSchema.optional(),
@@ -202,6 +252,10 @@ export const UpdateDiscountCodeRequestSchema = z
         });
       }
     }
+
+    if (input.startsAt != null && input.expiresAt != null) {
+      validateDiscountCodeDateRangeInput(input.startsAt, input.expiresAt, context);
+    }
   });
 
 export const DiscountCodeResponseSchema = z.object({
@@ -214,6 +268,7 @@ export const DiscountCodeResponseSchema = z.object({
   valuePercent: z.number().optional(),
   perimeter: DiscountPerimeterResponseSchema,
   stackable: z.boolean(),
+  startsAt: z.string().optional(),
   expiresAt: z.string(),
   maxUses: z.number().int().min(1).optional(),
   usedCount: z.number().int().min(0),
@@ -252,9 +307,19 @@ export function mapDiscountValueToDb(input: CreateDiscountCodeRequest): number {
   }
 }
 
+export function assertDiscountCodeDateRange(startsAt: Date | undefined, expiresAt: Date): void {
+  if (startsAt == null) {
+    return;
+  }
+  if (startsAt.getTime() >= expiresAt.getTime()) {
+    throw new DiscountCodeValidationError(DISCOUNT_CODE_DATE_RANGE_ERROR);
+  }
+}
+
 export function computeDiscountCodeDisplayStatus(
   input: {
     status: DiscountCodeStatus;
+    startsAt?: Date;
     expiresAt: Date;
     maxUses?: number;
     usedCount: number;
@@ -270,10 +335,37 @@ export function computeDiscountCodeDisplayStatus(
   if (input.maxUses != null && input.usedCount >= input.maxUses) {
     return "exhausted";
   }
+  if (input.startsAt != null && input.startsAt.getTime() > now.getTime()) {
+    return "scheduled";
+  }
   if (input.status === "active") {
     return "active";
   }
   return "disabled";
+}
+
+export function assertDiscountCodeApplicable(
+  input: {
+    status: DiscountCodeStatus;
+    startsAt?: Date;
+    expiresAt: Date;
+    maxUses?: number;
+    usedCount: number;
+  },
+  now: Date = new Date(),
+): void {
+  if (input.status !== "active") {
+    throw new DiscountCodeValidationError(DISCOUNT_CODE_INVALID_MESSAGE);
+  }
+  if (input.startsAt != null && input.startsAt.getTime() > now.getTime()) {
+    throw new DiscountCodeValidationError(DISCOUNT_CODE_INVALID_MESSAGE);
+  }
+  if (input.expiresAt.getTime() <= now.getTime()) {
+    throw new DiscountCodeValidationError(DISCOUNT_CODE_INVALID_MESSAGE);
+  }
+  if (input.maxUses != null && input.usedCount >= input.maxUses) {
+    throw new DiscountCodeValidationError(DISCOUNT_CODE_INVALID_MESSAGE);
+  }
 }
 
 export function assertDiscountCodeServiceTargets(
@@ -346,6 +438,7 @@ export interface DiscountCodeDbShape {
     serviceKeys?: string[];
   };
   stackable: boolean;
+  startsAt?: Date;
   expiresAt: Date;
   maxUses?: number;
   usedCount: number;
@@ -361,6 +454,7 @@ export function mapDiscountCodeToResponse(
   const displayStatus = computeDiscountCodeDisplayStatus(
     {
       status: doc.status,
+      startsAt: doc.startsAt,
       expiresAt: doc.expiresAt,
       maxUses: doc.maxUses,
       usedCount: doc.usedCount,
@@ -382,6 +476,7 @@ export function mapDiscountCodeToResponse(
       serviceKeys: doc.perimeter.serviceKeys,
     },
     stackable: doc.stackable,
+    startsAt: doc.startsAt?.toISOString(),
     expiresAt: doc.expiresAt.toISOString(),
     maxUses: doc.maxUses,
     usedCount: doc.usedCount,
