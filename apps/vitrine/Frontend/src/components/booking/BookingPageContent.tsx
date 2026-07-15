@@ -54,6 +54,7 @@ import {
 import { BookingProgressBar, type BookingProgressStepId } from "./BookingProgressBar";
 import { BookingFloatingSummary } from "./BookingFloatingSummary";
 import { BookingServicesStep, type BookingCartItem } from "./BookingServicesStep";
+import { BOOKING_SPACE_CARD_IMAGE_SIZES } from "./booking-image-sizes";
 import styles from "./booking.module.css";
 
 type BookingView = "search" | "results" | "calendar" | "services";
@@ -100,6 +101,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [lockExpiredMessage, setLockExpiredMessage] = useState<string | null>(null);
   const [searchFormExpanded, setSearchFormExpanded] = useState(true);
   const shouldScrollAfterSearchRef = useRef(false);
+  const searchErrorRef = useRef<HTMLParagraphElement>(null);
   const [durationClass, setDurationClass] = useState<BookingPhase1DurationClass | null>(null);
   const [catalogServices, setCatalogServices] = useState<BookingServiceCatalogItem[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
@@ -294,6 +296,14 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     });
   }, [calendarDurationFilter, calendarSlots]);
 
+  function reportSearchError(message: string) {
+    setError(message);
+    setView("search");
+    requestAnimationFrame(() => {
+      searchErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
   async function handleSearch() {
     setLoading(true);
     setError(null);
@@ -307,18 +317,15 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     try {
       if (searchMode === "flexible") {
         if (!flexDuration) {
-          setError("Choisissez une durée de réservation.");
-          setView("search");
+          reportSearchError("Choisissez une durée de réservation.");
           return;
         }
         if (!flexStartMonth) {
-          setError("Choisissez un mois de réservation.");
-          setView("search");
+          reportSearchError("Choisissez un mois de réservation.");
           return;
         }
         if (flexDuration === "month_plus" && !flexEndMonth) {
-          setError("Choisissez la plage de mois (début et fin).");
-          setView("search");
+          reportSearchError("Choisissez la plage de mois (début et fin).");
           return;
         }
 
@@ -328,8 +335,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       }
 
       if (!startDate || !endDate) {
-        setError("Sélectionnez une plage de dates dans le calendrier.");
-        setView("search");
+        reportSearchError("Sélectionnez une plage de dates dans le calendrier.");
         return;
       }
 
@@ -341,8 +347,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         endTime,
       );
       if (new Date(window.endAt) <= new Date(window.startAt)) {
-        setError("L'heure de fin doit être postérieure à l'heure de début.");
-        setView("search");
+        reportSearchError("L'heure de fin doit être postérieure à l'heure de début.");
         return;
       }
 
@@ -630,32 +635,36 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                       />
                     )}
                   </div>
-
-                  <div className={styles.searchActions}>
-                    <button className={styles.primaryButton} type="submit" disabled={loading}>
-                      {loading
-                        ? "Recherche…"
-                        : searchMode === "flexible"
-                          ? "Voir les espaces"
-                          : "Rechercher"}
-                    </button>
-                    {view !== "search" ? (
-                      <button
-                        type="button"
-                        className={styles.secondaryButton}
-                        onClick={() => {
-                          setSearchFormExpanded(true);
-                          setView("search");
-                          setSpaces([]);
-                          setSelectedSpace(null);
-                          setCalendarSlots([]);
-                        }}
-                      >
-                        Nouvelle recherche
-                      </button>
-                    ) : null}
-                  </div>
                 </div>
+
+                {!searchCollapsed ? (
+                  <div className={styles.searchFormFooter}>
+                    <div className={styles.searchActions}>
+                      <button className={styles.primaryButton} type="submit" disabled={loading}>
+                        {loading
+                          ? "Recherche…"
+                          : searchMode === "flexible"
+                            ? "Voir les espaces"
+                            : "Rechercher"}
+                      </button>
+                      {view !== "search" ? (
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={() => {
+                            setSearchFormExpanded(true);
+                            setView("search");
+                            setSpaces([]);
+                            setSelectedSpace(null);
+                            setCalendarSlots([]);
+                          }}
+                        >
+                          Nouvelle recherche
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
                 {searchCollapsed && searchSummaryLabel ? (
                   <div className={styles.searchFormSummaryPanel}>
@@ -670,7 +679,13 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 ) : null}
 
                 {error ? (
-                  <p className={`${styles.message} ${styles.messageError}`}>{error}</p>
+                  <p
+                    ref={searchErrorRef}
+                    role="alert"
+                    className={`${styles.message} ${styles.messageError}`}
+                  >
+                    {error}
+                  </p>
                 ) : null}
                 {lockExpiredMessage ? (
                   <p className={`${styles.message} ${styles.messageInfo}`}>{lockExpiredMessage}</p>
@@ -714,7 +729,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                               src={space.primaryPhotoUrl}
                               alt={space.name}
                               fill
-                              sizes="7rem"
+                              sizes={BOOKING_SPACE_CARD_IMAGE_SIZES}
                               className={styles.spaceImage}
                             />
                           ) : (
