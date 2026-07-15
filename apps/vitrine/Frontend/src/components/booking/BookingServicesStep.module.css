@@ -1,6 +1,7 @@
 .step {
   display: grid;
   gap: var(--v-space-5);
+  align-content: start;
 }
 
 .stepHeader {
@@ -21,13 +22,14 @@
 .title {
   margin: 0;
   font-family: var(--v-font-display);
-  font-size: 1.6rem;
+  font-size: clamp(1.45rem, 3vw, 1.75rem);
   color: var(--v-color-ink);
 }
 
 .lead {
   margin: 0.35rem 0 0;
   color: var(--v-color-text-muted);
+  line-height: 1.55;
 }
 
 .loading {
@@ -38,6 +40,11 @@
 .serviceGrid {
   display: grid;
   gap: var(--v-space-4);
+  align-content: start;
+}
+
+.serviceGridSingle {
+  max-width: 26rem;
 }
 
 .serviceCard {
@@ -47,12 +54,14 @@
   border: 1px solid var(--v-color-border);
   border-radius: var(--v-radius-lg);
   background: var(--v-color-surface);
+  box-shadow: var(--v-shadow-sm);
 }
 
-.serviceTop {
+.serviceCardMain {
   display: grid;
-  grid-template-columns: 6rem 1fr;
   gap: var(--v-space-3);
+  grid-template-columns: 6rem minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .serviceMedia {
@@ -62,6 +71,7 @@
   overflow: hidden;
   border-radius: var(--v-radius-md);
   background: var(--v-color-surface-muted);
+  flex-shrink: 0;
 }
 
 .serviceImage {
@@ -78,86 +88,145 @@
   font-size: 0.82rem;
 }
 
+.serviceInfo {
+  min-width: 0;
+}
+
 .serviceName {
   margin: 0;
   font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .serviceDescription {
-  margin: 0.35rem 0 0;
+  margin: 0.3rem 0 0;
   color: var(--v-color-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .servicePrice {
-  margin: 0.45rem 0 0;
+  margin: 0.4rem 0 0;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--v-color-brand-hover);
 }
 
-.qtyField {
+.serviceQtyWrap {
   display: grid;
-  gap: 0.35rem;
-  max-width: 8rem;
-  font-size: 0.82rem;
-  font-weight: 600;
+  gap: 0.25rem;
+  justify-items: center;
 }
 
-.qtyInput {
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-md);
-}
-
-.promoBlock {
-  display: grid;
-  gap: 0.45rem;
-  padding: var(--v-space-4);
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-lg);
-  background: color-mix(in srgb, var(--v-color-brand) 5%, var(--v-color-surface));
-}
-
-.promoField {
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.promoInput {
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-md);
+.qtyLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--v-color-text-muted);
 }
 
-.promoInfo {
-  margin: 0;
+.qtyStepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-bg);
+  overflow: hidden;
+}
+
+.qtyStepperButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: var(--v-color-ink);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qtyStepperButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.qtyStepperButton:not(:disabled):hover {
+  background: var(--v-color-brand-muted);
   color: var(--v-color-brand-hover);
-  font-size: 0.86rem;
 }
 
-.promoError {
-  margin: 0;
-  color: #b42318;
-  font-size: 0.86rem;
+.qtyStepperValue {
+  min-width: 1.75rem;
+  padding-inline: 0.15rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--v-color-ink);
+}
+
+.serviceConfig {
+  display: grid;
+  gap: var(--v-space-3);
+  padding-top: var(--v-space-3);
+  border-top: 1px solid var(--v-color-border);
+}
+
+.configToggle {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v-color-brand);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
 }
 
 @media (min-width: 768px) {
-  .serviceGrid {
+  .serviceGrid:not(.serviceGridSingle) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .serviceTop {
-    grid-template-columns: 1fr;
+  .serviceCardMain {
+    grid-template-columns: 6rem minmax(0, 1fr);
+    grid-template-areas:
+      "media info"
+      "qty qty";
   }
 
   .serviceMedia {
-    width: 100%;
-    height: 9rem;
+    grid-area: media;
+  }
+
+  .serviceInfo {
+    grid-area: info;
+  }
+
+  .serviceQtyWrap {
+    grid-area: qty;
+    justify-self: start;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: var(--v-space-3);
+  }
+
+  .serviceMedia {
+    width: 5.5rem;
+    height: 5.5rem;
   }
 }

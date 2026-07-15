@@ -24,11 +24,7 @@ interface BookingServicesStepProps {
   services: BookingServiceCatalogItem[];
   cart: BookingCartItem[];
   loading: boolean;
-  discountCode: string;
-  promoMessage: string | null;
-  promoError: string | null;
   onCartChange: (cart: BookingCartItem[]) => void;
-  onDiscountCodeChange: (code: string) => void;
   onBack: () => void;
 }
 
@@ -36,15 +32,12 @@ export function BookingServicesStep({
   services,
   cart,
   loading,
-  discountCode,
-  promoMessage,
-  promoError,
   onCartChange,
-  onDiscountCodeChange,
   onBack,
 }: BookingServicesStepProps) {
   const [draftAnswers, setDraftAnswers] = useState<Record<string, Record<string, unknown>>>({});
   const [formErrors, setFormErrors] = useState<Record<string, Record<string, string>>>({});
+  const [expandedConfig, setExpandedConfig] = useState<Record<string, boolean>>({});
 
   const cartByServiceId = useMemo(
     () => new Map(cart.map((item) => [item.serviceId, item])),
@@ -54,6 +47,11 @@ export function BookingServicesStep({
   function updateQty(service: BookingServiceCatalogItem, qty: number) {
     if (qty <= 0) {
       onCartChange(cart.filter((item) => item.serviceId !== service.id));
+      setExpandedConfig((current) => {
+        const next = { ...current };
+        delete next[service.id];
+        return next;
+      });
       return;
     }
 
@@ -69,6 +67,7 @@ export function BookingServicesStep({
       );
       if (Object.keys(errors).length > 0) {
         setFormErrors((current) => ({ ...current, [service.id]: errors }));
+        setExpandedConfig((current) => ({ ...current, [service.id]: true }));
         return;
       }
     }
@@ -88,6 +87,10 @@ export function BookingServicesStep({
     });
   }
 
+  function toggleConfig(serviceId: string) {
+    setExpandedConfig((current) => ({ ...current, [serviceId]: !current[serviceId] }));
+  }
+
   return (
     <section className={styles.step}>
       <div className={styles.stepHeader}>
@@ -102,14 +105,20 @@ export function BookingServicesStep({
 
       {loading ? <p className={styles.loading}>Chargement des services…</p> : null}
 
-      <div className={styles.serviceGrid}>
+      <div
+        className={[styles.serviceGrid, services.length === 1 ? styles.serviceGridSingle : ""]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {services.map((service) => {
           const cartItem = cartByServiceId.get(service.id);
           const qty = cartItem?.qty ?? 0;
+          const hasQuestions = service.customQuestions.length > 0;
+          const isConfigOpen = Boolean(expandedConfig[service.id]);
 
           return (
             <article key={service.id} className={styles.serviceCard}>
-              <div className={styles.serviceTop}>
+              <div className={styles.serviceCardMain}>
                 <div className={styles.serviceMedia}>
                   {service.photo?.url ? (
                     <Image
@@ -123,7 +132,8 @@ export function BookingServicesStep({
                     <div className={styles.serviceFallback}>Service</div>
                   )}
                 </div>
-                <div>
+
+                <div className={styles.serviceInfo}>
                   <h3 className={styles.serviceName}>{service.label}</h3>
                   {service.description ? (
                     <p className={styles.serviceDescription}>{service.description}</p>
@@ -132,53 +142,69 @@ export function BookingServicesStep({
                     {formatCentsAsEuroString(service.priceHTCents)} € HT · TVA {service.vatRate} %
                   </p>
                 </div>
+
+                <div className={styles.serviceQtyWrap}>
+                  <span className={styles.qtyLabel}>Qté</span>
+                  <div
+                    className={styles.qtyStepper}
+                    role="group"
+                    aria-label={`Quantité ${service.label}`}
+                  >
+                    <button
+                      type="button"
+                      className={styles.qtyStepperButton}
+                      aria-label="Diminuer la quantité"
+                      disabled={qty === 0}
+                      onClick={() => updateQty(service, qty - 1)}
+                    >
+                      −
+                    </button>
+                    <span className={styles.qtyStepperValue} aria-live="polite">
+                      {qty}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.qtyStepperButton}
+                      aria-label="Augmenter la quantité"
+                      onClick={() => updateQty(service, qty + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <label className={styles.qtyField}>
-                <span>Quantité</span>
-                <input
-                  className={styles.qtyInput}
-                  type="number"
-                  min={0}
-                  value={qty}
-                  onChange={(event) => updateQty(service, Number(event.target.value))}
-                />
-              </label>
-
-              {qty > 0 && service.customQuestions.length > 0 ? (
-                <BookingCustomQuestionsForm
-                  questions={service.customQuestions}
-                  values={draftAnswers[service.id] ?? {}}
-                  errors={formErrors[service.id]}
-                  onChange={(questionId, value) =>
-                    setDraftAnswers((current) => ({
-                      ...current,
-                      [service.id]: {
-                        ...(current[service.id] ?? {}),
-                        [questionId]: value,
-                      },
-                    }))
-                  }
-                />
+              {qty > 0 && hasQuestions ? (
+                <div className={styles.serviceConfig}>
+                  <button
+                    type="button"
+                    className={styles.configToggle}
+                    aria-expanded={isConfigOpen}
+                    onClick={() => toggleConfig(service.id)}
+                  >
+                    {isConfigOpen ? "Masquer la configuration" : "Configurer"}
+                  </button>
+                  {isConfigOpen ? (
+                    <BookingCustomQuestionsForm
+                      questions={service.customQuestions}
+                      values={draftAnswers[service.id] ?? {}}
+                      errors={formErrors[service.id]}
+                      onChange={(questionId, value) =>
+                        setDraftAnswers((current) => ({
+                          ...current,
+                          [service.id]: {
+                            ...(current[service.id] ?? {}),
+                            [questionId]: value,
+                          },
+                        }))
+                      }
+                    />
+                  ) : null}
+                </div>
               ) : null}
             </article>
           );
         })}
-      </div>
-
-      <div className={styles.promoBlock}>
-        <label className={styles.promoField}>
-          <span>Code promo ou préférentiel</span>
-          <input
-            className={styles.promoInput}
-            type="text"
-            value={discountCode}
-            placeholder="Ex. WELCOME20"
-            onChange={(event) => onDiscountCodeChange(event.target.value.toUpperCase())}
-          />
-        </label>
-        {promoMessage ? <p className={styles.promoInfo}>{promoMessage}</p> : null}
-        {promoError ? <p className={styles.promoError}>{promoError}</p> : null}
       </div>
     </section>
   );
