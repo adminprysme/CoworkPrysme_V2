@@ -12,6 +12,8 @@ vi.mock("@coworkprysme/db", () => ({
   }),
 }));
 
+import { DISCOUNT_CODE_INVALID_MESSAGE } from "@coworkprysme/shared";
+
 import { DiscountCodeValidationService } from "./discount-code-validation.service.js";
 
 describe("DiscountCodeValidationService", () => {
@@ -43,5 +45,38 @@ describe("DiscountCodeValidationService", () => {
         perimeter: { appliesTo: "service", serviceKeys: ["parking"] },
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("rejects scheduled codes via assertApplicable with generic message", () => {
+    const now = new Date("2026-07-10T12:00:00.000Z");
+
+    expect(() =>
+      service.assertApplicable(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-20T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).toThrow(BadRequestException);
+
+    try {
+      service.assertApplicable(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-20T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      );
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toEqual({
+        message: DISCOUNT_CODE_INVALID_MESSAGE,
+      });
+    }
   });
 });

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertDiscountCodeApplicable,
+  assertDiscountCodeDateRange,
   assertDiscountCodeServiceTargets,
   computeDiscountCodeDisplayStatus,
+  DISCOUNT_CODE_DATE_RANGE_ERROR,
+  DISCOUNT_CODE_INVALID_MESSAGE,
   DiscountCodeValidationError,
   mapFixedDiscountEurosToDb,
   mapFixedDiscountDbToEuros,
@@ -63,6 +67,23 @@ describe("assertDiscountCodeServiceTargets", () => {
   });
 });
 
+describe("assertDiscountCodeDateRange", () => {
+  it("requires startsAt to be strictly before expiresAt", () => {
+    const startsAt = new Date("2026-08-01T00:00:00.000Z");
+    const expiresAt = new Date("2026-07-01T00:00:00.000Z");
+
+    expect(() => assertDiscountCodeDateRange(startsAt, expiresAt)).toThrow(
+      DISCOUNT_CODE_DATE_RANGE_ERROR,
+    );
+  });
+
+  it("allows absent startsAt", () => {
+    expect(() =>
+      assertDiscountCodeDateRange(undefined, new Date("2026-12-01T00:00:00.000Z")),
+    ).not.toThrow();
+  });
+});
+
 describe("computeDiscountCodeDisplayStatus", () => {
   const now = new Date("2026-07-10T12:00:00.000Z");
 
@@ -105,6 +126,122 @@ describe("computeDiscountCodeDisplayStatus", () => {
         now,
       ),
     ).toBe("active");
+  });
+
+  it("returns scheduled when startsAt is in the future", () => {
+    expect(
+      computeDiscountCodeDisplayStatus(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-15T12:00:00.000Z"),
+          expiresAt: new Date("2026-07-20T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).toBe("scheduled");
+  });
+
+  it("does not return active before startsAt even when other criteria match", () => {
+    expect(
+      computeDiscountCodeDisplayStatus(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-15T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          maxUses: 100,
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).not.toBe("active");
+  });
+
+  it("returns active once startsAt is in the past", () => {
+    expect(
+      computeDiscountCodeDisplayStatus(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-01T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).toBe("active");
+  });
+
+  it("returns disabled before scheduled when status is disabled", () => {
+    expect(
+      computeDiscountCodeDisplayStatus(
+        {
+          status: "disabled",
+          startsAt: new Date("2026-07-15T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).toBe("disabled");
+  });
+
+  it("returns expired before scheduled for inconsistent future start with past expiry", () => {
+    expect(
+      computeDiscountCodeDisplayStatus(
+        {
+          status: "active",
+          startsAt: new Date("2026-08-01T12:00:00.000Z"),
+          expiresAt: new Date("2026-07-05T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).toBe("expired");
+  });
+});
+
+describe("assertDiscountCodeApplicable", () => {
+  const now = new Date("2026-07-10T12:00:00.000Z");
+
+  it("rejects scheduled codes with the generic invalid message", () => {
+    expect(() =>
+      assertDiscountCodeApplicable(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-15T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).toThrow(DISCOUNT_CODE_INVALID_MESSAGE);
+  });
+
+  it("allows codes without startsAt (non-regression)", () => {
+    expect(() =>
+      assertDiscountCodeApplicable(
+        {
+          status: "active",
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).not.toThrow();
+  });
+
+  it("allows codes whose startsAt is already reached", () => {
+    expect(() =>
+      assertDiscountCodeApplicable(
+        {
+          status: "active",
+          startsAt: new Date("2026-07-01T12:00:00.000Z"),
+          expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+          usedCount: 0,
+        },
+        now,
+      ),
+    ).not.toThrow();
   });
 });
 
