@@ -9,15 +9,18 @@ interface PromoCodeCardProps {
 }
 
 const STATUS_CLASS = {
-  active: styles.badgeActive ?? "",
-  expired: styles.badgeExpired ?? "",
-  exhausted: styles.badgeExhausted ?? "",
-  disabled: styles.badgeDisabled ?? "",
+  active: styles.statusActive ?? "",
+  scheduled: styles.statusScheduled ?? "",
+  expired: styles.statusExpired ?? "",
+  exhausted: styles.statusExpired ?? "",
+  disabled: styles.statusDisabled ?? "",
 } satisfies Record<DiscountCodeResponse["displayStatus"], string>;
 
-function statusClass(displayStatus: DiscountCodeResponse["displayStatus"]): string {
-  return STATUS_CLASS[displayStatus];
-}
+const DISCOUNT_TYPE_LABELS: Record<DiscountCodeResponse["discountType"], string> = {
+  percentage: "Pourcentage",
+  fixed_amount: "Montant fixe",
+  buy_one_get_one: "1 acheté = 1 offert",
+};
 
 function formatDiscount(code: DiscountCodeResponse): string {
   if (code.discountType === "percentage") {
@@ -30,28 +33,51 @@ function formatDiscount(code: DiscountCodeResponse): string {
 }
 
 export function PromoCodeCard({ code, onEdit }: PromoCodeCardProps) {
+  const startsLabel = code.startsAt ? new Date(code.startsAt).toLocaleDateString("fr-FR") : null;
   const expiresLabel = new Date(code.expiresAt).toLocaleDateString("fr-FR");
+  const usageLabel =
+    code.maxUses != null
+      ? `${code.usedCount}/${code.maxUses} utilisations`
+      : "Utilisations illimitées";
+
+  const dateLine = startsLabel
+    ? `Début le ${startsLabel} · Expire le ${expiresLabel}`
+    : `Expire le ${expiresLabel}`;
+
+  const perimeterTag =
+    code.perimeter.appliesTo === "order"
+      ? "Toute la commande"
+      : `${code.perimeter.serviceKeys?.length ?? 0} service${(code.perimeter.serviceKeys?.length ?? 0) > 1 ? "s" : ""}`;
 
   return (
-    <button type="button" className={styles.card} onClick={onEdit}>
-      <div className={styles.header}>
-        <h3 className={styles.code}>{code.code}</h3>
-        <span className={[styles.badge, statusClass(code.displayStatus)].join(" ")}>
-          {DISPLAY_STATUS_LABELS[code.displayStatus]}
-        </span>
-      </div>
-      <p className={styles.discount}>{formatDiscount(code)}</p>
-      <p className={styles.meta}>
-        Périmètre :{" "}
-        {code.perimeter.appliesTo === "order"
-          ? "Toute la commande"
-          : `${code.perimeter.serviceKeys?.length ?? 0} service(s)`}
-      </p>
-      <p className={styles.meta}>
-        Expire le {expiresLabel}
-        {code.maxUses != null ? ` · ${code.usedCount}/${code.maxUses} utilisations` : " · Illimité"}
-      </p>
-      {code.stackable ? <span className={styles.stackable}>Cumulable</span> : null}
-    </button>
+    <article className={styles.cardShell}>
+      <button type="button" className={styles.card} onClick={onEdit}>
+        <div className={styles.body}>
+          <div className={styles.header}>
+            <h3 className={styles.title}>{code.code}</h3>
+            <span className={[styles.statusBadge, STATUS_CLASS[code.displayStatus]].join(" ")}>
+              {DISPLAY_STATUS_LABELS[code.displayStatus]}
+            </span>
+          </div>
+
+          <p className={styles.subtitle}>{DISCOUNT_TYPE_LABELS[code.discountType]}</p>
+
+          <div className={styles.discountBlock}>
+            <div className={styles.discountPrimary}>
+              <span className={styles.discountLabel}>Remise</span>
+              <span className={styles.discountValue}>{formatDiscount(code)}</span>
+            </div>
+            <p className={styles.discountSecondary}>
+              {dateLine} · {usageLabel}
+            </p>
+          </div>
+
+          <div className={styles.tags}>
+            <span className={styles.tag}>{perimeterTag}</span>
+            {code.stackable ? <span className={styles.tag}>Cumulable</span> : null}
+          </div>
+        </div>
+      </button>
+    </article>
   );
 }

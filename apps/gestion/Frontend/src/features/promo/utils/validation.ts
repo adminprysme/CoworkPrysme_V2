@@ -1,5 +1,7 @@
 import {
+  assertDiscountCodeDateRange,
   assertDiscountCodeServiceTargets,
+  DISCOUNT_CODE_DATE_RANGE_ERROR,
   DiscountCodeValidationError,
   type DiscountAppliesTo,
   type DiscountCodeDisplayStatus,
@@ -15,6 +17,7 @@ export interface PromoCodeFormValues {
   appliesTo: DiscountAppliesTo;
   serviceKeys: string[];
   stackable: boolean;
+  startsAt: string;
   expiresAt: string;
   maxUses: string;
   status: "active" | "disabled";
@@ -22,12 +25,14 @@ export interface PromoCodeFormValues {
 
 export type PromoCodeFormErrors = Partial<Record<string, string>>;
 
+function toLocalDatetimeInput(isoOrLocal: string): string {
+  const date = new Date(isoOrLocal);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
 export function createEmptyPromoCodeFormValues(): PromoCodeFormValues {
   const expires = new Date();
   expires.setDate(expires.getDate() + 30);
-  const local = new Date(expires.getTime() - expires.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
 
   return {
     code: "",
@@ -37,7 +42,8 @@ export function createEmptyPromoCodeFormValues(): PromoCodeFormValues {
     appliesTo: "order",
     serviceKeys: [],
     stackable: false,
-    expiresAt: local,
+    startsAt: "",
+    expiresAt: toLocalDatetimeInput(expires.toISOString()),
     maxUses: "",
     status: "active",
   };
@@ -50,15 +56,11 @@ export function discountCodeResponseToFormValues(code: {
   valueEuros?: number;
   perimeter: { appliesTo: DiscountAppliesTo; serviceKeys?: string[] };
   stackable: boolean;
+  startsAt?: string;
   expiresAt: string;
   maxUses?: number;
   status: "active" | "expired" | "disabled";
 }): PromoCodeFormValues {
-  const expiresAt = new Date(code.expiresAt);
-  const local = new Date(expiresAt.getTime() - expiresAt.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
-
   return {
     code: code.code,
     discountType: code.discountType,
@@ -67,7 +69,8 @@ export function discountCodeResponseToFormValues(code: {
     appliesTo: code.perimeter.appliesTo === "service" ? "service" : "order",
     serviceKeys: code.perimeter.serviceKeys ?? [],
     stackable: code.stackable,
-    expiresAt: local,
+    startsAt: code.startsAt ? toLocalDatetimeInput(code.startsAt) : "",
+    expiresAt: toLocalDatetimeInput(code.expiresAt),
     maxUses: code.maxUses != null ? String(code.maxUses) : "",
     status: code.status === "disabled" ? "disabled" : "active",
   };
@@ -83,12 +86,32 @@ export function validatePromoCodeForm(
     errors.code = "Le code doit contenir au moins 3 caractères";
   }
 
+  let startsAtDate: Date | undefined;
+  if (values.startsAt.trim()) {
+    startsAtDate = new Date(values.startsAt);
+    if (Number.isNaN(startsAtDate.getTime())) {
+      errors.startsAt = "Date invalide";
+    }
+  }
+
+  let expiresAtDate: Date | undefined;
   if (!values.expiresAt) {
     errors.expiresAt = "La date d'expiration est obligatoire";
   } else {
-    const expiresAt = new Date(values.expiresAt);
-    if (Number.isNaN(expiresAt.getTime())) {
+    expiresAtDate = new Date(values.expiresAt);
+    if (Number.isNaN(expiresAtDate.getTime())) {
       errors.expiresAt = "Date invalide";
+    }
+  }
+
+  if (startsAtDate && expiresAtDate && !errors.startsAt && !errors.expiresAt) {
+    try {
+      assertDiscountCodeDateRange(startsAtDate, expiresAtDate);
+    } catch (error) {
+      if (error instanceof DiscountCodeValidationError) {
+        errors.startsAt = DISCOUNT_CODE_DATE_RANGE_ERROR;
+        errors.expiresAt = DISCOUNT_CODE_DATE_RANGE_ERROR;
+      }
     }
   }
 
@@ -154,6 +177,7 @@ export function promoCodeFormValuesToCreateRequest(values: PromoCodeFormValues) 
       serviceKeys: values.appliesTo === "service" ? values.serviceKeys : undefined,
     },
     stackable: values.stackable,
+    startsAt: values.startsAt.trim() ? new Date(values.startsAt).toISOString() : undefined,
     expiresAt: expiresAt.toISOString(),
     maxUses: values.maxUses.trim() ? Number.parseInt(values.maxUses, 10) : undefined,
     status: values.status,
@@ -181,6 +205,7 @@ export function promoCodeFormValuesToCreateRequest(values: PromoCodeFormValues) 
 
 export const DISPLAY_STATUS_LABELS: Record<DiscountCodeDisplayStatus, string> = {
   active: "Actif",
+  scheduled: "Programmé",
   expired: "Expiré",
   exhausted: "Épuisé",
   disabled: "Désactivé",
