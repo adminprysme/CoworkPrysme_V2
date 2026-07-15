@@ -271,11 +271,22 @@ export {
 export {
   BOOKING_ERROR_CODES,
   BOOKING_PHASE1_DURATION_CLASSES,
+  BOOKING_PRICE_LINE_KINDS,
   BookingAvailabilityQuerySchema,
   BookingAvailabilityResponseSchema,
   BookingErrorResponseSchema,
   BookingLockResponseSchema,
   BookingPhase1DurationClassSchema,
+  BookingPriceDiscountSchema,
+  BookingPriceLineKindSchema,
+  BookingPriceLineSchema,
+  BookingPriceRequestSchema,
+  BookingPriceResponseSchema,
+  BookingPriceServiceInputSchema,
+  BookingServiceCatalogItemSchema,
+  BookingServicesQuerySchema,
+  BookingServicesResponseSchema,
+  BookingVatBreakdownLineSchema,
   type BookingPhase1DurationClass,
   BookingSlotSchema,
   BookingSpaceAvailabilityQuerySchema,
@@ -290,12 +301,22 @@ export {
   type BookingAvailabilityResponse,
   type BookingErrorCode,
   type BookingLockResponse,
+  type BookingPriceDiscount,
+  type BookingPriceLine,
+  type BookingPriceLineKind,
+  type BookingPriceRequest,
+  type BookingPriceResponse,
+  type BookingPriceServiceInput,
+  type BookingServiceCatalogItem,
+  type BookingServicesQuery,
+  type BookingServicesResponse,
   type BookingSlot,
   type BookingSpaceAvailabilityQuery,
   type BookingSpaceAvailabilityResponse,
   type BookingSpaceCard,
   type BookingSpacesQuery,
   type BookingSpacesResponse,
+  type BookingVatBreakdownLine,
   type CreateBookingLockRequest,
 } from "./booking.js";
 
@@ -393,6 +414,11 @@ export {
 } from "./service-custom-questions.js";
 
 export {
+  ServiceCustomAnswerValidationError,
+  assertServiceCustomAnswers,
+} from "./service-custom-answers.js";
+
+export {
   DISCOUNT_APPLIES_TO,
   DISCOUNT_CODE_DISPLAY_STATUSES,
   DISCOUNT_CODE_KINDS,
@@ -416,6 +442,7 @@ export {
   computeDiscountCodeDisplayStatus,
   DISCOUNT_CODE_DATE_RANGE_ERROR,
   DISCOUNT_CODE_INVALID_MESSAGE,
+  DISCOUNT_CODE_PREFERENTIAL_PENDING_MESSAGE,
   mapDiscountCodeToResponse,
   mapDiscountValueToDb,
   mapFixedDiscountDbToEuros,

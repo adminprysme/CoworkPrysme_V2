@@ -168,4 +168,132 @@ export type BookingSpaceAvailabilityResponse = z.infer<
 export type CreateBookingLockRequest = z.infer<typeof CreateBookingLockRequestSchema>;
 export type BookingLockResponse = z.infer<typeof BookingLockResponseSchema>;
 
+export const BOOKING_PRICE_LINE_KINDS = ["space", "service", "discount"] as const;
+export const BookingPriceLineKindSchema = z.enum(BOOKING_PRICE_LINE_KINDS);
+export type BookingPriceLineKind = z.infer<typeof BookingPriceLineKindSchema>;
+
+export const BookingServicesQuerySchema = z.object({
+  buildingId: z
+    .string()
+    .trim()
+    .regex(/^[a-f0-9]{24}$/i, "Identifiant de bâtiment invalide"),
+});
+
+export const BookingServiceCatalogItemSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  label: z.string(),
+  description: z.string().optional(),
+  priceHTCents: z.number().int().min(0),
+  vatRate: z.number().min(0),
+  promoEligible: z.boolean(),
+  customQuestions: z.array(
+    z.object({
+      id: z.string().uuid(),
+      label: z.string(),
+      type: z.string(),
+      required: z.boolean(),
+      order: z.number().int().min(0),
+      options: z.array(z.string()).optional(),
+    }),
+  ),
+  photo: z
+    .object({
+      storageKey: z.string(),
+      url: z.string(),
+      alt: z.string().optional(),
+    })
+    .optional(),
+});
+
+export const BookingServicesResponseSchema = z.object({
+  services: z.array(BookingServiceCatalogItemSchema),
+});
+
+export const BookingPriceServiceInputSchema = z.object({
+  serviceId: z
+    .string()
+    .trim()
+    .regex(/^[a-f0-9]{24}$/i, "Identifiant de service invalide"),
+  qty: z.number().int().min(1),
+  customAnswers: z
+    .array(
+      z.object({
+        questionId: z.string().uuid(),
+        type: z.string(),
+        label: z.string().trim().min(1),
+        value: z.unknown(),
+      }),
+    )
+    .optional(),
+});
+
+export const BookingPriceRequestSchema = z
+  .object({
+    spaceId: z
+      .string()
+      .trim()
+      .regex(/^[a-f0-9]{24}$/i, "Identifiant d'espace invalide"),
+    startAt: isoDateTimeSchema,
+    endAt: isoDateTimeSchema,
+    durationClass: BookingPhase1DurationClassSchema,
+    services: z.array(BookingPriceServiceInputSchema).default([]),
+    discountCode: z.string().trim().min(1).optional(),
+  })
+  .superRefine((value, context) => {
+    const startAt = new Date(value.startAt);
+    const endAt = new Date(value.endAt);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid date range" });
+      return;
+    }
+    if (endAt <= startAt) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "endAt must be after startAt" });
+    }
+  });
+
+export const BookingVatBreakdownLineSchema = z.object({
+  rate: z.number(),
+  baseHT: z.number().int(),
+  vat: z.number().int(),
+});
+
+export const BookingPriceLineSchema = z.object({
+  label: z.string(),
+  kind: BookingPriceLineKindSchema,
+  refId: z.string().optional(),
+  qty: z.number().int().min(0),
+  unitPriceHT: z.number().int().min(0),
+  vatRate: z.number().min(0),
+  discount: z.number().int().min(0),
+  totalHT: z.number().int(),
+  totalVAT: z.number().int(),
+  totalTTC: z.number().int(),
+});
+
+export const BookingPriceDiscountSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+  type: z.enum(["percentage", "fixed_amount", "buy_one_get_one"]),
+});
+
+export const BookingPriceResponseSchema = z.object({
+  subtotalHT: z.number().int().min(0),
+  discountTotal: z.number().int().min(0),
+  vatBreakdown: z.array(BookingVatBreakdownLineSchema),
+  totalTTC: z.number().int().min(0),
+  lines: z.array(BookingPriceLineSchema),
+  discount: BookingPriceDiscountSchema.optional(),
+});
+
+export type BookingServicesQuery = z.infer<typeof BookingServicesQuerySchema>;
+export type BookingServiceCatalogItem = z.infer<typeof BookingServiceCatalogItemSchema>;
+export type BookingServicesResponse = z.infer<typeof BookingServicesResponseSchema>;
+export type BookingPriceServiceInput = z.infer<typeof BookingPriceServiceInputSchema>;
+export type BookingPriceRequest = z.infer<typeof BookingPriceRequestSchema>;
+export type BookingVatBreakdownLine = z.infer<typeof BookingVatBreakdownLineSchema>;
+export type BookingPriceLine = z.infer<typeof BookingPriceLineSchema>;
+export type BookingPriceDiscount = z.infer<typeof BookingPriceDiscountSchema>;
+export type BookingPriceResponse = z.infer<typeof BookingPriceResponseSchema>;
+
 export { durationClassLabel as bookingDurationClassLabel };

@@ -30,6 +30,8 @@ export const DISCOUNT_CODE_DISPLAY_STATUSES = [
 export type DiscountCodeDisplayStatus = (typeof DISCOUNT_CODE_DISPLAY_STATUSES)[number];
 
 export const DISCOUNT_CODE_INVALID_MESSAGE = "Code non valide";
+export const DISCOUNT_CODE_PREFERENTIAL_PENDING_MESSAGE =
+  "Ce code préférentiel sera utilisable à l'étape Compte, après création de votre espace client.";
 export const DISCOUNT_CODE_DATE_RANGE_ERROR =
   "La date de début doit être antérieure à la date d'expiration";
 
