@@ -58,6 +58,7 @@ describe("vitrine-api read-only controllers", () => {
       if (relative.endsWith(BOOKING_CONTROLLER)) {
         expect(source).not.toMatch(/@(Put|Patch)\(/);
         expect(source).toMatch(/@Post\("lock"\)/);
+        expect(source).toMatch(/@Post\("price"\)/);
         expect(source).toMatch(/@Delete\("lock\/:lockId"\)/);
         expect(source).not.toMatch(/createReservation|clientAccount|Reservation\.create/i);
         continue;
@@ -80,12 +81,13 @@ describe("vitrine-api read-only controllers", () => {
     expect(source).not.toMatch(/@(Post|Put|Patch|Delete)\(/);
   });
 
-  it("booking controller only exposes lock/unlock writes", () => {
+  it("booking controller only exposes lock/unlock and stateless price writes", () => {
     const source = readFileSync(join(SRC_DIR, BOOKING_CONTROLLER), "utf8");
     const writeMatches = [...source.matchAll(/@(Post|Put|Patch|Delete)\(([^)]*)\)/g)];
     expect(writeMatches.map((match) => `${match[1]}(${match[2]})`)).toEqual([
       'Post("lock")',
       'Delete("lock/:lockId")',
+      'Post("price")',
     ]);
   });
 });
