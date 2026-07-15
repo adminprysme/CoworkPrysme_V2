@@ -86,6 +86,20 @@ export const photoSchema = new Schema<Photo>(
   { _id: false },
 );
 
+/** Single optional photo on a catalog service (gestion / vitrine booking). */
+export interface ServicePhoto {
+  storageKey: string;
+  alt?: string;
+}
+
+export const servicePhotoSchema = new Schema<ServicePhoto>(
+  {
+    storageKey: { type: String, required: true },
+    alt: { type: String, trim: true },
+  },
+  { _id: false },
+);
+
 const TIME_OF_DAY_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export interface BuildingFloor {

@@ -71,4 +71,41 @@ describe("service schema", () => {
     expect(empty.customQuestions).toEqual([]);
     void connection.close();
   });
+
+  it("persists photo, isGlobal and buildingIds with defaults", () => {
+    const connection = mongoose.createConnection();
+    const Service = registerServiceModel(connection);
+    const buildingId = new mongoose.Types.ObjectId();
+
+    const globalDoc = new Service({
+      key: "global-service",
+      label: "Service global",
+      priceHT: 1000,
+      vatRate: 20,
+      promoEligible: false,
+      status: "active",
+    });
+    expect(globalDoc.isGlobal).toBe(true);
+    expect(globalDoc.buildingIds).toEqual([]);
+
+    const scopedDoc = new Service({
+      key: "scoped-service",
+      label: "Service local",
+      priceHT: 2000,
+      vatRate: 20,
+      promoEligible: false,
+      status: "active",
+      isGlobal: false,
+      buildingIds: [buildingId],
+      photo: {
+        storageKey: `services/${buildingId.toString()}/00000000-0000-4000-8000-000000000001.webp`,
+      },
+    });
+
+    expect(scopedDoc.validateSync()).toBeUndefined();
+    expect(scopedDoc.isGlobal).toBe(false);
+    expect(scopedDoc.buildingIds).toHaveLength(1);
+    expect(scopedDoc.photo?.storageKey).toContain("services/");
+    void connection.close();
+  });
 });

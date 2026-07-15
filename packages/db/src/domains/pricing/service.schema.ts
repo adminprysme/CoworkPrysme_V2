@@ -1,8 +1,9 @@
-import { Schema, type Connection, type HydratedDocument, type Model } from "mongoose";
+import { Schema, type Connection, type HydratedDocument, type Model, type Types } from "mongoose";
 
 import { getCoworkDb } from "../../connection.js";
 import { SERVICE_STATUSES } from "../../lib/enums.js";
 import { registerModel } from "../../lib/register-model.js";
+import { servicePhotoSchema, type ServicePhoto } from "../../lib/subdocuments.js";
 import { centsField, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
 import {
   serviceCustomQuestionSchema,
@@ -14,6 +15,7 @@ export type {
   ServiceCustomQuestionType,
 } from "./service-custom-question.schema.js";
 export { SERVICE_CUSTOM_QUESTION_TYPES } from "./service-custom-question.schema.js";
+export type { ServicePhoto } from "../../lib/subdocuments.js";
 
 export interface Service {
   key: string;
@@ -24,6 +26,9 @@ export interface Service {
   promoEligible: boolean;
   status: (typeof SERVICE_STATUSES)[number];
   customQuestions: ServiceCustomQuestion[];
+  photo?: ServicePhoto;
+  isGlobal: boolean;
+  buildingIds: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,11 +45,16 @@ const serviceSchema = new Schema<Service>(
     promoEligible: { type: Boolean, default: false, required: true },
     status: { type: String, enum: SERVICE_STATUSES, default: "active", required: true },
     customQuestions: { type: [serviceCustomQuestionSchema], default: [] },
+    photo: { type: servicePhotoSchema, default: undefined },
+    isGlobal: { type: Boolean, default: true, required: true },
+    buildingIds: { type: [Schema.Types.ObjectId], default: [] },
   },
   { ...TIMESTAMP_OPTIONS, collection: "services" },
 );
 
 serviceSchema.index({ key: 1 }, { unique: true });
+serviceSchema.index({ isGlobal: 1 });
+serviceSchema.index({ buildingIds: 1 });
 
 export type ServiceModel = Model<Service>;
 
