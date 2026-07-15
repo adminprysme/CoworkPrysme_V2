@@ -16,6 +16,8 @@ export interface AcquireLockInput {
   endAt: Date;
   sessionId: string;
   clientAccountId?: Types.ObjectId;
+  partySize?: number;
+  durationClass?: "hourly" | "daily";
   now?: Date;
 }
 
@@ -40,6 +42,8 @@ export async function acquireLock(input: AcquireLockInput): Promise<SlotLockDocu
       endAt: input.endAt,
       sessionId: input.sessionId,
       clientAccountId: input.clientAccountId,
+      partySize: input.partySize,
+      durationClass: input.durationClass,
       expiresAt: new Date(now.getTime() + SLOT_LOCK_DURATION_MS),
     });
   } catch (error) {
@@ -90,5 +94,26 @@ export async function findActiveLock(
   if (!lock || !isSlotLockValid(lock, now)) {
     return null;
   }
+  return lock;
+}
+
+/** Returns the newest active lock owned by an anonymous booking session, if any. */
+export async function findActiveLockBySessionId(
+  sessionId: string,
+  now: Date = new Date(),
+): Promise<(SlotLock & { _id: Types.ObjectId }) | null> {
+  const SlotLock = await getSlotLockModel();
+  const lock = await SlotLock.findOne({
+    sessionId,
+    expiresAt: { $gte: now },
+  })
+    .sort({ createdAt: -1 })
+    .lean<SlotLock & { _id: Types.ObjectId }>()
+    .exec();
+
+  if (!lock || !isSlotLockValid(lock, now)) {
+    return null;
+  }
+
   return lock;
 }

@@ -10,6 +10,8 @@ export interface SlotLock {
   endAt: Date;
   sessionId: string;
   clientAccountId?: Types.ObjectId;
+  partySize?: number;
+  durationClass?: "hourly" | "daily";
   expiresAt: Date;
   createdAt: Date;
 }
@@ -23,6 +25,8 @@ const slotLockSchema = new Schema<SlotLock>(
     endAt: { type: Date, required: true },
     sessionId: { type: String, required: true },
     clientAccountId: optionalObjectIdRef("ClientAccount"),
+    partySize: { type: Number, min: 1 },
+    durationClass: { type: String, enum: ["hourly", "daily"] },
     expiresAt: { type: Date, required: true },
   },
   { ...CREATED_AT_ONLY, collection: "slotLocks" },
@@ -30,6 +34,7 @@ const slotLockSchema = new Schema<SlotLock>(
 
 slotLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 slotLockSchema.index({ spaceId: 1, startAt: 1, endAt: 1 }, { unique: true });
+slotLockSchema.index({ sessionId: 1, expiresAt: -1 });
 
 export type SlotLockModel = Model<SlotLock>;
 

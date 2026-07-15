@@ -120,6 +120,7 @@ export const CreateBookingLockRequestSchema = z
     endAt: isoDateTimeSchema,
     sessionId: z.string().trim().min(8).max(128),
     partySize: z.coerce.number().int().min(1).optional(),
+    durationClass: BookingPhase1DurationClassSchema.optional(),
   })
   .superRefine((value, context) => {
     const startAt = new Date(value.startAt);
@@ -145,6 +146,17 @@ export const ReleaseBookingLockQuerySchema = z.object({
   sessionId: z.string().trim().min(8).max(128),
 });
 
+export const ActiveBookingLockQuerySchema = z.object({
+  sessionId: z.string().trim().min(8).max(128),
+});
+
+export const ActiveBookingLockResponseSchema = z.object({
+  lock: BookingLockResponseSchema.nullable(),
+  space: BookingSpaceCardSchema.nullable(),
+  partySize: z.number().int().min(1).optional(),
+  durationClass: BookingPhase1DurationClassSchema.optional(),
+});
+
 export const BookingErrorResponseSchema = z.object({
   code: z.enum([
     BOOKING_ERROR_CODES.SLOT_UNAVAILABLE,
@@ -168,6 +180,8 @@ export type BookingSpaceAvailabilityResponse = z.infer<
 >;
 export type CreateBookingLockRequest = z.infer<typeof CreateBookingLockRequestSchema>;
 export type BookingLockResponse = z.infer<typeof BookingLockResponseSchema>;
+export type ActiveBookingLockQuery = z.infer<typeof ActiveBookingLockQuerySchema>;
+export type ActiveBookingLockResponse = z.infer<typeof ActiveBookingLockResponseSchema>;
 
 export const BOOKING_PRICE_LINE_KINDS = ["space", "service", "discount"] as const;
 export const BookingPriceLineKindSchema = z.enum(BOOKING_PRICE_LINE_KINDS);

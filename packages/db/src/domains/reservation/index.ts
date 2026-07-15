@@ -22,6 +22,7 @@ export {
 export {
   acquireLock,
   findActiveLock,
+  findActiveLockBySessionId,
   releaseLock,
   releaseLockById,
   SLOT_LOCK_DURATION_MS,

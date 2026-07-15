@@ -7,6 +7,7 @@ import {
   assertRangeAvailable,
   createReservation,
   ensureReservationIndexes,
+  findActiveLockBySessionId,
   findOverlappingActiveLock,
   registerReservationModel,
   registerSlotLockModel,
@@ -90,6 +91,59 @@ describe("integration: reservation core (replica set)", () => {
 
       await expect(releaseLockById(lock._id, "other-session")).resolves.toBe(false);
       await expect(releaseLockById(lock._id, "owner-session")).resolves.toBe(true);
+    });
+
+    it("findActiveLockBySessionId returns the newest valid lock for the session", async () => {
+      const spaceId = new Types.ObjectId();
+      const firstStart = new Date("2026-07-01T10:00:00.000Z");
+      const firstEnd = new Date("2026-07-01T11:00:00.000Z");
+      const secondStart = new Date("2026-07-02T10:00:00.000Z");
+      const secondEnd = new Date("2026-07-02T11:00:00.000Z");
+
+      await acquireLock({
+        spaceId,
+        startAt: firstStart,
+        endAt: firstEnd,
+        sessionId: "resume-session",
+        partySize: 2,
+        durationClass: "hourly",
+      });
+      await acquireLock({
+        spaceId,
+        startAt: secondStart,
+        endAt: secondEnd,
+        sessionId: "resume-session",
+        partySize: 4,
+        durationClass: "daily",
+      });
+
+      const active = await findActiveLockBySessionId("resume-session");
+      expect(active).not.toBeNull();
+      expect(active?.partySize).toBe(4);
+      expect(active?.durationClass).toBe("daily");
+      expect(active?.startAt.toISOString()).toBe(secondStart.toISOString());
+    });
+
+    it("findActiveLockBySessionId returns null for another session", async () => {
+      const spaceId = new Types.ObjectId();
+      const startAt = new Date("2026-07-01T10:00:00.000Z");
+      const endAt = new Date("2026-07-01T11:00:00.000Z");
+
+      await acquireLock({ spaceId, startAt, endAt, sessionId: "owner-session" });
+
+      await expect(findActiveLockBySessionId("other-session")).resolves.toBeNull();
+    });
+
+    it("findActiveLockBySessionId returns null once the lock has expired", async () => {
+      const spaceId = new Types.ObjectId();
+      const startAt = new Date("2026-07-01T10:00:00.000Z");
+      const endAt = new Date("2026-07-01T11:00:00.000Z");
+      const now = new Date("2026-07-01T09:00:00.000Z");
+
+      await acquireLock({ spaceId, startAt, endAt, sessionId: "expired-session", now });
+
+      const expiredAt = new Date(now.getTime() + 10 * 60 * 1000 + 1);
+      await expect(findActiveLockBySessionId("expired-session", expiredAt)).resolves.toBeNull();
     });
   });
 
