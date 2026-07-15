@@ -11,7 +11,7 @@ import {
   type CreateBookingLockRequest,
 } from "@coworkprysme/shared";
 
-import { bookingFetch, buildQuery, getApiBaseUrl } from "./booking-api-client.js";
+import { bookingFetch, buildQuery, getApiBaseUrl } from "./booking-api-client";
 
 export async function fetchBookingAvailability(
   query: BookingAvailabilityQuery,

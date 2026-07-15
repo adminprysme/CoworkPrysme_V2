@@ -7,7 +7,7 @@ import {
   type BookingServicesQuery,
 } from "@coworkprysme/shared";
 
-import { bookingFetch, buildQuery } from "./booking-api-client.js";
+import { bookingFetch, buildQuery } from "./booking-api-client";
 
 export async function fetchBookingServices(query: BookingServicesQuery) {
   const qs = buildQuery({ buildingId: query.buildingId });
