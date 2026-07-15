@@ -43,57 +43,6 @@
   line-height: 1.65;
 }
 
-.progressBar {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--v-space-2);
-  margin: 0 0 var(--v-space-8);
-  padding: 0;
-  list-style: none;
-}
-
-.progressStep {
-  display: grid;
-  gap: 0.35rem;
-  justify-items: center;
-  padding: var(--v-space-2);
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-md);
-  background: var(--v-color-surface-muted);
-  color: var(--v-color-text-muted);
-  text-align: center;
-}
-
-.progressStepActive {
-  border-color: var(--v-color-brand-soft);
-  background: var(--v-color-brand-muted);
-  color: var(--v-color-brand-hover);
-}
-
-.progressIndex {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  background: var(--v-color-surface);
-  font-size: var(--v-text-xs);
-  font-weight: 700;
-}
-
-.progressStepActive .progressIndex {
-  background: var(--v-color-brand);
-  color: #fff;
-}
-
-.progressLabel {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .searchForm {
   display: grid;
   gap: var(--v-space-4);
@@ -266,6 +215,13 @@
   color: var(--v-color-brand-hover);
 }
 
+.searchFormFooter {
+  display: grid;
+  gap: var(--v-space-3);
+  padding-top: var(--v-space-4);
+  border-top: 1px solid var(--v-color-border);
+}
+
 .searchActions {
   display: flex;
   flex-wrap: wrap;
@@ -297,7 +253,7 @@
 }
 
 .message {
-  margin: var(--v-space-4) 0 0;
+  margin: 0;
   padding: var(--v-space-3) var(--v-space-4);
   border-radius: var(--v-radius-md);
   font-size: var(--v-text-sm);
@@ -361,7 +317,15 @@
   overflow: hidden;
   border-radius: var(--v-radius-md);
   background: var(--v-color-surface-muted);
-  min-height: 5.5rem;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+@media (min-width: 641px) {
+  .spaceImageWrap {
+    width: 7rem;
+    aspect-ratio: 4 / 3;
+  }
 }
 
 .spaceImage {
@@ -371,9 +335,17 @@
 .spaceImagePlaceholder {
   display: grid;
   place-items: center;
-  min-height: 5.5rem;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   color: var(--v-color-text-muted);
   font-size: var(--v-text-xs);
+}
+
+@media (min-width: 641px) {
+  .spaceImagePlaceholder {
+    width: 7rem;
+    aspect-ratio: 4 / 3;
+  }
 }
 
 .spaceName {
@@ -516,10 +488,6 @@
 }
 
 @media (max-width: 640px) {
-  .progressLabel {
-    font-size: 0.58rem;
-  }
-
   .spaceCardTop {
     grid-template-columns: 1fr;
   }
