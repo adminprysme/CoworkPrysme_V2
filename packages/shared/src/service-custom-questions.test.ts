@@ -148,6 +148,8 @@ describe("service custom questions", () => {
         vatRate: 20,
         promoEligible: false,
         status: "active",
+        isGlobal: true,
+        buildingIds: [],
         customQuestions: [
           {
             label: "Question sans id frontend",
