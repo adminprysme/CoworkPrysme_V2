@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { durationClassLabel } from "./catalog-content.js";
+import { ServiceCustomQuestionsSchema } from "./service-custom-questions.js";
 import { SpaceTypeSchema } from "./spaces.js";
 
 export const BOOKING_ERROR_CODES = {
@@ -187,16 +188,7 @@ export const BookingServiceCatalogItemSchema = z.object({
   priceHTCents: z.number().int().min(0),
   vatRate: z.number().min(0),
   promoEligible: z.boolean(),
-  customQuestions: z.array(
-    z.object({
-      id: z.string().uuid(),
-      label: z.string(),
-      type: z.string(),
-      required: z.boolean(),
-      order: z.number().int().min(0),
-      options: z.array(z.string()).optional(),
-    }),
-  ),
+  customQuestions: ServiceCustomQuestionsSchema,
   photo: z
     .object({
       storageKey: z.string(),

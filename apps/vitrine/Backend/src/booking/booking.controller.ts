@@ -3,6 +3,10 @@ import {
   BookingAvailabilityQuerySchema,
   BookingAvailabilityResponseSchema,
   BookingLockResponseSchema,
+  BookingPriceRequestSchema,
+  BookingPriceResponseSchema,
+  BookingServicesQuerySchema,
+  BookingServicesResponseSchema,
   BookingSpaceAvailabilityQuerySchema,
   BookingSpaceAvailabilityResponseSchema,
   BookingSpacesQuerySchema,
@@ -12,11 +16,17 @@ import {
 } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { BookingCatalogService } from "./booking-catalog.service.js";
+import { BookingPriceService } from "./booking-price.service.js";
 import { BookingService } from "./booking.service.js";
 
 @Controller("booking")
 export class BookingController {
-  constructor(private readonly booking: BookingService) {}
+  constructor(
+    private readonly booking: BookingService,
+    private readonly bookingCatalog: BookingCatalogService,
+    private readonly bookingPrice: BookingPriceService,
+  ) {}
 
   @Get("availability")
   async searchAvailability(@Query() query: Record<string, unknown>) {
@@ -54,5 +64,19 @@ export class BookingController {
     const parsed = ReleaseBookingLockQuerySchema.parse(query);
     await this.booking.releaseLock(lockId, parsed.sessionId);
     return { released: true };
+  }
+
+  @Get("services")
+  async listServices(@Query() query: Record<string, unknown>) {
+    const parsed = BookingServicesQuerySchema.parse(query);
+    const payload = await this.bookingCatalog.listServicesForBuilding(parsed);
+    return BookingServicesResponseSchema.parse(payload);
+  }
+
+  @Post("price")
+  async computePrice(@Body() body: unknown) {
+    const parsed = BookingPriceRequestSchema.parse(body);
+    const payload = await this.bookingPrice.computePrice(parsed);
+    return BookingPriceResponseSchema.parse(payload);
   }
 }
