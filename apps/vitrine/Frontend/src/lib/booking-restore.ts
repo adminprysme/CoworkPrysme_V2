@@ -36,7 +36,7 @@ function readCookie(name: string): string | null {
   const match = document.cookie.match(
     new RegExp(`(?:^|; )${name.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&")}=([^;]*)`),
   );
-  return match ? decodeURIComponent(match[1]) : null;
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function writeRestoreCookie(value: string): void {

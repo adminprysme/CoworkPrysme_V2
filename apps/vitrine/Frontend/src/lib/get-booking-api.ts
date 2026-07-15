@@ -1,9 +1,11 @@
 import {
+  ActiveBookingLockResponseSchema,
   BookingAvailabilityResponseSchema,
   BookingLockResponseSchema,
   BookingSpaceAvailabilityResponseSchema,
   BookingSpacesResponseSchema,
   type BookingAvailabilityQuery,
+  type ActiveBookingLockResponse,
   type BookingLockResponse,
   type BookingSpaceAvailabilityQuery,
   type BookingSpaceCard,
@@ -68,6 +70,13 @@ export async function releaseBookingLock(lockId: string, sessionId: string): Pro
     method: "DELETE",
     cache: "no-store",
   });
+}
+
+export async function fetchActiveBookingLock(
+  sessionId: string,
+): Promise<ActiveBookingLockResponse> {
+  const qs = buildQuery({ sessionId });
+  return bookingFetch(`/booking/lock/active?${qs}`, ActiveBookingLockResponseSchema);
 }
 
 export function toDatetimeLocalValue(date: Date): string {

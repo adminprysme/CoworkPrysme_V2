@@ -29,6 +29,16 @@
   margin-bottom: var(--v-space-8);
 }
 
+.resumePending {
+  margin: 0 0 var(--v-space-6);
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: color-mix(in srgb, var(--v-color-surface) 92%, var(--v-color-brand-muted));
+  color: var(--v-color-text-muted);
+  text-align: center;
+}
+
 .title {
   margin: 0;
   font-family: var(--v-font-display);
