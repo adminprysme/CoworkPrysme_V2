@@ -1,71 +1,146 @@
 .section {
   display: grid;
-  gap: 0.85rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.section h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.notice,
-.hint,
-.subtitle {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.88rem;
-  line-height: 1.5;
-}
-
-.subtitle {
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.globalItem,
-.item {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.65rem 0.75rem;
+  gap: 0.55rem;
+  padding: 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--color-surface-muted);
 }
 
-.itemChecked {
-  border-color: var(--color-secondary);
-  background: color-mix(in srgb, var(--color-secondary) 10%, var(--color-surface-muted));
-}
-
-.itemDisabled {
-  opacity: 0.72;
-}
-
-.optionLabel {
+.sectionHead {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  cursor: pointer;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
-.optionLabel input {
-  accent-color: var(--color-secondary);
+.sectionHead h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.summaryTag,
+.readOnlyTag {
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.summaryTag {
+  color: var(--color-secondary);
+  background: var(--color-secondary-soft);
+}
+
+.readOnlyTag {
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.notice,
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.modeSwitch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 9px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.modeBtn {
+  padding: 0.42rem 0.55rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.modeBtn:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.modeBtnActive {
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary);
+}
+
+.modeBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .buildingsBlock {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.4rem;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.5rem;
+.chipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-height: 7.5rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
 }
 
-.frozenTag {
-  font-size: 0.75rem;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-secondary) 45%, var(--color-border));
+}
+
+.chipChecked {
+  border-color: var(--color-secondary);
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.chipDisabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.chipFrozen {
+  border-style: dashed;
+}
+
+.frozenMark {
+  font-size: 0.7rem;
   color: var(--color-text-muted);
 }

@@ -87,7 +87,7 @@ export function serviceResponseToFormValues(service: {
 
 export function validateServiceForm(
   values: ServiceFormValues,
-  options?: { skipAvailability?: boolean },
+  options?: { skipAvailability?: boolean; skipCustomQuestions?: boolean },
 ): ServiceFormErrors {
   const errors: ServiceFormErrors = {};
   const label = values.label.trim();
@@ -115,64 +115,66 @@ export function validateServiceForm(
     errors.buildingIds = "Sélectionnez au moins un bâtiment";
   }
 
-  if (values.customQuestions.length > MAX_SERVICE_CUSTOM_QUESTIONS) {
-    errors.customQuestions = `Maximum ${MAX_SERVICE_CUSTOM_QUESTIONS} questions par service`;
-  }
-
-  const customQuestionByIndex: Record<number, string> = {};
-  const customQuestionOptionsByIndex: Record<number, string> = {};
-
-  values.customQuestions.forEach((question, index) => {
-    if (!question.label.trim()) {
-      customQuestionByIndex[index] = "Le libellé est obligatoire";
+  if (!options?.skipCustomQuestions) {
+    if (values.customQuestions.length > MAX_SERVICE_CUSTOM_QUESTIONS) {
+      errors.customQuestions = `Maximum ${MAX_SERVICE_CUSTOM_QUESTIONS} questions par service`;
     }
 
-    if (question.type === "select") {
-      const options = question.options ?? [];
-      const filledOptions = options.map((option) => option.trim()).filter(Boolean);
-      if (filledOptions.length < SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS) {
-        customQuestionOptionsByIndex[index] =
-          `Au moins ${SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS} options sont requises`;
-      } else if (new Set(filledOptions).size !== filledOptions.length) {
-        customQuestionOptionsByIndex[index] = "Les options doivent être uniques";
+    const customQuestionByIndex: Record<number, string> = {};
+    const customQuestionOptionsByIndex: Record<number, string> = {};
+
+    values.customQuestions.forEach((question, index) => {
+      if (!question.label.trim()) {
+        customQuestionByIndex[index] = "Le libellé est obligatoire";
+      }
+
+      if (question.type === "select") {
+        const selectOptions = question.options ?? [];
+        const filledOptions = selectOptions.map((option) => option.trim()).filter(Boolean);
+        if (filledOptions.length < SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS) {
+          customQuestionOptionsByIndex[index] =
+            `Au moins ${SERVICE_CUSTOM_QUESTION_SELECT_MIN_OPTIONS} options sont requises`;
+        } else if (new Set(filledOptions).size !== filledOptions.length) {
+          customQuestionOptionsByIndex[index] = "Les options doivent être uniques";
+        }
+      }
+    });
+
+    const parsedQuestions = ServiceCustomQuestionsInputSchema.safeParse(
+      values.customQuestions.map((question, index) => ({
+        ...question,
+        label: question.label.trim(),
+        order: index,
+        ...(question.type === "select"
+          ? {
+              options: (question.options ?? []).map((option) => option.trim()).filter(Boolean),
+            }
+          : {}),
+      })),
+    );
+
+    if (!parsedQuestions.success) {
+      for (const issue of parsedQuestions.error.issues) {
+        const index = typeof issue.path[0] === "number" ? issue.path[0] : undefined;
+        if (index === undefined) {
+          errors.customQuestions = issue.message;
+          continue;
+        }
+
+        if (issue.path[1] === "options") {
+          customQuestionOptionsByIndex[index] = issue.message;
+        } else if (!customQuestionByIndex[index]) {
+          customQuestionByIndex[index] = issue.message;
+        }
       }
     }
-  });
 
-  const parsedQuestions = ServiceCustomQuestionsInputSchema.safeParse(
-    values.customQuestions.map((question, index) => ({
-      ...question,
-      label: question.label.trim(),
-      order: index,
-      ...(question.type === "select"
-        ? {
-            options: (question.options ?? []).map((option) => option.trim()).filter(Boolean),
-          }
-        : {}),
-    })),
-  );
-
-  if (!parsedQuestions.success) {
-    for (const issue of parsedQuestions.error.issues) {
-      const index = typeof issue.path[0] === "number" ? issue.path[0] : undefined;
-      if (index === undefined) {
-        errors.customQuestions = issue.message;
-        continue;
-      }
-
-      if (issue.path[1] === "options") {
-        customQuestionOptionsByIndex[index] = issue.message;
-      } else if (!customQuestionByIndex[index]) {
-        customQuestionByIndex[index] = issue.message;
-      }
+    if (Object.keys(customQuestionByIndex).length > 0) {
+      errors.customQuestionByIndex = customQuestionByIndex;
     }
-  }
-
-  if (Object.keys(customQuestionByIndex).length > 0) {
-    errors.customQuestionByIndex = customQuestionByIndex;
-  }
-  if (Object.keys(customQuestionOptionsByIndex).length > 0) {
-    errors.customQuestionOptionsByIndex = customQuestionOptionsByIndex;
+    if (Object.keys(customQuestionOptionsByIndex).length > 0) {
+      errors.customQuestionOptionsByIndex = customQuestionOptionsByIndex;
+    }
   }
 
   return errors;

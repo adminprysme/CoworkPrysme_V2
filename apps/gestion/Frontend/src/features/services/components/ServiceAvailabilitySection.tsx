@@ -91,13 +91,13 @@ export function ServiceAvailabilitySection({
     };
   }, [frozenIds]);
 
-  function toggleGlobal(checked: boolean) {
+  function setGlobalMode(isGlobal: boolean) {
     if (!isAdmin || readOnly) {
       return;
     }
     onChange({
-      isGlobal: checked,
-      buildingIds: checked ? [] : value.buildingIds,
+      isGlobal,
+      buildingIds: isGlobal ? [] : value.buildingIds,
     });
   }
 
@@ -121,71 +121,79 @@ export function ServiceAvailabilitySection({
 
   return (
     <section className={styles.section}>
-      <h3>Disponibilité</h3>
+      <div className={styles.sectionHead}>
+        <h3>Disponibilité</h3>
+        {readOnly ? (
+          <span className={styles.readOnlyTag}>Prix seul</span>
+        ) : value.isGlobal ? (
+          <span className={styles.summaryTag}>Tous les bâtiments</span>
+        ) : (
+          <span className={styles.summaryTag}>
+            {value.buildingIds.length} sélectionné{value.buildingIds.length > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
 
       {readOnly ? (
-        <p className={styles.notice}>Ce service est global — seul le prix est modifiable ici.</p>
+        <p className={styles.notice}>Ce service est global — seul le prix est modifiable.</p>
       ) : null}
 
-      <div
-        className={[
-          styles.globalItem,
-          value.isGlobal ? styles.itemChecked : "",
-          !isAdmin || readOnly ? styles.itemDisabled : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <label className={styles.optionLabel}>
-          <input
-            type="checkbox"
-            checked={value.isGlobal}
-            disabled={!isAdmin || readOnly}
-            onChange={(event) => toggleGlobal(event.target.checked)}
-          />
-          <span>Service global (disponible dans tous les bâtiments)</span>
-        </label>
-        {!isAdmin ? (
-          <p className={styles.hint}>Seul un administrateur peut créer un service global.</p>
-        ) : null}
-      </div>
+      {isAdmin ? (
+        <div className={styles.modeSwitch} role="group" aria-label="Mode de disponibilité">
+          <button
+            type="button"
+            className={[styles.modeBtn, value.isGlobal ? styles.modeBtnActive : ""]
+              .filter(Boolean)
+              .join(" ")}
+            disabled={readOnly}
+            onClick={() => setGlobalMode(true)}
+          >
+            Global
+          </button>
+          <button
+            type="button"
+            className={[styles.modeBtn, !value.isGlobal ? styles.modeBtnActive : ""]
+              .filter(Boolean)
+              .join(" ")}
+            disabled={readOnly}
+            onClick={() => setGlobalMode(false)}
+          >
+            Par bâtiment
+          </button>
+        </div>
+      ) : (
+        <p className={styles.hint}>Seul un administrateur peut définir un service global.</p>
+      )}
 
       {!value.isGlobal ? (
         <div className={styles.buildingsBlock}>
-          <p className={styles.subtitle}>Bâtiments concernés</p>
-          {loading ? <p className={styles.hint}>Chargement des bâtiments…</p> : null}
+          {loading ? <p className={styles.hint}>Chargement…</p> : null}
           {!loading && buildings.length === 0 ? (
-            <p className={styles.hint}>Aucun bâtiment disponible dans votre périmètre.</p>
+            <p className={styles.hint}>Aucun bâtiment disponible.</p>
           ) : null}
-          <div className={styles.grid}>
+          <div className={styles.chipGrid}>
             {buildings.map((building) => {
               const checked = value.buildingIds.includes(building.id);
               const disabled = readOnly || building.frozen;
               return (
-                <div
+                <button
                   key={building.id}
+                  type="button"
                   className={[
-                    styles.item,
-                    checked ? styles.itemChecked : "",
-                    disabled ? styles.itemDisabled : "",
+                    styles.chip,
+                    checked ? styles.chipChecked : "",
+                    disabled ? styles.chipDisabled : "",
+                    building.frozen ? styles.chipFrozen : "",
                   ]
                     .filter(Boolean)
                     .join(" ")}
+                  disabled={disabled}
                   title={building.frozen ? "Hors de votre périmètre" : undefined}
+                  onClick={() => toggleBuilding(building.id)}
                 >
-                  <label className={styles.optionLabel}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={disabled}
-                      onChange={() => toggleBuilding(building.id)}
-                    />
-                    <span>{building.name}</span>
-                  </label>
-                  {building.frozen ? (
-                    <span className={styles.frozenTag}>Hors de votre périmètre</span>
-                  ) : null}
-                </div>
+                  <span>{building.name}</span>
+                  {building.frozen ? <span className={styles.frozenMark}>⊘</span> : null}
+                </button>
               );
             })}
           </div>

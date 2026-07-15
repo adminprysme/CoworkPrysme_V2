@@ -1,6 +1,4 @@
 import type { ServiceFormErrors, ServiceFormValues } from "../utils/validation.js";
-import { StatusToggle } from "../../spaces/components/StatusToggle.js";
-import { ServiceCustomQuestionsSection } from "./ServiceCustomQuestionsSection.js";
 import styles from "./ServiceForm.module.css";
 
 interface ServiceFormProps {
@@ -37,7 +35,7 @@ export function ServiceForm({
         <span>Description courte</span>
         <textarea
           className={styles.textarea}
-          rows={3}
+          rows={2}
           value={values.description}
           disabled={contentReadOnly}
           onChange={(event) => patch({ description: event.target.value })}
@@ -84,30 +82,6 @@ export function ServiceForm({
           <strong>Éligible aux remises « 1 acheté = 1 offert »</strong>
         </span>
       </label>
-
-      <div className={styles.field}>
-        <span>Statut</span>
-        <StatusToggle
-          value={values.status}
-          disabled={contentReadOnly}
-          onChange={(status) => patch({ status })}
-          ariaLabel="Statut du service"
-        />
-      </div>
-
-      {!contentReadOnly ? (
-        <>
-          <ServiceCustomQuestionsSection
-            questions={values.customQuestions}
-            errors={errors.customQuestionByIndex ?? {}}
-            optionErrors={errors.customQuestionOptionsByIndex ?? {}}
-            onChange={(customQuestions) => patch({ customQuestions })}
-          />
-          {errors.customQuestions ? (
-            <span className={styles.error}>{errors.customQuestions}</span>
-          ) : null}
-        </>
-      ) : null}
     </div>
   );
 }
