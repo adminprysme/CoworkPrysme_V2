@@ -419,6 +419,13 @@ export {
 } from "./service-custom-answers.js";
 
 export {
+  computeBookingPrice,
+  type BookingDiscountInput,
+  type BookingPriceLineInput,
+  type ComputeBookingPriceInput,
+} from "./booking-price.js";
+
+export {
   DISCOUNT_APPLIES_TO,
   DISCOUNT_CODE_DISPLAY_STATUSES,
   DISCOUNT_CODE_KINDS,
