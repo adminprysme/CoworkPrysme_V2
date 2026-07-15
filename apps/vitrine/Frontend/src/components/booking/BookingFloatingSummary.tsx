@@ -33,6 +33,11 @@ interface BookingFloatingSummaryProps {
   promoError?: string | null;
   onReleaseLock?: () => void;
   releaseLoading?: boolean;
+  continueAction?: {
+    label: string;
+    disabled?: boolean;
+    onClick: () => void;
+  };
 }
 
 export function BookingFloatingSummary({
@@ -52,6 +57,7 @@ export function BookingFloatingSummary({
   promoError = null,
   onReleaseLock,
   releaseLoading = false,
+  continueAction,
 }: BookingFloatingSummaryProps) {
   const [mobileExpanded, setMobileExpanded] = useState(expandedByDefault);
 
@@ -74,6 +80,7 @@ export function BookingFloatingSummary({
           promoError={promoError}
           onReleaseLock={onReleaseLock}
           releaseLoading={releaseLoading}
+          continueAction={continueAction}
         />
       </div>
 
@@ -116,6 +123,7 @@ export function BookingFloatingSummary({
               promoError={promoError}
               onReleaseLock={onReleaseLock}
               releaseLoading={releaseLoading}
+              continueAction={continueAction}
             />
           </div>
         ) : null}
@@ -140,6 +148,7 @@ function SummaryContent({
   promoError,
   onReleaseLock,
   releaseLoading,
+  continueAction,
 }: Omit<BookingFloatingSummaryProps, "expandedByDefault">) {
   const [promoDraft, setPromoDraft] = useState(discountCode ?? "");
   const hasAppliedDiscount = Boolean(price?.discount && price.discountTotal > 0);
@@ -291,6 +300,17 @@ function SummaryContent({
           onClick={onReleaseLock}
         >
           {releaseLoading ? "Libération…" : "Libérer le créneau"}
+        </button>
+      ) : null}
+
+      {continueAction ? (
+        <button
+          type="button"
+          className={styles.continueButton}
+          disabled={continueAction.disabled}
+          onClick={continueAction.onClick}
+        >
+          {continueAction.label}
         </button>
       ) : null}
     </div>

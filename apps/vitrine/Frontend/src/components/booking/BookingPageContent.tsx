@@ -1,7 +1,9 @@
 "use client";
 
 import type {
+  BookingConfirmResponse,
   BookingLockResponse,
+  BookingPaymentMethod,
   BookingPhase1DurationClass,
   BookingPriceRequest,
   BookingServiceCatalogItem,
@@ -33,6 +35,7 @@ import {
 import { buildRecurringReservationMailto } from "@/lib/booking-recurring-contact";
 import { useBookingLockCountdown } from "@/hooks/useBookingLock";
 import { useBookingPrice } from "@/hooks/useBookingPrice";
+import { confirmBooking } from "@/lib/booking-confirm-api";
 import { fetchBookingServices } from "@/lib/booking-price-api";
 import { getBookingSessionId } from "@/lib/booking-session";
 import {
@@ -58,13 +61,20 @@ import {
   formatBookingDatesSearchSummary,
   formatBookingFlexibleSearchSummary,
 } from "./BookingSearchSummary";
+import { BookingAccountStep, type BookingAccountFormState } from "./BookingAccountStep";
+import { BookingConfirmedStep } from "./BookingConfirmedStep";
+import { BookingPaymentStep } from "./BookingPaymentStep";
+import { BookingSummaryStep, type BookingSummaryFormState } from "./BookingSummaryStep";
 import { BookingProgressBar, type BookingProgressStepId } from "./BookingProgressBar";
 import { BookingFloatingSummary } from "./BookingFloatingSummary";
 import { BookingServicesStep, type BookingCartItem } from "./BookingServicesStep";
 import { BOOKING_SPACE_CARD_IMAGE_SIZES } from "./booking-image-sizes";
+import type { BookingRestoreView } from "@/lib/booking-restore";
+
 import styles from "./booking.module.css";
 
-type BookingView = "search" | "results" | "calendar" | "services";
+type BookingView =
+  "search" | "results" | "calendar" | "services" | "account" | "summary" | "payment" | "confirmed";
 
 type CalendarSlot = {
   startAt: string;
@@ -116,6 +126,24 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [discountCode, setDiscountCode] = useState("");
   const [resumePending, setResumePending] = useState(true);
   const [releaseLoading, setReleaseLoading] = useState(false);
+  const [accountForm, setAccountForm] = useState<BookingAccountFormState>({
+    mode: "new",
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    privacyAccepted: false,
+    verified: false,
+  });
+  const [summaryForm, setSummaryForm] = useState<BookingSummaryFormState>({
+    cgvAccepted: false,
+    withdrawalAcknowledged: false,
+  });
+  const [confirmResult, setConfirmResult] = useState<BookingConfirmResponse | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const remainingMs = useBookingLockCountdown(lock?.expiresAt ?? null);
 
@@ -171,14 +199,31 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     (view === "results" || view === "calendar") && spaces.length > 0 && !searchFormExpanded;
 
   const progressStep = useMemo<BookingProgressStepId>(() => {
+    if (view === "account") {
+      return "account";
+    }
+    if (view === "summary") {
+      return "summary";
+    }
+    if (view === "payment" || view === "confirmed") {
+      return "payment";
+    }
     if (view === "services") {
       return "services";
     }
     return "space";
   }, [view]);
 
+  const showTunnelProgress = view !== "search" && view !== "results" && view !== "calendar";
+
   const showFloatingSummary = Boolean(
-    selectedSpace && (view === "results" || view === "calendar" || view === "services"),
+    selectedSpace &&
+    (view === "results" ||
+      view === "calendar" ||
+      view === "services" ||
+      view === "account" ||
+      view === "summary" ||
+      view === "payment"),
   );
 
   const priceRequest = useMemo<BookingPriceRequest | null>(() => {
@@ -235,7 +280,9 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     return {
       version: 1,
       lockId: lock.lockId,
-      view,
+      view: (["account", "summary", "payment"].includes(view)
+        ? "services"
+        : view) as BookingRestoreView,
       searchMode,
       spaceType,
       partySize,
@@ -608,6 +655,61 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     setReleaseLoading(false);
   }
 
+  async function handleConfirm(paymentMethod: BookingPaymentMethod) {
+    if (!lock || !selectedSpace || !durationClass || !price) {
+      return;
+    }
+
+    setConfirmLoading(true);
+    setConfirmError(null);
+
+    try {
+      const result = await confirmBooking({
+        lockId: lock.lockId,
+        sessionId: getBookingSessionId(),
+        spaceId: selectedSpace.spaceId,
+        startAt: lock.startAt,
+        endAt: lock.endAt,
+        durationClass,
+        partySize,
+        services: cart.map((item) => ({
+          serviceId: item.serviceId,
+          qty: item.qty,
+          customAnswers: item.customAnswers,
+        })),
+        discountCode: discountCode.trim() || undefined,
+        accountMode: accountForm.mode,
+        email: accountForm.email.trim(),
+        password: accountForm.password,
+        identity:
+          accountForm.mode === "new"
+            ? {
+                firstName: accountForm.firstName.trim(),
+                lastName: accountForm.lastName.trim(),
+                phone: accountForm.phone.trim() || undefined,
+              }
+            : undefined,
+        privacyPolicyAccepted: accountForm.mode === "new" ? accountForm.privacyAccepted : undefined,
+        cgvAccepted: true,
+        withdrawalAcknowledged: true,
+        paymentMethod,
+      });
+
+      setConfirmResult(result);
+      clearBookingRestoreSnapshot();
+      setLock(null);
+      setView("confirmed");
+    } catch (confirmFailure: unknown) {
+      setConfirmError(
+        confirmFailure instanceof Error
+          ? confirmFailure.message
+          : "Impossible de confirmer la réservation",
+      );
+    } finally {
+      setConfirmLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (view !== "services" || !selectedSpace) {
       return;
@@ -660,7 +762,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           </p>
         </div>
 
-        <BookingProgressBar activeStep={progressStep} />
+        {showTunnelProgress ? <BookingProgressBar activeStep={progressStep} /> : null}
 
         {resumePending ? (
           <p className={styles.resumePending} role="status" aria-live="polite">
@@ -1012,6 +1114,44 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                   onBack={() => setView(searchMode === "flexible" ? "calendar" : "results")}
                 />
               ) : null}
+
+              {view === "account" && lock && selectedSpace ? (
+                <BookingAccountStep
+                  value={accountForm}
+                  onChange={setAccountForm}
+                  onBack={() => setView("services")}
+                  onContinue={() => setView("summary")}
+                />
+              ) : null}
+
+              {view === "summary" && lock && selectedSpace && price ? (
+                <BookingSummaryStep
+                  price={price}
+                  spaceLabel={selectedSpace.name}
+                  slotLabel={selectedRangeLabel ?? ""}
+                  value={summaryForm}
+                  onChange={setSummaryForm}
+                  onBack={() => setView("account")}
+                  onContinue={() => setView("payment")}
+                />
+              ) : null}
+
+              {view === "payment" && lock && selectedSpace ? (
+                <BookingPaymentStep
+                  onBack={() => setView("summary")}
+                  onConfirm={handleConfirm}
+                  loading={confirmLoading}
+                  error={confirmError}
+                />
+              ) : null}
+
+              {view === "confirmed" && confirmResult && selectedSpace ? (
+                <BookingConfirmedStep
+                  result={confirmResult}
+                  spaceLabel={selectedSpace.name}
+                  slotLabel={selectedRangeLabel ?? ""}
+                />
+              ) : null}
             </div>
 
             {showFloatingSummary ? (
@@ -1031,6 +1171,15 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 promoError={promoError}
                 onReleaseLock={lock ? () => void handleReleaseLock() : undefined}
                 releaseLoading={releaseLoading}
+                continueAction={
+                  view === "services"
+                    ? {
+                        label: "Continuer",
+                        disabled: priceLoading || Boolean(promoError) || !price,
+                        onClick: () => setView("account"),
+                      }
+                    : undefined
+                }
               />
             ) : null}
           </div>
