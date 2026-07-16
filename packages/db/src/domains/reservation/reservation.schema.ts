@@ -2,6 +2,8 @@ import { Schema, type Connection, type HydratedDocument, type Model, type Types 
 
 import { getCoworkDb } from "../../connection.js";
 import {
+  AWAITING_PAYMENT_METHODS,
+  BANK_TRANSFER_REMINDER_TIERS,
   CREATED_CHANNELS,
   DURATION_CLASSES,
   RESERVATION_STATUSES,
@@ -41,8 +43,12 @@ export interface Reservation {
   withdrawalAcknowledgedAt?: Date;
   /** Set when status is `awaiting_payment` — after this, the hold may be cancelled. */
   awaitingPaymentExpiresAt?: Date;
+  /** Distinguishes card vs bank_transfer holds (expiry / reminders / Stripe cancel). */
+  awaitingPaymentMethod?: (typeof AWAITING_PAYMENT_METHODS)[number];
   /** Latest Stripe PaymentIntent id for card checkout (cancel on expiry). */
   stripePaymentIntentId?: string;
+  /** Bank-transfer reminder tiers already sent (idempotent sweeper). */
+  bankTransferRemindersSent?: (typeof BANK_TRANSFER_REMINDER_TIERS)[number][];
   createdChannel: (typeof CREATED_CHANNELS)[number];
   createdAt: Date;
   updatedAt: Date;
@@ -71,7 +77,12 @@ const reservationSchema = new Schema<Reservation>(
     cgvAcceptedAt: { type: Date },
     withdrawalAcknowledgedAt: { type: Date },
     awaitingPaymentExpiresAt: { type: Date },
+    awaitingPaymentMethod: { type: String, enum: AWAITING_PAYMENT_METHODS },
     stripePaymentIntentId: { type: String, trim: true },
+    bankTransferRemindersSent: {
+      type: [{ type: String, enum: BANK_TRANSFER_REMINDER_TIERS }],
+      default: undefined,
+    },
     createdChannel: { type: String, enum: CREATED_CHANNELS, required: true },
   },
   { ...TIMESTAMP_OPTIONS, collection: "reservations" },
@@ -83,6 +94,12 @@ reservationSchema.index({ reference: 1 }, { unique: true });
 reservationSchema.index(
   { status: 1, awaitingPaymentExpiresAt: 1 },
   { partialFilterExpression: { status: "awaiting_payment" } },
+);
+reservationSchema.index(
+  { status: 1, awaitingPaymentMethod: 1, "statusHistory.at": 1 },
+  {
+    partialFilterExpression: { status: "awaiting_payment", awaitingPaymentMethod: "bank_transfer" },
+  },
 );
 
 export type ReservationModel = Model<Reservation>;

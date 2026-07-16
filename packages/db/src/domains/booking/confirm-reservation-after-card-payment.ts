@@ -6,27 +6,30 @@ import {
   type ReservationDocument,
 } from "../reservation/reservation.schema.js";
 
-export interface ConfirmReservationAfterCardPaymentInput {
+export interface ConfirmReservationAfterPaymentInput {
   reservationId: Types.ObjectId | string;
   confirmedAt?: Date;
+  /** statusHistory reason — defaults to stripe_payment_succeeded for card path. */
+  reason?: string;
 }
 
-export interface ConfirmReservationAfterCardPaymentResult {
+export interface ConfirmReservationAfterPaymentResult {
   /** false when the reservation was already confirmed (idempotent replay). */
   transitioned: boolean;
   reservation: ReservationDocument;
 }
 
 /**
- * Moves a card-checkout reservation from `awaiting_payment` to `confirmed`
- * after Stripe `payment_intent.succeeded`. Idempotent if already confirmed.
+ * Moves an awaiting_payment reservation to confirmed after payment is applied.
+ * Idempotent if already confirmed. Clears awaiting-payment fields.
  */
-export async function confirmReservationAfterCardPayment(
-  input: ConfirmReservationAfterCardPaymentInput,
-): Promise<ConfirmReservationAfterCardPaymentResult> {
+export async function confirmReservationAfterPayment(
+  input: ConfirmReservationAfterPaymentInput,
+): Promise<ConfirmReservationAfterPaymentResult> {
   await connectMongo();
   const Reservation = await getReservationModel();
   const confirmedAt = input.confirmedAt ?? new Date();
+  const reason = input.reason ?? "stripe_payment_succeeded";
 
   const existing = await Reservation.findById(input.reservationId).exec();
   if (!existing) {
@@ -47,13 +50,17 @@ export async function confirmReservationAfterCardPayment(
     { _id: existing._id, status: "awaiting_payment" },
     {
       $set: { status: "confirmed" },
-      $unset: { awaitingPaymentExpiresAt: 1 },
+      $unset: {
+        awaitingPaymentExpiresAt: 1,
+        awaitingPaymentMethod: 1,
+        stripePaymentIntentId: 1,
+      },
       $push: {
         statusHistory: {
           from: "awaiting_payment",
           to: "confirmed",
           at: confirmedAt,
-          reason: "stripe_payment_succeeded",
+          reason,
         },
       },
     },
@@ -61,7 +68,6 @@ export async function confirmReservationAfterCardPayment(
   ).exec();
 
   if (!updated) {
-    // Concurrent confirm won the race — reload.
     const reloaded = await Reservation.findById(input.reservationId).exec();
     if (!reloaded) {
       throw new Error(`Reservation not found after confirm race: ${input.reservationId}`);
@@ -70,4 +76,14 @@ export async function confirmReservationAfterCardPayment(
   }
 
   return { transitioned: true, reservation: updated };
+}
+
+/** @deprecated Prefer confirmReservationAfterPayment — kept for existing Stripe callers. */
+export async function confirmReservationAfterCardPayment(
+  input: Omit<ConfirmReservationAfterPaymentInput, "reason">,
+): Promise<ConfirmReservationAfterPaymentResult> {
+  return confirmReservationAfterPayment({
+    ...input,
+    reason: "stripe_payment_succeeded",
+  });
 }

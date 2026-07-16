@@ -4,7 +4,11 @@ import { getReservationModel } from "../reservation/reservation.schema.js";
 export interface ExpiredAwaitingPaymentReservation {
   reservationId: string;
   reference: string;
+  awaitingPaymentMethod?: "card" | "bank_transfer";
   stripePaymentIntentId?: string;
+  clientAccountId?: string;
+  buildingId?: string;
+  invoiceId?: string;
 }
 
 export interface ExpireAwaitingPaymentReservationsResult {
@@ -12,8 +16,8 @@ export interface ExpireAwaitingPaymentReservationsResult {
 }
 
 /**
- * Soft-cancels card holds past `awaitingPaymentExpiresAt`.
- * Returns cancelled rows (with optional Stripe PI id) so the caller can cancel PaymentIntents.
+ * Soft-cancels awaiting_payment holds past `awaitingPaymentExpiresAt`.
+ * Returns cancelled rows so the caller can cancel Stripe PIs and/or email clients.
  */
 export async function expireAwaitingPaymentReservations(
   now: Date = new Date(),
@@ -25,7 +29,13 @@ export async function expireAwaitingPaymentReservations(
     status: "awaiting_payment",
     awaitingPaymentExpiresAt: { $lte: now },
   })
-    .select({ reference: 1, stripePaymentIntentId: 1 })
+    .select({
+      reference: 1,
+      stripePaymentIntentId: 1,
+      awaitingPaymentMethod: 1,
+      clientAccountId: 1,
+      buildingId: 1,
+    })
     .lean()
     .exec();
 
@@ -40,7 +50,7 @@ export async function expireAwaitingPaymentReservations(
       },
       {
         $set: { status: "cancelled" },
-        $unset: { awaitingPaymentExpiresAt: 1 },
+        $unset: { awaitingPaymentExpiresAt: 1, awaitingPaymentMethod: 1 },
         $push: {
           statusHistory: {
             from: "awaiting_payment",
@@ -62,7 +72,10 @@ export async function expireAwaitingPaymentReservations(
     expired.push({
       reservationId: updated._id.toString(),
       reference: updated.reference,
+      awaitingPaymentMethod: updated.awaitingPaymentMethod,
       stripePaymentIntentId: updated.stripePaymentIntentId || undefined,
+      clientAccountId: updated.clientAccountId?.toString(),
+      buildingId: updated.buildingId?.toString(),
     });
   }
 

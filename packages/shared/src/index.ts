@@ -327,6 +327,7 @@ export {
 
 export {
   BOOKING_CONFIRM_ERROR_CODES,
+  BankTransferInstructionsSchema,
   BookingAccountModeSchema,
   BookingCardexIdentityInputSchema,
   BookingCheckEmailRequestSchema,
@@ -338,6 +339,7 @@ export {
   BookingVerifyAccountRequestSchema,
   BookingVerifyAccountResponseSchema,
   PRIVACY_POLICY_VERSION,
+  type BankTransferInstructions,
   type BookingAccountMode,
   type BookingCardexIdentityInput,
   type BookingCheckEmailRequest,
@@ -349,6 +351,19 @@ export {
   type BookingVerifyAccountRequest,
   type BookingVerifyAccountResponse,
 } from "./booking-confirm.js";
+
+export {
+  BANK_TRANSFER_REMINDER_OFFSET_DAYS,
+  BANK_TRANSFER_REMINDER_TIERS,
+  DEFAULT_BANK_TRANSFER_MIN_LEAD_DAYS,
+  DEFAULT_BANK_TRANSFER_PAYMENT_WINDOW_DAYS,
+  DEFAULT_BANK_TRANSFER_SAFETY_MARGIN_DAYS,
+  computeBankTransferExpiresAt,
+  isBankTransferFullyEligible,
+  isBankTransferLeadTimeEligible,
+  type BankTransferExpiryResult,
+  type BankTransferReminderTier,
+} from "./bank-transfer.js";
 
 export {
   BOOKING_PAYMENT_ERROR_CODES,

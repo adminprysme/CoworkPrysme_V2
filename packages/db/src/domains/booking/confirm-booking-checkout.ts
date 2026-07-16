@@ -48,8 +48,10 @@ export interface ConfirmBookingCheckoutInput {
   marketingCommunicationsAccepted?: boolean;
   cgvAcceptedAt: Date;
   withdrawalAcknowledgedAt: Date;
-  paymentMethod: "proforma" | "card";
+  paymentMethod: "proforma" | "card" | "bank_transfer";
   pricing: BookingPriceResponse;
+  /** Required when paymentMethod is bank_transfer — precomputed expiry. */
+  awaitingPaymentExpiresAt?: Date;
   now?: Date;
 }
 
@@ -292,9 +294,13 @@ export async function confirmBookingCheckout(
       const pricingSnapshot = mapPricingToReservationSnapshot(input.pricing);
       const totalVAT = pricingSnapshot.totalVAT;
 
-      // Card: hold slot as awaiting_payment until Stripe confirms; proforma: confirmed now.
+      // Card / bank_transfer: hold as awaiting_payment; proforma: confirmed now.
       const isCard = input.paymentMethod === "card";
-      const reservationStatus = isCard ? ("awaiting_payment" as const) : ("confirmed" as const);
+      const isBankTransfer = input.paymentMethod === "bank_transfer";
+      const awaitsPayment = isCard || isBankTransfer;
+      const reservationStatus = awaitsPayment
+        ? ("awaiting_payment" as const)
+        : ("confirmed" as const);
       const statusHistory = isCard
         ? [
             {
@@ -304,7 +310,16 @@ export async function confirmBookingCheckout(
               reason: "card_checkout",
             },
           ]
-        : [{ from: "pending", to: "confirmed", at: now }];
+        : isBankTransfer
+          ? [
+              {
+                from: "pending",
+                to: "awaiting_payment",
+                at: now,
+                reason: "bank_transfer_checkout",
+              },
+            ]
+          : [{ from: "pending", to: "confirmed", at: now }];
 
       const Reservation = await getReservationModel();
       const [reservation] = await Reservation.create(
@@ -331,6 +346,16 @@ export async function confirmBookingCheckout(
             ...(isCard
               ? {
                   awaitingPaymentExpiresAt: new Date(now.getTime() + AWAITING_PAYMENT_TTL_MS),
+                  awaitingPaymentMethod: "card" as const,
+                }
+              : {}),
+            ...(isBankTransfer
+              ? {
+                  awaitingPaymentExpiresAt:
+                    input.awaitingPaymentExpiresAt ??
+                    new Date(now.getTime() + AWAITING_PAYMENT_TTL_MS),
+                  awaitingPaymentMethod: "bank_transfer" as const,
+                  bankTransferRemindersSent: [],
                 }
               : {}),
             createdChannel: "online",

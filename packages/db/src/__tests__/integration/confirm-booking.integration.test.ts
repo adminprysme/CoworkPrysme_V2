@@ -184,6 +184,7 @@ describe("integration: confirm booking checkout (replica set)", () => {
     );
 
     expect(result.reservation.status).toBe("awaiting_payment");
+    expect(result.reservation.awaitingPaymentMethod).toBe("card");
     expect(result.reservation.awaitingPaymentExpiresAt?.getTime()).toBe(
       now.getTime() + 45 * 60 * 1000,
     );
@@ -203,6 +204,31 @@ describe("integration: confirm booking checkout (replica set)", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(ReservationOverlapError);
+  });
+
+  it("creates bank_transfer checkout as awaiting_payment with custom expiry", async () => {
+    const spaceId = new Types.ObjectId();
+    const buildingId = new Types.ObjectId();
+    const sessionId = "bank-transfer-session";
+    const startAt = new Date("2026-07-20T10:00:00.000Z");
+    const endAt = new Date("2026-07-20T11:00:00.000Z");
+    const now = new Date("2026-07-01T09:00:00.000Z");
+    const expiresAt = new Date("2026-07-09T09:00:00.000Z");
+
+    const lock = await acquireLock({ spaceId, startAt, endAt, sessionId });
+    const result = await confirmBookingCheckout(
+      buildConfirmInput(lock._id, sessionId, spaceId, buildingId, {
+        paymentMethod: "bank_transfer",
+        email: "transfer@example.com",
+        awaitingPaymentExpiresAt: expiresAt,
+        now,
+      }),
+    );
+
+    expect(result.reservation.status).toBe("awaiting_payment");
+    expect(result.reservation.awaitingPaymentMethod).toBe("bank_transfer");
+    expect(result.reservation.awaitingPaymentExpiresAt?.getTime()).toBe(expiresAt.getTime());
+    expect(result.reservation.bankTransferRemindersSent).toEqual([]);
   });
 
   it("persists opted-in marketing consent on new client account", async () => {

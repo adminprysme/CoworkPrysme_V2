@@ -17,6 +17,8 @@ export const BOOKING_CONFIRM_ERROR_CODES = {
   INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
   EMAIL_ALREADY_REGISTERED: "EMAIL_ALREADY_REGISTERED",
   VALIDATION_ERROR: "VALIDATION_ERROR",
+  BANK_TRANSFER_NOT_ELIGIBLE: "BANK_TRANSFER_NOT_ELIGIBLE",
+  BANK_TRANSFER_NOT_CONFIGURED: "BANK_TRANSFER_NOT_CONFIGURED",
 } as const;
 
 export type BookingConfirmErrorCode =
@@ -30,8 +32,20 @@ const objectIdSchema = z
 export const BookingAccountModeSchema = z.enum(["new", "existing"]);
 export type BookingAccountMode = z.infer<typeof BookingAccountModeSchema>;
 
-export const BookingPaymentMethodSchema = z.enum(["proforma", "card"]);
+export const BookingPaymentMethodSchema = z.enum(["proforma", "card", "bank_transfer"]);
 export type BookingPaymentMethod = z.infer<typeof BookingPaymentMethodSchema>;
+
+export const BankTransferInstructionsSchema = z.object({
+  iban: z.string().min(1),
+  bic: z.string().min(1),
+  accountHolder: z.string().min(1),
+  bankName: z.string().optional(),
+  transferLabel: z.string().min(1),
+  amountCents: z.number().int().positive(),
+  expiresAt: z.string().datetime(),
+});
+
+export type BankTransferInstructions = z.infer<typeof BankTransferInstructionsSchema>;
 
 export const BookingCardexIdentityInputSchema = z.object({
   firstName: z.string().trim().min(1, "Le prénom est requis"),
@@ -114,7 +128,7 @@ export const BookingConfirmResponseSchema = z.object({
   reservationReference: z.string(),
   invoiceReference: z.string(),
   paymentMethod: BookingPaymentMethodSchema,
-  /** Real reservation.status after atomic create (awaiting_payment for card). */
+  /** Real reservation.status after atomic create (awaiting_payment for card/bank_transfer). */
   reservationStatus: z.enum([
     "pending",
     "awaiting_payment",
@@ -123,6 +137,8 @@ export const BookingConfirmResponseSchema = z.object({
     "completed",
     "no_show",
   ]),
+  /** Present when paymentMethod is bank_transfer — RIB + libellé for the client. */
+  bankTransfer: BankTransferInstructionsSchema.optional(),
 });
 
 export type BookingCheckEmailRequest = z.infer<typeof BookingCheckEmailRequestSchema>;
@@ -141,6 +157,8 @@ export const BookingConfirmErrorResponseSchema = z.object({
     BOOKING_CONFIRM_ERROR_CODES.INVALID_CREDENTIALS,
     BOOKING_CONFIRM_ERROR_CODES.EMAIL_ALREADY_REGISTERED,
     BOOKING_CONFIRM_ERROR_CODES.VALIDATION_ERROR,
+    BOOKING_CONFIRM_ERROR_CODES.BANK_TRANSFER_NOT_ELIGIBLE,
+    BOOKING_CONFIRM_ERROR_CODES.BANK_TRANSFER_NOT_CONFIGURED,
   ]),
   message: z.string(),
 });

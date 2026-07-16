@@ -24,3 +24,8 @@ export {
   type ApplyStripeCardPaymentInput,
   type ApplyStripeCardPaymentResult,
 } from "./apply-stripe-card-payment.js";
+export {
+  applyBankTransferPayment,
+  type ApplyBankTransferPaymentInput,
+  type ApplyBankTransferPaymentResult,
+} from "./apply-bank-transfer-payment.js";

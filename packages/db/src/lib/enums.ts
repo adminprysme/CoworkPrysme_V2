@@ -54,6 +54,13 @@ export const BLOCKING_RESERVATION_STATUSES = ["pending", "awaiting_payment", "co
  */
 export const AWAITING_PAYMENT_TTL_MS = 45 * 60 * 1000;
 
+/** How an awaiting_payment hold is expected to be settled. */
+export const AWAITING_PAYMENT_METHODS = ["card", "bank_transfer"] as const;
+export type AwaitingPaymentMethod = (typeof AWAITING_PAYMENT_METHODS)[number];
+
+export const BANK_TRANSFER_REMINDER_TIERS = ["j2", "j4", "j6"] as const;
+export type BankTransferReminderTier = (typeof BANK_TRANSFER_REMINDER_TIERS)[number];
+
 export const CREATED_CHANNELS = ["online", "staff", "phone"] as const;
 export type CreatedChannel = (typeof CREATED_CHANNELS)[number];
 
