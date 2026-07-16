@@ -364,6 +364,38 @@ Local : `stripe listen --forward-to localhost:8002/stripe/webhook`.
 
 `POST /booking/payments/intent` et `GET /booking/payments/status` s'appuient sur `reservationReference` + `invoiceReference` (+ TTL facture 24 h), **sans token signé**. Les références (`RES-2026-00001`, …) sont **devinables** : un tiers pourrait interroger statut / montant d'une autre facture. Aucune donnée carte n'est exposée ; payer la facture d'autrui ne lui nuit pas — fuite d'information mineure. **À durcir** : token signé propre à chaque réservation, renvoyé à la confirm et exigé sur intent/status.
 
+## Paiement par virement bancaire
+
+Option `paymentMethod: "bank_transfer"` dans le tunnel, offerte seulement si le RIB est configuré **et** si la réservation est pleinement éligible (lead time + fenêtre de paiement non vide).
+
+### Règles
+
+| Élément          | Valeur                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| Lead time min    | `BANK_TRANSFER_MIN_LEAD_DAYS` (défaut **7**)                                                |
+| Fenêtre paiement | `BANK_TRANSFER_PAYMENT_WINDOW_DAYS` (défaut **8**) depuis `issuedAt`                        |
+| Marge sécurité   | `BANK_TRANSFER_SAFETY_MARGIN_DAYS` (défaut **2**) avant `startAt`                           |
+| Expiration       | `min(issuedAt+8j, startAt−2j)` — si `expiresAt ≤ issuedAt` → **rejet** (`window_too_short`) |
+| Libellé virement | référence réservation seule (`RES-…`)                                                       |
+| Relances         | J+2 / J+4 / J+6 depuis `issuedAt` (sweep `AwaitingPaymentExpiryService`)                    |
+| Champ distinct   | `reservation.awaitingPaymentMethod: "card" \| "bank_transfer"`                              |
+
+À la confirm : statut `awaiting_payment`, emails J+0 (RIB + libellé + montant), payload `bankTransfer` dans la réponse. À l'expiration : `cancelled` + email client (pas d'annulation Stripe). Encaissement manuel : gestion → **Facturation** → `POST /billing/transfers/mark-received` (permission **`billing`**) → `Payment.method: "transfer"` + `confirmed` + email confirmation ; les relances s'arrêtent immédiatement (`markBankTransferReminderSent` ne matche plus `awaiting_payment`).
+
+### Variables d'environnement (RIB)
+
+| Variable                                        | App         | Rôle                  |
+| ----------------------------------------------- | ----------- | --------------------- |
+| `BANK_TRANSFER_IBAN` / `BIC` / `ACCOUNT_HOLDER` | vitrine-api | RIB affiché / e-mailé |
+| `BANK_TRANSFER_BANK_NAME`                       | vitrine-api | Optionnel             |
+| `BANK_TRANSFER_MIN_LEAD_DAYS`                   | vitrine-api | Seuil d'éligibilité   |
+| `BANK_TRANSFER_PAYMENT_WINDOW_DAYS`             | vitrine-api | Fenêtre max           |
+| `BANK_TRANSFER_SAFETY_MARGIN_DAYS`              | vitrine-api | Plafond avant début   |
+
+### Automatisation Qonto — phase future
+
+Le schéma `Payment.reconciliation.qontoTxId` est déjà prévu. **Non branché** ici : le matching automatique des virements Qonto (API / webhooks) reste une évolution séparée. Le flux actuel est **manuel** (staff marque reçu).
+
 ## Qualité
 
 - TypeScript strict, ESLint 9, Prettier, Husky + Commitlint
@@ -387,4 +419,5 @@ pnpm --filter @coworkprysme/db test
 - Moteur facturation / codes promo (schémas en place, logique à venir)
 - Module Permissions gestion : permission « Reçoit les emails de réservation » + remplacement du stub `resolveBookingNotificationRecipients`
 - Durcir auth paiement carte : token signé par réservation (remplacer refs séquentielles seules)
+- Automatisation rapprochement virements Qonto (`Payment.reconciliation.qontoTxId`)
 - CI/CD automatisé
