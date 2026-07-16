@@ -4,11 +4,12 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import type { Service, Space } from "@coworkprysme/db";
+import type { Building, Service, Space } from "@coworkprysme/db";
 import {
   confirmBookingCheckout,
   connectMongo,
   EmailAlreadyRegisteredError,
+  getBuildingModel,
   getDiscountCodeModel,
   getServiceModel,
   InvalidCredentialsError,
@@ -28,8 +29,10 @@ import type { Types } from "mongoose";
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { MailService } from "../mail/mail.service.js";
 import {
+  buildingToEmailAccess,
   renderAccountCreatedEmail,
   renderBookingConfirmationEmail,
+  type BookingConfirmationBuildingAccess,
 } from "../mail/templates/booking-emails.js";
 import { AvailabilityService } from "./availability.service.js";
 import { BookingPriceService } from "./booking-price.service.js";
@@ -37,6 +40,7 @@ import { toObjectId } from "./object-id.util.js";
 
 type ServiceLean = Service & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
+type BuildingLean = Building & { _id: Types.ObjectId };
 
 const CARD_PAYMENT_STUB_MESSAGE =
   "Le paiement par carte sera bientôt disponible — votre réservation est enregistrée, vous recevrez une facture proforma en attendant.";
@@ -189,6 +193,8 @@ export class BookingConfirmService {
       this.mapConfirmError(error);
     }
 
+    const buildingAccess = await this.resolveBuildingAccess((space as SpaceLean).buildingId);
+
     await this.sendConfirmationEmails({
       email: result.clientEmail,
       isNewAccount: result.isNewAccount,
@@ -198,6 +204,7 @@ export class BookingConfirmService {
       startAt: input.startAt,
       endAt: input.endAt,
       pricing,
+      building: buildingAccess,
     });
 
     return BookingConfirmResponseSchema.parse({
@@ -209,6 +216,21 @@ export class BookingConfirmService {
     });
   }
 
+  private async resolveBuildingAccess(
+    buildingId: Types.ObjectId,
+  ): Promise<BookingConfirmationBuildingAccess> {
+    await connectMongo();
+    const Building = await getBuildingModel();
+    const building = (await Building.findById(buildingId).lean().exec()) as BuildingLean | null;
+    if (!building) {
+      throw new NotFoundException({
+        code: BOOKING_CONFIRM_ERROR_CODES.VALIDATION_ERROR,
+        message: "Bâtiment introuvable",
+      });
+    }
+    return buildingToEmailAccess(building);
+  }
+
   private async sendConfirmationEmails(input: {
     email: string;
     isNewAccount: boolean;
@@ -218,6 +240,7 @@ export class BookingConfirmService {
     startAt: string;
     endAt: string;
     pricing: Awaited<ReturnType<BookingPriceService["computePrice"]>>;
+    building: BookingConfirmationBuildingAccess;
   }) {
     const bookingEmail = renderBookingConfirmationEmail({
       reservationReference: input.reservationReference,
@@ -232,6 +255,7 @@ export class BookingConfirmService {
         totalTTC: line.totalTTC,
       })),
       vatBreakdown: input.pricing.vatBreakdown,
+      building: input.building,
     });
 
     await this.mail.sendMail({
