@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -20,14 +21,23 @@ import {
 import {
   BOOKING_CONFIRM_ERROR_CODES,
   BookingConfirmResponseSchema,
+  computeBankTransferExpiresAt,
+  isBankTransferFullyEligible,
   PRIVACY_POLICY_VERSION,
+  type BankTransferInstructions,
   type BookingConfirmRequest,
+  type BookingPaymentMethod,
   type BookingPriceServiceInput,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { AvailabilityService } from "./availability.service.js";
+import {
+  loadBankTransferRibConfig,
+  loadBankTransferThresholds,
+  resolveAvailablePaymentMethods,
+} from "./bank-transfer.config.js";
 import { BookingEmailsService } from "./booking-emails.service.js";
 import { BookingPriceService } from "./booking-price.service.js";
 import { toObjectId } from "./object-id.util.js";
@@ -44,6 +54,15 @@ export class BookingConfirmService {
     private readonly bookingPrice: BookingPriceService,
     private readonly bookingEmails: BookingEmailsService,
   ) {}
+
+  /** Public payment-method availability for the tunnel (no RIB secrets). */
+  getPaymentMethods(startAtIso: string): {
+    paymentMethods: BookingPaymentMethod[];
+    bankTransferAvailable: boolean;
+    minLeadDays: number;
+  } {
+    return resolveAvailablePaymentMethods(new Date(startAtIso));
+  }
 
   private async resolveDiscountCodeId(code?: string) {
     if (!code) {
@@ -129,6 +148,50 @@ export class BookingConfirmService {
     throw error;
   }
 
+  private assertBankTransferAllowed(
+    startAt: Date,
+    now: Date,
+  ): {
+    expiresAt: Date;
+    rib: NonNullable<ReturnType<typeof loadBankTransferRibConfig>>;
+  } {
+    const rib = loadBankTransferRibConfig();
+    if (!rib) {
+      throw new BadRequestException({
+        code: BOOKING_CONFIRM_ERROR_CODES.BANK_TRANSFER_NOT_CONFIGURED,
+        message: "Le paiement par virement n'est pas disponible pour le moment.",
+      });
+    }
+    const thresholds = loadBankTransferThresholds();
+    if (
+      !isBankTransferFullyEligible({
+        startAt,
+        now,
+        minLeadDays: thresholds.minLeadDays,
+        paymentWindowDays: thresholds.paymentWindowDays,
+        safetyMarginDays: thresholds.safetyMarginDays,
+      })
+    ) {
+      throw new BadRequestException({
+        code: BOOKING_CONFIRM_ERROR_CODES.BANK_TRANSFER_NOT_ELIGIBLE,
+        message: `Le virement bancaire n'est possible que pour les réservations dans au moins ${thresholds.minLeadDays} jours, avec une fenêtre de paiement suffisante.`,
+      });
+    }
+    const expiry = computeBankTransferExpiresAt({
+      issuedAt: now,
+      startAt,
+      paymentWindowDays: thresholds.paymentWindowDays,
+      safetyMarginDays: thresholds.safetyMarginDays,
+    });
+    if (!expiry.ok) {
+      throw new BadRequestException({
+        code: BOOKING_CONFIRM_ERROR_CODES.BANK_TRANSFER_NOT_ELIGIBLE,
+        message: "Le délai avant votre réservation est trop court pour un paiement par virement.",
+      });
+    }
+    return { expiresAt: expiry.expiresAt, rib };
+  }
+
   async confirm(input: BookingConfirmRequest) {
     const space = await this.availability.getSpaceById(input.spaceId);
     if (!space) {
@@ -148,6 +211,16 @@ export class BookingConfirmService {
     });
 
     const now = new Date();
+    const startAt = new Date(input.startAt);
+    let bankTransferExpiresAt: Date | undefined;
+    let bankTransferRib: ReturnType<typeof loadBankTransferRibConfig> = null;
+
+    if (input.paymentMethod === "bank_transfer") {
+      const allowed = this.assertBankTransferAllowed(startAt, now);
+      bankTransferExpiresAt = allowed.expiresAt;
+      bankTransferRib = allowed.rib;
+    }
+
     const services = await this.buildServiceSnapshots(input.services);
     const discountCodeId = await this.resolveDiscountCodeId(input.discountCode);
 
@@ -158,7 +231,7 @@ export class BookingConfirmService {
         sessionId: input.sessionId,
         spaceId: toObjectId(input.spaceId),
         buildingId: (space as SpaceLean).buildingId,
-        startAt: new Date(input.startAt),
+        startAt,
         endAt: new Date(input.endAt),
         durationClass: input.durationClass,
         partySize: input.partySize,
@@ -180,13 +253,16 @@ export class BookingConfirmService {
         withdrawalAcknowledgedAt: now,
         paymentMethod: input.paymentMethod,
         pricing,
+        awaitingPaymentExpiresAt: bankTransferExpiresAt,
       });
     } catch (error) {
       this.mapConfirmError(error);
     }
 
-    // Card: emails only after payment_intent.succeeded. Proforma: send now.
-    if (input.paymentMethod === "proforma") {
+    let bankTransfer: BankTransferInstructions | undefined;
+
+    // Proforma + bank_transfer: emails at create. Card: deferred until webhook.
+    if (input.paymentMethod === "proforma" || input.paymentMethod === "bank_transfer") {
       const buildingAccess = await this.bookingEmails.resolveBuildingAccess(
         (space as SpaceLean).buildingId,
       );
@@ -195,23 +271,50 @@ export class BookingConfirmService {
         ? `${input.identity.firstName} ${input.identity.lastName}`.trim()
         : null;
 
-      await this.bookingEmails.sendClientConfirmationEmails({
-        clientEmail: result.clientEmail,
-        isNewAccount: result.isNewAccount,
-        reservationReference: result.reservation.reference,
-        invoiceReference: result.invoiceReference,
-        spaceName: space.name,
-        startAt: input.startAt,
-        endAt: input.endAt,
-        totalTTC: pricing.totalTTC,
-        lines: pricing.lines.map((line) => ({
-          label: line.label,
-          qty: line.qty,
-          totalTTC: line.totalTTC,
-        })),
-        vatBreakdown: pricing.vatBreakdown,
-        building: buildingAccess,
-      });
+      if (input.paymentMethod === "bank_transfer" && bankTransferRib && bankTransferExpiresAt) {
+        bankTransfer = {
+          iban: bankTransferRib.iban,
+          bic: bankTransferRib.bic,
+          accountHolder: bankTransferRib.accountHolder,
+          bankName: bankTransferRib.bankName,
+          transferLabel: result.reservation.reference,
+          amountCents: pricing.totalTTC,
+          expiresAt: bankTransferExpiresAt.toISOString(),
+        };
+
+        await this.bookingEmails.sendBankTransferInstructionsEmails({
+          clientEmail: result.clientEmail,
+          isNewAccount: result.isNewAccount,
+          reservationReference: result.reservation.reference,
+          invoiceReference: result.invoiceReference,
+          spaceName: space.name,
+          startAt: input.startAt,
+          endAt: input.endAt,
+          amountCents: pricing.totalTTC,
+          expiresAt: bankTransferExpiresAt,
+          rib: bankTransferRib,
+          transferLabel: result.reservation.reference,
+          building: buildingAccess,
+        });
+      } else {
+        await this.bookingEmails.sendClientConfirmationEmails({
+          clientEmail: result.clientEmail,
+          isNewAccount: result.isNewAccount,
+          reservationReference: result.reservation.reference,
+          invoiceReference: result.invoiceReference,
+          spaceName: space.name,
+          startAt: input.startAt,
+          endAt: input.endAt,
+          totalTTC: pricing.totalTTC,
+          lines: pricing.lines.map((line) => ({
+            label: line.label,
+            qty: line.qty,
+            totalTTC: line.totalTTC,
+          })),
+          vatBreakdown: pricing.vatBreakdown,
+          building: buildingAccess,
+        });
+      }
 
       await this.bookingEmails.sendStaffBookingNotifications({
         buildingId,
@@ -237,6 +340,7 @@ export class BookingConfirmService {
       invoiceReference: result.invoiceReference,
       paymentMethod: input.paymentMethod,
       reservationStatus: result.reservation.status,
+      bankTransfer,
     });
   }
 }

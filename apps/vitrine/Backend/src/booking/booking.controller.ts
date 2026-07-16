@@ -113,6 +113,15 @@ export class BookingController {
     return BookingVerifyAccountResponseSchema.parse(payload);
   }
 
+  @Get("payment-methods")
+  getPaymentMethods(@Query() query: Record<string, unknown>) {
+    const startAt = typeof query.startAt === "string" ? query.startAt : "";
+    if (!startAt) {
+      return this.bookingConfirm.getPaymentMethods(new Date().toISOString());
+    }
+    return this.bookingConfirm.getPaymentMethods(startAt);
+  }
+
   @Post("confirm")
   async confirmBooking(@Body() body: unknown) {
     const parsed = BookingConfirmRequestSchema.parse(body);

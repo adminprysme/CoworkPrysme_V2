@@ -254,7 +254,7 @@ export interface StaffBookingNotificationEmailInput {
   totalTTC: number;
   clientEmail: string;
   clientName?: string | null;
-  paymentMethod: "proforma" | "card";
+  paymentMethod: "proforma" | "card" | "bank_transfer";
   siteUrl?: string;
 }
 
@@ -264,7 +264,12 @@ export function renderStaffBookingNotificationEmail(input: StaffBookingNotificat
   html: string;
 } {
   const siteUrl = resolvePublicSiteUrl(input.siteUrl);
-  const paymentLabel = input.paymentMethod === "card" ? "Paiement par carte" : "Facture proforma";
+  const paymentLabel =
+    input.paymentMethod === "card"
+      ? "Paiement par carte"
+      : input.paymentMethod === "bank_transfer"
+        ? "Virement bancaire"
+        : "Facture proforma";
   const clientName = input.clientName?.trim();
   const clientLine = clientName
     ? `${escapeHtml(clientName)} (${escapeHtml(input.clientEmail)})`
@@ -312,5 +317,105 @@ export function renderStaffBookingNotificationEmail(input: StaffBookingNotificat
   return {
     subject: `Nouvelle réservation — ${input.spaceName} — ${input.startAt}`,
     html: layout("Nouvelle réservation", body, siteUrl, { staffNotification: true }),
+  };
+}
+
+export interface BankTransferInstructionsEmailInput {
+  reservationReference: string;
+  invoiceReference: string;
+  spaceName: string;
+  startAt: string;
+  endAt: string;
+  amountCents: number;
+  expiresAtLabel: string;
+  iban: string;
+  bic: string;
+  accountHolder: string;
+  bankName?: string;
+  transferLabel: string;
+  building: BookingConfirmationBuildingAccess;
+  siteUrl?: string;
+}
+
+/** J+0 bank transfer instructions — RIB + exact transfer label. */
+export function renderBankTransferInstructionsEmail(input: BankTransferInstructionsEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl(input.siteUrl);
+  const bankNameLine = input.bankName
+    ? `<tr><td style="padding:6px 0;color:#666;">Banque</td><td style="padding:6px 0;">${escapeHtml(input.bankName)}</td></tr>`
+    : "";
+  const body = `
+    <p style="margin-top:0;">Votre réservation est <strong>enregistrée</strong> et en attente de paiement par virement.</p>
+    <p><strong>Référence :</strong> ${escapeHtml(input.reservationReference)}<br>
+    <strong>Facture proforma :</strong> ${escapeHtml(input.invoiceReference)}</p>
+    <p><strong>${escapeHtml(input.spaceName)}</strong><br>
+    Du ${escapeHtml(input.startAt)} au ${escapeHtml(input.endAt)}</p>
+    <p style="margin:20px 0 8px;"><strong>Montant exact à virer</strong></p>
+    <p style="font-size:22px;color:${BRAND_COPPER};margin:0 0 16px;"><strong>${formatEuro(input.amountCents)}</strong></p>
+    <p><strong>Libellé exact du virement</strong> (à recopier tel quel) :</p>
+    <p style="font-family:ui-monospace,monospace;font-size:18px;background:#f6f3ef;padding:12px 14px;border-radius:6px;">
+      <strong>${escapeHtml(input.transferLabel)}</strong>
+    </p>
+    <p style="margin-top:20px;"><strong>Coordonnées bancaires (RIB)</strong></p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 16px;">
+      <tr><td style="padding:6px 0;color:#666;width:38%;">Titulaire</td><td style="padding:6px 0;">${escapeHtml(input.accountHolder)}</td></tr>
+      ${bankNameLine}
+      <tr><td style="padding:6px 0;color:#666;">IBAN</td><td style="padding:6px 0;font-family:ui-monospace,monospace;">${escapeHtml(input.iban)}</td></tr>
+      <tr><td style="padding:6px 0;color:#666;">BIC</td><td style="padding:6px 0;font-family:ui-monospace,monospace;">${escapeHtml(input.bic)}</td></tr>
+    </table>
+    <p>Merci d'effectuer le virement avant le <strong>${escapeHtml(input.expiresAtLabel)}</strong>.
+    Passé ce délai, la réservation pourra être annulée automatiquement.</p>
+    ${renderAccessPlanHtml(input.building, siteUrl)}
+  `;
+  return {
+    subject: `Virement à effectuer — ${input.reservationReference} — Cowork Prysme`,
+    html: layout("Instructions de virement", body, siteUrl),
+  };
+}
+
+export function renderBankTransferReminderEmail(
+  input: BankTransferInstructionsEmailInput & { tier: "j2" | "j4" | "j6" },
+): { subject: string; html: string } {
+  const siteUrl = resolvePublicSiteUrl(input.siteUrl);
+  const tone =
+    input.tier === "j2"
+      ? "Nous n'avons pas encore reçu votre virement. Voici un rappel des coordonnées."
+      : input.tier === "j4"
+        ? "Votre règlement par virement est toujours en attente. Merci de procéder rapidement."
+        : "Dernière relance : sans paiement sous 48h, votre réservation sera annulée automatiquement.";
+  const subjectPrefix =
+    input.tier === "j6" ? "Dernière relance" : input.tier === "j4" ? "Relance" : "Rappel";
+  const body = `
+    <p style="margin-top:0;">${tone}</p>
+    <p><strong>Référence :</strong> ${escapeHtml(input.reservationReference)} —
+    Montant <strong>${formatEuro(input.amountCents)}</strong> —
+    Libellé <strong>${escapeHtml(input.transferLabel)}</strong></p>
+    <p>IBAN ${escapeHtml(input.iban)} — BIC ${escapeHtml(input.bic)} — ${escapeHtml(input.accountHolder)}</p>
+    <p>Échéance : <strong>${escapeHtml(input.expiresAtLabel)}</strong></p>
+  `;
+  return {
+    subject: `${subjectPrefix} virement ${input.reservationReference} — Cowork Prysme`,
+    html: layout("Relance virement", body, siteUrl),
+  };
+}
+
+export function renderBankTransferExpiredEmail(input: {
+  reservationReference: string;
+  spaceName: string;
+  siteUrl?: string;
+}): { subject: string; html: string } {
+  const siteUrl = resolvePublicSiteUrl(input.siteUrl);
+  const body = `
+    <p style="margin-top:0;">Le délai de paiement par virement pour la réservation
+    <strong>${escapeHtml(input.reservationReference)}</strong> (${escapeHtml(input.spaceName)})
+    est dépassé. La réservation a été <strong>annulée</strong> et le créneau libéré.</p>
+    <p>Vous pouvez effectuer une nouvelle recherche sur
+    <a href="${escapeHtml(siteUrl)}/reservation" style="color:${BRAND_COPPER};">notre site</a>.</p>
+  `;
+  return {
+    subject: `Réservation annulée — ${input.reservationReference} — Cowork Prysme`,
+    html: layout("Réservation annulée", body, siteUrl),
   };
 }

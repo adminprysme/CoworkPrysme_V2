@@ -15,6 +15,7 @@ import { resolveBookingNotificationRecipients } from "../mail/resolve-booking-no
 import {
   buildingToEmailAccess,
   renderAccountCreatedEmail,
+  renderBankTransferInstructionsEmail,
   renderBookingConfirmationEmail,
   renderStaffBookingNotificationEmail,
   type BookingConfirmationBuildingAccess,
@@ -103,6 +104,56 @@ export class BookingEmailsService {
     }
   }
 
+  async sendBankTransferInstructionsEmails(input: {
+    clientEmail: string;
+    isNewAccount: boolean;
+    reservationReference: string;
+    invoiceReference: string;
+    spaceName: string;
+    startAt: Date | string;
+    endAt: Date | string;
+    amountCents: number;
+    expiresAt: Date;
+    rib: { iban: string; bic: string; accountHolder: string; bankName?: string };
+    transferLabel: string;
+    building: BookingConfirmationBuildingAccess;
+  }) {
+    const clientEmail = input.clientEmail.trim().toLowerCase();
+    const expiresAtLabel = input.expiresAt.toLocaleString("fr-FR", {
+      timeZone: "Europe/Paris",
+    });
+    const email = renderBankTransferInstructionsEmail({
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
+      spaceName: input.spaceName,
+      startAt: new Date(input.startAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }),
+      endAt: new Date(input.endAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }),
+      amountCents: input.amountCents,
+      expiresAtLabel,
+      iban: input.rib.iban,
+      bic: input.rib.bic,
+      accountHolder: input.rib.accountHolder,
+      bankName: input.rib.bankName,
+      transferLabel: input.transferLabel,
+      building: input.building,
+    });
+
+    await this.mail.sendMail({
+      to: clientEmail,
+      subject: email.subject,
+      html: email.html,
+    });
+
+    if (input.isNewAccount) {
+      const accountEmail = renderAccountCreatedEmail({ email: clientEmail });
+      await this.mail.sendMail({
+        to: clientEmail,
+        subject: accountEmail.subject,
+        html: accountEmail.html,
+      });
+    }
+  }
+
   /**
    * Staff notification — recipients ONLY via resolveBookingNotificationRecipients.
    * Never uses buildings.email as SMTP destination.
@@ -118,7 +169,7 @@ export class BookingEmailsService {
     startAt: Date | string;
     endAt: Date | string;
     totalTTC: number;
-    paymentMethod: "proforma" | "card";
+    paymentMethod: "proforma" | "card" | "bank_transfer";
   }) {
     const recipients = await resolveBookingNotificationRecipients(input.buildingId);
     if (recipients.length === 0) {
