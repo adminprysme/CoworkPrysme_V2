@@ -227,6 +227,9 @@ export class BuildingsService {
     if (payload.email === undefined) {
       existing.set("email", undefined);
     }
+    if (!payload.address.accessInfo) {
+      existing.set("address.accessInfo", undefined);
+    }
     await existing.save();
 
     const saved = await Building.findById(existing._id).lean().exec();

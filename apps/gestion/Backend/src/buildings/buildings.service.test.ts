@@ -149,6 +149,14 @@ describe("BuildingsService", () => {
     vi.clearAllMocks();
     const doc = mutableBuilding([]);
     mockFindById(doc);
+    mockBuildingModel.find.mockReturnValue({
+      lean: vi.fn().mockReturnValue({
+        exec: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    mockBuildingModel.updateMany.mockReturnValue({
+      exec: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+    });
     service = new BuildingsService(mockGeocoding as never, mockUploads as never);
   });
 

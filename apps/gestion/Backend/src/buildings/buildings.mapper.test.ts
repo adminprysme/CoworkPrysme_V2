@@ -51,6 +51,7 @@ describe("buildings.mapper", () => {
     expect(dbDoc.phone).toBe("04 78 86 92 55");
     expect(dbDoc.email).toBe("contact@example.com");
     expect(dbDoc.address.country).toBe("FR");
+    expect(dbDoc.address.accessInfo).toBeUndefined();
     expect(dbDoc.concierge.url).toBe("https://example.com");
     expect(dbDoc.visibleOnVitrine).toBe(false);
     expect(dbDoc.isDefaultVitrineBuilding).toBe(false);
@@ -145,5 +146,64 @@ describe("buildings.mapper", () => {
   it("allows building creation only for global scope (empty buildingIds)", () => {
     expect(canCreateBuilding({ scope: { buildingIds: [] } })).toBe(true);
     expect(canCreateBuilding({ scope: { buildingIds: ["507f1f77bcf86cd799439011"] } })).toBe(false);
+  });
+
+  it("maps accessInfo between API and Mongo address", () => {
+    const withAccess = {
+      ...sampleRequest,
+      address: {
+        ...sampleRequest.address,
+        accessInfo: "  Entrée grille, sonner à CoworkPrysme.  ",
+      },
+    };
+    const dbDoc = mapRequestToDbDocument(withAccess, { lat: 45.76, lng: 4.86 });
+    expect(dbDoc.address.accessInfo).toBe("Entrée grille, sonner à CoworkPrysme.");
+
+    const cleared = mapRequestToDbDocument(
+      { ...sampleRequest, address: { ...sampleRequest.address, accessInfo: "   " } },
+      { lat: 45.76, lng: 4.86 },
+    );
+    expect(cleared.address.accessInfo).toBeUndefined();
+
+    const now = new Date("2026-01-01T12:00:00.000Z");
+    const response = mapBuildingToResponse({
+      _id: "507f1f77bcf86cd799439011" as never,
+      name: "Cowork Test",
+      address: {
+        street: "47 avenue Leclerc",
+        zip: "69003",
+        city: "Lyon",
+        country: "FR",
+        accessInfo: "Entrée grille, sonner à CoworkPrysme.",
+      },
+      coordinates: { lat: 45.76, lng: 4.86 },
+      floors: [{ name: "RDC" }],
+      accessibilityHours: sampleRequest.accessibilityHours.map((entry) => ({
+        day: entry.day,
+        is24h: entry.is24h,
+        open: entry.openTime,
+        close: entry.closeTime,
+      })),
+      receptionHours: sampleRequest.receptionHours.map((entry) => ({
+        day: entry.day,
+        is24h: entry.is24h,
+        open: entry.openTime,
+        close: entry.closeTime,
+      })),
+      concierge: { url: "https://example.com", accessCode: "1234" },
+      photos: [],
+      status: "active",
+      visibleOnVitrine: false,
+      isDefaultVitrineBuilding: false,
+      seo: {
+        slug: "cowork-test",
+        metaTitle: "Cowork Test | Cowork Prysme",
+        metaDescription: "Cowork Test — coworking Cowork Prysme à Lyon.",
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    expect(response.address.accessInfo).toBe("Entrée grille, sonner à CoworkPrysme.");
   });
 });

@@ -1,7 +1,11 @@
 import type { Building } from "@coworkprysme/db";
 import type { BuildingResponse, CreateBuildingRequest } from "@coworkprysme/shared";
 import {
+  BuildingResponseSchema,
   buildBuildingSeoMeta,
+  normalizeCountryFromDb,
+  normalizeCountryToDb,
+  normalizeOptionalBuildingContactField,
   resolveUniqueSlugFromSet,
   slugifyBuildingName,
 } from "@coworkprysme/shared";
@@ -17,7 +21,7 @@ function normalizeBuildingDescription(description: string | undefined): string |
 export function mapRequestToDbDocument(
   input: CreateBuildingRequest,
   coordinates: { lat: number; lng: number },
-): Omit<Building, "createdAt" | "updatedAt"> {
+): Omit<Building, "createdAt" | "updatedAt" | "seo"> {
   return {
     name: input.name.trim(),
     description: normalizeBuildingDescription(input.description),
@@ -28,6 +32,7 @@ export function mapRequestToDbDocument(
       zip: input.address.postalCode.trim(),
       city: input.address.city.trim(),
       country: normalizeCountryToDb(input.address.country),
+      accessInfo: input.address.accessInfo?.trim() || undefined,
     },
     coordinates,
     floors: input.floors.map((floor) => ({ name: floor.name.trim() })),
@@ -66,6 +71,7 @@ export function mapBuildingToResponse(doc: BuildingLean): BuildingResponse {
       postalCode: doc.address.zip,
       city: doc.address.city,
       country: normalizeCountryFromDb(doc.address.country),
+      accessInfo: doc.address.accessInfo?.trim() || undefined,
     },
     coordinates: {
       lat: doc.coordinates.lat,
