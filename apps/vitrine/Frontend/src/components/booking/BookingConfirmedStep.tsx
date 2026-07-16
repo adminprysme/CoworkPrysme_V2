@@ -216,8 +216,8 @@ export function BookingConfirmedStep({
       paymentState === "failed" ||
       paymentState === "confirming");
 
-  // --- Proforma: definitive confirmation (unchanged intent) ---
-  if (!isCard) {
+  // --- Proforma: definitive confirmation ---
+  if (result.paymentMethod === "proforma") {
     return (
       <section className={styles.step}>
         <div className={styles.confirmedCard}>
@@ -234,6 +234,72 @@ export function BookingConfirmedStep({
           />
           <p className={styles.lead}>
             Un email de confirmation vous a été envoyé avec le détail et le plan d&apos;accès.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  // --- Bank transfer: hold + RIB instructions ---
+  if (result.paymentMethod === "bank_transfer") {
+    const bt = result.bankTransfer;
+    const expiresLabel = bt?.expiresAt
+      ? new Date(bt.expiresAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })
+      : null;
+    return (
+      <section className={styles.step}>
+        <div className={styles.confirmedCard}>
+          <h2 className={styles.title}>Réservation enregistrée — virement à effectuer</h2>
+          <p className={styles.lead}>
+            Votre réservation <strong>{result.reservationReference}</strong> est enregistrée en
+            attente de paiement. Effectuez un virement avec le libellé exact ci-dessous.
+          </p>
+          <BookingRecap
+            spaceLabel={spaceLabel}
+            slotLabel={slotLabel}
+            invoiceReference={result.invoiceReference}
+            reservationStatus={reservationStatus}
+          />
+          {bt ? (
+            <div className={styles.bankTransferBlock} aria-label="Instructions de virement">
+              <p className={styles.lineRow}>
+                <span>Montant exact</span>
+                <span>{formatEuroFromCents(bt.amountCents)}</span>
+              </p>
+              <p className={styles.bankTransferLabelTitle}>Libellé du virement</p>
+              <p className={styles.bankTransferLabel}>{bt.transferLabel}</p>
+              <p className={styles.lineRow}>
+                <span>Titulaire</span>
+                <span>{bt.accountHolder}</span>
+              </p>
+              {bt.bankName ? (
+                <p className={styles.lineRow}>
+                  <span>Banque</span>
+                  <span>{bt.bankName}</span>
+                </p>
+              ) : null}
+              <p className={styles.lineRow}>
+                <span>IBAN</span>
+                <span className={styles.mono}>{bt.iban}</span>
+              </p>
+              <p className={styles.lineRow}>
+                <span>BIC</span>
+                <span className={styles.mono}>{bt.bic}</span>
+              </p>
+              {expiresLabel ? (
+                <p className={styles.notice}>
+                  À régler avant le <strong>{expiresLabel}</strong>. Passé ce délai, la réservation
+                  pourra être annulée automatiquement.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className={styles.notice}>
+              Les instructions de virement vous ont été envoyées par email.
+            </p>
+          )}
+          <p className={styles.lead}>
+            Un email avec le RIB et le libellé exact vous a également été envoyé.
           </p>
         </div>
       </section>

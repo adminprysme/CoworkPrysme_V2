@@ -2,12 +2,14 @@ import {
   BookingCheckEmailResponseSchema,
   BookingConfirmRequestSchema,
   BookingConfirmResponseSchema,
+  BookingPaymentMethodsResponseSchema,
   BookingVerifyAccountResponseSchema,
   type BookingConfirmRequest,
   type BookingConfirmResponse,
+  type BookingPaymentMethodsResponse,
 } from "@coworkprysme/shared";
 
-import { bookingFetch } from "./booking-api-client";
+import { bookingFetch, buildQuery } from "./booking-api-client";
 
 export async function checkBookingEmail(email: string): Promise<boolean> {
   const data = await bookingFetch("/booking/account/check-email", BookingCheckEmailResponseSchema, {
@@ -23,6 +25,13 @@ export async function verifyBookingAccount(email: string, password: string): Pro
     body: JSON.stringify({ email, password }),
   });
   return data.valid;
+}
+
+export async function fetchBookingPaymentMethods(
+  startAt: string,
+): Promise<BookingPaymentMethodsResponse> {
+  const qs = buildQuery({ startAt });
+  return bookingFetch(`/booking/payment-methods?${qs}`, BookingPaymentMethodsResponseSchema);
 }
 
 export async function confirmBooking(

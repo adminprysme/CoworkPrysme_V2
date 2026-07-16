@@ -1184,6 +1184,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
               {view === "payment" && lock && selectedSpace ? (
                 <BookingPaymentStep
+                  startAt={lock.startAt}
                   onBack={() => setView("summary")}
                   onConfirm={handleConfirm}
                   loading={confirmLoading}

@@ -336,6 +336,7 @@ export {
   BookingConfirmRequestSchema,
   BookingConfirmResponseSchema,
   BookingPaymentMethodSchema,
+  BookingPaymentMethodsResponseSchema,
   BookingVerifyAccountRequestSchema,
   BookingVerifyAccountResponseSchema,
   PRIVACY_POLICY_VERSION,
@@ -348,6 +349,7 @@ export {
   type BookingConfirmRequest,
   type BookingConfirmResponse,
   type BookingPaymentMethod,
+  type BookingPaymentMethodsResponse,
   type BookingVerifyAccountRequest,
   type BookingVerifyAccountResponse,
 } from "./booking-confirm.js";

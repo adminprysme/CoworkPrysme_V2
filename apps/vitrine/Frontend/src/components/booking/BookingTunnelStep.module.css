@@ -174,6 +174,38 @@
   line-height: 1.5;
 }
 
+.bankTransferBlock {
+  display: grid;
+  gap: var(--v-space-2);
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-surface-muted, #f6f3ef);
+}
+
+.bankTransferLabelTitle {
+  margin: var(--v-space-2) 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--v-color-text-muted);
+}
+
+.bankTransferLabel {
+  margin: 0;
+  padding: var(--v-space-3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--v-color-surface);
+  border-radius: var(--v-radius-md, 6px);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-all;
+}
+
 .recapBlock {
   display: grid;
   gap: var(--v-space-3);

@@ -47,6 +47,14 @@ export const BankTransferInstructionsSchema = z.object({
 
 export type BankTransferInstructions = z.infer<typeof BankTransferInstructionsSchema>;
 
+export const BookingPaymentMethodsResponseSchema = z.object({
+  paymentMethods: z.array(BookingPaymentMethodSchema),
+  bankTransferAvailable: z.boolean(),
+  minLeadDays: z.number().int().nonnegative(),
+});
+
+export type BookingPaymentMethodsResponse = z.infer<typeof BookingPaymentMethodsResponseSchema>;
+
 export const BookingCardexIdentityInputSchema = z.object({
   firstName: z.string().trim().min(1, "Le prénom est requis"),
   lastName: z.string().trim().min(1, "Le nom est requis"),
