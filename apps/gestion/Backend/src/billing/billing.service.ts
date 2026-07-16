@@ -5,6 +5,7 @@ import {
   applyBankTransferPayment,
   confirmReservationAfterPayment,
   connectMongo,
+  getBuildingModel,
   getClientAccountModel,
   getInvoiceModel,
   getReservationModel,
@@ -143,6 +144,7 @@ export class BillingService {
         startAt: pair.reservation.startAt,
         endAt: pair.reservation.endAt,
         totalTTC: pair.reservation.pricing.totalTTC,
+        buildingId: pair.reservation.buildingId.toString(),
       });
     }
 
@@ -207,10 +209,12 @@ export class BillingService {
     startAt: Date;
     endAt: Date;
     totalTTC: number;
+    buildingId: string;
   }) {
     const startAt = input.startAt.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
     const endAt = input.endAt.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
     const amount = `${(input.totalTTC / 100).toFixed(2).replace(".", ",")} €`;
+    const accessPlanHtml = await this.renderFullAccessPlanHtml(input.buildingId);
     const html = `
       <p>Bonjour,</p>
       <p>Nous avons bien reçu votre virement. Votre réservation
@@ -219,6 +223,7 @@ export class BillingService {
       <p><strong>${escapeHtml(input.spaceName)}</strong><br>
       Du ${escapeHtml(startAt)} au ${escapeHtml(endAt)}<br>
       Facture ${escapeHtml(input.invoiceReference)} — Montant ${escapeHtml(amount)}</p>
+      ${accessPlanHtml}
       <p>Merci et à bientôt au Cowork Prysme.</p>
     `;
     await this.mail.sendMail({
@@ -226,6 +231,50 @@ export class BillingService {
       subject: `Réservation confirmée — ${input.reservationReference} — Cowork Prysme`,
       html,
     });
+  }
+
+  /** Full access plan — only after payment is confirmed (never on pre-payment emails). */
+  private async renderFullAccessPlanHtml(buildingId: string): Promise<string> {
+    await connectMongo();
+    const Building = await getBuildingModel();
+    const building = await Building.findById(buildingId).lean().exec();
+    if (!building) {
+      return "";
+    }
+
+    const locality = `${building.address.zip.trim()} ${building.address.city.trim()}`.trim();
+    const addressFull = [building.address.street.trim(), locality].filter(Boolean).join(", ");
+    const items: string[] = [`<li><strong>Adresse :</strong> ${escapeHtml(addressFull)}</li>`];
+
+    const accessInfo = building.address.accessInfo?.trim();
+    if (accessInfo) {
+      items.push(
+        `<li><strong>Instructions d'accès :</strong> ${escapeHtml(accessInfo).replaceAll("\n", "<br>")}</li>`,
+      );
+    }
+    const buildingAccessCode = building.accessCode?.trim();
+    if (buildingAccessCode) {
+      items.push(`<li><strong>Code d'accès :</strong> ${escapeHtml(buildingAccessCode)}</li>`);
+    }
+    const conciergeAccessCode = building.concierge?.accessCode?.trim();
+    if (conciergeAccessCode) {
+      items.push(
+        `<li><strong>Code conciergerie :</strong> ${escapeHtml(conciergeAccessCode)}</li>`,
+      );
+    }
+    const conciergeUrl = building.concierge?.url?.trim();
+    if (conciergeUrl) {
+      items.push(
+        `<li><strong>Conciergerie :</strong> <a href="${escapeHtml(conciergeUrl)}">${escapeHtml(conciergeUrl)}</a></li>`,
+      );
+    }
+
+    return `
+      <p><strong>Plan d'accès — ${escapeHtml(building.name)}</strong></p>
+      <ul style="padding-left:20px;margin:8px 0 16px;">
+        ${items.join("\n        ")}
+      </ul>
+    `;
   }
 }
 

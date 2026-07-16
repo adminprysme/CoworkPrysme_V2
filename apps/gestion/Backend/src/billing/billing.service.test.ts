@@ -7,6 +7,7 @@ const {
   getInvoiceModelMock,
   getReservationModelMock,
   getClientAccountModelMock,
+  getBuildingModelMock,
 } = vi.hoisted(() => ({
   applyBankTransferPaymentMock: vi.fn(),
   confirmReservationAfterPaymentMock: vi.fn(),
@@ -14,6 +15,7 @@ const {
   getInvoiceModelMock: vi.fn(),
   getReservationModelMock: vi.fn(),
   getClientAccountModelMock: vi.fn(),
+  getBuildingModelMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -23,6 +25,7 @@ vi.mock("@coworkprysme/db", () => ({
   getInvoiceModel: getInvoiceModelMock,
   getReservationModel: getReservationModelMock,
   getClientAccountModel: getClientAccountModelMock,
+  getBuildingModel: getBuildingModelMock,
 }));
 
 import { BillingService } from "./billing.service.js";
@@ -44,6 +47,7 @@ describe("BillingService.markTransferReceivedByReference", () => {
       status: "awaiting_payment",
       awaitingPaymentMethod: "bank_transfer",
       clientAccountId: "cli1",
+      buildingId: "bldg1",
       spaceSnapshot: { name: "Salle A" },
       startAt: new Date("2026-07-20T10:00:00.000Z"),
       endAt: new Date("2026-07-20T12:00:00.000Z"),
@@ -73,6 +77,26 @@ describe("BillingService.markTransferReceivedByReference", () => {
         }),
       }),
     });
+    getBuildingModelMock.mockResolvedValue({
+      findById: () => ({
+        lean: () => ({
+          exec: async () => ({
+            name: "Cowork GERLAND",
+            accessCode: "BLDG-9911",
+            address: {
+              street: "39 Rue Saint-Jean de Dieu",
+              zip: "69007",
+              city: "Lyon",
+              accessInfo: "Sonner à CoworkPrysme",
+            },
+            concierge: {
+              url: "https://espaceclient.maconciergerie.eu/login",
+              accessCode: "229",
+            },
+          }),
+        }),
+      }),
+    });
     applyBankTransferPaymentMock.mockResolvedValue({
       applied: true,
       invoice: { ...invoice, reference: "PF-BT01" },
@@ -84,7 +108,7 @@ describe("BillingService.markTransferReceivedByReference", () => {
     });
   });
 
-  it("applies transfer payment, confirms reservation, and emails the client", async () => {
+  it("applies transfer payment, confirms reservation, and emails access plan", async () => {
     const result = await service.markTransferReceivedByReference("RES-2026-BT01", "staff1");
 
     expect(applyBankTransferPaymentMock).toHaveBeenCalledWith({
@@ -97,6 +121,13 @@ describe("BillingService.markTransferReceivedByReference", () => {
       reason: "bank_transfer_received",
     });
     expect(mail.sendMail).toHaveBeenCalled();
+    const mailCall = (mail.sendMail as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+      html: string;
+    };
+    expect(mailCall.html).toContain("Code conciergerie");
+    expect(mailCall.html).toContain("229");
+    expect(mailCall.html).toContain("BLDG-9911");
+    expect(mailCall.html).toContain("Sonner à CoworkPrysme");
     expect(result).toMatchObject({
       applied: true,
       transitioned: true,
