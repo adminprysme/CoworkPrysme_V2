@@ -351,6 +351,22 @@ export {
 } from "./booking-confirm.js";
 
 export {
+  BOOKING_PAYMENT_ERROR_CODES,
+  BookingPaymentErrorResponseSchema,
+  BookingPaymentStateSchema,
+  BookingPaymentStatusQuerySchema,
+  BookingPaymentStatusResponseSchema,
+  CreateBookingPaymentIntentRequestSchema,
+  CreateBookingPaymentIntentResponseSchema,
+  type BookingPaymentErrorCode,
+  type BookingPaymentState,
+  type BookingPaymentStatusQuery,
+  type BookingPaymentStatusResponse,
+  type CreateBookingPaymentIntentRequest,
+  type CreateBookingPaymentIntentResponse,
+} from "./booking-payment.js";
+
+export {
   DEFAULT_SERVICE_VAT_RATE,
   SERVICE_DESCRIPTION_MAX_LENGTH,
   SERVICE_LABEL_MAX_LENGTH,

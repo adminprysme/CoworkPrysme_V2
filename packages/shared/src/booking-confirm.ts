@@ -114,7 +114,6 @@ export const BookingConfirmResponseSchema = z.object({
   reservationReference: z.string(),
   invoiceReference: z.string(),
   paymentMethod: BookingPaymentMethodSchema,
-  cardPaymentStubMessage: z.string().optional(),
 });
 
 export type BookingCheckEmailRequest = z.infer<typeof BookingCheckEmailRequestSchema>;
