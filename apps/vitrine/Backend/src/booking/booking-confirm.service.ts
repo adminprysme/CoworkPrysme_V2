@@ -196,7 +196,7 @@ export class BookingConfirmService {
     const buildingAccess = await this.resolveBuildingAccess((space as SpaceLean).buildingId);
 
     await this.sendConfirmationEmails({
-      email: result.clientEmail,
+      clientEmail: result.clientEmail,
       isNewAccount: result.isNewAccount,
       reservationReference: result.reservation.reference,
       invoiceReference: result.invoiceReference,
@@ -231,8 +231,12 @@ export class BookingConfirmService {
     return buildingToEmailAccess(building);
   }
 
+  /**
+   * Client transactional emails only.
+   * `building.contactEmail` may appear in the HTML body (display) but must never be used as SMTP `to`.
+   */
   private async sendConfirmationEmails(input: {
-    email: string;
+    clientEmail: string;
     isNewAccount: boolean;
     reservationReference: string;
     invoiceReference: string;
@@ -242,6 +246,8 @@ export class BookingConfirmService {
     pricing: Awaited<ReturnType<BookingPriceService["computePrice"]>>;
     building: BookingConfirmationBuildingAccess;
   }) {
+    const clientEmail = input.clientEmail.trim().toLowerCase();
+
     const bookingEmail = renderBookingConfirmationEmail({
       reservationReference: input.reservationReference,
       invoiceReference: input.invoiceReference,
@@ -258,16 +264,17 @@ export class BookingConfirmService {
       building: input.building,
     });
 
+    // Permanent rule: building contact email is display-only, never a send recipient.
     await this.mail.sendMail({
-      to: input.email,
+      to: clientEmail,
       subject: bookingEmail.subject,
       html: bookingEmail.html,
     });
 
     if (input.isNewAccount) {
-      const accountEmail = renderAccountCreatedEmail({ email: input.email });
+      const accountEmail = renderAccountCreatedEmail({ email: clientEmail });
       await this.mail.sendMail({
-        to: input.email,
+        to: clientEmail,
         subject: accountEmail.subject,
         html: accountEmail.html,
       });
