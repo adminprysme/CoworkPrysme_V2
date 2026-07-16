@@ -16,12 +16,15 @@ export const TIME_OF_DAY_SCHEMA = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 
   message: "Invalid HH:mm time",
 });
 
+export const BUILDING_ACCESS_INFO_MAX_LENGTH = 2000;
+
 /** API / form address — uses postalCode (not zip). */
 export const BuildingAddressInputSchema = z.object({
   street: z.string().trim().min(1),
   postalCode: z.string().trim().min(1),
   city: z.string().trim().min(1),
   country: z.string().trim().min(1),
+  accessInfo: z.string().trim().max(BUILDING_ACCESS_INFO_MAX_LENGTH).optional(),
 });
 
 export const BuildingFloorInputSchema = z.object({
