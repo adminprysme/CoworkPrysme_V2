@@ -60,10 +60,10 @@ export function BookingPaymentStep({ onBack, onConfirm, loading, error }: Bookin
             .join(" ")}
           onClick={() => setPaymentMethod("card")}
         >
-          <p className={styles.paymentOptionTitle}>Payer par carte</p>
+          <p className={styles.paymentOptionTitle}>Payer par carte maintenant</p>
           <p className={styles.paymentOptionText}>
-            Le paiement par carte sera bientôt disponible. Votre réservation sera enregistrée avec
-            une facture proforma en attendant.
+            La réservation est confirmée immédiatement, puis vous saisissez votre carte dans un
+            formulaire sécurisé Stripe (Payment Element).
           </p>
         </button>
       </div>

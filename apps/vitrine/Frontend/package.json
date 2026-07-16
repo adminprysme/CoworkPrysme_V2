@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@coworkprysme/shared": "workspace:*",
+    "@stripe/react-stripe-js": "^6.8.0",
+    "@stripe/stripe-js": "^9.10.0",
     "leaflet": "^1.9.4",
     "next": "^16.2.9",
     "react": "^19.2.7",
