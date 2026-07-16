@@ -346,6 +346,24 @@ Ce champ sert uniquement à l'**affichage** dans le corps des e-mails clients (b
 - **Cible future** : page Gestion → Permissions — marquer un `staffProfile` avec la permission « Reçoit les emails de réservation » + `scope.buildingIds`. Remplacer **uniquement** le corps de cette fonction (requête staffProfiles) ; ne pas toucher au template ni à l'appelant.
 - Si la liste est vide : log d'avertissement, **pas** d'échec du flux de confirmation.
 
+## Paiement Stripe Phase 4a (vitrine-api + vitrine-web)
+
+Flux carte : confirm atomique Phase 3 → `POST /booking/payments/intent` → Payment Element → confirmation **uniquement** via webhook `payment_intent.succeeded` (signature `STRIPE_WEBHOOK_SECRET`). La facture reste `type: "proforma"` ; seuls `paidTotal`, `status` et la collection `payments` évoluent.
+
+### Variables d'environnement
+
+| Variable                             | App         | Rôle                            |
+| ------------------------------------ | ----------- | ------------------------------- |
+| `STRIPE_SECRET_KEY`                  | vitrine-api | Création PaymentIntent          |
+| `STRIPE_WEBHOOK_SECRET`              | vitrine-api | Vérification signature webhook  |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | vitrine-web | Payment Element (iframe Stripe) |
+
+Local : `stripe listen --forward-to localhost:8002/stripe/webhook`.
+
+### Dette de sécurité — références séquentielles (à durcir)
+
+`POST /booking/payments/intent` et `GET /booking/payments/status` s'appuient sur `reservationReference` + `invoiceReference` (+ TTL facture 24 h), **sans token signé**. Les références (`RES-2026-00001`, …) sont **devinables** : un tiers pourrait interroger statut / montant d'une autre facture. Aucune donnée carte n'est exposée ; payer la facture d'autrui ne lui nuit pas — fuite d'information mineure. **À durcir** : token signé propre à chaque réservation, renvoyé à la confirm et exigé sur intent/status.
+
 ## Qualité
 
 - TypeScript strict, ESLint 9, Prettier, Husky + Commitlint
@@ -368,4 +386,5 @@ pnpm --filter @coworkprysme/db test
 - Authentification staff via `prysma_bdd`
 - Moteur facturation / codes promo (schémas en place, logique à venir)
 - Module Permissions gestion : permission « Reçoit les emails de réservation » + remplacement du stub `resolveBookingNotificationRecipients`
+- Durcir auth paiement carte : token signé par réservation (remplacer refs séquentielles seules)
 - CI/CD automatisé
