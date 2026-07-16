@@ -24,6 +24,7 @@ import {
 import type Stripe from "stripe";
 
 import { createStripeClient, loadStripeConfig } from "./stripe.config.js";
+import type { BookingEmailsService } from "../booking/booking-emails.service.js";
 
 /** Payment intent / status may only target invoices issued within this window (Phase 4a). */
 export const BOOKING_PAYMENT_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
@@ -37,6 +38,8 @@ export class BookingPaymentService {
   private readonly logger = new Logger(BookingPaymentService.name);
   private stripe: Stripe | null = null;
   private webhookSecret: string | null = null;
+
+  constructor(private readonly bookingEmails: BookingEmailsService) {}
 
   private ensureStripe(): Stripe {
     if (this.stripe && this.webhookSecret) {
@@ -207,6 +210,12 @@ export class BookingPaymentService {
         this.logger.log(
           `Reservation after card payment id=${reservationId} transitioned=${confirmed.transitioned} status=${confirmed.reservation.status}`,
         );
+        if (confirmed.transitioned) {
+          await this.bookingEmails.sendEmailsAfterCardPayment({
+            reservationId,
+            invoiceReference: result.invoice.reference,
+          });
+        }
       } else {
         this.logger.error(
           `payment_intent.succeeded ${pi.id}: no reservationId to confirm after payment`,

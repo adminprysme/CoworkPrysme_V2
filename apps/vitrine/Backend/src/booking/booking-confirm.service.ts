@@ -5,12 +5,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import type { Building, Service, Space } from "@coworkprysme/db";
+import type { Service, Space } from "@coworkprysme/db";
 import {
   confirmBookingCheckout,
   connectMongo,
   EmailAlreadyRegisteredError,
-  getBuildingModel,
   getDiscountCodeModel,
   getServiceModel,
   InvalidCredentialsError,
@@ -28,22 +27,13 @@ import {
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
-import { MailService } from "../mail/mail.service.js";
-import { resolveBookingNotificationRecipients } from "../mail/resolve-booking-notification-recipients.js";
-import {
-  buildingToEmailAccess,
-  renderAccountCreatedEmail,
-  renderBookingConfirmationEmail,
-  renderStaffBookingNotificationEmail,
-  type BookingConfirmationBuildingAccess,
-} from "../mail/templates/booking-emails.js";
 import { AvailabilityService } from "./availability.service.js";
+import { BookingEmailsService } from "./booking-emails.service.js";
 import { BookingPriceService } from "./booking-price.service.js";
 import { toObjectId } from "./object-id.util.js";
 
 type ServiceLean = Service & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
-type BuildingLean = Building & { _id: Types.ObjectId };
 
 @Injectable()
 export class BookingConfirmService {
@@ -52,7 +42,7 @@ export class BookingConfirmService {
   constructor(
     private readonly availability: AvailabilityService,
     private readonly bookingPrice: BookingPriceService,
-    private readonly mail: MailService,
+    private readonly bookingEmails: BookingEmailsService,
   ) {}
 
   private async resolveDiscountCodeId(code?: string) {
@@ -195,37 +185,52 @@ export class BookingConfirmService {
       this.mapConfirmError(error);
     }
 
-    const buildingAccess = await this.resolveBuildingAccess((space as SpaceLean).buildingId);
-    const buildingId = (space as SpaceLean).buildingId.toString();
-    const clientName = input.identity
-      ? `${input.identity.firstName} ${input.identity.lastName}`.trim()
-      : null;
+    // Card: emails only after payment_intent.succeeded. Proforma: send now.
+    if (input.paymentMethod === "proforma") {
+      const buildingAccess = await this.bookingEmails.resolveBuildingAccess(
+        (space as SpaceLean).buildingId,
+      );
+      const buildingId = (space as SpaceLean).buildingId.toString();
+      const clientName = input.identity
+        ? `${input.identity.firstName} ${input.identity.lastName}`.trim()
+        : null;
 
-    await this.sendConfirmationEmails({
-      clientEmail: result.clientEmail,
-      isNewAccount: result.isNewAccount,
-      reservationReference: result.reservation.reference,
-      invoiceReference: result.invoiceReference,
-      spaceName: space.name,
-      startAt: input.startAt,
-      endAt: input.endAt,
-      pricing,
-      building: buildingAccess,
-    });
+      await this.bookingEmails.sendClientConfirmationEmails({
+        clientEmail: result.clientEmail,
+        isNewAccount: result.isNewAccount,
+        reservationReference: result.reservation.reference,
+        invoiceReference: result.invoiceReference,
+        spaceName: space.name,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        totalTTC: pricing.totalTTC,
+        lines: pricing.lines.map((line) => ({
+          label: line.label,
+          qty: line.qty,
+          totalTTC: line.totalTTC,
+        })),
+        vatBreakdown: pricing.vatBreakdown,
+        building: buildingAccess,
+      });
 
-    await this.sendStaffBookingNotifications({
-      buildingId,
-      clientEmail: result.clientEmail,
-      clientName,
-      reservationReference: result.reservation.reference,
-      invoiceReference: result.invoiceReference,
-      spaceName: space.name,
-      buildingName: buildingAccess.name,
-      startAt: input.startAt,
-      endAt: input.endAt,
-      totalTTC: pricing.totalTTC,
-      paymentMethod: input.paymentMethod,
-    });
+      await this.bookingEmails.sendStaffBookingNotifications({
+        buildingId,
+        clientEmail: result.clientEmail,
+        clientName,
+        reservationReference: result.reservation.reference,
+        invoiceReference: result.invoiceReference,
+        spaceName: space.name,
+        buildingName: buildingAccess.name,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        totalTTC: pricing.totalTTC,
+        paymentMethod: input.paymentMethod,
+      });
+    } else {
+      this.logger.log(
+        `Card checkout ${result.reservation.reference}: emails deferred until payment succeeds`,
+      );
+    }
 
     return BookingConfirmResponseSchema.parse({
       reservationReference: result.reservation.reference,
@@ -233,120 +238,6 @@ export class BookingConfirmService {
       paymentMethod: input.paymentMethod,
       reservationStatus: result.reservation.status,
     });
-  }
-
-  private async resolveBuildingAccess(
-    buildingId: Types.ObjectId,
-  ): Promise<BookingConfirmationBuildingAccess> {
-    await connectMongo();
-    const Building = await getBuildingModel();
-    const building = (await Building.findById(buildingId).lean().exec()) as BuildingLean | null;
-    if (!building) {
-      throw new NotFoundException({
-        code: BOOKING_CONFIRM_ERROR_CODES.VALIDATION_ERROR,
-        message: "Bâtiment introuvable",
-      });
-    }
-    return buildingToEmailAccess(building);
-  }
-
-  /**
-   * Client transactional emails only.
-   * `building.contactEmail` may appear in the HTML body (display) but must never be used as SMTP `to`.
-   */
-  private async sendConfirmationEmails(input: {
-    clientEmail: string;
-    isNewAccount: boolean;
-    reservationReference: string;
-    invoiceReference: string;
-    spaceName: string;
-    startAt: string;
-    endAt: string;
-    pricing: Awaited<ReturnType<BookingPriceService["computePrice"]>>;
-    building: BookingConfirmationBuildingAccess;
-  }) {
-    const clientEmail = input.clientEmail.trim().toLowerCase();
-
-    const bookingEmail = renderBookingConfirmationEmail({
-      reservationReference: input.reservationReference,
-      invoiceReference: input.invoiceReference,
-      spaceName: input.spaceName,
-      startAt: new Date(input.startAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }),
-      endAt: new Date(input.endAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }),
-      totalTTC: input.pricing.totalTTC,
-      lines: input.pricing.lines.map((line) => ({
-        label: line.label,
-        qty: line.qty,
-        totalTTC: line.totalTTC,
-      })),
-      vatBreakdown: input.pricing.vatBreakdown,
-      building: input.building,
-    });
-
-    // Permanent rule: building contact email is display-only, never a send recipient.
-    await this.mail.sendMail({
-      to: clientEmail,
-      subject: bookingEmail.subject,
-      html: bookingEmail.html,
-    });
-
-    if (input.isNewAccount) {
-      const accountEmail = renderAccountCreatedEmail({ email: clientEmail });
-      await this.mail.sendMail({
-        to: clientEmail,
-        subject: accountEmail.subject,
-        html: accountEmail.html,
-      });
-    }
-  }
-
-  /**
-   * Staff notification — recipients ONLY via resolveBookingNotificationRecipients.
-   * Never uses buildings.email as SMTP destination.
-   */
-  private async sendStaffBookingNotifications(input: {
-    buildingId: string;
-    clientEmail: string;
-    clientName: string | null;
-    reservationReference: string;
-    invoiceReference: string;
-    spaceName: string;
-    buildingName: string;
-    startAt: string;
-    endAt: string;
-    totalTTC: number;
-    paymentMethod: "proforma" | "card";
-  }) {
-    const recipients = await resolveBookingNotificationRecipients(input.buildingId);
-    if (recipients.length === 0) {
-      this.logger.warn(
-        `aucun destinataire de notification configuré pour ce bâtiment (${input.buildingId})`,
-      );
-      return;
-    }
-
-    const startAt = new Date(input.startAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
-    const endAt = new Date(input.endAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
-    const staffEmail = renderStaffBookingNotificationEmail({
-      reservationReference: input.reservationReference,
-      invoiceReference: input.invoiceReference,
-      spaceName: input.spaceName,
-      buildingName: input.buildingName,
-      startAt,
-      endAt,
-      totalTTC: input.totalTTC,
-      clientEmail: input.clientEmail,
-      clientName: input.clientName,
-      paymentMethod: input.paymentMethod,
-    });
-
-    for (const to of recipients) {
-      await this.mail.sendMail({
-        to,
-        subject: staffEmail.subject,
-        html: staffEmail.html,
-      });
-    }
   }
 }
 

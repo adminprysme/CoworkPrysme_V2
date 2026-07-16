@@ -10,6 +10,7 @@ const {
   paymentIntentsCreateMock,
   constructEventMock,
   reservationUpdateOneMock,
+  sendEmailsAfterCardPaymentMock,
 } = vi.hoisted(() => ({
   applyStripeCardPaymentMock: vi.fn(),
   confirmReservationAfterCardPaymentMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   paymentIntentsCreateMock: vi.fn(),
   constructEventMock: vi.fn(),
   reservationUpdateOneMock: vi.fn(),
+  sendEmailsAfterCardPaymentMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -48,6 +50,7 @@ vi.mock("./stripe.config.js", () => ({
 
 import { BookingPaymentService } from "./booking-payment.service.js";
 import { StripeWebhookController } from "./stripe-webhook.controller.js";
+import type { BookingEmailsService } from "../booking/booking-emails.service.js";
 
 const RESERVATION_ID = "507f1f77bcf86cd799439011";
 const INVOICE_ID = "507f1f77bcf86cd799439012";
@@ -93,7 +96,11 @@ describe("Stripe booking payment", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new BookingPaymentService();
+    sendEmailsAfterCardPaymentMock.mockResolvedValue(undefined);
+    const bookingEmails = {
+      sendEmailsAfterCardPayment: sendEmailsAfterCardPaymentMock,
+    } as unknown as BookingEmailsService;
+    service = new BookingPaymentService(bookingEmails);
     mockInvoicePair(4800);
   });
 
@@ -110,12 +117,13 @@ describe("Stripe booking payment", () => {
     expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
   });
 
-  it("applies payment_intent.succeeded and confirms awaiting_payment reservation", async () => {
+  it("applies payment_intent.succeeded, confirms reservation, and sends deferred emails", async () => {
     applyStripeCardPaymentMock.mockResolvedValue({
       applied: true,
       invoice: {
         type: "proforma",
         status: "paid",
+        reference: "PF-2026-00042",
         totals: { paidTotal: 4800, balanceDue: 0 },
         reservationId: { toString: () => RESERVATION_ID },
       },
@@ -151,6 +159,46 @@ describe("Stripe booking payment", () => {
     expect(confirmReservationAfterCardPaymentMock).toHaveBeenCalledWith({
       reservationId: RESERVATION_ID,
     });
+    expect(sendEmailsAfterCardPaymentMock).toHaveBeenCalledWith({
+      reservationId: RESERVATION_ID,
+      invoiceReference: "PF-2026-00042",
+    });
+  });
+
+  it("does not send emails when payment_intent.succeeded is an idempotent replay", async () => {
+    applyStripeCardPaymentMock.mockResolvedValue({
+      applied: false,
+      invoice: {
+        type: "proforma",
+        status: "paid",
+        reference: "PF-2026-00042",
+        totals: { paidTotal: 4800, balanceDue: 0 },
+        reservationId: { toString: () => RESERVATION_ID },
+      },
+      payment: { method: "card" },
+    });
+    confirmReservationAfterCardPaymentMock.mockResolvedValue({
+      transitioned: false,
+      reservation: { status: "confirmed", reference: "RES-2026-00042" },
+    });
+
+    await service.handleWebhookEvent({
+      id: "evt_replay",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_test_ok",
+          amount: 4800,
+          amount_received: 4800,
+          metadata: {
+            invoiceId: INVOICE_ID,
+            reservationId: RESERVATION_ID,
+          },
+        },
+      },
+    } as never);
+
+    expect(sendEmailsAfterCardPaymentMock).not.toHaveBeenCalled();
   });
 
   it("creates PaymentIntent amount from invoice.balanceDue, ignoring any client amount", async () => {
@@ -178,7 +226,7 @@ describe("Stripe booking payment", () => {
     expect(reservationUpdateOneMock).toHaveBeenCalled();
   });
 
-  it("logs payment_intent.payment_failed without applying a payment or confirming", async () => {
+  it("logs payment_intent.payment_failed without applying a payment, confirming, or emailing", async () => {
     await service.handleWebhookEvent({
       id: "evt_failed",
       type: "payment_intent.payment_failed",
@@ -192,5 +240,6 @@ describe("Stripe booking payment", () => {
 
     expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
     expect(confirmReservationAfterCardPaymentMock).not.toHaveBeenCalled();
+    expect(sendEmailsAfterCardPaymentMock).not.toHaveBeenCalled();
   });
 });

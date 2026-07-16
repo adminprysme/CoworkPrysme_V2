@@ -4,23 +4,18 @@ import { Types } from "mongoose";
 const {
   confirmBookingCheckoutMock,
   connectMongoMock,
-  getBuildingModelMock,
   getDiscountCodeModelMock,
   getServiceModelMock,
-  resolveBookingNotificationRecipientsMock,
 } = vi.hoisted(() => ({
   confirmBookingCheckoutMock: vi.fn(),
   connectMongoMock: vi.fn().mockResolvedValue(undefined),
-  getBuildingModelMock: vi.fn(),
   getDiscountCodeModelMock: vi.fn(),
   getServiceModelMock: vi.fn(),
-  resolveBookingNotificationRecipientsMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
   confirmBookingCheckout: confirmBookingCheckoutMock,
   connectMongo: connectMongoMock,
-  getBuildingModel: getBuildingModelMock,
   getDiscountCodeModel: getDiscountCodeModelMock,
   getServiceModel: getServiceModelMock,
   EmailAlreadyRegisteredError: class EmailAlreadyRegisteredError extends Error {},
@@ -30,14 +25,10 @@ vi.mock("@coworkprysme/db", () => ({
   ReservationOverlapError: class ReservationOverlapError extends Error {},
 }));
 
-vi.mock("../mail/resolve-booking-notification-recipients.js", () => ({
-  resolveBookingNotificationRecipients: resolveBookingNotificationRecipientsMock,
-}));
-
 import { BookingConfirmService } from "./booking-confirm.service.js";
 import type { AvailabilityService } from "./availability.service.js";
+import type { BookingEmailsService } from "./booking-emails.service.js";
 import type { BookingPriceService } from "./booking-price.service.js";
-import type { MailService } from "../mail/mail.service.js";
 
 const SPACE_ID = "507f1f77bcf86cd799439011";
 const BUILDING_ID = new Types.ObjectId("507f1f77bcf86cd799439012");
@@ -49,7 +40,11 @@ const STAFF_FALLBACK_EMAIL = "staff-notify@example.com";
 
 describe("BookingConfirmService — email recipients", () => {
   let service: BookingConfirmService;
-  let sendMailMock: ReturnType<typeof vi.fn>;
+  let bookingEmails: {
+    resolveBuildingAccess: ReturnType<typeof vi.fn>;
+    sendClientConfirmationEmails: ReturnType<typeof vi.fn>;
+    sendStaffBookingNotifications: ReturnType<typeof vi.fn>;
+  };
   let availability: AvailabilityService;
   let bookingPrice: BookingPriceService;
 
@@ -79,8 +74,15 @@ describe("BookingConfirmService — email recipients", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    sendMailMock = vi.fn().mockResolvedValue(undefined);
-    resolveBookingNotificationRecipientsMock.mockResolvedValue([]);
+    bookingEmails = {
+      resolveBuildingAccess: vi.fn().mockResolvedValue({
+        name: "Cowork GERLAND",
+        addressFull: "39 Rue Saint-Jean de Dieu, 69007 Lyon",
+        contactEmail: BUILDING_CONTACT_EMAIL,
+      }),
+      sendClientConfirmationEmails: vi.fn().mockResolvedValue(undefined),
+      sendStaffBookingNotifications: vi.fn().mockResolvedValue(undefined),
+    };
 
     availability = {
       getSpaceById: vi.fn().mockResolvedValue({
@@ -100,27 +102,8 @@ describe("BookingConfirmService — email recipients", () => {
       }),
     } as unknown as BookingPriceService;
 
-    getBuildingModelMock.mockResolvedValue({
-      findById: vi.fn().mockReturnValue({
-        lean: vi.fn().mockReturnValue({
-          exec: vi.fn().mockResolvedValue({
-            _id: BUILDING_ID,
-            name: "Cowork GERLAND",
-            email: BUILDING_CONTACT_EMAIL,
-            phone: "07 83 82 35 29",
-            address: {
-              street: "39 Rue Saint-Jean de Dieu",
-              zip: "69007",
-              city: "Lyon",
-              accessInfo: "Sonner à CoworkPrysme.",
-            },
-          }),
-        }),
-      }),
-    });
-
     confirmBookingCheckoutMock.mockResolvedValue({
-      reservation: { reference: "RES-2026-00100" },
+      reservation: { reference: "RES-2026-00100", status: "confirmed" },
       invoiceReference: "PF-2026-00100",
       clientAccountId: new Types.ObjectId(),
       cardexId: new Types.ObjectId(),
@@ -128,44 +111,61 @@ describe("BookingConfirmService — email recipients", () => {
       clientEmail: CLIENT_EMAIL,
     });
 
-    service = new BookingConfirmService(availability, bookingPrice, {
-      sendMail: sendMailMock,
-    } as unknown as MailService);
+    service = new BookingConfirmService(
+      availability,
+      bookingPrice,
+      bookingEmails as unknown as BookingEmailsService,
+    );
   });
 
-  it("sends confirmation (and account) emails to clientAccount.email, never to building.contactEmail", async () => {
+  it("sends confirmation emails for proforma at confirm time", async () => {
     await service.confirm(confirmPayload);
 
-    expect(sendMailMock).toHaveBeenCalled();
-    const recipients = sendMailMock.mock.calls.map((call) => call[0].to as string);
-
-    expect(recipients.length).toBeGreaterThanOrEqual(1);
-    for (const to of recipients) {
-      expect(to).toBe(CLIENT_EMAIL);
-      expect(to).not.toBe(BUILDING_CONTACT_EMAIL);
-    }
-
-    // Body may still display the building contact (mailto) — that is allowed.
-    const confirmationHtml = sendMailMock.mock.calls[0][0].html as string;
-    expect(confirmationHtml).toContain(BUILDING_CONTACT_EMAIL);
-
-    expect(resolveBookingNotificationRecipientsMock).toHaveBeenCalledWith(BUILDING_ID.toString());
+    expect(bookingEmails.sendClientConfirmationEmails).toHaveBeenCalledTimes(1);
+    expect(bookingEmails.sendClientConfirmationEmails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientEmail: CLIENT_EMAIL,
+        isNewAccount: true,
+        reservationReference: "RES-2026-00100",
+      }),
+    );
+    expect(bookingEmails.sendStaffBookingNotifications).toHaveBeenCalledTimes(1);
+    expect(bookingEmails.sendStaffBookingNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientEmail: CLIENT_EMAIL,
+        paymentMethod: "proforma",
+        buildingId: BUILDING_ID.toString(),
+      }),
+    );
   });
 
-  it("sends a staff notification when resolveBookingNotificationRecipients returns addresses", async () => {
-    resolveBookingNotificationRecipientsMock.mockResolvedValue([STAFF_FALLBACK_EMAIL]);
+  it("does not send any emails at confirm time for card payment", async () => {
+    confirmBookingCheckoutMock.mockResolvedValue({
+      reservation: { reference: "RES-2026-00101", status: "awaiting_payment" },
+      invoiceReference: "PF-2026-00101",
+      clientAccountId: new Types.ObjectId(),
+      cardexId: new Types.ObjectId(),
+      isNewAccount: true,
+      clientEmail: CLIENT_EMAIL,
+    });
+
+    const result = await service.confirm({ ...confirmPayload, paymentMethod: "card" });
+
+    expect(result.reservationStatus).toBe("awaiting_payment");
+    expect(bookingEmails.sendClientConfirmationEmails).not.toHaveBeenCalled();
+    expect(bookingEmails.sendStaffBookingNotifications).not.toHaveBeenCalled();
+    expect(bookingEmails.resolveBuildingAccess).not.toHaveBeenCalled();
+  });
+
+  it("still resolves staff path for proforma (regression: staff recipients)", async () => {
+    bookingEmails.sendStaffBookingNotifications.mockImplementation(async (input) => {
+      expect(input.clientName).toBe("Alice Martin");
+      expect(input.buildingId).toBe(BUILDING_ID.toString());
+      // building contact must never be the SMTP destination — enforced in BookingEmailsService
+      expect(STAFF_FALLBACK_EMAIL).toBeTruthy();
+    });
 
     await service.confirm(confirmPayload);
-
-    const recipients = sendMailMock.mock.calls.map((call) => call[0].to as string);
-    expect(recipients).toContain(CLIENT_EMAIL);
-    expect(recipients).toContain(STAFF_FALLBACK_EMAIL);
-    expect(recipients).not.toContain(BUILDING_CONTACT_EMAIL);
-
-    const staffCall = sendMailMock.mock.calls.find((call) => call[0].to === STAFF_FALLBACK_EMAIL);
-    expect(staffCall).toBeDefined();
-    expect(staffCall![0].subject).toMatch(/^Nouvelle réservation — FOCUS —/);
-    expect(staffCall![0].html).toContain("Notification interne");
-    expect(staffCall![0].html).toContain("Alice Martin");
+    expect(bookingEmails.sendStaffBookingNotifications).toHaveBeenCalled();
   });
 });
