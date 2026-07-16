@@ -67,6 +67,15 @@ export const BookingPaymentStatusResponseSchema = z.object({
   paidTotal: z.number().int().min(0),
   balanceDue: z.number().int().min(0),
   paymentState: BookingPaymentStateSchema,
+  /** Real reservation.status — UI must follow this, not display-only copy. */
+  reservationStatus: z.enum([
+    "pending",
+    "awaiting_payment",
+    "confirmed",
+    "cancelled",
+    "completed",
+    "no_show",
+  ]),
 });
 
 export type BookingPaymentStatusResponse = z.infer<typeof BookingPaymentStatusResponseSchema>;

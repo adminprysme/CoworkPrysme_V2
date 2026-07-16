@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import {
   applyStripeCardPayment,
+  confirmReservationAfterCardPayment,
   connectMongo,
   getInvoiceModel,
   getReservationModel,
@@ -72,7 +73,25 @@ export class BookingPaymentService {
     input: CreateBookingPaymentIntentRequest,
   ): Promise<CreateBookingPaymentIntentResponse> {
     const stripe = this.ensureStripe();
-    const { invoice, reservationReference } = await this.loadPayableInvoicePair(input);
+    const { invoice, reservation } = await this.loadPayableInvoicePair(input);
+
+    if (reservation.status !== "awaiting_payment" && reservation.status !== "confirmed") {
+      throw new BadRequestException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_NOT_PAYABLE,
+        message: "Cette réservation n'accepte plus de paiement carte",
+      });
+    }
+
+    if (
+      reservation.status === "awaiting_payment" &&
+      reservation.awaitingPaymentExpiresAt &&
+      new Date(reservation.awaitingPaymentExpiresAt).getTime() <= Date.now()
+    ) {
+      throw new BadRequestException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_EXPIRED,
+        message: "Le délai de paiement pour cette réservation est dépassé",
+      });
+    }
 
     // Amount ALWAYS from cowork_bdd invoice — never trust a client amount.
     const amount = invoice.totals.balanceDue;
@@ -93,7 +112,7 @@ export class BookingPaymentService {
           invoiceId: invoice._id.toString(),
           invoiceReference: invoice.reference,
           reservationId: invoice.reservationId?.toString() ?? "",
-          reservationReference,
+          reservationReference: reservation.reference,
         },
       },
       {
@@ -108,6 +127,13 @@ export class BookingPaymentService {
       });
     }
 
+    // Persist PI id so expiry can cancel it on Stripe.
+    const Reservation = await getReservationModel();
+    await Reservation.updateOne(
+      { _id: reservation._id },
+      { $set: { stripePaymentIntentId: paymentIntent.id } },
+    ).exec();
+
     return {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
@@ -120,7 +146,7 @@ export class BookingPaymentService {
     reservationReference: string;
     invoiceReference: string;
   }): Promise<BookingPaymentStatusResponse> {
-    const { invoice } = await this.loadInvoicePair(input, { requirePayable: false });
+    const { invoice, reservation } = await this.loadInvoicePair(input, { requirePayable: false });
 
     const paymentState = this.mapPaymentState(invoice);
 
@@ -132,6 +158,7 @@ export class BookingPaymentService {
       paidTotal: invoice.totals.paidTotal,
       balanceDue: invoice.totals.balanceDue,
       paymentState,
+      reservationStatus: reservation.status as BookingPaymentStatusResponse["reservationStatus"],
     };
   }
 
@@ -172,6 +199,19 @@ export class BookingPaymentService {
       this.logger.log(
         `Applied Stripe payment pi=${pi.id} invoice=${invoiceId} applied=${result.applied} status=${result.invoice.status} type=${result.invoice.type}`,
       );
+
+      const reservationId =
+        pi.metadata?.reservationId?.trim() || result.invoice.reservationId?.toString();
+      if (reservationId) {
+        const confirmed = await confirmReservationAfterCardPayment({ reservationId });
+        this.logger.log(
+          `Reservation after card payment id=${reservationId} transitioned=${confirmed.transitioned} status=${confirmed.reservation.status}`,
+        );
+      } else {
+        this.logger.error(
+          `payment_intent.succeeded ${pi.id}: no reservationId to confirm after payment`,
+        );
+      }
     } catch (error) {
       if (error instanceof InvoiceNotFoundError) {
         this.logger.error(`payment_intent.succeeded ${pi.id}: invoice not found ${invoiceId}`);
@@ -256,6 +296,7 @@ export class BookingPaymentService {
 
     return {
       invoice,
+      reservation,
       reservationReference: reservation.reference as string,
     };
   }

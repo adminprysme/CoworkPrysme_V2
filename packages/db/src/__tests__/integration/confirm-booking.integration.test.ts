@@ -148,6 +148,8 @@ describe("integration: confirm booking checkout (replica set)", () => {
     expect(result.isNewAccount).toBe(true);
     expect(result.reservation.reference).toMatch(/^RES-2026-\d{5}$/);
     expect(result.invoiceReference).toMatch(/^PF-2026-\d{5}$/);
+    expect(result.reservation.status).toBe("confirmed");
+    expect(result.reservation.awaitingPaymentExpiresAt).toBeUndefined();
 
     const ClientAccount = await getClientAccountModel();
     const Cardex = await getCardexModel();
@@ -162,6 +164,45 @@ describe("integration: confirm booking checkout (replica set)", () => {
     const account = await ClientAccount.findOne({ email: "client@example.com" }).lean().exec();
     expect(account?.cardexId?.toString()).toBe(result.cardexId.toString());
     expect(account?.marketingConsent).toEqual({ accepted: false });
+  });
+
+  it("creates card checkout as awaiting_payment with expiry and blocks the slot", async () => {
+    const spaceId = new Types.ObjectId();
+    const buildingId = new Types.ObjectId();
+    const sessionId = "card-awaiting-session";
+    const startAt = new Date("2026-07-01T10:00:00.000Z");
+    const endAt = new Date("2026-07-01T11:00:00.000Z");
+    const now = new Date("2026-07-01T09:00:00.000Z");
+
+    const lock = await acquireLock({ spaceId, startAt, endAt, sessionId });
+    const result = await confirmBookingCheckout(
+      buildConfirmInput(lock._id, sessionId, spaceId, buildingId, {
+        paymentMethod: "card",
+        email: "card@example.com",
+        now,
+      }),
+    );
+
+    expect(result.reservation.status).toBe("awaiting_payment");
+    expect(result.reservation.awaitingPaymentExpiresAt?.getTime()).toBe(
+      now.getTime() + 45 * 60 * 1000,
+    );
+
+    const otherSession = "other-overlap-session";
+    const otherLock = await acquireLock({
+      spaceId,
+      startAt,
+      endAt,
+      sessionId: otherSession,
+    });
+
+    await expect(
+      confirmBookingCheckout(
+        buildConfirmInput(otherLock._id, otherSession, spaceId, buildingId, {
+          email: "other@example.com",
+        }),
+      ),
+    ).rejects.toBeInstanceOf(ReservationOverlapError);
   });
 
   it("persists opted-in marketing consent on new client account", async () => {

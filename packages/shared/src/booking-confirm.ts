@@ -114,6 +114,15 @@ export const BookingConfirmResponseSchema = z.object({
   reservationReference: z.string(),
   invoiceReference: z.string(),
   paymentMethod: BookingPaymentMethodSchema,
+  /** Real reservation.status after atomic create (awaiting_payment for card). */
+  reservationStatus: z.enum([
+    "pending",
+    "awaiting_payment",
+    "confirmed",
+    "cancelled",
+    "completed",
+    "no_show",
+  ]),
 });
 
 export type BookingCheckEmailRequest = z.infer<typeof BookingCheckEmailRequestSchema>;

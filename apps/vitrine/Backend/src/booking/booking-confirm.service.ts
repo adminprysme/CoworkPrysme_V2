@@ -231,6 +231,7 @@ export class BookingConfirmService {
       reservationReference: result.reservation.reference,
       invoiceReference: result.invoiceReference,
       paymentMethod: input.paymentMethod,
+      reservationStatus: result.reservation.status,
     });
   }
 

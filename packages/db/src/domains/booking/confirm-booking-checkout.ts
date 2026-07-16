@@ -12,6 +12,7 @@ import {
   LockNotAvailableError,
   ReservationOverlapError,
 } from "../../lib/errors.js";
+import { AWAITING_PAYMENT_TTL_MS } from "../../lib/enums.js";
 import { nextReference } from "../../lib/reference-sequences.js";
 import { assertReplicaSetForTransactions } from "../../lib/replica-set.js";
 import type { CardexIdentity } from "../../lib/subdocuments.js";
@@ -291,6 +292,20 @@ export async function confirmBookingCheckout(
       const pricingSnapshot = mapPricingToReservationSnapshot(input.pricing);
       const totalVAT = pricingSnapshot.totalVAT;
 
+      // Card: hold slot as awaiting_payment until Stripe confirms; proforma: confirmed now.
+      const isCard = input.paymentMethod === "card";
+      const reservationStatus = isCard ? ("awaiting_payment" as const) : ("confirmed" as const);
+      const statusHistory = isCard
+        ? [
+            {
+              from: "pending",
+              to: "awaiting_payment",
+              at: now,
+              reason: "card_checkout",
+            },
+          ]
+        : [{ from: "pending", to: "confirmed", at: now }];
+
       const Reservation = await getReservationModel();
       const [reservation] = await Reservation.create(
         [
@@ -306,13 +321,18 @@ export async function confirmBookingCheckout(
             endAt: input.endAt,
             durationClass: input.durationClass,
             partySize: input.partySize,
-            status: "confirmed",
-            statusHistory: [{ from: "pending", to: "confirmed", at: now }],
+            status: reservationStatus,
+            statusHistory,
             services: input.services,
             discountCodeId: input.discountCodeId,
             pricing: pricingSnapshot,
             cgvAcceptedAt: input.cgvAcceptedAt,
             withdrawalAcknowledgedAt: input.withdrawalAcknowledgedAt,
+            ...(isCard
+              ? {
+                  awaitingPaymentExpiresAt: new Date(now.getTime() + AWAITING_PAYMENT_TTL_MS),
+                }
+              : {}),
             createdChannel: "online",
           },
         ],

@@ -3,22 +3,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   applyStripeCardPaymentMock,
+  confirmReservationAfterCardPaymentMock,
   connectMongoMock,
   getInvoiceModelMock,
   getReservationModelMock,
   paymentIntentsCreateMock,
   constructEventMock,
+  reservationUpdateOneMock,
 } = vi.hoisted(() => ({
   applyStripeCardPaymentMock: vi.fn(),
+  confirmReservationAfterCardPaymentMock: vi.fn(),
   connectMongoMock: vi.fn().mockResolvedValue(undefined),
   getInvoiceModelMock: vi.fn(),
   getReservationModelMock: vi.fn(),
   paymentIntentsCreateMock: vi.fn(),
   constructEventMock: vi.fn(),
+  reservationUpdateOneMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
   applyStripeCardPayment: applyStripeCardPaymentMock,
+  confirmReservationAfterCardPayment: confirmReservationAfterCardPaymentMock,
   connectMongo: connectMongoMock,
   getInvoiceModel: getInvoiceModelMock,
   getReservationModel: getReservationModelMock,
@@ -48,15 +53,22 @@ const RESERVATION_ID = "507f1f77bcf86cd799439011";
 const INVOICE_ID = "507f1f77bcf86cd799439012";
 
 function mockInvoicePair(balanceDue = 4800) {
+  reservationUpdateOneMock.mockReturnValue({
+    exec: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
+  });
+
   getReservationModelMock.mockResolvedValue({
     findOne: vi.fn().mockReturnValue({
       lean: vi.fn().mockReturnValue({
         exec: vi.fn().mockResolvedValue({
           _id: RESERVATION_ID,
           reference: "RES-2026-00042",
+          status: "awaiting_payment",
+          awaitingPaymentExpiresAt: new Date(Date.now() + 60_000),
         }),
       }),
     }),
+    updateOne: reservationUpdateOneMock,
   });
 
   getInvoiceModelMock.mockResolvedValue({
@@ -98,11 +110,20 @@ describe("Stripe booking payment", () => {
     expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
   });
 
-  it("applies payment_intent.succeeded without changing invoice type (via applyStripeCardPayment)", async () => {
+  it("applies payment_intent.succeeded and confirms awaiting_payment reservation", async () => {
     applyStripeCardPaymentMock.mockResolvedValue({
       applied: true,
-      invoice: { type: "proforma", status: "paid", totals: { paidTotal: 4800, balanceDue: 0 } },
+      invoice: {
+        type: "proforma",
+        status: "paid",
+        totals: { paidTotal: 4800, balanceDue: 0 },
+        reservationId: { toString: () => RESERVATION_ID },
+      },
       payment: { method: "card" },
+    });
+    confirmReservationAfterCardPaymentMock.mockResolvedValue({
+      transitioned: true,
+      reservation: { status: "confirmed", reference: "RES-2026-00042" },
     });
 
     await service.handleWebhookEvent({
@@ -113,7 +134,11 @@ describe("Stripe booking payment", () => {
           id: "pi_test_ok",
           amount: 4800,
           amount_received: 4800,
-          metadata: { invoiceId: INVOICE_ID, invoiceReference: "PF-2026-00042" },
+          metadata: {
+            invoiceId: INVOICE_ID,
+            invoiceReference: "PF-2026-00042",
+            reservationId: RESERVATION_ID,
+          },
         },
       },
     } as never);
@@ -122,6 +147,9 @@ describe("Stripe booking payment", () => {
       stripePaymentIntentId: "pi_test_ok",
       invoiceId: INVOICE_ID,
       amountReceived: 4800,
+    });
+    expect(confirmReservationAfterCardPaymentMock).toHaveBeenCalledWith({
+      reservationId: RESERVATION_ID,
     });
   });
 
@@ -147,9 +175,10 @@ describe("Stripe booking payment", () => {
     expect(createArgs.amount).not.toBe(1);
     expect(result.amount).toBe(4800);
     expect(result.clientSecret).toBe("pi_created_secret");
+    expect(reservationUpdateOneMock).toHaveBeenCalled();
   });
 
-  it("logs payment_intent.payment_failed without applying a payment", async () => {
+  it("logs payment_intent.payment_failed without applying a payment or confirming", async () => {
     await service.handleWebhookEvent({
       id: "evt_failed",
       type: "payment_intent.payment_failed",
@@ -162,5 +191,6 @@ describe("Stripe booking payment", () => {
     } as never);
 
     expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
+    expect(confirmReservationAfterCardPaymentMock).not.toHaveBeenCalled();
   });
 });
