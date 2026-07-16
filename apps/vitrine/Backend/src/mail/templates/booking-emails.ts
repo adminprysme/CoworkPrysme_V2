@@ -123,6 +123,7 @@ export interface BookingConfirmationEmailInput {
 function renderAccessPlanHtml(
   building: BookingConfirmationBuildingAccess,
   siteUrl: string,
+  options: { includeSensitiveAccess: boolean } = { includeSensitiveAccess: true },
 ): string {
   const contactHref = `${siteUrl}/contact`;
   const contactHostLabel = `${siteHostname(siteUrl)}/contact`;
@@ -130,51 +131,65 @@ function renderAccessPlanHtml(
     `<li><strong>Adresse :</strong> ${escapeHtml(building.addressFull)}</li>`,
   ];
 
-  const accessInfo = building.accessInfo?.trim();
-  if (accessInfo) {
-    items.push(
-      `<li><strong>Instructions d'accès :</strong> ${escapeHtml(accessInfo).replaceAll("\n", "<br>")}</li>`,
-    );
-  }
+  if (options.includeSensitiveAccess) {
+    const accessInfo = building.accessInfo?.trim();
+    if (accessInfo) {
+      items.push(
+        `<li><strong>Instructions d'accès :</strong> ${escapeHtml(accessInfo).replaceAll("\n", "<br>")}</li>`,
+      );
+    }
 
-  const buildingAccessCode = building.buildingAccessCode?.trim();
-  if (buildingAccessCode) {
-    items.push(`<li><strong>Code d'accès :</strong> ${escapeHtml(buildingAccessCode)}</li>`);
-  }
+    const buildingAccessCode = building.buildingAccessCode?.trim();
+    if (buildingAccessCode) {
+      items.push(`<li><strong>Code d'accès :</strong> ${escapeHtml(buildingAccessCode)}</li>`);
+    }
 
-  const conciergeAccessCode = building.conciergeAccessCode?.trim();
-  if (conciergeAccessCode) {
-    items.push(`<li><strong>Code conciergerie :</strong> ${escapeHtml(conciergeAccessCode)}</li>`);
-  }
+    const conciergeAccessCode = building.conciergeAccessCode?.trim();
+    if (conciergeAccessCode) {
+      items.push(
+        `<li><strong>Code conciergerie :</strong> ${escapeHtml(conciergeAccessCode)}</li>`,
+      );
+    }
 
-  const conciergeUrl = building.conciergeUrl?.trim();
-  if (conciergeUrl) {
-    items.push(
-      `<li><strong>Conciergerie :</strong> <a href="${escapeHtml(conciergeUrl)}" style="color:${BRAND_COPPER};">${escapeHtml(conciergeUrl)}</a></li>`,
-    );
-  }
+    const conciergeUrl = building.conciergeUrl?.trim();
+    if (conciergeUrl) {
+      items.push(
+        `<li><strong>Conciergerie :</strong> <a href="${escapeHtml(conciergeUrl)}" style="color:${BRAND_COPPER};">${escapeHtml(conciergeUrl)}</a></li>`,
+      );
+    }
 
-  const contactParts: string[] = [];
-  const contactEmail = building.contactEmail?.trim();
-  const contactPhone = building.contactPhone?.trim();
-  if (contactEmail) {
-    contactParts.push(
-      `<a href="mailto:${escapeHtml(contactEmail)}" style="color:${BRAND_COPPER};">${escapeHtml(contactEmail)}</a>`,
-    );
-  }
-  if (contactPhone) {
-    contactParts.push(escapeHtml(contactPhone));
-  }
-  if (contactParts.length > 0) {
-    items.push(`<li><strong>Contact sur place :</strong> ${contactParts.join(" · ")}</li>`);
-  }
+    const contactParts: string[] = [];
+    const contactEmail = building.contactEmail?.trim();
+    const contactPhone = building.contactPhone?.trim();
+    if (contactEmail) {
+      contactParts.push(
+        `<a href="mailto:${escapeHtml(contactEmail)}" style="color:${BRAND_COPPER};">${escapeHtml(contactEmail)}</a>`,
+      );
+    }
+    if (contactPhone) {
+      contactParts.push(escapeHtml(contactPhone));
+    }
+    if (contactParts.length > 0) {
+      items.push(`<li><strong>Contact sur place :</strong> ${contactParts.join(" · ")}</li>`);
+    }
 
-  return `
+    return `
     <p><strong>Plan d'accès — ${escapeHtml(building.name)}</strong></p>
     <ul style="padding-left:20px;margin:8px 0 16px;">
       ${items.join("\n      ")}
     </ul>
     <p>Retrouvez aussi nos instructions détaillées sur <a href="${escapeHtml(contactHref)}" style="color:${BRAND_COPPER};">${escapeHtml(contactHostLabel)}</a>.</p>
+  `;
+  }
+
+  // Pre-payment: public address only — never codes, concierge URL, or detailed access instructions.
+  return `
+    <p><strong>${escapeHtml(building.name)}</strong></p>
+    <ul style="padding-left:20px;margin:8px 0 16px;">
+      ${items.join("\n      ")}
+    </ul>
+    <p>Les instructions d'accès détaillées (code conciergerie, etc.) vous seront envoyées
+    <strong>après réception de votre paiement</strong>.</p>
   `;
 }
 
@@ -367,7 +382,7 @@ export function renderBankTransferInstructionsEmail(input: BankTransferInstructi
     </table>
     <p>Merci d'effectuer le virement avant le <strong>${escapeHtml(input.expiresAtLabel)}</strong>.
     Passé ce délai, la réservation pourra être annulée automatiquement.</p>
-    ${renderAccessPlanHtml(input.building, siteUrl)}
+    ${renderAccessPlanHtml(input.building, siteUrl, { includeSensitiveAccess: false })}
   `;
   return {
     subject: `Virement à effectuer — ${input.reservationReference} — Cowork Prysme`,
