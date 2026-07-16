@@ -37,6 +37,11 @@ import { useBookingLockCountdown } from "@/hooks/useBookingLock";
 import { useBookingPrice } from "@/hooks/useBookingPrice";
 import { confirmBooking } from "@/lib/booking-confirm-api";
 import { fetchBookingServices } from "@/lib/booking-price-api";
+import {
+  loadBookingPaymentResumeSnapshot,
+  parseBookingStripeReturnParams,
+  stripBookingStripeReturnQuery,
+} from "@/lib/booking-payment-return";
 import { getBookingSessionId } from "@/lib/booking-session";
 import {
   clearBookingRestoreSnapshot,
@@ -143,6 +148,11 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     withdrawalAcknowledged: false,
   });
   const [confirmResult, setConfirmResult] = useState<BookingConfirmResponse | null>(null);
+  const [paymentReturnSpaceLabel, setPaymentReturnSpaceLabel] = useState<string | null>(null);
+  const [paymentReturnSlotLabel, setPaymentReturnSlotLabel] = useState<string | null>(null);
+  const [resumeAfterStripeRedirect, setResumeAfterStripeRedirect] = useState(false);
+  const [stripeRedirectStatus, setStripeRedirectStatus] = useState<string | null>(null);
+  const stripeReturnHandledRef = useRef(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -317,9 +327,42 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   ]);
 
   useEffect(() => {
+    if (stripeReturnHandledRef.current || typeof window === "undefined") {
+      return;
+    }
+
+    const returned = parseBookingStripeReturnParams(window.location.search);
+    if (!returned) {
+      return;
+    }
+
+    stripeReturnHandledRef.current = true;
+    const snapshot = loadBookingPaymentResumeSnapshot(returned.reservationReference);
+
+    setConfirmResult({
+      reservationReference: returned.reservationReference,
+      invoiceReference: returned.invoiceReference,
+      paymentMethod: "card",
+      reservationStatus: snapshot?.reservationStatus ?? "awaiting_payment",
+    });
+    setPaymentReturnSpaceLabel(snapshot?.spaceLabel ?? null);
+    setPaymentReturnSlotLabel(snapshot?.slotLabel ?? null);
+    setStripeRedirectStatus(returned.redirectStatus);
+    setResumeAfterStripeRedirect(true);
+    setView("confirmed");
+    setSearchFormExpanded(false);
+
+    const cleaned = stripBookingStripeReturnQuery(window.location.href);
+    window.history.replaceState({}, "", cleaned);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function tryResumeSession() {
+      if (stripeReturnHandledRef.current) {
+        return;
+      }
       try {
         const sessionId = getBookingSessionId();
         const active = await fetchActiveBookingLock(sessionId);
@@ -1148,11 +1191,13 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 />
               ) : null}
 
-              {view === "confirmed" && confirmResult && selectedSpace ? (
+              {view === "confirmed" && confirmResult ? (
                 <BookingConfirmedStep
                   result={confirmResult}
-                  spaceLabel={selectedSpace.name}
-                  slotLabel={selectedRangeLabel ?? ""}
+                  spaceLabel={selectedSpace?.name ?? paymentReturnSpaceLabel ?? ""}
+                  slotLabel={selectedRangeLabel ?? paymentReturnSlotLabel ?? ""}
+                  resumeAfterRedirect={resumeAfterStripeRedirect}
+                  stripeRedirectStatus={stripeRedirectStatus}
                 />
               ) : null}
             </div>

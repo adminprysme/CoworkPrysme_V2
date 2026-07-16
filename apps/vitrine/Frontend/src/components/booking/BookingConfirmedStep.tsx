@@ -5,9 +5,14 @@ import type {
   BookingPaymentState,
   BookingPaymentStatusResponse,
 } from "@coworkprysme/shared";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createBookingPaymentIntent, fetchBookingPaymentStatus } from "@/lib/booking-payment-api";
+import {
+  buildBookingPaymentReturnUrl,
+  clearBookingPaymentResumeSnapshot,
+  saveBookingPaymentResumeSnapshot,
+} from "@/lib/booking-payment-return";
 
 import { BookingCardPaymentForm } from "./BookingCardPaymentForm";
 import styles from "./BookingTunnelStep.module.css";
@@ -19,24 +24,69 @@ interface BookingConfirmedStepProps {
   result: BookingConfirmResponse;
   spaceLabel: string;
   slotLabel: string;
+  /**
+   * Client landed here after a Stripe redirect (Bancontact / 3DS / etc.).
+   * Start polling webhook status — do not trust redirect_status as paid.
+   */
+  resumeAfterRedirect?: boolean;
+  /** Stripe redirect_status from the return URL (informational only). */
+  stripeRedirectStatus?: string | null;
 }
 
 function formatEuroFromCents(cents: number): string {
   return `${(cents / 100).toFixed(2).replace(".", ",")} €`;
 }
 
-export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingConfirmedStepProps) {
+export function BookingConfirmedStep({
+  result,
+  spaceLabel,
+  slotLabel,
+  resumeAfterRedirect = false,
+  stripeRedirectStatus = null,
+}: BookingConfirmedStepProps) {
   const isCard = result.paymentMethod === "card";
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [intentLoading, setIntentLoading] = useState(isCard);
+  const [intentLoading, setIntentLoading] = useState(isCard && !resumeAfterRedirect);
   const [intentError, setIntentError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [paymentState, setPaymentState] = useState<BookingPaymentState>(
-    isCard ? "awaiting_payment" : "paid",
-  );
+  const [paymentState, setPaymentState] = useState<BookingPaymentState>(() => {
+    if (!isCard) {
+      return "paid";
+    }
+    // After redirect: poll only — webhook decides paid vs still awaiting.
+    return resumeAfterRedirect ? "confirming" : "awaiting_payment";
+  });
   const [reservationStatus, setReservationStatus] = useState(result.reservationStatus);
   const [paidTotal, setPaidTotal] = useState(0);
   const [balanceDue, setBalanceDue] = useState<number | null>(null);
+
+  const returnUrl = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return buildBookingPaymentReturnUrl({
+      origin: window.location.origin,
+      reservationReference: result.reservationReference,
+      invoiceReference: result.invoiceReference,
+    });
+  }, [result.invoiceReference, result.reservationReference]);
+
+  const persistResumeSnapshot = useCallback(() => {
+    saveBookingPaymentResumeSnapshot({
+      version: 1,
+      reservationReference: result.reservationReference,
+      invoiceReference: result.invoiceReference,
+      reservationStatus: result.reservationStatus,
+      spaceLabel,
+      slotLabel,
+    });
+  }, [
+    result.invoiceReference,
+    result.reservationReference,
+    result.reservationStatus,
+    slotLabel,
+    spaceLabel,
+  ]);
 
   const applyStatus = useCallback((status: BookingPaymentStatusResponse) => {
     setPaidTotal(status.paidTotal);
@@ -44,6 +94,7 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
     setReservationStatus(status.reservationStatus);
     if (status.paymentState === "paid" || status.paymentState === "partially_paid") {
       setPaymentState(status.paymentState);
+      clearBookingPaymentResumeSnapshot();
     }
   }, []);
 
@@ -51,6 +102,7 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
     setIntentLoading(true);
     setIntentError(null);
     try {
+      persistResumeSnapshot();
       const intent = await createBookingPaymentIntent({
         reservationReference: result.reservationReference,
         invoiceReference: result.invoiceReference,
@@ -64,14 +116,19 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
     } finally {
       setIntentLoading(false);
     }
-  }, [result.invoiceReference, result.reservationReference]);
+  }, [persistResumeSnapshot, result.invoiceReference, result.reservationReference]);
 
   useEffect(() => {
     if (!isCard) {
       return;
     }
+    if (resumeAfterRedirect) {
+      // Snapshot already useful for labels; keep it until webhook confirms.
+      persistResumeSnapshot();
+      return;
+    }
     void loadIntent();
-  }, [isCard, loadIntent]);
+  }, [isCard, loadIntent, persistResumeSnapshot, resumeAfterRedirect]);
 
   useEffect(() => {
     if (!isCard || paymentState !== "confirming") {
@@ -101,6 +158,18 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
         ) {
           return;
         }
+        // Still awaiting after redirect: offer retry once poll window ends or immediately if redirect failed.
+        if (
+          resumeAfterRedirect &&
+          stripeRedirectStatus === "failed" &&
+          status.paymentState === "awaiting_payment"
+        ) {
+          setPaymentState("failed");
+          setPaymentError(
+            "Le paiement n'a pas abouti après la redirection. Vous pouvez réessayer.",
+          );
+          return;
+        }
       } catch {
         // Keep polling until timeout — webhook may still land.
       }
@@ -126,7 +195,15 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
         clearTimeout(timer);
       }
     };
-  }, [applyStatus, isCard, paymentState, result.invoiceReference, result.reservationReference]);
+  }, [
+    applyStatus,
+    isCard,
+    paymentState,
+    result.invoiceReference,
+    result.reservationReference,
+    resumeAfterRedirect,
+    stripeRedirectStatus,
+  ]);
 
   const paymentSettled =
     isCard &&
@@ -210,11 +287,25 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
   return (
     <section className={styles.step}>
       <div className={styles.confirmedCard}>
-        <h2 className={styles.title}>Réservation enregistrée</h2>
+        <h2 className={styles.title}>
+          {resumeAfterRedirect && paymentState === "confirming"
+            ? "Retour du paiement"
+            : "Réservation enregistrée"}
+        </h2>
         <p className={styles.lead}>
-          Votre réservation <strong>{result.reservationReference}</strong> est bien enregistrée
-          {reservationStatus === "awaiting_payment" ? " (en attente de paiement)" : ""}. Complétez
-          votre paiement ci-dessous pour finaliser votre réservation.
+          {resumeAfterRedirect && paymentState === "confirming" ? (
+            <>
+              Vous êtes de retour après l&apos;étape de paiement sécurisée. Nous confirmons votre
+              réservation <strong>{result.reservationReference}</strong> auprès de notre serveur (le
+              webhook Stripe fait foi)…
+            </>
+          ) : (
+            <>
+              Votre réservation <strong>{result.reservationReference}</strong> est bien enregistrée
+              {reservationStatus === "awaiting_payment" ? " (en attente de paiement)" : ""}.
+              Complétez votre paiement ci-dessous pour finaliser votre réservation.
+            </>
+          )}
         </p>
         <BookingRecap
           spaceLabel={spaceLabel}
@@ -226,12 +317,16 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
         {paymentPending ? (
           <div className={styles.cardPaymentActive} aria-labelledby="card-payment-step-title">
             <h3 id="card-payment-step-title" className={styles.cardPaymentActiveTitle}>
-              Étape suivante — paiement par carte
+              {paymentState === "confirming"
+                ? "Confirmation du paiement"
+                : "Étape suivante — paiement par carte"}
             </h3>
-            <p className={styles.cardPaymentActiveLead}>
-              Saisissez vos informations de carte pour régler la facture proforma. Le montant est
-              calculé côté serveur ; aucune donnée de carte ne transite par nos serveurs.
-            </p>
+            {paymentState !== "confirming" ? (
+              <p className={styles.cardPaymentActiveLead}>
+                Saisissez vos informations de carte pour régler la facture proforma. Le montant est
+                calculé côté serveur ; aucune donnée de carte ne transite par nos serveurs.
+              </p>
+            ) : null}
 
             {paymentState === "confirming" ? (
               <p className={styles.notice} role="status">
@@ -244,10 +339,12 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
                 {intentLoading ? <p className={styles.notice}>Préparation du paiement…</p> : null}
                 {intentError ? <p className={styles.error}>{intentError}</p> : null}
                 {paymentError ? <p className={styles.error}>{paymentError}</p> : null}
-                {clientSecret && !intentLoading ? (
+                {clientSecret && !intentLoading && returnUrl ? (
                   <BookingCardPaymentForm
                     clientSecret={clientSecret}
+                    returnUrl={returnUrl}
                     onSubmitted={() => {
+                      persistResumeSnapshot();
                       setPaymentError(null);
                       setPaymentState("confirming");
                     }}
@@ -308,12 +405,16 @@ function BookingRecap({
 
   return (
     <>
-      <p className={styles.lineRow}>
-        <span>{spaceLabel}</span>
-      </p>
-      <p className={styles.lineRow}>
-        <span>{slotLabel}</span>
-      </p>
+      {spaceLabel ? (
+        <p className={styles.lineRow}>
+          <span>{spaceLabel}</span>
+        </p>
+      ) : null}
+      {slotLabel ? (
+        <p className={styles.lineRow}>
+          <span>{slotLabel}</span>
+        </p>
+      ) : null}
       <p className={styles.lineRow}>
         <span>Statut</span>
         <span>{statusLabel}</span>

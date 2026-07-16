@@ -18,11 +18,14 @@ function getStripePromise(): Promise<Stripe | null> {
 
 interface BookingCardPaymentFormProps {
   clientSecret: string;
+  /** Absolute URL Stripe redirects to after Bancontact / 3DS / etc. */
+  returnUrl: string;
   onSubmitted: () => void;
   onError: (message: string) => void;
 }
 
 function CardPaymentInner({
+  returnUrl,
   onSubmitted,
   onError,
 }: Omit<BookingCardPaymentFormProps, "clientSecret">) {
@@ -36,6 +39,11 @@ function CardPaymentInner({
       return;
     }
 
+    if (!returnUrl.trim()) {
+      onError("URL de retour paiement manquante — impossible de confirmer.");
+      return;
+    }
+
     setSubmitting(true);
     onError("");
 
@@ -43,10 +51,12 @@ function CardPaymentInner({
       elements,
       redirect: "if_required",
       confirmParams: {
-        return_url: typeof window !== "undefined" ? window.location.href : undefined,
+        // Required whenever automatic_payment_methods may include redirect methods.
+        return_url: returnUrl,
       },
     });
 
+    // If Stripe redirected, this code path does not run — the return page resumes via query params.
     setSubmitting(false);
 
     if (result.error) {
@@ -74,6 +84,7 @@ function CardPaymentInner({
 
 export function BookingCardPaymentForm({
   clientSecret,
+  returnUrl,
   onSubmitted,
   onError,
 }: BookingCardPaymentFormProps) {
@@ -103,7 +114,7 @@ export function BookingCardPaymentForm({
 
   return (
     <Elements stripe={getStripePromise()} options={options}>
-      <CardPaymentInner onSubmitted={onSubmitted} onError={onError} />
+      <CardPaymentInner returnUrl={returnUrl} onSubmitted={onSubmitted} onError={onError} />
     </Elements>
   );
 }
