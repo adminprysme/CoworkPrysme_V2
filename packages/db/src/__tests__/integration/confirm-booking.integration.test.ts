@@ -221,6 +221,8 @@ describe("integration: confirm booking checkout (replica set)", () => {
         paymentMethod: "bank_transfer",
         email: "transfer@example.com",
         awaitingPaymentExpiresAt: expiresAt,
+        startAt,
+        endAt,
         now,
       }),
     );
