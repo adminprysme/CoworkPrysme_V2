@@ -37,6 +37,7 @@ export type DurationClass = (typeof DURATION_CLASSES)[number];
 
 export const RESERVATION_STATUSES = [
   "pending",
+  "awaiting_payment",
   "confirmed",
   "cancelled",
   "completed",
@@ -44,7 +45,14 @@ export const RESERVATION_STATUSES = [
 ] as const;
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
-export const BLOCKING_RESERVATION_STATUSES = ["pending", "confirmed"] as const;
+/** Statuses that occupy a slot (anti-overlap / availability). */
+export const BLOCKING_RESERVATION_STATUSES = ["pending", "awaiting_payment", "confirmed"] as const;
+
+/**
+ * How long a card checkout may stay in `awaiting_payment` before auto-cancel.
+ * Aligns with the lock TTL spirit: abandoned unpaid holds must free the slot.
+ */
+export const AWAITING_PAYMENT_TTL_MS = 45 * 60 * 1000;
 
 export const CREATED_CHANNELS = ["online", "staff", "phone"] as const;
 export type CreatedChannel = (typeof CREATED_CHANNELS)[number];

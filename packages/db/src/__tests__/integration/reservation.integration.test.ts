@@ -186,6 +186,27 @@ describe("integration: reservation core (replica set)", () => {
       await expect(createReservation(overlapping)).rejects.toBeInstanceOf(ReservationOverlapError);
     });
 
+    it("refuses a reservation that overlaps an awaiting_payment booking", async () => {
+      const input = {
+        ...baseInput(),
+        status: "awaiting_payment" as const,
+        awaitingPaymentExpiresAt: new Date(Date.now() + 45 * 60 * 1000),
+      };
+      await createReservation(input);
+
+      const overlapping = {
+        ...baseInput(),
+        spaceId: input.spaceId,
+        buildingId: input.buildingId,
+        reference: `RES-2026-${Math.random().toString(36).slice(2, 8)}`,
+        startAt: new Date("2026-07-01T10:30:00.000Z"),
+        endAt: new Date("2026-07-01T11:30:00.000Z"),
+        status: "confirmed" as const,
+      };
+
+      await expect(createReservation(overlapping)).rejects.toBeInstanceOf(ReservationOverlapError);
+    });
+
     it("allows a reservation when existing booking is cancelled", async () => {
       const input = { ...baseInput(), status: "cancelled" as const };
       await createReservation(input);

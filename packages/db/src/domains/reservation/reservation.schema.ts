@@ -39,6 +39,10 @@ export interface Reservation {
   pricing: ReservationPricingSnapshot;
   cgvAcceptedAt?: Date;
   withdrawalAcknowledgedAt?: Date;
+  /** Set when status is `awaiting_payment` — after this, the hold may be cancelled. */
+  awaitingPaymentExpiresAt?: Date;
+  /** Latest Stripe PaymentIntent id for card checkout (cancel on expiry). */
+  stripePaymentIntentId?: string;
   createdChannel: (typeof CREATED_CHANNELS)[number];
   createdAt: Date;
   updatedAt: Date;
@@ -66,6 +70,8 @@ const reservationSchema = new Schema<Reservation>(
     pricing: { type: reservationPricingSnapshotSchema, required: true },
     cgvAcceptedAt: { type: Date },
     withdrawalAcknowledgedAt: { type: Date },
+    awaitingPaymentExpiresAt: { type: Date },
+    stripePaymentIntentId: { type: String, trim: true },
     createdChannel: { type: String, enum: CREATED_CHANNELS, required: true },
   },
   { ...TIMESTAMP_OPTIONS, collection: "reservations" },
@@ -74,6 +80,10 @@ const reservationSchema = new Schema<Reservation>(
 reservationSchema.index({ spaceId: 1, startAt: 1, endAt: 1, status: 1 });
 reservationSchema.index({ cardexId: 1, startAt: -1 });
 reservationSchema.index({ reference: 1 }, { unique: true });
+reservationSchema.index(
+  { status: 1, awaitingPaymentExpiresAt: 1 },
+  { partialFilterExpression: { status: "awaiting_payment" } },
+);
 
 export type ReservationModel = Model<Reservation>;
 
