@@ -17,6 +17,10 @@ interface BookingConfirmedStepProps {
   slotLabel: string;
 }
 
+function formatEuroFromCents(cents: number): string {
+  return `${(cents / 100).toFixed(2).replace(".", ",")} €`;
+}
+
 export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingConfirmedStepProps) {
   const isCard = result.paymentMethod === "card";
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -109,69 +113,111 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
     };
   }, [isCard, paymentState, result.invoiceReference, result.reservationReference]);
 
-  return (
-    <section className={styles.step}>
-      <div className={styles.confirmedCard}>
-        <h2 className={styles.title}>Réservation confirmée</h2>
-        <p className={styles.lead}>
-          Merci — votre réservation <strong>{result.reservationReference}</strong> est enregistrée.
-        </p>
-        <p className={styles.lineRow}>
-          <span>{spaceLabel}</span>
-        </p>
-        <p className={styles.lineRow}>
-          <span>{slotLabel}</span>
-        </p>
-        <p className={styles.lineRow}>
-          <span>Facture proforma</span>
-          <span>{result.invoiceReference}</span>
-        </p>
+  const paymentSettled = isCard && (paymentState === "paid" || paymentState === "partially_paid");
+  const paymentPending =
+    isCard &&
+    (paymentState === "awaiting_payment" ||
+      paymentState === "failed" ||
+      paymentState === "confirming");
 
-        {!isCard ? (
+  // --- Proforma: definitive confirmation (unchanged intent) ---
+  if (!isCard) {
+    return (
+      <section className={styles.step}>
+        <div className={styles.confirmedCard}>
+          <h2 className={styles.title}>Réservation confirmée</h2>
+          <p className={styles.lead}>
+            Merci — votre réservation <strong>{result.reservationReference}</strong> est
+            enregistrée.
+          </p>
+          <BookingRecap
+            spaceLabel={spaceLabel}
+            slotLabel={slotLabel}
+            invoiceReference={result.invoiceReference}
+          />
           <p className={styles.lead}>
             Un email de confirmation vous a été envoyé avec le détail et le plan d&apos;accès.
           </p>
-        ) : null}
+        </div>
+      </section>
+    );
+  }
 
-        {isCard ? (
-          <div className={styles.cardPaymentBlock}>
-            {paymentState === "paid" || paymentState === "partially_paid" ? (
-              <>
-                <p className={styles.successNotice}>
-                  {paymentState === "paid"
-                    ? "Paiement confirmé. Merci !"
-                    : "Paiement partiel confirmé."}
-                </p>
-                {balanceDue !== null ? (
-                  <p className={styles.lineRow}>
-                    <span>Solde restant</span>
-                    <span>{(balanceDue / 100).toFixed(2)}&nbsp;€</span>
-                  </p>
-                ) : null}
-                {paidTotal > 0 ? (
-                  <p className={styles.lineRow}>
-                    <span>Déjà réglé</span>
-                    <span>{(paidTotal / 100).toFixed(2)}&nbsp;€</span>
-                  </p>
-                ) : null}
-                <p className={styles.lead}>
-                  Un email de confirmation vous a été envoyé avec le détail et le plan d&apos;accès.
-                </p>
-              </>
-            ) : null}
+  // --- Card: paid (webhook confirmed) ---
+  if (paymentSettled) {
+    return (
+      <section className={styles.step}>
+        <div className={styles.confirmedCard}>
+          <h2 className={styles.title}>
+            {paymentState === "paid"
+              ? "Réservation confirmée et payée"
+              : "Réservation confirmée — paiement partiel"}
+          </h2>
+          <p className={styles.lead}>
+            Merci — votre réservation <strong>{result.reservationReference}</strong> est enregistrée
+            {paymentState === "paid" ? " et votre paiement a été confirmé." : "."}
+          </p>
+          <BookingRecap
+            spaceLabel={spaceLabel}
+            slotLabel={slotLabel}
+            invoiceReference={result.invoiceReference}
+          />
+          <p className={styles.successNotice}>
+            {paymentState === "paid" ? "Paiement confirmé. Merci !" : "Paiement partiel confirmé."}
+          </p>
+          {paidTotal > 0 ? (
+            <p className={styles.lineRow}>
+              <span>Déjà réglé</span>
+              <span>{formatEuroFromCents(paidTotal)}</span>
+            </p>
+          ) : null}
+          {balanceDue !== null && balanceDue > 0 ? (
+            <p className={styles.lineRow}>
+              <span>Solde restant</span>
+              <span>{formatEuroFromCents(balanceDue)}</span>
+            </p>
+          ) : null}
+          <p className={styles.lead}>
+            Un email de confirmation vous a été envoyé avec le détail et le plan d&apos;accès.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  // --- Card: awaiting / confirming / failed — reservation saved, payment still required ---
+  return (
+    <section className={styles.step}>
+      <div className={styles.confirmedCard}>
+        <h2 className={styles.title}>Réservation enregistrée</h2>
+        <p className={styles.lead}>
+          Votre réservation <strong>{result.reservationReference}</strong> est bien enregistrée.
+          Complétez votre paiement ci-dessous pour finaliser votre réservation.
+        </p>
+        <BookingRecap
+          spaceLabel={spaceLabel}
+          slotLabel={slotLabel}
+          invoiceReference={result.invoiceReference}
+        />
+
+        {paymentPending ? (
+          <div className={styles.cardPaymentActive} aria-labelledby="card-payment-step-title">
+            <h3 id="card-payment-step-title" className={styles.cardPaymentActiveTitle}>
+              Étape suivante — paiement par carte
+            </h3>
+            <p className={styles.cardPaymentActiveLead}>
+              Saisissez vos informations de carte pour régler la facture proforma. Le montant est
+              calculé côté serveur ; aucune donnée de carte ne transite par nos serveurs.
+            </p>
 
             {paymentState === "confirming" ? (
               <p className={styles.notice} role="status">
-                Paiement en cours de confirmation…
+                Paiement en cours de confirmation… Ne fermez pas cette page.
               </p>
             ) : null}
 
             {(paymentState === "awaiting_payment" || paymentState === "failed") && (
               <>
-                <p className={styles.lead}>
-                  Votre réservation est confirmée. Réglez maintenant par carte — le montant est
-                  calculé depuis votre facture proforma.
-                </p>
                 {intentLoading ? <p className={styles.notice}>Préparation du paiement…</p> : null}
                 {intentError ? <p className={styles.error}>{intentError}</p> : null}
                 {paymentError ? <p className={styles.error}>{paymentError}</p> : null}
@@ -207,5 +253,30 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
         ) : null}
       </div>
     </section>
+  );
+}
+
+function BookingRecap({
+  spaceLabel,
+  slotLabel,
+  invoiceReference,
+}: {
+  spaceLabel: string;
+  slotLabel: string;
+  invoiceReference: string;
+}) {
+  return (
+    <>
+      <p className={styles.lineRow}>
+        <span>{spaceLabel}</span>
+      </p>
+      <p className={styles.lineRow}>
+        <span>{slotLabel}</span>
+      </p>
+      <p className={styles.lineRow}>
+        <span>Facture proforma</span>
+        <span>{invoiceReference}</span>
+      </p>
+    </>
   );
 }

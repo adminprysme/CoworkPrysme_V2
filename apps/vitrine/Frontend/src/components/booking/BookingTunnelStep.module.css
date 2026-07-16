@@ -220,6 +220,32 @@
   border-top: 1px solid var(--v-color-border);
 }
 
+.cardPaymentActive {
+  display: grid;
+  gap: var(--v-space-3);
+  margin-top: var(--v-space-3);
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-brand);
+  border-radius: var(--v-radius-lg);
+  background: color-mix(in srgb, var(--v-color-brand-muted) 40%, var(--v-color-surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--v-color-brand) 20%, transparent);
+}
+
+.cardPaymentActiveTitle {
+  margin: 0;
+  font-family: var(--v-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--v-color-ink);
+}
+
+.cardPaymentActiveLead {
+  margin: 0;
+  color: var(--v-color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .cardPaymentForm {
   display: grid;
   gap: var(--v-space-4);
