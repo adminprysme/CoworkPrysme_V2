@@ -1,6 +1,10 @@
 "use client";
 
-import type { BookingConfirmResponse, BookingPaymentState } from "@coworkprysme/shared";
+import type {
+  BookingConfirmResponse,
+  BookingPaymentState,
+  BookingPaymentStatusResponse,
+} from "@coworkprysme/shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { createBookingPaymentIntent, fetchBookingPaymentStatus } from "@/lib/booking-payment-api";
@@ -30,8 +34,18 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
   const [paymentState, setPaymentState] = useState<BookingPaymentState>(
     isCard ? "awaiting_payment" : "paid",
   );
+  const [reservationStatus, setReservationStatus] = useState(result.reservationStatus);
   const [paidTotal, setPaidTotal] = useState(0);
   const [balanceDue, setBalanceDue] = useState<number | null>(null);
+
+  const applyStatus = useCallback((status: BookingPaymentStatusResponse) => {
+    setPaidTotal(status.paidTotal);
+    setBalanceDue(status.balanceDue);
+    setReservationStatus(status.reservationStatus);
+    if (status.paymentState === "paid" || status.paymentState === "partially_paid") {
+      setPaymentState(status.paymentState);
+    }
+  }, []);
 
   const loadIntent = useCallback(async () => {
     setIntentLoading(true);
@@ -80,10 +94,11 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
         if (cancelled) {
           return;
         }
-        setPaidTotal(status.paidTotal);
-        setBalanceDue(status.balanceDue);
-        if (status.paymentState === "paid" || status.paymentState === "partially_paid") {
-          setPaymentState(status.paymentState);
+        applyStatus(status);
+        if (
+          status.reservationStatus === "confirmed" &&
+          (status.paymentState === "paid" || status.paymentState === "partially_paid")
+        ) {
           return;
         }
       } catch {
@@ -111,11 +126,15 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
         clearTimeout(timer);
       }
     };
-  }, [isCard, paymentState, result.invoiceReference, result.reservationReference]);
+  }, [applyStatus, isCard, paymentState, result.invoiceReference, result.reservationReference]);
 
-  const paymentSettled = isCard && (paymentState === "paid" || paymentState === "partially_paid");
+  const paymentSettled =
+    isCard &&
+    reservationStatus === "confirmed" &&
+    (paymentState === "paid" || paymentState === "partially_paid");
   const paymentPending =
     isCard &&
+    reservationStatus === "awaiting_payment" &&
     (paymentState === "awaiting_payment" ||
       paymentState === "failed" ||
       paymentState === "confirming");
@@ -134,6 +153,7 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
             spaceLabel={spaceLabel}
             slotLabel={slotLabel}
             invoiceReference={result.invoiceReference}
+            reservationStatus={reservationStatus}
           />
           <p className={styles.lead}>
             Un email de confirmation vous a été envoyé avec le détail et le plan d&apos;accès.
@@ -143,7 +163,7 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
     );
   }
 
-  // --- Card: paid (webhook confirmed) ---
+  // --- Card: paid (webhook confirmed) — status must be confirmed in DB ---
   if (paymentSettled) {
     return (
       <section className={styles.step}>
@@ -161,6 +181,7 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
             spaceLabel={spaceLabel}
             slotLabel={slotLabel}
             invoiceReference={result.invoiceReference}
+            reservationStatus={reservationStatus}
           />
           <p className={styles.successNotice}>
             {paymentState === "paid" ? "Paiement confirmé. Merci !" : "Paiement partiel confirmé."}
@@ -185,19 +206,21 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
     );
   }
 
-  // --- Card: awaiting / confirming / failed — reservation saved, payment still required ---
+  // --- Card: awaiting_payment in DB — reservation held, payment still required ---
   return (
     <section className={styles.step}>
       <div className={styles.confirmedCard}>
         <h2 className={styles.title}>Réservation enregistrée</h2>
         <p className={styles.lead}>
-          Votre réservation <strong>{result.reservationReference}</strong> est bien enregistrée.
-          Complétez votre paiement ci-dessous pour finaliser votre réservation.
+          Votre réservation <strong>{result.reservationReference}</strong> est bien enregistrée
+          {reservationStatus === "awaiting_payment" ? " (en attente de paiement)" : ""}. Complétez
+          votre paiement ci-dessous pour finaliser votre réservation.
         </p>
         <BookingRecap
           spaceLabel={spaceLabel}
           slotLabel={slotLabel}
           invoiceReference={result.invoiceReference}
+          reservationStatus={reservationStatus}
         />
 
         {paymentPending ? (
@@ -251,6 +274,13 @@ export function BookingConfirmedStep({ result, spaceLabel, slotLabel }: BookingC
             )}
           </div>
         ) : null}
+
+        {reservationStatus === "cancelled" ? (
+          <p className={styles.error} role="alert">
+            Le délai de paiement est dépassé — cette réservation a été annulée. Relancez une
+            recherche pour réserver un créneau.
+          </p>
+        ) : null}
       </div>
     </section>
   );
@@ -260,11 +290,22 @@ function BookingRecap({
   spaceLabel,
   slotLabel,
   invoiceReference,
+  reservationStatus,
 }: {
   spaceLabel: string;
   slotLabel: string;
   invoiceReference: string;
+  reservationStatus: BookingConfirmResponse["reservationStatus"];
 }) {
+  const statusLabel =
+    reservationStatus === "awaiting_payment"
+      ? "En attente de paiement"
+      : reservationStatus === "confirmed"
+        ? "Confirmée"
+        : reservationStatus === "cancelled"
+          ? "Annulée"
+          : reservationStatus;
+
   return (
     <>
       <p className={styles.lineRow}>
@@ -272,6 +313,10 @@ function BookingRecap({
       </p>
       <p className={styles.lineRow}>
         <span>{slotLabel}</span>
+      </p>
+      <p className={styles.lineRow}>
+        <span>Statut</span>
+        <span>{statusLabel}</span>
       </p>
       <p className={styles.lineRow}>
         <span>Facture proforma</span>
