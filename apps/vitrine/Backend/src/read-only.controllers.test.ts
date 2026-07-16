@@ -20,6 +20,8 @@ import { CatalogContentService } from "./catalog-content/catalog-content.service
 
 const SRC_DIR = fileURLToPath(new URL(".", import.meta.url));
 const BOOKING_CONTROLLER = "booking/booking.controller.ts";
+const BOOKING_PAYMENT_CONTROLLER = "stripe/booking-payment.controller.ts";
+const STRIPE_WEBHOOK_CONTROLLER = "stripe/stripe-webhook.controller.ts";
 
 function walkControllers(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -45,7 +47,7 @@ function relativeControllerPath(filePath: string): string {
 }
 
 describe("vitrine-api read-only controllers", () => {
-  it("declares no write HTTP decorators except booking/slotLocks lock endpoints", () => {
+  it("declares no write HTTP decorators except booking/slotLocks and Stripe payment endpoints", () => {
     const controllerFiles = walkControllers(SRC_DIR);
     expect(controllerFiles.length).toBeGreaterThan(0);
 
@@ -62,6 +64,19 @@ describe("vitrine-api read-only controllers", () => {
         expect(source).toMatch(/@Post\("confirm"\)/);
         expect(source).toMatch(/@Delete\("lock\/:lockId"\)/);
         expect(source).not.toMatch(/createReservation|Reservation\.create/i);
+        continue;
+      }
+
+      if (relative.endsWith(BOOKING_PAYMENT_CONTROLLER)) {
+        expect(source).toMatch(/@Post\("intent"\)/);
+        expect(source).toMatch(/@Get\("status"\)/);
+        expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
+        continue;
+      }
+
+      if (relative.endsWith(STRIPE_WEBHOOK_CONTROLLER)) {
+        expect(source).toMatch(/@Post\("webhook"\)/);
+        expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
         continue;
       }
 
@@ -82,13 +97,16 @@ describe("vitrine-api read-only controllers", () => {
     expect(source).not.toMatch(/@(Post|Put|Patch|Delete)\(/);
   });
 
-  it("booking controller only exposes lock/unlock and stateless price writes", () => {
+  it("booking controller exposes booking tunnel write endpoints", () => {
     const source = readFileSync(join(SRC_DIR, BOOKING_CONTROLLER), "utf8");
     const writeMatches = [...source.matchAll(/@(Post|Put|Patch|Delete)\(([^)]*)\)/g)];
     expect(writeMatches.map((match) => `${match[1]}(${match[2]})`)).toEqual([
       'Post("lock")',
       'Delete("lock/:lockId")',
       'Post("price")',
+      'Post("account/check-email")',
+      'Post("account/verify")',
+      'Post("confirm")',
     ]);
   });
 });

@@ -20,7 +20,9 @@
     "mongoose": "^9.7.3",
     "nodemailer": "^9.0.3",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "stripe": "^22.3.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@coworkprysme/config": "workspace:*",

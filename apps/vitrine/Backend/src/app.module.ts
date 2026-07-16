@@ -11,6 +11,7 @@ import { HomeContentModule } from "./home-content/home-content.module.js";
 import { MediaModule } from "./media/media.module.js";
 import { ServicesContentModule } from "./services-content/services-content.module.js";
 import { SiteContactModule } from "./site-contact/site-contact.module.js";
+import { StripeModule } from "./stripe/stripe.module.js";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SiteContactModule } from "./site-contact/site-contact.module.js";
     DiscountCodesModule,
     ServicesContentModule,
     SiteContactModule,
+    StripeModule,
   ],
 })
 export class AppModule {}

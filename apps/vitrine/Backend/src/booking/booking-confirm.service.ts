@@ -45,9 +45,6 @@ type ServiceLean = Service & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
 type BuildingLean = Building & { _id: Types.ObjectId };
 
-const CARD_PAYMENT_STUB_MESSAGE =
-  "Le paiement par carte sera bientôt disponible — votre réservation est enregistrée, vous recevrez une facture proforma en attendant.";
-
 @Injectable()
 export class BookingConfirmService {
   private readonly logger = new Logger(BookingConfirmService.name);
@@ -234,8 +231,6 @@ export class BookingConfirmService {
       reservationReference: result.reservation.reference,
       invoiceReference: result.invoiceReference,
       paymentMethod: input.paymentMethod,
-      cardPaymentStubMessage:
-        input.paymentMethod === "card" ? CARD_PAYMENT_STUB_MESSAGE : undefined,
     });
   }
 

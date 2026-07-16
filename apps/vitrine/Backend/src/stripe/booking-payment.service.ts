@@ -1,0 +1,262 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
+import {
+  applyStripeCardPayment,
+  connectMongo,
+  getInvoiceModel,
+  getReservationModel,
+  InvoiceNotFoundError,
+  type Invoice,
+} from "@coworkprysme/db";
+import {
+  BOOKING_PAYMENT_ERROR_CODES,
+  type BookingPaymentStatusResponse,
+  type CreateBookingPaymentIntentRequest,
+  type CreateBookingPaymentIntentResponse,
+} from "@coworkprysme/shared";
+import type Stripe from "stripe";
+
+import { createStripeClient, loadStripeConfig } from "./stripe.config.js";
+
+/** Payment intent / status may only target invoices issued within this window (Phase 4a). */
+export const BOOKING_PAYMENT_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * SECURITY DEBT (Phase 4a): authorization is reservationReference + invoiceReference + 24h TTL.
+ * Sequential references are guessable — harden later with a per-reservation signed token.
+ */
+@Injectable()
+export class BookingPaymentService {
+  private readonly logger = new Logger(BookingPaymentService.name);
+  private stripe: Stripe | null = null;
+  private webhookSecret: string | null = null;
+
+  private ensureStripe(): Stripe {
+    if (this.stripe && this.webhookSecret) {
+      return this.stripe;
+    }
+    const config = loadStripeConfig();
+    if (!config) {
+      throw new ServiceUnavailableException({
+        code: BOOKING_PAYMENT_ERROR_CODES.STRIPE_NOT_CONFIGURED,
+        message: "Paiement par carte indisponible (Stripe non configuré)",
+      });
+    }
+    this.stripe = createStripeClient(config.secretKey);
+    this.webhookSecret = config.webhookSecret;
+    return this.stripe;
+  }
+
+  getWebhookSecret(): string {
+    this.ensureStripe();
+    if (!this.webhookSecret) {
+      throw new ServiceUnavailableException({
+        code: BOOKING_PAYMENT_ERROR_CODES.STRIPE_NOT_CONFIGURED,
+        message: "Paiement par carte indisponible (Stripe non configuré)",
+      });
+    }
+    return this.webhookSecret;
+  }
+
+  getStripe(): Stripe {
+    return this.ensureStripe();
+  }
+
+  async createPaymentIntent(
+    input: CreateBookingPaymentIntentRequest,
+  ): Promise<CreateBookingPaymentIntentResponse> {
+    const stripe = this.ensureStripe();
+    const { invoice, reservationReference } = await this.loadPayableInvoicePair(input);
+
+    // Amount ALWAYS from cowork_bdd invoice — never trust a client amount.
+    const amount = invoice.totals.balanceDue;
+    if (amount <= 0) {
+      throw new ConflictException({
+        code: BOOKING_PAYMENT_ERROR_CODES.ALREADY_PAID,
+        message: "Cette facture est déjà soldée",
+      });
+    }
+
+    const currency = (invoice.currency || "EUR").toLowerCase();
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount,
+        currency,
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          invoiceId: invoice._id.toString(),
+          invoiceReference: invoice.reference,
+          reservationId: invoice.reservationId?.toString() ?? "",
+          reservationReference,
+        },
+      },
+      {
+        idempotencyKey: `pi-${invoice._id.toString()}-${amount}`,
+      },
+    );
+
+    if (!paymentIntent.client_secret) {
+      throw new ServiceUnavailableException({
+        code: BOOKING_PAYMENT_ERROR_CODES.STRIPE_NOT_CONFIGURED,
+        message: "Impossible de créer le paiement Stripe",
+      });
+    }
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      amount,
+      currency,
+    };
+  }
+
+  async getPaymentStatus(input: {
+    reservationReference: string;
+    invoiceReference: string;
+  }): Promise<BookingPaymentStatusResponse> {
+    const { invoice } = await this.loadInvoicePair(input, { requirePayable: false });
+
+    const paymentState = this.mapPaymentState(invoice);
+
+    return {
+      reservationReference: input.reservationReference,
+      invoiceReference: invoice.reference,
+      invoiceStatus: invoice.status as BookingPaymentStatusResponse["invoiceStatus"],
+      invoiceType: "proforma",
+      paidTotal: invoice.totals.paidTotal,
+      balanceDue: invoice.totals.balanceDue,
+      paymentState,
+    };
+  }
+
+  async handleWebhookEvent(event: Stripe.Event): Promise<void> {
+    this.logger.log(`Stripe webhook received type=${event.type} id=${event.id}`);
+
+    if (event.type === "payment_intent.succeeded") {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      await this.onPaymentIntentSucceeded(pi);
+      return;
+    }
+
+    if (event.type === "payment_intent.payment_failed") {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      this.logger.warn(
+        `Stripe payment_intent.payment_failed id=${pi.id} invoice=${pi.metadata?.invoiceReference ?? "?"}`,
+      );
+      return;
+    }
+
+    this.logger.log(`Stripe webhook ignored type=${event.type}`);
+  }
+
+  private async onPaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<void> {
+    const invoiceId = pi.metadata?.invoiceId?.trim();
+    if (!invoiceId) {
+      this.logger.error(`payment_intent.succeeded ${pi.id} missing metadata.invoiceId`);
+      return;
+    }
+
+    const amountReceived = pi.amount_received > 0 ? pi.amount_received : pi.amount;
+    try {
+      const result = await applyStripeCardPayment({
+        stripePaymentIntentId: pi.id,
+        invoiceId,
+        amountReceived,
+      });
+      this.logger.log(
+        `Applied Stripe payment pi=${pi.id} invoice=${invoiceId} applied=${result.applied} status=${result.invoice.status} type=${result.invoice.type}`,
+      );
+    } catch (error) {
+      if (error instanceof InvoiceNotFoundError) {
+        this.logger.error(`payment_intent.succeeded ${pi.id}: invoice not found ${invoiceId}`);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private mapPaymentState(invoice: Invoice): BookingPaymentStatusResponse["paymentState"] {
+    if (invoice.status === "paid" || invoice.totals.balanceDue === 0) {
+      return "paid";
+    }
+    if (invoice.status === "partially_paid" || invoice.totals.paidTotal > 0) {
+      return "partially_paid";
+    }
+    return "awaiting_payment";
+  }
+
+  private async loadPayableInvoicePair(input: {
+    reservationReference: string;
+    invoiceReference: string;
+  }) {
+    return this.loadInvoicePair(input, { requirePayable: true });
+  }
+
+  private async loadInvoicePair(
+    input: { reservationReference: string; invoiceReference: string },
+    options: { requirePayable: boolean },
+  ) {
+    await connectMongo();
+    const Reservation = await getReservationModel();
+    const Invoice = await getInvoiceModel();
+
+    const reservation = await Reservation.findOne({ reference: input.reservationReference })
+      .lean()
+      .exec();
+    if (!reservation) {
+      throw new NotFoundException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_NOT_FOUND,
+        message: "Réservation introuvable",
+      });
+    }
+
+    const invoice = await Invoice.findOne({ reference: input.invoiceReference }).exec();
+    if (!invoice) {
+      throw new NotFoundException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_NOT_FOUND,
+        message: "Facture introuvable",
+      });
+    }
+
+    if (!invoice.reservationId || invoice.reservationId.toString() !== reservation._id.toString()) {
+      throw new BadRequestException({
+        code: BOOKING_PAYMENT_ERROR_CODES.RESERVATION_MISMATCH,
+        message: "La facture ne correspond pas à cette réservation",
+      });
+    }
+
+    if (invoice.type !== "proforma") {
+      throw new BadRequestException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_NOT_PAYABLE,
+        message: "Cette facture n'accepte pas de paiement carte",
+      });
+    }
+
+    const issuedAt = invoice.issuedAt ?? invoice.createdAt;
+    const ageMs = Date.now() - new Date(issuedAt).getTime();
+    if (ageMs > BOOKING_PAYMENT_INTENT_TTL_MS) {
+      throw new BadRequestException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_EXPIRED,
+        message: "Le délai de paiement en ligne pour cette facture est dépassé",
+      });
+    }
+
+    if (options.requirePayable && invoice.totals.balanceDue <= 0) {
+      throw new ConflictException({
+        code: BOOKING_PAYMENT_ERROR_CODES.ALREADY_PAID,
+        message: "Cette facture est déjà soldée",
+      });
+    }
+
+    return {
+      invoice,
+      reservationReference: reservation.reference as string,
+    };
+  }
+}
