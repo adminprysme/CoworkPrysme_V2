@@ -4,6 +4,9 @@
  * Usage:
  *   cd apps/vitrine/Backend && set -a && . ./.env && set +a && node scripts/preview-booking-access-email.mjs
  *   EMAIL_TO=you@example.com node scripts/preview-booking-access-email.mjs
+ *
+ * NOTE: EMAIL_TO is an explicit demo override for this script only.
+ * Production confirm sends to clientAccount.email — never to building.email.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";

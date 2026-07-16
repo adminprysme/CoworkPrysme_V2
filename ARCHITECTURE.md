@@ -323,6 +323,29 @@ Optimisations et durcissements **reportés** tant que le volume reste faible (pe
 | **`scope.spaceTypes`**         | Champ profil staff jamais appliqué côté API                                          | Filtrer listes/écritures ou retirer du modèle           |
 | **Lazy-load Leaflet**          | `BuildingsMap` (Leaflet + markercluster) dans le bundle principal (~595 kB JS)       | `React.lazy` sur la carte si le split devient pertinent |
 
+## Emails de réservation (vitrine-api)
+
+Après `confirmBookingCheckout` (création atomique), `BookingConfirmService` envoie les e-mails transactionnels.
+
+### Destinataires — règle permanente
+
+| E-mail                                      | Destinataire SMTP (`to`)  | Source                                             |
+| ------------------------------------------- | ------------------------- | -------------------------------------------------- |
+| Confirmation de réservation                 | **client** uniquement     | `clientAccount.email` / `result.clientEmail`       |
+| Création de compte                          | **client** uniquement     | idem                                               |
+| Notification staff « Nouvelle réservation » | gestionnaires du bâtiment | `resolveBookingNotificationRecipients(buildingId)` |
+
+**`buildings.email` (contact du bâtiment) ne doit JAMAIS être un destinataire d'envoi.**  
+Ce champ sert uniquement à l'**affichage** dans le corps des e-mails clients (bloc « Contact sur place »). Tout code d'envoi qui utiliserait `building.email` / `contactEmail` comme `to` est une régression.
+
+### `resolveBookingNotificationRecipients` — en attente du module Permissions
+
+- **Fichier** : `apps/vitrine/Backend/src/mail/resolve-booking-notification-recipients.ts`
+- **Rôle** : **seul** point d'entrée pour résoudre les destinataires de la notification staff.
+- **État actuel (stub)** : renvoie `[]`, ou une adresse unique si `FALLBACK_BOOKING_NOTIFICATION_EMAIL` est définie (**temporaire**, pour tests).
+- **Cible future** : page Gestion → Permissions — marquer un `staffProfile` avec la permission « Reçoit les emails de réservation » + `scope.buildingIds`. Remplacer **uniquement** le corps de cette fonction (requête staffProfiles) ; ne pas toucher au template ni à l'appelant.
+- Si la liste est vide : log d'avertissement, **pas** d'échec du flux de confirmation.
+
 ## Qualité
 
 - TypeScript strict, ESLint 9, Prettier, Husky + Commitlint
@@ -344,4 +367,5 @@ pnpm --filter @coworkprysme/db test
 - Endpoints de délégation vitrine-api → gestion-api (au-delà du stub HTTP)
 - Authentification staff via `prysma_bdd`
 - Moteur facturation / codes promo (schémas en place, logique à venir)
+- Module Permissions gestion : permission « Reçoit les emails de réservation » + remplacement du stub `resolveBookingNotificationRecipients`
 - CI/CD automatisé
