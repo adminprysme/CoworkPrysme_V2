@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -28,10 +29,12 @@ import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { MailService } from "../mail/mail.service.js";
+import { resolveBookingNotificationRecipients } from "../mail/resolve-booking-notification-recipients.js";
 import {
   buildingToEmailAccess,
   renderAccountCreatedEmail,
   renderBookingConfirmationEmail,
+  renderStaffBookingNotificationEmail,
   type BookingConfirmationBuildingAccess,
 } from "../mail/templates/booking-emails.js";
 import { AvailabilityService } from "./availability.service.js";
@@ -47,6 +50,8 @@ const CARD_PAYMENT_STUB_MESSAGE =
 
 @Injectable()
 export class BookingConfirmService {
+  private readonly logger = new Logger(BookingConfirmService.name);
+
   constructor(
     private readonly availability: AvailabilityService,
     private readonly bookingPrice: BookingPriceService,
@@ -194,6 +199,10 @@ export class BookingConfirmService {
     }
 
     const buildingAccess = await this.resolveBuildingAccess((space as SpaceLean).buildingId);
+    const buildingId = (space as SpaceLean).buildingId.toString();
+    const clientName = input.identity
+      ? `${input.identity.firstName} ${input.identity.lastName}`.trim()
+      : null;
 
     await this.sendConfirmationEmails({
       clientEmail: result.clientEmail,
@@ -205,6 +214,20 @@ export class BookingConfirmService {
       endAt: input.endAt,
       pricing,
       building: buildingAccess,
+    });
+
+    await this.sendStaffBookingNotifications({
+      buildingId,
+      clientEmail: result.clientEmail,
+      clientName,
+      reservationReference: result.reservation.reference,
+      invoiceReference: result.invoiceReference,
+      spaceName: space.name,
+      buildingName: buildingAccess.name,
+      startAt: input.startAt,
+      endAt: input.endAt,
+      totalTTC: pricing.totalTTC,
+      paymentMethod: input.paymentMethod,
     });
 
     return BookingConfirmResponseSchema.parse({
@@ -277,6 +300,55 @@ export class BookingConfirmService {
         to: clientEmail,
         subject: accountEmail.subject,
         html: accountEmail.html,
+      });
+    }
+  }
+
+  /**
+   * Staff notification — recipients ONLY via resolveBookingNotificationRecipients.
+   * Never uses buildings.email as SMTP destination.
+   */
+  private async sendStaffBookingNotifications(input: {
+    buildingId: string;
+    clientEmail: string;
+    clientName: string | null;
+    reservationReference: string;
+    invoiceReference: string;
+    spaceName: string;
+    buildingName: string;
+    startAt: string;
+    endAt: string;
+    totalTTC: number;
+    paymentMethod: "proforma" | "card";
+  }) {
+    const recipients = await resolveBookingNotificationRecipients(input.buildingId);
+    if (recipients.length === 0) {
+      this.logger.warn(
+        `aucun destinataire de notification configuré pour ce bâtiment (${input.buildingId})`,
+      );
+      return;
+    }
+
+    const startAt = new Date(input.startAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+    const endAt = new Date(input.endAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+    const staffEmail = renderStaffBookingNotificationEmail({
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
+      spaceName: input.spaceName,
+      buildingName: input.buildingName,
+      startAt,
+      endAt,
+      totalTTC: input.totalTTC,
+      clientEmail: input.clientEmail,
+      clientName: input.clientName,
+      paymentMethod: input.paymentMethod,
+    });
+
+    for (const to of recipients) {
+      await this.mail.sendMail({
+        to,
+        subject: staffEmail.subject,
+        html: staffEmail.html,
       });
     }
   }

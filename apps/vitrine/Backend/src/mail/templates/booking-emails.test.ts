@@ -4,6 +4,7 @@ import {
   buildingToEmailAccess,
   renderAccountCreatedEmail,
   renderBookingConfirmationEmail,
+  renderStaffBookingNotificationEmail,
   resolvePublicSiteUrl,
 } from "./booking-emails.js";
 
@@ -95,5 +96,30 @@ describe("booking email templates", () => {
         process.env.PUBLIC_SITE_URL = previous;
       }
     }
+  });
+
+  it("renders a distinct staff notification (not client access plan)", () => {
+    const staff = renderStaffBookingNotificationEmail({
+      reservationReference: "RES-2026-00101",
+      invoiceReference: "PF-2026-00101",
+      spaceName: "FOCUS",
+      buildingName: "Cowork GERLAND",
+      startAt: "21/07/2026 10:00:00",
+      endAt: "21/07/2026 12:00:00",
+      totalTTC: 4800,
+      clientEmail: "client@example.com",
+      clientName: "Alice Martin",
+      paymentMethod: "proforma",
+    });
+
+    expect(staff.subject).toBe("Nouvelle réservation — FOCUS — 21/07/2026 10:00:00");
+    expect(staff.html).toContain("Notification interne");
+    expect(staff.html).toContain("Alice Martin");
+    expect(staff.html).toContain("client@example.com");
+    expect(staff.html).toContain("RES-2026-00101");
+    expect(staff.html).toContain("Cowork GERLAND");
+    expect(staff.html).toContain("Facture proforma");
+    expect(staff.html).not.toContain("Plan d'accès");
+    expect(staff.html).not.toContain("Votre réservation est confirmée");
   });
 });

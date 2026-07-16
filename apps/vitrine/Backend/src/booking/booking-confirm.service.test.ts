@@ -7,12 +7,14 @@ const {
   getBuildingModelMock,
   getDiscountCodeModelMock,
   getServiceModelMock,
+  resolveBookingNotificationRecipientsMock,
 } = vi.hoisted(() => ({
   confirmBookingCheckoutMock: vi.fn(),
   connectMongoMock: vi.fn().mockResolvedValue(undefined),
   getBuildingModelMock: vi.fn(),
   getDiscountCodeModelMock: vi.fn(),
   getServiceModelMock: vi.fn(),
+  resolveBookingNotificationRecipientsMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -28,6 +30,10 @@ vi.mock("@coworkprysme/db", () => ({
   ReservationOverlapError: class ReservationOverlapError extends Error {},
 }));
 
+vi.mock("../mail/resolve-booking-notification-recipients.js", () => ({
+  resolveBookingNotificationRecipients: resolveBookingNotificationRecipientsMock,
+}));
+
 import { BookingConfirmService } from "./booking-confirm.service.js";
 import type { AvailabilityService } from "./availability.service.js";
 import type { BookingPriceService } from "./booking-price.service.js";
@@ -39,6 +45,7 @@ const LOCK_ID = "507f1f77bcf86cd799439013";
 
 const CLIENT_EMAIL = "client@example.com";
 const BUILDING_CONTACT_EMAIL = "accueil-technopark-a1@coworkprysme.eu";
+const STAFF_FALLBACK_EMAIL = "staff-notify@example.com";
 
 describe("BookingConfirmService — email recipients", () => {
   let service: BookingConfirmService;
@@ -46,10 +53,34 @@ describe("BookingConfirmService — email recipients", () => {
   let availability: AvailabilityService;
   let bookingPrice: BookingPriceService;
 
+  const confirmPayload = {
+    lockId: LOCK_ID,
+    sessionId: "session-test-abcdefgh",
+    spaceId: SPACE_ID,
+    startAt: "2026-07-21T08:00:00.000Z",
+    endAt: "2026-07-21T10:00:00.000Z",
+    durationClass: "hourly" as const,
+    partySize: 4,
+    services: [] as [],
+    accountMode: "new" as const,
+    email: CLIENT_EMAIL,
+    password: "GoodPass1!",
+    identity: {
+      firstName: "Alice",
+      lastName: "Martin",
+    },
+    privacyPolicyAccepted: true,
+    marketingCommunicationsAccepted: false,
+    cgvAccepted: true as const,
+    withdrawalAcknowledged: true as const,
+    paymentMethod: "proforma" as const,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
 
     sendMailMock = vi.fn().mockResolvedValue(undefined);
+    resolveBookingNotificationRecipientsMock.mockResolvedValue([]);
 
     availability = {
       getSpaceById: vi.fn().mockResolvedValue({
@@ -103,28 +134,7 @@ describe("BookingConfirmService — email recipients", () => {
   });
 
   it("sends confirmation (and account) emails to clientAccount.email, never to building.contactEmail", async () => {
-    await service.confirm({
-      lockId: LOCK_ID,
-      sessionId: "session-test-abcdefgh",
-      spaceId: SPACE_ID,
-      startAt: "2026-07-21T08:00:00.000Z",
-      endAt: "2026-07-21T10:00:00.000Z",
-      durationClass: "hourly",
-      partySize: 4,
-      services: [],
-      accountMode: "new",
-      email: CLIENT_EMAIL,
-      password: "GoodPass1!",
-      identity: {
-        firstName: "Alice",
-        lastName: "Martin",
-      },
-      privacyPolicyAccepted: true,
-      marketingCommunicationsAccepted: false,
-      cgvAccepted: true,
-      withdrawalAcknowledged: true,
-      paymentMethod: "proforma",
-    });
+    await service.confirm(confirmPayload);
 
     expect(sendMailMock).toHaveBeenCalled();
     const recipients = sendMailMock.mock.calls.map((call) => call[0].to as string);
@@ -138,5 +148,24 @@ describe("BookingConfirmService — email recipients", () => {
     // Body may still display the building contact (mailto) — that is allowed.
     const confirmationHtml = sendMailMock.mock.calls[0][0].html as string;
     expect(confirmationHtml).toContain(BUILDING_CONTACT_EMAIL);
+
+    expect(resolveBookingNotificationRecipientsMock).toHaveBeenCalledWith(BUILDING_ID.toString());
+  });
+
+  it("sends a staff notification when resolveBookingNotificationRecipients returns addresses", async () => {
+    resolveBookingNotificationRecipientsMock.mockResolvedValue([STAFF_FALLBACK_EMAIL]);
+
+    await service.confirm(confirmPayload);
+
+    const recipients = sendMailMock.mock.calls.map((call) => call[0].to as string);
+    expect(recipients).toContain(CLIENT_EMAIL);
+    expect(recipients).toContain(STAFF_FALLBACK_EMAIL);
+    expect(recipients).not.toContain(BUILDING_CONTACT_EMAIL);
+
+    const staffCall = sendMailMock.mock.calls.find((call) => call[0].to === STAFF_FALLBACK_EMAIL);
+    expect(staffCall).toBeDefined();
+    expect(staffCall![0].subject).toMatch(/^Nouvelle réservation — FOCUS —/);
+    expect(staffCall![0].html).toContain("Notification interne");
+    expect(staffCall![0].html).toContain("Alice Martin");
   });
 });

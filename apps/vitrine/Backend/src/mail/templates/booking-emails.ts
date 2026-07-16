@@ -24,8 +24,21 @@ function siteHostname(siteUrl: string): string {
   }
 }
 
-function layout(title: string, bodyHtml: string, siteUrl: string): string {
+function layout(
+  title: string,
+  bodyHtml: string,
+  siteUrl: string,
+  options?: { staffNotification?: boolean },
+): string {
   const host = escapeHtml(siteHostname(siteUrl));
+  const headerTitle = options?.staffNotification
+    ? `<p style="margin:0 0 6px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.85);">Notification interne</p>
+          <h1 style="margin:0;font-size:22px;color:#ffffff;font-weight:normal;">Cowork Prysme — Gestion</h1>`
+    : `<h1 style="margin:0;font-size:22px;color:#ffffff;font-weight:normal;">Cowork Prysme</h1>`;
+  const footer = options?.staffNotification
+    ? `Notification staff — Cowork Prysme — ${host}`
+    : `Cowork Prysme — ${host}`;
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head>
@@ -34,11 +47,11 @@ function layout(title: string, bodyHtml: string, siteUrl: string): string {
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e8dfd4;border-radius:8px;overflow:hidden;">
         <tr><td style="background:${BRAND_COPPER};padding:20px 28px;">
-          <h1 style="margin:0;font-size:22px;color:#ffffff;font-weight:normal;">Cowork Prysme</h1>
+          ${headerTitle}
         </td></tr>
         <tr><td style="padding:28px;font-size:15px;line-height:1.6;">${bodyHtml}</td></tr>
         <tr><td style="padding:16px 28px 24px;font-size:12px;color:#666;border-top:1px solid #eee;">
-          Cowork Prysme — ${host}
+          ${footer}
         </td></tr>
       </table>
     </td></tr>
@@ -228,5 +241,76 @@ export function renderAccountCreatedEmail(input: { email: string; siteUrl?: stri
   return {
     subject: "Votre compte Cowork Prysme a été créé",
     html: layout("Compte créé", body, siteUrl),
+  };
+}
+
+export interface StaffBookingNotificationEmailInput {
+  reservationReference: string;
+  invoiceReference: string;
+  spaceName: string;
+  buildingName: string;
+  startAt: string;
+  endAt: string;
+  totalTTC: number;
+  clientEmail: string;
+  clientName?: string | null;
+  paymentMethod: "proforma" | "card";
+  siteUrl?: string;
+}
+
+/** Internal staff notification — distinct tone from client confirmation. */
+export function renderStaffBookingNotificationEmail(input: StaffBookingNotificationEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl(input.siteUrl);
+  const paymentLabel = input.paymentMethod === "card" ? "Paiement par carte" : "Facture proforma";
+  const clientName = input.clientName?.trim();
+  const clientLine = clientName
+    ? `${escapeHtml(clientName)} (${escapeHtml(input.clientEmail)})`
+    : escapeHtml(input.clientEmail);
+
+  const body = `
+    <p style="margin-top:0;">Une nouvelle réservation vient d'être confirmée sur la vitrine.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;width:38%;color:#666;">Référence</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>${escapeHtml(input.reservationReference)}</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:#666;">Facture proforma</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;">${escapeHtml(input.invoiceReference)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:#666;">Client</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;">${clientLine}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:#666;">Espace</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;">${escapeHtml(input.spaceName)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:#666;">Bâtiment</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;">${escapeHtml(input.buildingName)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:#666;">Créneau</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;">Du ${escapeHtml(input.startAt)} au ${escapeHtml(input.endAt)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:#666;">Montant TTC</td>
+        <td style="padding:6px 0;border-bottom:1px solid #eee;color:${BRAND_COPPER};font-weight:bold;">${formatEuro(input.totalTTC)}</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:#666;">Règlement</td>
+        <td style="padding:6px 0;">${escapeHtml(paymentLabel)}</td>
+      </tr>
+    </table>
+    <p style="margin-bottom:0;font-size:13px;color:#666;">Cet e-mail est destiné aux gestionnaires du bâtiment. Ne pas transférer au client.</p>
+  `;
+
+  return {
+    subject: `Nouvelle réservation — ${input.spaceName} — ${input.startAt}`,
+    html: layout("Nouvelle réservation", body, siteUrl, { staffNotification: true }),
   };
 }
