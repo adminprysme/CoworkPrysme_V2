@@ -15,7 +15,7 @@ import {
 import { AWAITING_PAYMENT_TTL_MS } from "../../lib/enums.js";
 import { nextReference } from "../../lib/reference-sequences.js";
 import { assertReplicaSetForTransactions } from "../../lib/replica-set.js";
-import type { CardexIdentity } from "../../lib/subdocuments.js";
+import type { CardexCompany, CardexIdentity, Address } from "../../lib/subdocuments.js";
 import type { BookingPriceResponse } from "@coworkprysme/shared";
 import { findOverlappingReservation } from "../reservation/availability.js";
 import {
@@ -44,6 +44,10 @@ export interface ConfirmBookingCheckoutInput {
   email: string;
   password: string;
   identity?: CardexIdentity;
+  /** individual = particulier address on cardex; company = cardex.company */
+  clientKind?: "individual" | "company";
+  address?: Address;
+  company?: CardexCompany;
   privacyPolicyVersion?: string;
   marketingCommunicationsAccepted?: boolean;
   cgvAcceptedAt: Date;
@@ -216,6 +220,10 @@ async function ensureCardex(
   identity: CardexIdentity | undefined,
   now: Date,
   session: ClientSession,
+  extras?: {
+    address?: Address;
+    company?: CardexCompany;
+  },
 ): Promise<Types.ObjectId> {
   if (existingCardexId) {
     return existingCardexId;
@@ -233,6 +241,8 @@ async function ensureCardex(
       {
         clientAccountId,
         identity,
+        ...(extras?.address ? { address: extras.address } : {}),
+        ...(extras?.company ? { company: extras.company } : {}),
         documents: [],
         preferentialCodeIds: [],
         billingSummary: { depositsTotal: 0, balanceDue: 0 },
@@ -277,6 +287,10 @@ export async function confirmBookingCheckout(
         input.identity,
         now,
         session,
+        {
+          address: input.clientKind === "individual" ? input.address : undefined,
+          company: input.clientKind === "company" ? input.company : undefined,
+        },
       );
 
       const overlap = await findOverlappingReservation(

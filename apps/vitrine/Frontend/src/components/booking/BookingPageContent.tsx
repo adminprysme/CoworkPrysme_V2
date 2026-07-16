@@ -66,7 +66,7 @@ import {
   formatBookingDatesSearchSummary,
   formatBookingFlexibleSearchSummary,
 } from "./BookingSearchSummary";
-import { BookingAccountStep, type BookingAccountFormState } from "./BookingAccountStep";
+import { BookingAccountStep, EMPTY_BOOKING_ACCOUNT_FORM } from "./BookingAccountStep";
 import { BookingConfirmedStep } from "./BookingConfirmedStep";
 import { BookingPaymentStep } from "./BookingPaymentStep";
 import { BookingSummaryStep, type BookingSummaryFormState } from "./BookingSummaryStep";
@@ -131,18 +131,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [discountCode, setDiscountCode] = useState("");
   const [resumePending, setResumePending] = useState(true);
   const [releaseLoading, setReleaseLoading] = useState(false);
-  const [accountForm, setAccountForm] = useState<BookingAccountFormState>({
-    mode: "new",
-    email: "",
-    password: "",
-    passwordConfirm: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    privacyAccepted: false,
-    marketingAccepted: false,
-    verified: false,
-  });
+  const [accountForm, setAccountForm] = useState(EMPTY_BOOKING_ACCOUNT_FORM);
   const [summaryForm, setSummaryForm] = useState<BookingSummaryFormState>({
     cgvAccepted: false,
     withdrawalAcknowledged: false,
@@ -731,6 +720,30 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 firstName: accountForm.firstName.trim(),
                 lastName: accountForm.lastName.trim(),
                 phone: accountForm.phone.trim() || undefined,
+              }
+            : undefined,
+        clientKind: accountForm.mode === "new" ? accountForm.clientKind : undefined,
+        address:
+          accountForm.mode === "new" && accountForm.clientKind === "individual"
+            ? {
+                street: accountForm.street.trim(),
+                zip: accountForm.zip.trim(),
+                city: accountForm.city.trim(),
+                country: "FR",
+              }
+            : undefined,
+        company:
+          accountForm.mode === "new" && accountForm.clientKind === "company"
+            ? {
+                legalName: accountForm.legalName.trim(),
+                siret: accountForm.siret.trim() || undefined,
+                vatNumber: accountForm.vatNumber.trim() || undefined,
+                billingAddress: {
+                  street: accountForm.street.trim(),
+                  zip: accountForm.zip.trim(),
+                  city: accountForm.city.trim(),
+                  country: "FR",
+                },
               }
             : undefined,
         privacyPolicyAccepted: accountForm.mode === "new" ? accountForm.privacyAccepted : undefined,

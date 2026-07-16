@@ -64,6 +64,13 @@ describe("BookingConfirmService — email recipients", () => {
       firstName: "Alice",
       lastName: "Martin",
     },
+    clientKind: "individual" as const,
+    address: {
+      street: "10 rue de la République",
+      zip: "69001",
+      city: "Lyon",
+      country: "FR",
+    },
     privacyPolicyAccepted: true,
     marketingCommunicationsAccepted: false,
     cgvAccepted: true as const,

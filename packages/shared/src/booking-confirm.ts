@@ -63,6 +63,50 @@ export const BookingCardexIdentityInputSchema = z.object({
 
 export type BookingCardexIdentityInput = z.infer<typeof BookingCardexIdentityInputSchema>;
 
+export const BookingClientKindSchema = z.enum(["individual", "company"]);
+export type BookingClientKind = z.infer<typeof BookingClientKindSchema>;
+
+export const BookingAddressInputSchema = z.object({
+  street: z.string().trim().min(1, "L'adresse est requise"),
+  zip: z.string().trim().min(1, "Le code postal est requis"),
+  city: z.string().trim().min(1, "La ville est requise"),
+  country: z.string().trim().min(1).default("FR"),
+});
+
+export type BookingAddressInput = z.infer<typeof BookingAddressInputSchema>;
+
+export const BookingCompanyInputSchema = z.object({
+  legalName: z.string().trim().min(1, "La raison sociale est requise"),
+  siret: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => {
+      if (!value) {
+        return undefined;
+      }
+      const digits = value.replaceAll(/\s/g, "");
+      return digits === "" ? undefined : digits;
+    })
+    .refine((value) => value === undefined || /^\d{14}$/.test(value), {
+      message: "Le SIRET doit contenir exactement 14 chiffres",
+    }),
+  vatNumber: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => {
+      if (!value) {
+        return undefined;
+      }
+      const normalized = value.replaceAll(/\s/g, "").toUpperCase();
+      return normalized === "" ? undefined : normalized;
+    }),
+  billingAddress: BookingAddressInputSchema,
+});
+
+export type BookingCompanyInput = z.infer<typeof BookingCompanyInputSchema>;
+
 export const BookingCheckEmailRequestSchema = z.object({
   email: z.string().trim().email("Adresse email invalide"),
 });
@@ -95,6 +139,12 @@ export const BookingConfirmRequestSchema = z
     email: z.string().trim().email("Adresse email invalide"),
     password: z.string().min(8, "Mot de passe invalide"),
     identity: BookingCardexIdentityInputSchema.optional(),
+    /** Required for new accounts — particulier vs professionnel. */
+    clientKind: BookingClientKindSchema.optional(),
+    /** Postal address for particuliers (new individual accounts). */
+    address: BookingAddressInputSchema.optional(),
+    /** Company + billing address for professionnels (new company accounts). */
+    company: BookingCompanyInputSchema.optional(),
     privacyPolicyAccepted: z.boolean().optional(),
     marketingCommunicationsAccepted: z.boolean().optional(),
     cgvAccepted: z.literal(true, { message: "L'acceptation des CGV est obligatoire" }),
@@ -127,6 +177,27 @@ export const BookingConfirmRequestSchema = z
           code: z.ZodIssueCode.custom,
           path: ["privacyPolicyAccepted"],
           message: "Le consentement à la politique de confidentialité est obligatoire",
+        });
+      }
+      if (!value.clientKind) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["clientKind"],
+          message: "Choisissez particulier ou professionnel",
+        });
+      } else if (value.clientKind === "individual") {
+        if (!value.address) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["address"],
+            message: "L'adresse est requise pour un compte particulier",
+          });
+        }
+      } else if (!value.company) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["company"],
+          message: "Les informations société sont requises pour un compte professionnel",
         });
       }
     }

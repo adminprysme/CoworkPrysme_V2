@@ -97,6 +97,30 @@
   line-height: 1.45;
 }
 
+.kindToggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.kindOption {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md, 8px);
+  background: var(--v-color-surface);
+  color: var(--v-color-ink);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.kindOptionSelected {
+  border-color: var(--v-color-brand);
+  box-shadow: 0 0 0 1px var(--v-color-brand);
+  background: color-mix(in srgb, var(--v-color-brand-muted) 35%, var(--v-color-surface));
+  color: var(--v-color-brand-hover);
+}
+
 .fieldGrid {
   display: grid;
   gap: var(--v-space-4);

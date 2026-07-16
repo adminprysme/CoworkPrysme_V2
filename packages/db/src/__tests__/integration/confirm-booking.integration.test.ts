@@ -83,6 +83,13 @@ function buildConfirmInput(
     email: "client@example.com",
     password: "SecretPass1!",
     identity: { firstName: "Jean", lastName: "Dupont", phone: "0612345678" },
+    clientKind: "individual" as const,
+    address: {
+      street: "10 rue de la République",
+      zip: "69001",
+      city: "Lyon",
+      country: "FR",
+    },
     privacyPolicyVersion: "2026-07-09",
     cgvAcceptedAt: new Date("2026-07-01T09:00:00.000Z"),
     withdrawalAcknowledgedAt: new Date("2026-07-01T09:00:00.000Z"),
@@ -164,6 +171,58 @@ describe("integration: confirm booking checkout (replica set)", () => {
     const account = await ClientAccount.findOne({ email: "client@example.com" }).lean().exec();
     expect(account?.cardexId?.toString()).toBe(result.cardexId.toString());
     expect(account?.marketingConsent).toEqual({ accepted: false });
+
+    const cardex = await Cardex.findById(result.cardexId).lean().exec();
+    expect(cardex?.address).toMatchObject({
+      street: "10 rue de la République",
+      zip: "69001",
+      city: "Lyon",
+      country: "FR",
+    });
+    expect(cardex?.company).toBeUndefined();
+  });
+
+  it("persists company + billing address for professionnel accounts", async () => {
+    const spaceId = new Types.ObjectId();
+    const buildingId = new Types.ObjectId();
+    const sessionId = "company-session";
+    const startAt = new Date("2026-07-01T10:00:00.000Z");
+    const endAt = new Date("2026-07-01T11:00:00.000Z");
+
+    const lock = await acquireLock({ spaceId, startAt, endAt, sessionId });
+    const result = await confirmBookingCheckout(
+      buildConfirmInput(lock._id, sessionId, spaceId, buildingId, {
+        email: "pro@example.com",
+        clientKind: "company",
+        address: undefined,
+        company: {
+          legalName: "ACME SAS",
+          siret: "12345678901234",
+          vatNumber: "FR32123456789",
+          billingAddress: {
+            street: "1 place Bellecour",
+            zip: "69002",
+            city: "Lyon",
+            country: "FR",
+          },
+        },
+      }),
+    );
+
+    const Cardex = await getCardexModel();
+    const cardex = await Cardex.findById(result.cardexId).lean().exec();
+    expect(cardex?.address).toBeUndefined();
+    expect(cardex?.company).toMatchObject({
+      legalName: "ACME SAS",
+      siret: "12345678901234",
+      vatNumber: "FR32123456789",
+      billingAddress: {
+        street: "1 place Bellecour",
+        zip: "69002",
+        city: "Lyon",
+        country: "FR",
+      },
+    });
   });
 
   it("creates card checkout as awaiting_payment with expiry and blocks the slot", async () => {

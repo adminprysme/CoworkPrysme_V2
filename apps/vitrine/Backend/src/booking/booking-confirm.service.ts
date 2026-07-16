@@ -246,6 +246,32 @@ export class BookingConfirmService {
         email: input.email,
         password: input.password,
         identity: input.identity,
+        clientKind: input.accountMode === "new" ? input.clientKind : undefined,
+        address:
+          input.accountMode === "new" && input.clientKind === "individual"
+            ? input.address
+              ? {
+                  street: input.address.street,
+                  zip: input.address.zip,
+                  city: input.address.city,
+                  country: input.address.country ?? "FR",
+                }
+              : undefined
+            : undefined,
+        company:
+          input.accountMode === "new" && input.clientKind === "company" && input.company
+            ? {
+                legalName: input.company.legalName,
+                siret: input.company.siret,
+                vatNumber: input.company.vatNumber,
+                billingAddress: {
+                  street: input.company.billingAddress.street,
+                  zip: input.company.billingAddress.zip,
+                  city: input.company.billingAddress.city,
+                  country: input.company.billingAddress.country ?? "FR",
+                },
+              }
+            : undefined,
         privacyPolicyVersion: input.accountMode === "new" ? PRIVACY_POLICY_VERSION : undefined,
         marketingCommunicationsAccepted:
           input.accountMode === "new" ? input.marketingCommunicationsAccepted : undefined,

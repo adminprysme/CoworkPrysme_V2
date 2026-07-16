@@ -5,10 +5,12 @@ import { RETENTION_STATUSES } from "../../lib/enums.js";
 import { registerModel } from "../../lib/register-model.js";
 import { objectIdRef, TIMESTAMP_OPTIONS } from "../../lib/schema-helpers.js";
 import {
+  addressSchema,
   billingSummarySchema,
   cardexCompanySchema,
   cardexDocumentMetaSchema,
   cardexIdentitySchema,
+  type Address,
   type BillingSummary,
   type CardexCompany,
   type CardexDocumentMeta,
@@ -18,6 +20,8 @@ import {
 export interface Cardex {
   clientAccountId: Types.ObjectId;
   identity: CardexIdentity;
+  /** Postal / billing address for individual (particulier) clients. */
+  address?: Address;
   company?: CardexCompany;
   documents: CardexDocumentMeta[];
   preferentialCodeIds: Types.ObjectId[];
@@ -35,6 +39,7 @@ const cardexSchema = new Schema<Cardex>(
   {
     clientAccountId: objectIdRef("ClientAccount"),
     identity: { type: cardexIdentitySchema, required: true },
+    address: { type: addressSchema },
     company: { type: cardexCompanySchema },
     documents: { type: [cardexDocumentMetaSchema], default: [] },
     preferentialCodeIds: [{ type: Schema.Types.ObjectId, ref: "DiscountCode" }],

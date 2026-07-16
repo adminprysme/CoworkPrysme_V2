@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import type { BookingClientKind } from "@coworkprysme/shared";
 
 import { checkBookingEmail, verifyBookingAccount } from "@/lib/booking-confirm-api";
 
@@ -15,9 +16,36 @@ export type BookingAccountFormState = {
   firstName: string;
   lastName: string;
   phone: string;
+  clientKind: BookingClientKind;
+  street: string;
+  zip: string;
+  city: string;
+  legalName: string;
+  siret: string;
+  vatNumber: string;
   privacyAccepted: boolean;
   marketingAccepted: boolean;
   verified: boolean;
+};
+
+export const EMPTY_BOOKING_ACCOUNT_FORM: BookingAccountFormState = {
+  mode: "new",
+  email: "",
+  password: "",
+  passwordConfirm: "",
+  firstName: "",
+  lastName: "",
+  phone: "",
+  clientKind: "individual",
+  street: "",
+  zip: "",
+  city: "",
+  legalName: "",
+  siret: "",
+  vatNumber: "",
+  privacyAccepted: false,
+  marketingAccepted: false,
+  verified: false,
 };
 
 interface BookingAccountStepProps {
@@ -57,6 +85,34 @@ export function BookingAccountStep({
     setError(null);
   }
 
+  function validateNewAccount(): string | null {
+    if (!value.firstName.trim() || !value.lastName.trim()) {
+      return "Le prénom et le nom sont requis.";
+    }
+    if (!value.street.trim() || !value.zip.trim() || !value.city.trim()) {
+      return "L'adresse (rue, code postal, ville) est requise.";
+    }
+    if (value.clientKind === "company") {
+      if (!value.legalName.trim()) {
+        return "La raison sociale est requise.";
+      }
+      const siretDigits = value.siret.replaceAll(/\s/g, "");
+      if (siretDigits && !/^\d{14}$/.test(siretDigits)) {
+        return "Le SIRET doit contenir exactement 14 chiffres.";
+      }
+    }
+    if (value.password !== value.passwordConfirm) {
+      return "Les mots de passe ne correspondent pas.";
+    }
+    if (!value.privacyAccepted) {
+      return "Vous devez accepter la politique de confidentialité.";
+    }
+    if (existingEmailHint) {
+      return "Un compte existe déjà avec cette adresse. Connectez-vous.";
+    }
+    return null;
+  }
+
   async function handleContinue() {
     setError(null);
 
@@ -71,20 +127,9 @@ export function BookingAccountStep({
     }
 
     if (value.mode === "new") {
-      if (value.password !== value.passwordConfirm) {
-        setError("Les mots de passe ne correspondent pas.");
-        return;
-      }
-      if (!value.firstName.trim() || !value.lastName.trim()) {
-        setError("Le prénom et le nom sont requis.");
-        return;
-      }
-      if (!value.privacyAccepted) {
-        setError("Vous devez accepter la politique de confidentialité.");
-        return;
-      }
-      if (existingEmailHint) {
-        setError("Un compte existe déjà avec cette adresse. Connectez-vous.");
+      const validationError = validateNewAccount();
+      if (validationError) {
+        setError(validationError);
         return;
       }
       onChange({ ...value, verified: true });
@@ -137,53 +182,200 @@ export function BookingAccountStep({
 
       <div className={styles.formShell}>
         {value.mode === "new" ? (
-          <section className={styles.sectionCard} aria-labelledby="account-identity-title">
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle} id="account-identity-title">
-                Identité
-              </h3>
-              <p className={styles.sectionHint}>
-                Pour personnaliser votre fiche client et vos accès.
-              </p>
-            </div>
+          <>
+            <section className={styles.sectionCard} aria-labelledby="account-kind-title">
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle} id="account-kind-title">
+                  Type de compte
+                </h3>
+                <p className={styles.sectionHint}>
+                  Particulier ou professionnel — détermine les informations de facturation.
+                </p>
+              </div>
 
-            <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
+              <div className={styles.kindToggle} role="radiogroup" aria-label="Type de compte">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={value.clientKind === "individual"}
+                  className={[
+                    styles.kindOption,
+                    value.clientKind === "individual" ? styles.kindOptionSelected : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => patch({ clientKind: "individual" })}
+                >
+                  Particulier
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={value.clientKind === "company"}
+                  className={[
+                    styles.kindOption,
+                    value.clientKind === "company" ? styles.kindOptionSelected : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={() => patch({ clientKind: "company" })}
+                >
+                  Professionnel
+                </button>
+              </div>
+            </section>
+
+            <section className={styles.sectionCard} aria-labelledby="account-identity-title">
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle} id="account-identity-title">
+                  Identité
+                </h3>
+                <p className={styles.sectionHint}>
+                  Pour personnaliser votre fiche client et vos accès.
+                </p>
+              </div>
+
+              <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Prénom</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="given-name"
+                    value={value.firstName}
+                    onChange={(event) => patch({ firstName: event.target.value })}
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Nom</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="family-name"
+                    value={value.lastName}
+                    onChange={(event) => patch({ lastName: event.target.value })}
+                  />
+                </label>
+              </div>
+
               <label className={styles.field}>
-                <span className={styles.fieldLabel}>Prénom</span>
+                <span className={styles.fieldLabel}>
+                  Téléphone <span className={styles.fieldOptional}>(optionnel)</span>
+                </span>
+                <input
+                  className={styles.input}
+                  type="tel"
+                  autoComplete="tel"
+                  value={value.phone}
+                  onChange={(event) => patch({ phone: event.target.value })}
+                />
+              </label>
+            </section>
+
+            {value.clientKind === "company" ? (
+              <section className={styles.sectionCard} aria-labelledby="account-company-title">
+                <div className={styles.sectionHeader}>
+                  <h3 className={styles.sectionTitle} id="account-company-title">
+                    Société
+                  </h3>
+                  <p className={styles.sectionHint}>
+                    Informations figurant sur vos factures professionnelles.
+                  </p>
+                </div>
+
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Raison sociale</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="organization"
+                    value={value.legalName}
+                    onChange={(event) => patch({ legalName: event.target.value })}
+                  />
+                </label>
+
+                <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>
+                      SIRET <span className={styles.fieldOptional}>(optionnel)</span>
+                    </span>
+                    <input
+                      className={styles.input}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="14 chiffres"
+                      value={value.siret}
+                      onChange={(event) => patch({ siret: event.target.value })}
+                    />
+                  </label>
+
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>
+                      TVA intracom. <span className={styles.fieldOptional}>(optionnel)</span>
+                    </span>
+                    <input
+                      className={styles.input}
+                      type="text"
+                      autoComplete="off"
+                      placeholder="FR…"
+                      value={value.vatNumber}
+                      onChange={(event) => patch({ vatNumber: event.target.value })}
+                    />
+                  </label>
+                </div>
+              </section>
+            ) : null}
+
+            <section className={styles.sectionCard} aria-labelledby="account-address-title">
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle} id="account-address-title">
+                  {value.clientKind === "company" ? "Adresse de facturation" : "Adresse"}
+                </h3>
+                <p className={styles.sectionHint}>
+                  {value.clientKind === "company"
+                    ? "Adresse du siège ou de l'établissement à facturer."
+                    : "Adresse postale pour votre fiche client."}
+                </p>
+              </div>
+
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Adresse</span>
                 <input
                   className={styles.input}
                   type="text"
-                  autoComplete="given-name"
-                  value={value.firstName}
-                  onChange={(event) => patch({ firstName: event.target.value })}
+                  autoComplete="street-address"
+                  value={value.street}
+                  onChange={(event) => patch({ street: event.target.value })}
                 />
               </label>
 
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Nom</span>
-                <input
-                  className={styles.input}
-                  type="text"
-                  autoComplete="family-name"
-                  value={value.lastName}
-                  onChange={(event) => patch({ lastName: event.target.value })}
-                />
-              </label>
-            </div>
+              <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Code postal</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="postal-code"
+                    value={value.zip}
+                    onChange={(event) => patch({ zip: event.target.value })}
+                  />
+                </label>
 
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>
-                Téléphone <span className={styles.fieldOptional}>(optionnel)</span>
-              </span>
-              <input
-                className={styles.input}
-                type="tel"
-                autoComplete="tel"
-                value={value.phone}
-                onChange={(event) => patch({ phone: event.target.value })}
-              />
-            </label>
-          </section>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Ville</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="address-level2"
+                    value={value.city}
+                    onChange={(event) => patch({ city: event.target.value })}
+                  />
+                </label>
+              </div>
+            </section>
+          </>
         ) : null}
 
         <section className={styles.sectionCard} aria-labelledby="account-login-title">
