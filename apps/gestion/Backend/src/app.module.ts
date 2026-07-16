@@ -3,6 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 
 import { AuthModule } from "./auth/auth.module.js";
+import { BillingModule } from "./billing/billing.module.js";
 import { BuildingsModule } from "./buildings/buildings.module.js";
 import { DbModule } from "./db/db.module.js";
 import { DiscountCodesModule } from "./discount-codes/discount-codes.module.js";
@@ -25,6 +26,7 @@ import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.j
     SpacesModule,
     ServicesModule,
     DiscountCodesModule,
+    BillingModule,
     VitrineContentModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

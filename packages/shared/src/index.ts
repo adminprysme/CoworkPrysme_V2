@@ -530,3 +530,12 @@ export {
   type DiscountType,
   type UpdateDiscountCodeRequest,
 } from "./discount-codes.js";
+
+export {
+  BankTransferPendingLookupResponseSchema,
+  MarkBankTransferReceivedRequestSchema,
+  MarkBankTransferReceivedResponseSchema,
+  type BankTransferPendingLookupResponse,
+  type MarkBankTransferReceivedRequest,
+  type MarkBankTransferReceivedResponse,
+} from "./billing-transfer.js";
