@@ -387,6 +387,19 @@ export const consentRecordSchema = new Schema<ConsentRecord>(
   { _id: false },
 );
 
+export interface MarketingConsentRecord {
+  accepted: boolean;
+  acceptedAt?: Date;
+}
+
+export const marketingConsentRecordSchema = new Schema<MarketingConsentRecord>(
+  {
+    accepted: { type: Boolean, required: true },
+    acceptedAt: { type: Date },
+  },
+  { _id: false },
+);
+
 export interface CardexIdentity {
   firstName: string;
   lastName: string;

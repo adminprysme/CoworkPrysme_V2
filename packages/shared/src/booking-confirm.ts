@@ -74,6 +74,7 @@ export const BookingConfirmRequestSchema = z
     password: z.string().min(8, "Mot de passe invalide"),
     identity: BookingCardexIdentityInputSchema.optional(),
     privacyPolicyAccepted: z.boolean().optional(),
+    marketingCommunicationsAccepted: z.boolean().optional(),
     cgvAccepted: z.literal(true, { message: "L'acceptation des CGV est obligatoire" }),
     withdrawalAcknowledged: z.literal(true, {
       message: "La mention relative au droit de rétractation est obligatoire",

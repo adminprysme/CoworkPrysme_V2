@@ -161,6 +161,28 @@ describe("integration: confirm booking checkout (replica set)", () => {
 
     const account = await ClientAccount.findOne({ email: "client@example.com" }).lean().exec();
     expect(account?.cardexId?.toString()).toBe(result.cardexId.toString());
+    expect(account?.marketingConsent).toEqual({ accepted: false });
+  });
+
+  it("persists opted-in marketing consent on new client account", async () => {
+    const spaceId = new Types.ObjectId();
+    const buildingId = new Types.ObjectId();
+    const sessionId = "marketing-opt-in-session";
+    const startAt = new Date("2026-07-01T10:00:00.000Z");
+    const endAt = new Date("2026-07-01T11:00:00.000Z");
+
+    const lock = await acquireLock({ spaceId, startAt, endAt, sessionId });
+    await confirmBookingCheckout(
+      buildConfirmInput(lock._id, sessionId, spaceId, buildingId, {
+        email: "marketing@example.com",
+        marketingCommunicationsAccepted: true,
+      }),
+    );
+
+    const ClientAccount = await getClientAccountModel();
+    const account = await ClientAccount.findOne({ email: "marketing@example.com" }).lean().exec();
+    expect(account?.marketingConsent?.accepted).toBe(true);
+    expect(account?.marketingConsent?.acceptedAt).toBeInstanceOf(Date);
   });
 
   it("rolls back completely when overlap is detected at confirm time", async () => {

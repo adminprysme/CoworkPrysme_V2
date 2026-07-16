@@ -44,6 +44,7 @@ export interface ConfirmBookingCheckoutInput {
   password: string;
   identity?: CardexIdentity;
   privacyPolicyVersion?: string;
+  marketingCommunicationsAccepted?: boolean;
   cgvAcceptedAt: Date;
   withdrawalAcknowledgedAt: Date;
   paymentMethod: "proforma" | "card";
@@ -179,6 +180,10 @@ async function resolveClientAccount(
           consent: {
             privacyPolicyVersion: input.privacyPolicyVersion ?? "unknown",
             acceptedAt: now,
+          },
+          marketingConsent: {
+            accepted: input.marketingCommunicationsAccepted === true,
+            ...(input.marketingCommunicationsAccepted === true ? { acceptedAt: now } : {}),
           },
           status: "active",
         },
