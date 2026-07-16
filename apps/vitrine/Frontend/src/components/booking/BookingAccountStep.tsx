@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { checkBookingEmail, verifyBookingAccount } from "@/lib/booking-confirm-api";
 
-import styles from "./BookingTunnelStep.module.css";
+import styles from "./BookingAccountStep.module.css";
 
 export type BookingAccountFormState = {
   mode: "new" | "existing";
@@ -16,6 +16,7 @@ export type BookingAccountFormState = {
   lastName: string;
   phone: string;
   privacyAccepted: boolean;
+  marketingAccepted: boolean;
   verified: boolean;
 };
 
@@ -117,85 +118,63 @@ export function BookingAccountStep({
           <h2 className={styles.title}>Votre compte</h2>
           <p className={styles.lead}>
             {value.mode === "new"
-              ? "Créez votre compte client — il sera activé à la validation finale."
+              ? "Créez votre espace client pour finaliser la réservation."
               : "Connectez-vous pour finaliser votre réservation."}
           </p>
         </div>
       </div>
 
-      <div className={styles.form}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>Email</span>
-          <input
-            className={styles.input}
-            type="email"
-            autoComplete={value.mode === "new" ? "email" : "username"}
-            value={value.email}
-            onChange={(event) => patch({ email: event.target.value })}
-          />
-        </label>
+      <div className={styles.infoBanner} role="note">
+        <p className={styles.infoBannerTitle}>
+          {value.mode === "new" ? "Activation du compte" : "Connexion sécurisée"}
+        </p>
+        <p className={styles.infoBannerText}>
+          {value.mode === "new"
+            ? "Votre compte sera créé maintenant et activé définitivement à la validation finale de la réservation."
+            : "Utilisez l'email et le mot de passe de votre espace client Cowork Prysme."}
+        </p>
+      </div>
 
-        {existingEmailHint && value.mode === "new" ? (
-          <p className={[styles.notice, styles.noticeWarning].join(" ")}>
-            Un compte existe déjà avec cette adresse.{" "}
-            <button
-              type="button"
-              className={styles.modeSwitch}
-              onClick={() => patch({ mode: "existing" })}
-            >
-              Se connecter
-            </button>
-          </p>
-        ) : null}
-
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>Mot de passe</span>
-          <input
-            className={styles.input}
-            type="password"
-            autoComplete={value.mode === "new" ? "new-password" : "current-password"}
-            value={value.password}
-            onChange={(event) => patch({ password: event.target.value })}
-          />
-        </label>
-
+      <div className={styles.formShell}>
         {value.mode === "new" ? (
-          <>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Confirmer le mot de passe</span>
-              <input
-                className={styles.input}
-                type="password"
-                autoComplete="new-password"
-                value={value.passwordConfirm}
-                onChange={(event) => patch({ passwordConfirm: event.target.value })}
-              />
-            </label>
+          <section className={styles.sectionCard} aria-labelledby="account-identity-title">
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle} id="account-identity-title">
+                Identité
+              </h3>
+              <p className={styles.sectionHint}>
+                Pour personnaliser votre fiche client et vos accès.
+              </p>
+            </div>
+
+            <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Prénom</span>
+                <input
+                  className={styles.input}
+                  type="text"
+                  autoComplete="given-name"
+                  value={value.firstName}
+                  onChange={(event) => patch({ firstName: event.target.value })}
+                />
+              </label>
+
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Nom</span>
+                <input
+                  className={styles.input}
+                  type="text"
+                  autoComplete="family-name"
+                  value={value.lastName}
+                  onChange={(event) => patch({ lastName: event.target.value })}
+                />
+              </label>
+            </div>
 
             <label className={styles.field}>
-              <span className={styles.fieldLabel}>Prénom</span>
-              <input
-                className={styles.input}
-                type="text"
-                autoComplete="given-name"
-                value={value.firstName}
-                onChange={(event) => patch({ firstName: event.target.value })}
-              />
-            </label>
-
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Nom</span>
-              <input
-                className={styles.input}
-                type="text"
-                autoComplete="family-name"
-                value={value.lastName}
-                onChange={(event) => patch({ lastName: event.target.value })}
-              />
-            </label>
-
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Téléphone (optionnel)</span>
+              <span className={styles.fieldLabel}>
+                Téléphone <span className={styles.fieldOptional}>(optionnel)</span>
+              </span>
               <input
                 className={styles.input}
                 type="tel"
@@ -204,22 +183,120 @@ export function BookingAccountStep({
                 onChange={(event) => patch({ phone: event.target.value })}
               />
             </label>
+          </section>
+        ) : null}
 
-            <label className={styles.checkboxRow}>
+        <section className={styles.sectionCard} aria-labelledby="account-login-title">
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle} id="account-login-title">
+              Connexion
+            </h3>
+            <p className={styles.sectionHint}>
+              {value.mode === "new"
+                ? "Ces identifiants vous permettront de retrouver vos réservations."
+                : "Saisissez vos identifiants existants."}
+            </p>
+          </div>
+
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Email</span>
+            <input
+              className={styles.input}
+              type="email"
+              autoComplete={value.mode === "new" ? "email" : "username"}
+              value={value.email}
+              onChange={(event) => patch({ email: event.target.value })}
+            />
+          </label>
+
+          {existingEmailHint && value.mode === "new" ? (
+            <p className={[styles.notice, styles.noticeWarning].join(" ")}>
+              Un compte existe déjà avec cette adresse.{" "}
+              <button
+                type="button"
+                className={styles.modeSwitch}
+                onClick={() => patch({ mode: "existing" })}
+              >
+                Se connecter
+              </button>
+            </p>
+          ) : null}
+
+          <div
+            className={[styles.fieldGrid, value.mode === "new" ? styles.fieldGridTwo : ""].join(
+              " ",
+            )}
+          >
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Mot de passe</span>
+              <input
+                className={styles.input}
+                type="password"
+                autoComplete={value.mode === "new" ? "new-password" : "current-password"}
+                value={value.password}
+                onChange={(event) => patch({ password: event.target.value })}
+              />
+            </label>
+
+            {value.mode === "new" ? (
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Confirmer le mot de passe</span>
+                <input
+                  className={styles.input}
+                  type="password"
+                  autoComplete="new-password"
+                  value={value.passwordConfirm}
+                  onChange={(event) => patch({ passwordConfirm: event.target.value })}
+                />
+              </label>
+            ) : null}
+          </div>
+        </section>
+
+        {value.mode === "new" ? (
+          <section className={styles.sectionCard} aria-labelledby="account-consent-title">
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle} id="account-consent-title">
+                Consentement
+              </h3>
+              <p className={styles.sectionHint}>
+                Vos choix sont enregistrés avec horodatage pour votre espace client.
+              </p>
+            </div>
+
+            <label className={[styles.checkboxCard, styles.checkboxCardRequired].join(" ")}>
               <input
                 type="checkbox"
                 checked={value.privacyAccepted}
                 onChange={(event) => patch({ privacyAccepted: event.target.checked })}
               />
-              <span>
-                J&apos;accepte la{" "}
-                <Link href="/politique-de-confidentialite" className={styles.link}>
-                  politique de confidentialité
-                </Link>
-                .
+              <span className={styles.checkboxCardLabel}>
+                <span className={styles.checkboxCardTitle}>Politique de confidentialité</span>
+                <span>
+                  J&apos;accepte la{" "}
+                  <Link href="/politique-de-confidentialite" className={styles.link}>
+                    politique de confidentialité
+                  </Link>{" "}
+                  (obligatoire).
+                </span>
               </span>
             </label>
-          </>
+
+            <label className={styles.checkboxCard}>
+              <input
+                type="checkbox"
+                checked={value.marketingAccepted}
+                onChange={(event) => patch({ marketingAccepted: event.target.checked })}
+              />
+              <span className={styles.checkboxCardLabel}>
+                <span className={styles.checkboxCardTitle}>Communications de l&apos;espace</span>
+                <span>
+                  J&apos;accepte de recevoir des communications de mon espace de coworking
+                  (actualités, offres). Facultatif — sans impact sur votre réservation.
+                </span>
+              </span>
+            </label>
+          </section>
         ) : null}
 
         {value.verified ? <p className={styles.success}>Identifiants vérifiés.</p> : null}
@@ -236,31 +313,20 @@ export function BookingAccountStep({
           </button>
         </div>
 
-        <p>
-          {value.mode === "new" ? (
-            <>
-              Vous avez déjà un compte ?{" "}
-              <button
-                type="button"
-                className={styles.modeSwitch}
-                onClick={() => patch({ mode: "existing" })}
-              >
-                Se connecter
-              </button>
-            </>
-          ) : (
-            <>
-              Nouveau client ?{" "}
-              <button
-                type="button"
-                className={styles.modeSwitch}
-                onClick={() => patch({ mode: "new" })}
-              >
-                Créer un compte
-              </button>
-            </>
-          )}
-        </p>
+        <div className={styles.modePanel}>
+          <p className={styles.modePanelText}>
+            {value.mode === "new"
+              ? "Vous avez déjà un compte client ?"
+              : "Première réservation chez Cowork Prysme ?"}
+          </p>
+          <button
+            type="button"
+            className={styles.modeSwitch}
+            onClick={() => patch({ mode: value.mode === "new" ? "existing" : "new" })}
+          >
+            {value.mode === "new" ? "Se connecter" : "Créer un compte"}
+          </button>
+        </div>
       </div>
     </section>
   );

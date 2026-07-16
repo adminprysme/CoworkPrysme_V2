@@ -135,6 +135,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     lastName: "",
     phone: "",
     privacyAccepted: false,
+    marketingAccepted: false,
     verified: false,
   });
   const [summaryForm, setSummaryForm] = useState<BookingSummaryFormState>({
@@ -690,6 +691,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
               }
             : undefined,
         privacyPolicyAccepted: accountForm.mode === "new" ? accountForm.privacyAccepted : undefined,
+        marketingCommunicationsAccepted:
+          accountForm.mode === "new" ? accountForm.marketingAccepted : undefined,
         cgvAccepted: true,
         withdrawalAcknowledged: true,
         paymentMethod,
