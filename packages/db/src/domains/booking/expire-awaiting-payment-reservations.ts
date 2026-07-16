@@ -8,7 +8,7 @@ export interface ExpiredAwaitingPaymentReservation {
   stripePaymentIntentId?: string;
   clientAccountId?: string;
   buildingId?: string;
-  invoiceId?: string;
+  spaceName?: string;
 }
 
 export interface ExpireAwaitingPaymentReservationsResult {
@@ -35,6 +35,7 @@ export async function expireAwaitingPaymentReservations(
       awaitingPaymentMethod: 1,
       clientAccountId: 1,
       buildingId: 1,
+      spaceSnapshot: 1,
     })
     .lean()
     .exec();
@@ -42,6 +43,9 @@ export async function expireAwaitingPaymentReservations(
   const expired: ExpiredAwaitingPaymentReservation[] = [];
 
   for (const candidate of candidates) {
+    const methodBeforeCancel = candidate.awaitingPaymentMethod as
+      "card" | "bank_transfer" | undefined;
+
     const updated = await Reservation.findOneAndUpdate(
       {
         _id: candidate._id,
@@ -72,10 +76,12 @@ export async function expireAwaitingPaymentReservations(
     expired.push({
       reservationId: updated._id.toString(),
       reference: updated.reference,
-      awaitingPaymentMethod: updated.awaitingPaymentMethod,
+      // Read from candidate: awaitingPaymentMethod is unset on the updated doc.
+      awaitingPaymentMethod: methodBeforeCancel,
       stripePaymentIntentId: updated.stripePaymentIntentId || undefined,
       clientAccountId: updated.clientAccountId?.toString(),
       buildingId: updated.buildingId?.toString(),
+      spaceName: candidate.spaceSnapshot?.name,
     });
   }
 
