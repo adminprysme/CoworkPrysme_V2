@@ -271,7 +271,10 @@ export function BuildingForm({
               onSelect={(geocoded) =>
                 onChange({
                   ...values,
-                  address: geocoded.address,
+                  address: {
+                    ...geocoded.address,
+                    accessInfo: values.address.accessInfo,
+                  },
                   lat: geocoded.lat,
                   lng: geocoded.lng,
                 })
@@ -317,6 +320,17 @@ export function BuildingForm({
                 onChange={(event) => patchAddress({ country: event.target.value })}
               />
               {errors.country ? <p className={styles.fieldError}>{errors.country}</p> : null}
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>Instructions d&apos;accès</span>
+              <textarea
+                className={styles.textarea}
+                rows={4}
+                value={values.address.accessInfo}
+                placeholder="Ex. Entrée principale le long de la grille, interphone : sonner à CoworkPrysme."
+                onChange={(event) => patchAddress({ accessInfo: event.target.value })}
+              />
+              {errors.accessInfo ? <p className={styles.fieldError}>{errors.accessInfo}</p> : null}
             </label>
             {errors.coordinates ? <p className={styles.fieldError}>{errors.coordinates}</p> : null}
           </div>

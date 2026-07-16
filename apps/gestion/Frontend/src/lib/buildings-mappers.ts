@@ -43,13 +43,34 @@ export function mapApiPhotosToFormPhotos(photos: BuildingPhotoResponse[]): Build
 /** @deprecated Use mapApiPhotosToFormPhotos */
 export const apiPhotosToFormPhotos = mapApiPhotosToFormPhotos;
 
+function mapFormAddressToRequest(address: BuildingFormValues["address"]) {
+  const accessInfo = address.accessInfo.trim();
+  return {
+    street: address.street,
+    postalCode: address.postalCode,
+    city: address.city,
+    country: address.country,
+    ...(accessInfo ? { accessInfo } : {}),
+  };
+}
+
+function mapResponseAddressToForm(address: BuildingResponse["address"]) {
+  return {
+    street: address.street,
+    postalCode: address.postalCode,
+    city: address.city,
+    country: address.country,
+    accessInfo: address.accessInfo ?? "",
+  };
+}
+
 export function formValuesToCreateRequest(values: BuildingFormValues): CreateBuildingRequest {
   return {
     name: values.name,
     description: values.description.trim(),
     phone: values.phone.trim(),
     email: values.email.trim(),
-    address: { ...values.address },
+    address: mapFormAddressToRequest(values.address),
     floors: values.floors.map((floor) => ({ name: floor.name })),
     status: values.status,
     accessibilityHours: values.accessibilityHours.map((entry) => ({ ...entry })),
@@ -66,7 +87,7 @@ export function buildingResponseToUpdateRequest(response: BuildingResponse): Upd
     description: response.description,
     phone: response.phone,
     email: response.email,
-    address: { ...response.address },
+    address: mapFormAddressToRequest(mapResponseAddressToForm(response.address)),
     floors: response.floors.map((floor) => ({ name: floor.name })),
     status: response.status,
     accessibilityHours: response.accessibilityHours.map((entry) => ({ ...entry })),
@@ -84,7 +105,7 @@ export function buildingResponseToBuilding(response: BuildingResponse, spaceCoun
     description: response.description,
     phone: response.phone,
     email: response.email,
-    address: { ...response.address },
+    address: mapResponseAddressToForm(response.address),
     lat: response.coordinates.lat,
     lng: response.coordinates.lng,
     floors: response.floors.map((floor) => ({ id: floor.id, name: floor.name })),
@@ -103,7 +124,7 @@ export function buildingResponseToFormValues(response: BuildingResponse): Buildi
     description: response.description ?? "",
     phone: response.phone ?? "",
     email: response.email ?? "",
-    address: { ...response.address },
+    address: mapResponseAddressToForm(response.address),
     lat: response.coordinates.lat,
     lng: response.coordinates.lng,
     floors: response.floors.map((floor) => ({ id: floor.id, name: floor.name })),
@@ -126,6 +147,7 @@ export function createEmptyBuildingFormValues(): BuildingFormValues {
       postalCode: "",
       city: "",
       country: "France",
+      accessInfo: "",
     },
     lat: null,
     lng: null,

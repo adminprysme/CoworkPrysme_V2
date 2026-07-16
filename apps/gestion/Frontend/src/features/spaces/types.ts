@@ -31,6 +31,8 @@ export interface BuildingAddress {
   postalCode: string;
   city: string;
   country: string;
+  /** Optional visitor access instructions (stored as address.accessInfo). */
+  accessInfo: string;
 }
 
 export interface BuildingConcierge {

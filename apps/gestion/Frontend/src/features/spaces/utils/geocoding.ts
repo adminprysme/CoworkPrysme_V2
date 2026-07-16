@@ -53,6 +53,7 @@ export function parseNominatimResult(result: NominatimSearchResult): GeocodedAdd
     postalCode: address.postcode ?? "",
     city,
     country: address.country ?? "",
+    accessInfo: "",
   };
 
   return {

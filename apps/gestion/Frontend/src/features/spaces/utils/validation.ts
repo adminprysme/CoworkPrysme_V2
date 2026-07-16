@@ -1,4 +1,7 @@
-import { BUILDING_DESCRIPTION_MAX_LENGTH } from "@coworkprysme/shared";
+import {
+  BUILDING_ACCESS_INFO_MAX_LENGTH,
+  BUILDING_DESCRIPTION_MAX_LENGTH,
+} from "@coworkprysme/shared";
 
 import { ACCEPTED_IMAGE_TYPES, MAX_PHOTO_SIZE_BYTES, type BuildingFormValues } from "../types.js";
 
@@ -14,6 +17,7 @@ export type BuildingFormErrors = Partial<
     | "postalCode"
     | "city"
     | "country"
+    | "accessInfo"
     | "coordinates"
     | "conciergeLink"
     | "floors"
@@ -67,6 +71,10 @@ export function validateBuildingForm(values: BuildingFormValues): BuildingFormEr
     errors.country = "Le pays est requis.";
   }
 
+  if (values.address.accessInfo.length > BUILDING_ACCESS_INFO_MAX_LENGTH) {
+    errors.accessInfo = `Les instructions d'accès ne peuvent pas dépasser ${BUILDING_ACCESS_INFO_MAX_LENGTH} caractères.`;
+  }
+
   if (values.concierge.link.trim() && !URL_PATTERN.test(values.concierge.link.trim())) {
     errors.conciergeLink = "L'URL de la conciergerie n'est pas valide.";
   }
@@ -108,6 +116,7 @@ export function createEmptyFormValues(): BuildingFormValues {
       postalCode: "",
       city: "",
       country: "France",
+      accessInfo: "",
     },
     lat: null,
     lng: null,

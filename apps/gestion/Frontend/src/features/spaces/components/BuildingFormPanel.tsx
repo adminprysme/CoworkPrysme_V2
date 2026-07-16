@@ -30,6 +30,7 @@ const ACCESSIBILITY_ERROR_KEYS = new Set<string>([
   "postalCode",
   "city",
   "country",
+  "accessInfo",
   "coordinates",
 ]);
 
