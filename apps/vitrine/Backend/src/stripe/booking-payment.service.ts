@@ -24,7 +24,8 @@ import {
 import type Stripe from "stripe";
 
 import { createStripeClient, loadStripeConfig } from "./stripe.config.js";
-import type { BookingEmailsService } from "../booking/booking-emails.service.js";
+/* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI needs runtime class reference */
+import { BookingEmailsService } from "../booking/booking-emails.service.js";
 
 /** Payment intent / status may only target invoices issued within this window (Phase 4a). */
 export const BOOKING_PAYMENT_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
