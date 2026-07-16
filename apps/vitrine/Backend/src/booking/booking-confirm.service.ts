@@ -178,6 +178,8 @@ export class BookingConfirmService {
         password: input.password,
         identity: input.identity,
         privacyPolicyVersion: input.accountMode === "new" ? PRIVACY_POLICY_VERSION : undefined,
+        marketingCommunicationsAccepted:
+          input.accountMode === "new" ? input.marketingCommunicationsAccepted : undefined,
         cgvAcceptedAt: now,
         withdrawalAcknowledgedAt: now,
         paymentMethod: input.paymentMethod,
