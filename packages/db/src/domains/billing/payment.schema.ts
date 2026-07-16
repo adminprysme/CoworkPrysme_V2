@@ -42,6 +42,16 @@ const paymentSchema = new Schema<Payment>(
 
 paymentSchema.index({ invoiceId: 1 });
 paymentSchema.index({ "reconciliation.status": 1 });
+paymentSchema.index(
+  { "reconciliation.stripePaymentIntentId": 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: {
+      "reconciliation.stripePaymentIntentId": { $type: "string" },
+    },
+  },
+);
 
 export type PaymentModel = Model<Payment>;
 

@@ -19,3 +19,8 @@ export {
   type QuoteDocument,
   type QuoteModel,
 } from "./quote.schema.js";
+export {
+  applyStripeCardPayment,
+  type ApplyStripeCardPaymentInput,
+  type ApplyStripeCardPaymentResult,
+} from "./apply-stripe-card-payment.js";

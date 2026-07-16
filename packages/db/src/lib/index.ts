@@ -20,6 +20,7 @@ export {
   isDuplicateKeyError,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
+  InvoiceNotFoundError,
   LockMismatchError,
   LockNotAvailableError,
   RangeOpeningHoursError,

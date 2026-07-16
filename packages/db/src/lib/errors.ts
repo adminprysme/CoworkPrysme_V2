@@ -65,6 +65,14 @@ export class EmailAlreadyRegisteredError extends Error {
   }
 }
 
+/** Thrown when an invoice referenced by a payment webhook/intent is missing. */
+export class InvoiceNotFoundError extends Error {
+  constructor(message = "Invoice not found") {
+    super(message);
+    this.name = "InvoiceNotFoundError";
+  }
+}
+
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&

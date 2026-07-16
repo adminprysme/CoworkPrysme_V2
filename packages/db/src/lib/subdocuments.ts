@@ -499,12 +499,15 @@ export const auditDiffSchema = new Schema<Record<string, AuditDiffEntry>>(
 export interface ReconciliationInfo {
   status: string;
   qontoTxId?: string;
+  /** Stripe PaymentIntent id — unique sparse index for webhook idempotence. */
+  stripePaymentIntentId?: string;
 }
 
 export const reconciliationSchema = new Schema<ReconciliationInfo>(
   {
     status: { type: String, required: true },
     qontoTxId: { type: String },
+    stripePaymentIntentId: { type: String },
   },
   { _id: false },
 );
