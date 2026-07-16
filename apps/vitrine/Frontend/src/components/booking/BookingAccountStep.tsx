@@ -292,7 +292,7 @@ export function BookingAccountStep({
                 <span className={styles.checkboxCardTitle}>Communications de l&apos;espace</span>
                 <span>
                   J&apos;accepte de recevoir des communications de mon espace de coworking
-                  (actualités, offres). Facultatif — sans impact sur votre réservation.
+                  (actualités, offres). Facultatif.
                 </span>
               </span>
             </label>
