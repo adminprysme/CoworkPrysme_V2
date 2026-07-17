@@ -79,15 +79,15 @@ export class BookingPaymentService {
     const stripe = this.ensureStripe();
     const { invoice, reservation } = await this.loadPayableInvoicePair(input);
 
-    if (reservation.status !== "awaiting_payment" && reservation.status !== "confirmed") {
+    // Card PaymentIntents only for unpaid card holds — never bank_transfer / confirmed / etc.
+    if (reservation.status !== "awaiting_payment" || reservation.awaitingPaymentMethod !== "card") {
       throw new BadRequestException({
         code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_NOT_PAYABLE,
-        message: "Cette réservation n'accepte plus de paiement carte",
+        message: "Cette réservation n'accepte pas de paiement carte",
       });
     }
 
     if (
-      reservation.status === "awaiting_payment" &&
       reservation.awaitingPaymentExpiresAt &&
       new Date(reservation.awaitingPaymentExpiresAt).getTime() <= Date.now()
     ) {

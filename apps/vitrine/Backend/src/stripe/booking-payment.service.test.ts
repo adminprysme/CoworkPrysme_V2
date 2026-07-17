@@ -55,7 +55,14 @@ import type { BookingEmailsService } from "../booking/booking-emails.service.js"
 const RESERVATION_ID = "507f1f77bcf86cd799439011";
 const INVOICE_ID = "507f1f77bcf86cd799439012";
 
-function mockInvoicePair(balanceDue = 4800) {
+function mockInvoicePair(
+  balanceDue = 4800,
+  reservationOverrides: {
+    status?: string;
+    awaitingPaymentMethod?: string | undefined;
+    awaitingPaymentExpiresAt?: Date;
+  } = {},
+) {
   reservationUpdateOneMock.mockReturnValue({
     exec: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
   });
@@ -66,8 +73,10 @@ function mockInvoicePair(balanceDue = 4800) {
         exec: vi.fn().mockResolvedValue({
           _id: RESERVATION_ID,
           reference: "RES-2026-00042",
-          status: "awaiting_payment",
-          awaitingPaymentExpiresAt: new Date(Date.now() + 60_000),
+          status: reservationOverrides.status ?? "awaiting_payment",
+          awaitingPaymentMethod: reservationOverrides.awaitingPaymentMethod ?? "card",
+          awaitingPaymentExpiresAt:
+            reservationOverrides.awaitingPaymentExpiresAt ?? new Date(Date.now() + 60_000),
         }),
       }),
     }),
@@ -224,6 +233,34 @@ describe("Stripe booking payment", () => {
     expect(result.amount).toBe(4800);
     expect(result.clientSecret).toBe("pi_created_secret");
     expect(reservationUpdateOneMock).toHaveBeenCalled();
+  });
+
+  it("rejects PaymentIntent creation for a bank_transfer awaiting_payment hold", async () => {
+    mockInvoicePair(2400, { awaitingPaymentMethod: "bank_transfer" });
+
+    await expect(
+      service.createPaymentIntent({
+        reservationReference: "RES-2026-00042",
+        invoiceReference: "PF-2026-00042",
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "INVOICE_NOT_PAYABLE" }),
+    });
+    expect(paymentIntentsCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects PaymentIntent creation when reservation is already confirmed", async () => {
+    mockInvoicePair(2400, { status: "confirmed", awaitingPaymentMethod: undefined });
+
+    await expect(
+      service.createPaymentIntent({
+        reservationReference: "RES-2026-00042",
+        invoiceReference: "PF-2026-00042",
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "INVOICE_NOT_PAYABLE" }),
+    });
+    expect(paymentIntentsCreateMock).not.toHaveBeenCalled();
   });
 
   it("logs payment_intent.payment_failed without applying a payment, confirming, or emailing", async () => {
