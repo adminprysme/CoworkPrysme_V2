@@ -116,7 +116,7 @@ export class BookingPaymentService {
     }
 
     const currency = (invoice.currency || "EUR").toLowerCase();
-    const paymentIntent = await stripe.paymentIntents.create(
+    const createdIntent = await stripe.paymentIntents.create(
       {
         amount,
         currency,
@@ -132,6 +132,22 @@ export class BookingPaymentService {
         idempotencyKey: `pi-${invoice._id.toString()}-${amount}`,
       },
     );
+
+    // Idempotent create may return a stale snapshot; always re-read live status.
+    // Never hand a succeeded/canceled client_secret to Payment Element (400 loaderror).
+    const paymentIntent = await stripe.paymentIntents.retrieve(createdIntent.id);
+    if (paymentIntent.status === "succeeded") {
+      throw new ConflictException({
+        code: BOOKING_PAYMENT_ERROR_CODES.ALREADY_PAID,
+        message: "Ce paiement carte est déjà confirmé côté Stripe",
+      });
+    }
+    if (paymentIntent.status === "canceled") {
+      throw new BadRequestException({
+        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_NOT_PAYABLE,
+        message: "Le PaymentIntent Stripe a été annulé — relancez une nouvelle tentative",
+      });
+    }
 
     if (!paymentIntent.client_secret) {
       throw new ServiceUnavailableException({

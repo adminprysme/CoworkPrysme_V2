@@ -11,6 +11,7 @@ const {
   getInvoiceModelMock,
   getReservationModelMock,
   paymentIntentsCreateMock,
+  paymentIntentsRetrieveMock,
   constructEventMock,
   reservationUpdateOneMock,
   sendEmailsAfterCardPaymentMock,
@@ -21,6 +22,7 @@ const {
   getInvoiceModelMock: vi.fn(),
   getReservationModelMock: vi.fn(),
   paymentIntentsCreateMock: vi.fn(),
+  paymentIntentsRetrieveMock: vi.fn(),
   constructEventMock: vi.fn(),
   reservationUpdateOneMock: vi.fn(),
   sendEmailsAfterCardPaymentMock: vi.fn(),
@@ -56,7 +58,10 @@ vi.mock("./stripe.config.js", () => ({
     webhookSecret: "whsec_test_mock",
   }),
   createStripeClient: () => ({
-    paymentIntents: { create: paymentIntentsCreateMock },
+    paymentIntents: {
+      create: paymentIntentsCreateMock,
+      retrieve: paymentIntentsRetrieveMock,
+    },
     webhooks: { constructEvent: constructEventMock },
   }),
 }));
@@ -236,6 +241,12 @@ describe("Stripe booking payment", () => {
     paymentIntentsCreateMock.mockResolvedValue({
       id: "pi_created",
       client_secret: "pi_created_secret",
+      status: "requires_payment_method",
+    });
+    paymentIntentsRetrieveMock.mockResolvedValue({
+      id: "pi_created",
+      client_secret: "pi_created_secret",
+      status: "requires_payment_method",
     });
 
     const result = await service.createPaymentIntent({
@@ -247,6 +258,7 @@ describe("Stripe booking payment", () => {
     });
 
     expect(paymentIntentsCreateMock).toHaveBeenCalledTimes(1);
+    expect(paymentIntentsRetrieveMock).toHaveBeenCalledWith("pi_created");
     const [createArgs] = paymentIntentsCreateMock.mock.calls[0] as [
       { amount: number; currency: string },
       { idempotencyKey: string },
@@ -256,6 +268,30 @@ describe("Stripe booking payment", () => {
     expect(result.amount).toBe(4800);
     expect(result.clientSecret).toBe("pi_created_secret");
     expect(reservationUpdateOneMock).toHaveBeenCalled();
+  });
+
+  it("refuses to return client_secret when PaymentIntent is already succeeded", async () => {
+    paymentIntentsCreateMock.mockResolvedValue({
+      id: "pi_already_paid",
+      client_secret: "secret_should_not_leak",
+      status: "requires_payment_method",
+    });
+    paymentIntentsRetrieveMock.mockResolvedValue({
+      id: "pi_already_paid",
+      client_secret: "secret_should_not_leak",
+      status: "succeeded",
+    });
+
+    await expect(
+      service.createPaymentIntent({
+        reservationReference: "RES-2026-00042",
+        invoiceReference: "PF-2026-00042",
+        paymentAccessToken: validToken,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "ALREADY_PAID" }),
+    });
+    expect(reservationUpdateOneMock).not.toHaveBeenCalled();
   });
 
   it("rejects PaymentIntent creation without a valid paymentAccessToken", async () => {
