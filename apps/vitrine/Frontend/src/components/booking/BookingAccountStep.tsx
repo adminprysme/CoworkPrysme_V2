@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { BookingClientKind } from "@coworkprysme/shared";
 
 import { checkBookingEmail, verifyBookingAccount } from "@/lib/booking-confirm-api";
+import { isValidSiretDigits, lookupCompanyBySiret } from "@/lib/company-lookup";
 
 import { BookingAddressSuggestField } from "./BookingAddressSuggestField";
 import styles from "./BookingAccountStep.module.css";
@@ -65,6 +66,9 @@ export function BookingAccountStep({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [existingEmailHint, setExistingEmailHint] = useState(false);
+  const [siretLookupLoading, setSiretLookupLoading] = useState(false);
+  const [siretLookupMessage, setSiretLookupMessage] = useState<string | null>(null);
+  const [vatPrefillHint, setVatPrefillHint] = useState(false);
 
   useEffect(() => {
     if (value.mode !== "new" || !value.email.includes("@")) {
@@ -84,6 +88,57 @@ export function BookingAccountStep({
   function patch(partial: Partial<BookingAccountFormState>) {
     onChange({ ...value, ...partial, verified: false });
     setError(null);
+    if (partial.siret !== undefined) {
+      setSiretLookupMessage(null);
+    }
+    if (partial.vatNumber !== undefined) {
+      setVatPrefillHint(false);
+    }
+  }
+
+  async function handleSiretLookup() {
+    setSiretLookupMessage(null);
+    setVatPrefillHint(false);
+
+    if (!isValidSiretDigits(value.siret)) {
+      setSiretLookupMessage("Le SIRET doit contenir exactement 14 chiffres.");
+      return;
+    }
+
+    setSiretLookupLoading(true);
+    try {
+      const outcome = await lookupCompanyBySiret(value.siret);
+      if (outcome.status === "ok") {
+        onChange({
+          ...value,
+          legalName: outcome.company.legalName,
+          siret: outcome.company.siret,
+          vatNumber: outcome.company.vatNumber,
+          street: outcome.company.address.street,
+          zip: outcome.company.address.zip,
+          city: outcome.company.address.city,
+          verified: false,
+        });
+        setVatPrefillHint(true);
+        setSiretLookupMessage(null);
+        return;
+      }
+      if (outcome.status === "invalid_siret") {
+        setSiretLookupMessage("Le SIRET doit contenir exactement 14 chiffres.");
+        return;
+      }
+      if (outcome.status === "not_found") {
+        setSiretLookupMessage(
+          "Aucun établissement trouvé pour ce SIRET. Vérifiez le numéro ou saisissez les informations manuellement.",
+        );
+        return;
+      }
+      setSiretLookupMessage(
+        "Recherche temporairement indisponible. Vous pouvez saisir les informations manuellement.",
+      );
+    } finally {
+      setSiretLookupLoading(false);
+    }
   }
 
   function validateNewAccount(): string | null {
@@ -296,7 +351,7 @@ export function BookingAccountStep({
                   />
                 </label>
 
-                <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
+                <div className={styles.siretRow}>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>
                       SIRET <span className={styles.fieldOptional}>(optionnel)</span>
@@ -311,21 +366,40 @@ export function BookingAccountStep({
                       onChange={(event) => patch({ siret: event.target.value })}
                     />
                   </label>
-
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>
-                      TVA intracom. <span className={styles.fieldOptional}>(optionnel)</span>
-                    </span>
-                    <input
-                      className={styles.input}
-                      type="text"
-                      autoComplete="off"
-                      placeholder="FR…"
-                      value={value.vatNumber}
-                      onChange={(event) => patch({ vatNumber: event.target.value })}
-                    />
-                  </label>
+                  <button
+                    type="button"
+                    className={styles.siretLookupButton}
+                    disabled={siretLookupLoading}
+                    onClick={() => void handleSiretLookup()}
+                  >
+                    {siretLookupLoading ? "Recherche…" : "Rechercher"}
+                  </button>
                 </div>
+
+                {siretLookupMessage ? (
+                  <p className={styles.siretLookupMessage} role="status">
+                    {siretLookupMessage}
+                  </p>
+                ) : null}
+
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>
+                    TVA intracom. <span className={styles.fieldOptional}>(optionnel)</span>
+                  </span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="off"
+                    placeholder="FR…"
+                    value={value.vatNumber}
+                    onChange={(event) => patch({ vatNumber: event.target.value })}
+                  />
+                  {vatPrefillHint ? (
+                    <span className={styles.fieldHint}>
+                      Numéro calculé à partir du SIREN — vérifiez avant validation.
+                    </span>
+                  ) : null}
+                </label>
               </section>
             ) : null}
 

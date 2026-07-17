@@ -166,6 +166,57 @@
   color: var(--v-color-text-muted);
 }
 
+.fieldHint {
+  font-size: 0.8rem;
+  color: var(--v-color-text-muted);
+  line-height: 1.4;
+}
+
+.siretRow {
+  display: grid;
+  gap: var(--v-space-3);
+  align-items: end;
+}
+
+@media (min-width: 640px) {
+  .siretRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+.siretLookupButton {
+  padding: 0.72rem 1.1rem;
+  border: 1px solid var(--v-color-brand);
+  border-radius: var(--v-radius-md);
+  background: transparent;
+  color: var(--v-color-brand);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.siretLookupButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--v-color-brand-muted) 45%, transparent);
+  color: var(--v-color-brand-hover);
+}
+
+.siretLookupButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.siretLookupMessage {
+  margin: 0;
+  padding: var(--v-space-3) var(--v-space-4);
+  border-radius: var(--v-radius-md);
+  border: 1px solid color-mix(in srgb, var(--v-color-brand) 28%, var(--v-color-border));
+  background: color-mix(in srgb, var(--v-color-brand-muted) 22%, var(--v-color-surface));
+  color: var(--v-color-ink);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .input {
   width: 100%;
   padding: 0.72rem 0.85rem;
