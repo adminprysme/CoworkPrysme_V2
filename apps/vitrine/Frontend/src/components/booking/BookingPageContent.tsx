@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  BookingBuildingOption,
   BookingConfirmResponse,
   BookingLockResponse,
   BookingPaymentMethod,
@@ -59,9 +60,16 @@ import {
   type HomeBookingSearchCriteria,
 } from "@/lib/booking-home-search";
 import {
+  BOOKING_BUILDING_FILTER_ALL,
+  resolveBookingBuildingIdQuery,
+  shouldShowBookingBuildingFilter,
+  type BookingBuildingFilterValue,
+} from "@/lib/booking-building-filter";
+import {
   createBookingLock,
   fetchActiveBookingLock,
   fetchBookingAvailability,
+  fetchBookingBuildings,
   fetchBookingSpaces,
   fetchSpaceAvailability,
   releaseBookingLock,
@@ -111,6 +119,10 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [searchMode, setSearchMode] = useState<BookingSearchMode>("dates");
   const [spaceType, setSpaceType] = useState<SpaceType>("meeting_room");
   const [partySize, setPartySize] = useState(4);
+  const [bookingBuildings, setBookingBuildings] = useState<BookingBuildingOption[]>([]);
+  const [buildingFilter, setBuildingFilter] = useState<BookingBuildingFilterValue>(
+    BOOKING_BUILDING_FILTER_ALL,
+  );
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const initialTimes = defaultTimesForRangeMode("same_day");
@@ -172,6 +184,27 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       }),
     [contactEmail, partySize, spaceType],
   );
+
+  const showBuildingFilter = shouldShowBookingBuildingFilter(bookingBuildings);
+  const selectedBuildingIdQuery = resolveBookingBuildingIdQuery(buildingFilter);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBookingBuildings()
+      .then((buildings) => {
+        if (!cancelled) {
+          setBookingBuildings(buildings);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBookingBuildings([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (previousRangeModeRef.current === dateRangeMode) {
@@ -492,6 +525,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           partySize: homePartySize,
           startAt: window.startAt,
           endAt: window.endAt,
+          buildingId: selectedBuildingIdQuery,
         });
         showSearchResults(result);
       } catch (searchError) {
@@ -503,7 +537,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     }
 
     void runHomeAutoSearch();
-  }, [homeAutoSearchPending, resumePending]);
+  }, [homeAutoSearchPending, resumePending, selectedBuildingIdQuery]);
 
   useEffect(() => {
     if (!restoreSnapshot) {
@@ -631,7 +665,11 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           return;
         }
 
-        const result = await fetchBookingSpaces({ spaceType, partySize });
+        const result = await fetchBookingSpaces({
+          spaceType,
+          partySize,
+          buildingId: selectedBuildingIdQuery,
+        });
         showSearchResults(result);
         return;
       }
@@ -658,6 +696,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         partySize,
         startAt: window.startAt,
         endAt: window.endAt,
+        buildingId: selectedBuildingIdQuery,
       });
       showSearchResults(result);
     } catch (searchError) {
@@ -995,6 +1034,29 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                           increaseLabel="Augmenter le nombre de personnes"
                         />
                       </div>
+
+                      {showBuildingFilter ? (
+                        <div className={styles.field}>
+                          <label className={styles.fieldLabel} htmlFor="booking-building-filter">
+                            Bâtiment
+                          </label>
+                          <select
+                            id="booking-building-filter"
+                            className={styles.fieldSelect}
+                            value={buildingFilter}
+                            onChange={(event) => {
+                              setBuildingFilter(event.target.value as BookingBuildingFilterValue);
+                            }}
+                          >
+                            <option value={BOOKING_BUILDING_FILTER_ALL}>Tous les bâtiments</option>
+                            {bookingBuildings.map((building) => (
+                              <option key={building.id} value={building.id}>
+                                {building.name} — {building.city}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className={styles.dateSection}>

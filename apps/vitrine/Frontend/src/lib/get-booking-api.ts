@@ -1,11 +1,13 @@
 import {
   ActiveBookingLockResponseSchema,
   BookingAvailabilityResponseSchema,
+  BookingBuildingsResponseSchema,
   BookingLockResponseSchema,
   BookingSpaceAvailabilityResponseSchema,
   BookingSpacesResponseSchema,
   type BookingAvailabilityQuery,
   type ActiveBookingLockResponse,
+  type BookingBuildingOption,
   type BookingLockResponse,
   type BookingSpaceAvailabilityQuery,
   type BookingSpaceCard,
@@ -14,6 +16,11 @@ import {
 } from "@coworkprysme/shared";
 
 import { bookingFetch, buildQuery, getApiBaseUrl } from "./booking-api-client";
+
+export async function fetchBookingBuildings(): Promise<BookingBuildingOption[]> {
+  const data = await bookingFetch("/booking/buildings", BookingBuildingsResponseSchema);
+  return data.buildings;
+}
 
 export async function fetchBookingAvailability(
   query: BookingAvailabilityQuery,

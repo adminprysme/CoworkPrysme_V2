@@ -134,6 +134,12 @@
   background: var(--v-color-bg);
   color: var(--v-color-text);
   font: inherit;
+  font-weight: 600;
+  font-size: var(--v-text-sm);
+}
+
+.fieldSelect {
+  cursor: pointer;
 }
 
 .dateRow {
