@@ -3,18 +3,22 @@ import { defineConfig } from "vite";
 
 const apiTarget = process.env.VITE_DEV_API_PROXY ?? "http://127.0.0.1:8003";
 
-/** Keep SPA routes (/spaces, /spaces/:id) on Vite; proxy JSON API calls only. */
+/** Keep SPA document requests on Vite; proxy JSON API calls only. */
 function proxyApiOnly(pathPrefix: string) {
   return {
     target: apiTarget,
     bypass(req: { headers: { accept?: string }; url?: string }) {
       const accept = req.headers.accept ?? "";
-      if (accept.includes("text/html")) {
-        return req.url;
+      const url = req.url ?? "";
+      const isSpaDocument =
+        accept.includes("text/html") &&
+        (url === pathPrefix ||
+          url.startsWith(`${pathPrefix}?`) ||
+          url.startsWith(`${pathPrefix}/`));
+      if (isSpaDocument) {
+        return url;
       }
-      if (req.url === pathPrefix || req.url?.startsWith(`${pathPrefix}?`)) {
-        return req.url;
-      }
+      return null;
     },
   };
 }
@@ -30,6 +34,10 @@ export default defineConfig({
       "/admin/vitrine-content": apiTarget,
       "/buildings": apiTarget,
       "/spaces": proxyApiOnly("/spaces"),
+      "/services": proxyApiOnly("/services"),
+      "/discount-codes": apiTarget,
+      "/billing": apiTarget,
+      "/integrations": apiTarget,
       "/media": apiTarget,
       "/health": apiTarget,
       "/nominatim": {
