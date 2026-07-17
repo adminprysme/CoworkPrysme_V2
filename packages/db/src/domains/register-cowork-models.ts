@@ -2,7 +2,13 @@ import type { Connection } from "mongoose";
 
 import { registerStaffSessionModel } from "./auth/index.js";
 import { registerCardexModel, registerClientAccountModel } from "./client/index.js";
-import { registerInvoiceModel, registerPaymentModel, registerQuoteModel } from "./billing/index.js";
+import {
+  registerInvoiceModel,
+  registerPaymentModel,
+  registerQontoOAuthCredentialModel,
+  registerQontoTransferCandidateModel,
+  registerQuoteModel,
+} from "./billing/index.js";
 import {
   registerNotificationModel,
   registerNewsOfferModel,
@@ -47,6 +53,8 @@ export function registerAllCoworkModels(connection: Connection): void {
   registerQuoteModel(connection);
   registerInvoiceModel(connection);
   registerPaymentModel(connection);
+  registerQontoOAuthCredentialModel(connection);
+  registerQontoTransferCandidateModel(connection);
   registerNotificationModel(connection);
   registerReviewModel(connection);
   registerSatisfactionSurveyModel(connection);
@@ -73,6 +81,8 @@ export const COWORK_COLLECTION_NAMES = [
   "quotes",
   "invoices",
   "payments",
+  "qontoOAuthCredentials",
+  "qontoTransferCandidates",
   "notifications",
   "reviews",
   "satisfactionSurveys",

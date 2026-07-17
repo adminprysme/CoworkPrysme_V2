@@ -5,6 +5,7 @@ import { InvoiceNotFoundError } from "../../lib/errors.js";
 import { assertReplicaSetForTransactions } from "../../lib/replica-set.js";
 import { getInvoiceModel, type InvoiceDocument } from "./invoice.schema.js";
 import { getPaymentModel, type PaymentDocument } from "./payment.schema.js";
+import { getQontoTransferCandidateModel } from "./qonto-transfer-candidate.schema.js";
 
 export interface ApplyBankTransferPaymentInput {
   invoiceId: Types.ObjectId | string;
@@ -13,6 +14,11 @@ export interface ApplyBankTransferPaymentInput {
   receivedAt?: Date;
   /** Optional staff note / operator id for audit. */
   markedByStaffProfileId?: Types.ObjectId | string;
+  /**
+   * Optional Qonto transaction id when confirming a suggested match.
+   * Written to Payment.reconciliation.qontoTxId (unique sparse index).
+   */
+  qontoTxId?: string;
 }
 
 export interface ApplyBankTransferPaymentResult {
@@ -33,12 +39,15 @@ export async function applyBankTransferPayment(
     throw new Error("amountReceived must be a positive integer (cents)");
   }
 
+  const qontoTxId = input.qontoTxId?.trim() || undefined;
+
   await connectMongo();
   const connection = await getCoworkDb();
   await assertReplicaSetForTransactions(connection);
 
   const Invoice = await getInvoiceModel();
   const Payment = await getPaymentModel();
+  const QontoCandidate = await getQontoTransferCandidateModel();
   const receivedAt = input.receivedAt ?? new Date();
 
   const session = await connection.startSession();
@@ -47,8 +56,8 @@ export async function applyBankTransferPayment(
 
     await session.withTransaction(async () => {
       result = await applyBankTransferPaymentInSession(
-        { ...input, receivedAt },
-        { Invoice, Payment, session },
+        { ...input, receivedAt, qontoTxId },
+        { Invoice, Payment, QontoCandidate, session },
       );
     });
 
@@ -62,13 +71,31 @@ export async function applyBankTransferPayment(
 }
 
 async function applyBankTransferPaymentInSession(
-  input: ApplyBankTransferPaymentInput & { receivedAt: Date },
+  input: ApplyBankTransferPaymentInput & { receivedAt: Date; qontoTxId?: string },
   deps: {
     Invoice: Awaited<ReturnType<typeof getInvoiceModel>>;
     Payment: Awaited<ReturnType<typeof getPaymentModel>>;
+    QontoCandidate: Awaited<ReturnType<typeof getQontoTransferCandidateModel>>;
     session: ClientSession;
   },
 ): Promise<ApplyBankTransferPaymentResult> {
+  if (input.qontoTxId) {
+    const existingByQonto = await deps.Payment.findOne({
+      "reconciliation.qontoTxId": input.qontoTxId,
+    })
+      .session(deps.session)
+      .exec();
+    if (existingByQonto) {
+      const invoice = await deps.Invoice.findById(existingByQonto.invoiceId)
+        .session(deps.session)
+        .exec();
+      if (!invoice) {
+        throw new InvoiceNotFoundError();
+      }
+      return { applied: false, invoice, payment: existingByQonto };
+    }
+  }
+
   const invoice = await deps.Invoice.findById(input.invoiceId).session(deps.session).exec();
   if (!invoice) {
     throw new InvoiceNotFoundError();
@@ -96,6 +123,7 @@ async function applyBankTransferPaymentInSession(
         amount: input.amountReceived,
         reconciliation: {
           status: "matched",
+          ...(input.qontoTxId ? { qontoTxId: input.qontoTxId } : {}),
         },
         receivedAt: input.receivedAt,
       },
@@ -115,6 +143,14 @@ async function applyBankTransferPaymentInSession(
     invoice.paidAt = input.receivedAt;
   }
   await invoice.save({ session: deps.session });
+
+  if (input.qontoTxId) {
+    await deps.QontoCandidate.updateOne(
+      { qontoTxId: input.qontoTxId },
+      { $set: { consumedAt: input.receivedAt } },
+      { session: deps.session },
+    ).exec();
+  }
 
   return { applied: true, invoice, payment };
 }

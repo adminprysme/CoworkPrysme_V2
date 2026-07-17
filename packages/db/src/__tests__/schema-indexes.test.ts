@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { registerPaymentModel } from "../domains/billing/payment.schema.js";
 import { registerSlotLockModel } from "../domains/reservation/slot-lock.schema.js";
 import { CENTS_VALIDATOR } from "../lib/schema-helpers.js";
 import { reservationPricingSnapshotSchema } from "../lib/subdocuments.js";
@@ -19,6 +20,29 @@ describe("slotLocks schema indexes", () => {
       ]),
     );
     connection.close();
+  });
+});
+
+describe("payments reconciliation indexes", () => {
+  it("declares unique sparse indexes for Stripe and Qonto ids", () => {
+    const connection = mongoose.createConnection();
+    registerPaymentModel(connection);
+    const schema = connection.models.Payment!.schema;
+    const indexes = schema.indexes();
+
+    expect(indexes).toEqual(
+      expect.arrayContaining([
+        [
+          { "reconciliation.stripePaymentIntentId": 1 },
+          expect.objectContaining({ unique: true, sparse: true }),
+        ],
+        [
+          { "reconciliation.qontoTxId": 1 },
+          expect.objectContaining({ unique: true, sparse: true }),
+        ],
+      ]),
+    );
+    void connection.close();
   });
 });
 

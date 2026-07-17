@@ -52,6 +52,16 @@ paymentSchema.index(
     },
   },
 );
+paymentSchema.index(
+  { "reconciliation.qontoTxId": 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: {
+      "reconciliation.qontoTxId": { $type: "string" },
+    },
+  },
+);
 
 export type PaymentModel = Model<Payment>;
 

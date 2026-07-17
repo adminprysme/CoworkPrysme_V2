@@ -20,6 +20,23 @@ export {
   type QuoteModel,
 } from "./quote.schema.js";
 export {
+  getQontoOAuthCredentialModel,
+  registerQontoOAuthCredentialModel,
+  QONTO_OAUTH_SINGLETON_KEY,
+  type QontoOAuthCredential,
+  type QontoOAuthCredentialDocument,
+  type QontoOAuthCredentialModel,
+} from "./qonto-oauth-credential.schema.js";
+export {
+  getQontoTransferCandidateModel,
+  registerQontoTransferCandidateModel,
+  QONTO_CANDIDATE_MATCH_STATUSES,
+  type QontoCandidateMatchStatus,
+  type QontoTransferCandidate,
+  type QontoTransferCandidateDocument,
+  type QontoTransferCandidateModel,
+} from "./qonto-transfer-candidate.schema.js";
+export {
   applyStripeCardPayment,
   type ApplyStripeCardPaymentInput,
   type ApplyStripeCardPaymentResult,
