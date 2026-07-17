@@ -50,6 +50,11 @@ import {
   type BookingRestoreSnapshot,
 } from "@/lib/booking-restore";
 import {
+  parseHomeBookingSearchParams,
+  stripHomeBookingSearchQuery,
+  type HomeBookingSearchCriteria,
+} from "@/lib/booking-home-search";
+import {
   createBookingLock,
   fetchActiveBookingLock,
   fetchBookingAvailability,
@@ -131,6 +136,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [cart, setCart] = useState<BookingCartItem[]>([]);
   const [discountCode, setDiscountCode] = useState("");
   const [resumePending, setResumePending] = useState(true);
+  const [homeAutoSearch, setHomeAutoSearch] = useState<HomeBookingSearchCriteria | null>(null);
   const [releaseLoading, setReleaseLoading] = useState(false);
   const [accountForm, setAccountForm] = useState(EMPTY_BOOKING_ACCOUNT_FORM);
   const [summaryForm, setSummaryForm] = useState<BookingSummaryFormState>({
@@ -351,47 +357,78 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
     async function tryResumeSession() {
       if (stripeReturnHandledRef.current) {
+        if (!cancelled) {
+          setResumePending(false);
+        }
         return;
       }
+
+      const homeParams =
+        typeof window !== "undefined" ? parseHomeBookingSearchParams(window.location.search) : null;
+      let resumedLock = false;
+
       try {
         const sessionId = getBookingSessionId();
         const active = await fetchActiveBookingLock(sessionId);
         if (cancelled || !active.lock || !active.space) {
-          return;
+          // fall through to home-params handling
+        } else {
+          resumedLock = true;
+          const snapshot = loadBookingRestoreSnapshot(active.lock.lockId);
+
+          setLock(active.lock);
+          setSelectedSpace(active.space);
+          setSelectedSlot({ startAt: active.lock.startAt, endAt: active.lock.endAt });
+          setDurationClass(snapshot?.durationClass ?? active.durationClass ?? "hourly");
+          setPartySize(snapshot?.partySize ?? active.partySize ?? 4);
+          setSpaces([active.space]);
+          setSearchFormExpanded(false);
+
+          if (snapshot) {
+            setSearchMode(snapshot.searchMode);
+            setSpaceType(snapshot.spaceType);
+            setFlexDuration(snapshot.flexDuration);
+            setFlexStartMonth(snapshot.flexStartMonth ? new Date(snapshot.flexStartMonth) : null);
+            setFlexEndMonth(snapshot.flexEndMonth ? new Date(snapshot.flexEndMonth) : null);
+            setStartDate(snapshot.startDate ? new Date(snapshot.startDate) : null);
+            setEndDate(snapshot.endDate ? new Date(snapshot.endDate) : null);
+            setStartTime(snapshot.startTime);
+            setEndTime(snapshot.endTime);
+            setCart(snapshot.cart);
+            setDiscountCode(snapshot.discountCode);
+          }
+
+          setView("services");
         }
-
-        const snapshot = loadBookingRestoreSnapshot(active.lock.lockId);
-
-        setLock(active.lock);
-        setSelectedSpace(active.space);
-        setSelectedSlot({ startAt: active.lock.startAt, endAt: active.lock.endAt });
-        setDurationClass(snapshot?.durationClass ?? active.durationClass ?? "hourly");
-        setPartySize(snapshot?.partySize ?? active.partySize ?? 4);
-        setSpaces([active.space]);
-        setSearchFormExpanded(false);
-
-        if (snapshot) {
-          setSearchMode(snapshot.searchMode);
-          setSpaceType(snapshot.spaceType);
-          setFlexDuration(snapshot.flexDuration);
-          setFlexStartMonth(snapshot.flexStartMonth ? new Date(snapshot.flexStartMonth) : null);
-          setFlexEndMonth(snapshot.flexEndMonth ? new Date(snapshot.flexEndMonth) : null);
-          setStartDate(snapshot.startDate ? new Date(snapshot.startDate) : null);
-          setEndDate(snapshot.endDate ? new Date(snapshot.endDate) : null);
-          setStartTime(snapshot.startTime);
-          setEndTime(snapshot.endTime);
-          setCart(snapshot.cart);
-          setDiscountCode(snapshot.discountCode);
-        }
-
-        setView("services");
       } catch {
         // Resume is best-effort; fall back to a fresh search flow.
-      } finally {
-        if (!cancelled) {
-          setResumePending(false);
-        }
       }
+
+      if (cancelled) {
+        return;
+      }
+
+      // Always clean home deep-link params from the URL once handled.
+      if (homeParams) {
+        stripHomeBookingSearchQuery();
+      }
+
+      // Active lock wins over home search criteria.
+      if (!resumedLock && homeParams?.autoSearch) {
+        const rangeMode = resolveDateRangeInputMode(homeParams.startDate, homeParams.endDate);
+        const times = defaultTimesForRangeMode(rangeMode);
+        setSearchMode("dates");
+        setSpaceType(homeParams.spaceType);
+        setPartySize(homeParams.partySize);
+        setStartDate(homeParams.startDate);
+        setEndDate(homeParams.endDate);
+        setStartTime(times.startTime);
+        setEndTime(times.endTime);
+        previousRangeModeRef.current = rangeMode;
+        setHomeAutoSearch(homeParams);
+      }
+
+      setResumePending(false);
     }
 
     void tryResumeSession();
@@ -400,6 +437,70 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (resumePending || !homeAutoSearch) {
+      return;
+    }
+
+    const criteria = homeAutoSearch;
+    setHomeAutoSearch(null);
+
+    const rangeMode = resolveDateRangeInputMode(criteria.startDate, criteria.endDate);
+    const times = defaultTimesForRangeMode(rangeMode);
+
+    let cancelled = false;
+    async function runHomeAutoSearch() {
+      setLoading(true);
+      setError(null);
+      setLockExpiredMessage(null);
+      setLock(null);
+      setSelectedSpace(null);
+      setSelectedSlot(null);
+      setCalendarSlots([]);
+      setCalendarMonth(null);
+
+      try {
+        const window = buildSearchWindowForRangeMode(
+          criteria.startDate,
+          criteria.endDate,
+          rangeMode,
+          times.startTime,
+          times.endTime,
+        );
+        if (new Date(window.endAt) <= new Date(window.startAt)) {
+          if (!cancelled) {
+            reportSearchError("L'heure de fin doit être postérieure à l'heure de début.");
+          }
+          return;
+        }
+
+        const result = await fetchBookingAvailability({
+          spaceType: criteria.spaceType,
+          partySize: criteria.partySize,
+          startAt: window.startAt,
+          endAt: window.endAt,
+        });
+        if (!cancelled) {
+          showSearchResults(result);
+        }
+      } catch (searchError) {
+        if (!cancelled) {
+          setError(searchError instanceof Error ? searchError.message : "Recherche impossible");
+          setView("search");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void runHomeAutoSearch();
+    return () => {
+      cancelled = true;
+    };
+  }, [homeAutoSearch, resumePending]);
 
   useEffect(() => {
     if (!restoreSnapshot) {
