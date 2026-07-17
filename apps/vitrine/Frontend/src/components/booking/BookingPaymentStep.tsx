@@ -1,7 +1,7 @@
 "use client";
 
 import type { BookingPaymentMethod } from "@coworkprysme/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { fetchBookingPaymentMethods } from "@/lib/booking-confirm-api";
 
@@ -15,6 +15,83 @@ interface BookingPaymentStepProps {
   error: string | null;
 }
 
+type PaymentOptionConfig = {
+  method: BookingPaymentMethod;
+  title: string;
+  description: string;
+  icon: ReactNode;
+};
+
+function IconCard() {
+  return (
+    <svg className={styles.paymentOptionIconSvg} viewBox="0 0 24 24" aria-hidden="true">
+      <rect
+        x="2.5"
+        y="5"
+        width="19"
+        height="14"
+        rx="2.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path d="M2.5 9.5h19" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6 15h4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTransfer() {
+  return (
+    <svg className={styles.paymentOptionIconSvg} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 7h12M12 4l4 3-4 3M20 17H8M12 14l-4 3 4 3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconDeferred() {
+  return (
+    <svg className={styles.paymentOptionIconSvg} viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M12 8v4.5l3 1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+const BASE_OPTIONS: PaymentOptionConfig[] = [
+  {
+    method: "card",
+    title: "Carte bancaire",
+    description: "Réglez immédiatement par carte bancaire, en toute sécurité.",
+    icon: <IconCard />,
+  },
+  {
+    method: "bank_transfer",
+    title: "Virement bancaire",
+    description: "Recevez nos coordonnées bancaires par email et réglez par virement.",
+    icon: <IconTransfer />,
+  },
+  {
+    method: "proforma",
+    title: "Paiement différé",
+    description: "Confirmez votre réservation maintenant et réglez plus tard.",
+    icon: <IconDeferred />,
+  },
+];
+
 export function BookingPaymentStep({
   startAt,
   onBack,
@@ -22,7 +99,7 @@ export function BookingPaymentStep({
   loading,
   error,
 }: BookingPaymentStepProps) {
-  const [paymentMethod, setPaymentMethod] = useState<BookingPaymentMethod>("proforma");
+  const [paymentMethod, setPaymentMethod] = useState<BookingPaymentMethod>("card");
   const [bankTransferAvailable, setBankTransferAvailable] = useState(false);
   const [methodsLoading, setMethodsLoading] = useState(true);
 
@@ -36,7 +113,7 @@ export function BookingPaymentStep({
         }
         setBankTransferAvailable(data.bankTransferAvailable);
         setPaymentMethod((current) =>
-          current === "bank_transfer" && !data.bankTransferAvailable ? "proforma" : current,
+          current === "bank_transfer" && !data.bankTransferAvailable ? "card" : current,
         );
       })
       .catch(() => {
@@ -54,6 +131,10 @@ export function BookingPaymentStep({
     };
   }, [startAt]);
 
+  const visibleOptions = BASE_OPTIONS.filter(
+    (option) => option.method !== "bank_transfer" || (!methodsLoading && bankTransferAvailable),
+  );
+
   return (
     <section className={styles.step}>
       <div className={styles.stepHeader}>
@@ -62,70 +143,34 @@ export function BookingPaymentStep({
         </button>
         <div>
           <h2 className={styles.title}>Règlement</h2>
-          <p className={styles.lead}>
-            Choisissez votre mode de règlement pour confirmer la réservation.
-          </p>
+          <p className={styles.lead}>Choisissez votre mode de règlement.</p>
         </div>
       </div>
 
       <div className={styles.paymentOptions} role="radiogroup" aria-label="Mode de règlement">
-        <button
-          type="button"
-          role="radio"
-          aria-checked={paymentMethod === "proforma"}
-          className={[
-            styles.paymentOption,
-            paymentMethod === "proforma" ? styles.paymentOptionSelected : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => setPaymentMethod("proforma")}
-        >
-          <p className={styles.paymentOptionTitle}>Recevoir une facture proforma</p>
-          <p className={styles.paymentOptionText}>
-            Votre réservation sera confirmée et vous recevrez une facture proforma par email.
-          </p>
-        </button>
-
-        <button
-          type="button"
-          role="radio"
-          aria-checked={paymentMethod === "card"}
-          className={[
-            styles.paymentOption,
-            paymentMethod === "card" ? styles.paymentOptionSelected : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          onClick={() => setPaymentMethod("card")}
-        >
-          <p className={styles.paymentOptionTitle}>Payer par carte maintenant</p>
-          <p className={styles.paymentOptionText}>
-            La réservation est enregistrée en attente, puis vous saisissez votre carte dans un
-            formulaire sécurisé Stripe (Payment Element).
-          </p>
-        </button>
-
-        {!methodsLoading && bankTransferAvailable ? (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={paymentMethod === "bank_transfer"}
-            className={[
-              styles.paymentOption,
-              paymentMethod === "bank_transfer" ? styles.paymentOptionSelected : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => setPaymentMethod("bank_transfer")}
-          >
-            <p className={styles.paymentOptionTitle}>Payer par virement bancaire</p>
-            <p className={styles.paymentOptionText}>
-              Réservation enregistrée en attente. Vous recevez le RIB et le libellé exact à utiliser
-              ; le créneau est libéré si le virement n&apos;arrive pas à temps.
-            </p>
-          </button>
-        ) : null}
+        {visibleOptions.map((option) => {
+          const selected = paymentMethod === option.method;
+          return (
+            <button
+              key={option.method}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              className={[styles.paymentOption, selected ? styles.paymentOptionSelected : ""]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setPaymentMethod(option.method)}
+            >
+              <span className={styles.paymentOptionIcon} aria-hidden="true">
+                {option.icon}
+              </span>
+              <span className={styles.paymentOptionBody}>
+                <span className={styles.paymentOptionTitle}>{option.title}</span>
+                <span className={styles.paymentOptionText}>{option.description}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {error ? <p className={styles.error}>{error}</p> : null}

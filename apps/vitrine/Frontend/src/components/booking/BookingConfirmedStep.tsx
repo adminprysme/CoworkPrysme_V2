@@ -389,8 +389,8 @@ export function BookingConfirmedStep({
             </h3>
             {paymentState !== "confirming" ? (
               <p className={styles.cardPaymentActiveLead}>
-                Saisissez vos informations de carte pour régler la facture proforma. Le montant est
-                calculé côté serveur ; aucune donnée de carte ne transite par nos serveurs.
+                Saisissez vos informations de carte pour finaliser le paiement sécurisé. Aucune
+                donnée de carte ne transite par nos serveurs.
               </p>
             ) : null}
 
