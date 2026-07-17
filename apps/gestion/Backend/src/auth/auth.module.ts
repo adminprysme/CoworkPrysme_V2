@@ -33,6 +33,7 @@ import { StaffContextService } from "./staff-context.service.js";
     BillingPermissionGuard,
   ],
   exports: [
+    AuthConfigService,
     AuthService,
     SessionGuard,
     SessionService,
