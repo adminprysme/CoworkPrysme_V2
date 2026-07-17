@@ -18,8 +18,9 @@ export default {
   resolve: {
     alias: {
       "@coworkprysme/db": join(repoRoot, "packages/db/dist/index.js"),
-      "@coworkprysme/shared": join(repoRoot, "packages/shared/dist/index.js"),
+      // More specific subpath must come before the package root alias.
       "@coworkprysme/shared/server": join(repoRoot, "packages/shared/dist/server.js"),
+      "@coworkprysme/shared": join(repoRoot, "packages/shared/dist/index.js"),
     },
   },
 };
