@@ -136,7 +136,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   const [cart, setCart] = useState<BookingCartItem[]>([]);
   const [discountCode, setDiscountCode] = useState("");
   const [resumePending, setResumePending] = useState(true);
-  const [homeAutoSearch, setHomeAutoSearch] = useState<HomeBookingSearchCriteria | null>(null);
+  const homeAutoSearchRef = useRef<HomeBookingSearchCriteria | null>(null);
+  const [homeAutoSearchPending, setHomeAutoSearchPending] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(false);
   const [accountForm, setAccountForm] = useState(EMPTY_BOOKING_ACCOUNT_FORM);
   const [summaryForm, setSummaryForm] = useState<BookingSummaryFormState>({
@@ -425,7 +426,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         setStartTime(times.startTime);
         setEndTime(times.endTime);
         previousRangeModeRef.current = rangeMode;
-        setHomeAutoSearch(homeParams);
+        homeAutoSearchRef.current = homeParams;
+        setHomeAutoSearchPending(true);
       }
 
       setResumePending(false);
@@ -439,17 +441,20 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   }, []);
 
   useEffect(() => {
-    if (resumePending || !homeAutoSearch) {
+    if (resumePending || !homeAutoSearchPending) {
       return;
     }
 
-    const criteria = homeAutoSearch;
-    setHomeAutoSearch(null);
+    const criteria = homeAutoSearchRef.current;
+    homeAutoSearchRef.current = null;
+    setHomeAutoSearchPending(false);
+    if (!criteria?.autoSearch) {
+      return;
+    }
 
     const rangeMode = resolveDateRangeInputMode(criteria.startDate, criteria.endDate);
     const times = defaultTimesForRangeMode(rangeMode);
 
-    let cancelled = false;
     async function runHomeAutoSearch() {
       setLoading(true);
       setError(null);
@@ -469,9 +474,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           times.endTime,
         );
         if (new Date(window.endAt) <= new Date(window.startAt)) {
-          if (!cancelled) {
-            reportSearchError("L'heure de fin doit être postérieure à l'heure de début.");
-          }
+          reportSearchError("L'heure de fin doit être postérieure à l'heure de début.");
           return;
         }
 
@@ -481,26 +484,17 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           startAt: window.startAt,
           endAt: window.endAt,
         });
-        if (!cancelled) {
-          showSearchResults(result);
-        }
+        showSearchResults(result);
       } catch (searchError) {
-        if (!cancelled) {
-          setError(searchError instanceof Error ? searchError.message : "Recherche impossible");
-          setView("search");
-        }
+        setError(searchError instanceof Error ? searchError.message : "Recherche impossible");
+        setView("search");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     }
 
     void runHomeAutoSearch();
-    return () => {
-      cancelled = true;
-    };
-  }, [homeAutoSearch, resumePending]);
+  }, [homeAutoSearchPending, resumePending]);
 
   useEffect(() => {
     if (!restoreSnapshot) {
