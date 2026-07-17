@@ -9,7 +9,8 @@
     "start": "node dist/main.js",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:invoice-pdf-samples": "node scripts/generate-invoice-pdf-samples.mjs"
   },
   "dependencies": {
     "@coworkprysme/db": "workspace:*",
@@ -19,6 +20,7 @@
     "@nestjs/platform-express": "^11.1.27",
     "mongoose": "^9.7.3",
     "nodemailer": "^9.0.3",
+    "playwright": "1.52.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "stripe": "^22.3.2",
