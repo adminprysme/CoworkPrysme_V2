@@ -1,15 +1,26 @@
 import type { NextConfig } from "next";
 
+/** Stripe.js / Payment Element origins (iframe + API). */
+const STRIPE_SCRIPT_SRC = "https://js.stripe.com";
+const STRIPE_FRAME_SRC = "https://js.stripe.com https://hooks.stripe.com";
+const STRIPE_CONNECT_SRC =
+  "https://api.stripe.com https://r.stripe.com https://m.stripe.network https://*.stripe.com";
+
+/** French government open data APIs used by booking account autocomplete. */
+const GOUV_FR_CONNECT_SRC =
+  "https://api-adresse.data.gouv.fr https://recherche-entreprises.api.gouv.fr";
+
 function getConnectSrc(): string {
+  const parts = ["'self'", STRIPE_CONNECT_SRC, GOUV_FR_CONNECT_SRC];
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) {
-    return "'self'";
+  if (apiUrl) {
+    try {
+      parts.push(new URL(apiUrl).origin);
+    } catch {
+      // ignore invalid origin
+    }
   }
-  try {
-    return `'self' ${new URL(apiUrl).origin}`;
-  } catch {
-    return "'self'";
-  }
+  return parts.join(" ");
 }
 
 function addImageRemotePattern(
@@ -59,7 +70,7 @@ function getImageRemotePatterns(): NonNullable<NextConfig["images"]>["remotePatt
 }
 
 function getScriptSrc(): string {
-  const parts = ["'self'", "'unsafe-inline'"];
+  const parts = ["'self'", "'unsafe-inline'", STRIPE_SCRIPT_SRC];
   // React dev tooling (call stacks, Fast Refresh helpers) needs eval in development only.
   if (process.env.NODE_ENV !== "production") {
     parts.push("'unsafe-eval'");
@@ -85,6 +96,7 @@ function getSecurityHeaders() {
         "img-src 'self' data: https: http:",
         "font-src 'self'",
         `connect-src ${getConnectSrc()}`,
+        `frame-src 'self' ${STRIPE_FRAME_SRC}`,
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -101,6 +113,12 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@coworkprysme/shared"],
   serverExternalPackages: ["mongoose"],
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   images: {
     remotePatterns: getImageRemotePatterns(),
     // Next.js 16 blocks localhost/private IPs in the image optimizer (SSRF protection).
