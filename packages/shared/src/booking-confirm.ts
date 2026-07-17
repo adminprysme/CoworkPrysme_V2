@@ -32,7 +32,8 @@ const objectIdSchema = z
 export const BookingAccountModeSchema = z.enum(["new", "existing"]);
 export type BookingAccountMode = z.infer<typeof BookingAccountModeSchema>;
 
-export const BookingPaymentMethodSchema = z.enum(["proforma", "card", "bank_transfer"]);
+/** Client payment choice in the booking tunnel (invoice document type remains separate). */
+export const BookingPaymentMethodSchema = z.enum(["card", "bank_transfer"]);
 export type BookingPaymentMethod = z.infer<typeof BookingPaymentMethodSchema>;
 
 export const BankTransferInstructionsSchema = z.object({

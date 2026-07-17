@@ -18,7 +18,7 @@ const base = {
   privacyPolicyAccepted: true,
   cgvAccepted: true as const,
   withdrawalAcknowledged: true as const,
-  paymentMethod: "proforma" as const,
+  paymentMethod: "card" as const,
 };
 
 describe("BookingConfirmRequestSchema — clientKind", () => {
