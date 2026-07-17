@@ -58,6 +58,7 @@ import {
   releaseBookingLock,
 } from "@/lib/get-booking-api";
 
+import { BookingEmptyState } from "./BookingEmptyState";
 import { BookingFlexibleSearchPanel } from "./BookingFlexibleSearchPanel";
 import { BookingSearchDateTimeFields } from "./BookingSearchDateTimeFields";
 import { BookingSearchDateRangePicker } from "./BookingSearchDateRangePicker";
@@ -1011,6 +1012,18 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                 </form>
               )}
 
+              {(view === "results" || view === "calendar") && !loading && spaces.length === 0 ? (
+                <BookingEmptyState
+                  title="Aucun espace disponible pour ces critères"
+                  description={
+                    searchMode === "flexible"
+                      ? "Élargissez votre recherche (autre type d'espace, moins de personnes) ou contactez-nous pour une demande spécifique."
+                      : "Essayez d'autres dates, une autre plage horaire, ou moins de personnes — ou contactez-nous pour une demande spécifique."
+                  }
+                  onAdjustSearch={() => setSearchFormExpanded(true)}
+                />
+              ) : null}
+
               {(view === "results" || view === "calendar") && spaces.length > 0 ? (
                 <>
                   <div
@@ -1021,9 +1034,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                       .filter(Boolean)
                       .join(" ")}
                   >
-                    <h2 className={styles.resultsTitle}>
-                      {searchMode === "flexible" ? "Espaces disponibles" : "Espaces disponibles"}
-                    </h2>
+                    <h2 className={styles.resultsTitle}>Espaces disponibles</h2>
                     <span>
                       {spaces.length} espace{spaces.length > 1 ? "s" : ""}
                     </span>
@@ -1126,41 +1137,68 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                     ))}
                   </div>
 
-                  <div className={styles.slotGrid}>
-                    {visibleCalendarSlots.map((slot) => {
-                      const selected =
-                        selectedSlot?.startAt === slot.startAt && selectedSlot.endAt === slot.endAt;
-                      const emphasized = slot.durationClass === "daily";
-                      return (
-                        <button
-                          key={`${slot.startAt}-${slot.endAt}`}
-                          type="button"
-                          disabled={!slot.selectable || loading}
-                          className={[
-                            styles.slotButton,
-                            !slot.selectable ? styles.slotButtonDisabled : "",
-                            selected ? styles.slotButtonSelected : "",
-                            emphasized ? styles.slotButtonEmphasized : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() =>
-                            void handleCreateLock(
-                              selectedSpace,
-                              slot.startAt,
-                              slot.endAt,
-                              slot.durationClass as BookingPhase1DurationClass,
-                            )
-                          }
-                        >
-                          <span className={styles.slotDuration}>{slot.durationClass}</span>
-                          <span className={styles.slotWhen}>
-                            {formatSlotLabel(slot.startAt, slot.endAt)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {!loading && visibleCalendarSlots.length === 0 ? (
+                    <BookingEmptyState
+                      compact
+                      title={
+                        calendarSlots.length === 0
+                          ? "Aucun créneau libre pour cette période"
+                          : "Aucun créneau de ce type pour cette période"
+                      }
+                      description={
+                        calendarSlots.length === 0
+                          ? "Essayez un autre mois ou une autre durée, ou contactez-nous pour une demande spécifique."
+                          : "Changez le filtre (Tous / Horaire / Journée), ou élargissez votre recherche."
+                      }
+                      onAdjustSearch={
+                        calendarSlots.length === 0
+                          ? () => setSearchFormExpanded(true)
+                          : () => setCalendarDurationFilter("all")
+                      }
+                      adjustSearchLabel={
+                        calendarSlots.length === 0
+                          ? "Modifier la recherche"
+                          : "Voir tous les créneaux"
+                      }
+                    />
+                  ) : (
+                    <div className={styles.slotGrid}>
+                      {visibleCalendarSlots.map((slot) => {
+                        const selected =
+                          selectedSlot?.startAt === slot.startAt &&
+                          selectedSlot.endAt === slot.endAt;
+                        const emphasized = slot.durationClass === "daily";
+                        return (
+                          <button
+                            key={`${slot.startAt}-${slot.endAt}`}
+                            type="button"
+                            disabled={!slot.selectable || loading}
+                            className={[
+                              styles.slotButton,
+                              !slot.selectable ? styles.slotButtonDisabled : "",
+                              selected ? styles.slotButtonSelected : "",
+                              emphasized ? styles.slotButtonEmphasized : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() =>
+                              void handleCreateLock(
+                                selectedSpace,
+                                slot.startAt,
+                                slot.endAt,
+                                slot.durationClass as BookingPhase1DurationClass,
+                              )
+                            }
+                          >
+                            <span className={styles.slotDuration}>{slot.durationClass}</span>
+                            <span className={styles.slotWhen}>
+                              {formatSlotLabel(slot.startAt, slot.endAt)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ) : null}
 
