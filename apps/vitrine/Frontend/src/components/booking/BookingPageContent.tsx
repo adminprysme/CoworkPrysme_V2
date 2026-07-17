@@ -449,11 +449,15 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     const criteria = homeAutoSearchRef.current;
     homeAutoSearchRef.current = null;
     setHomeAutoSearchPending(false);
-    if (!criteria?.autoSearch) {
+    if (!criteria || !criteria.autoSearch) {
       return;
     }
 
-    const rangeMode = resolveDateRangeInputMode(criteria.startDate, criteria.endDate);
+    const homeStartDate = criteria.startDate;
+    const homeEndDate = criteria.endDate;
+    const homeSpaceType = criteria.spaceType;
+    const homePartySize = criteria.partySize;
+    const rangeMode = resolveDateRangeInputMode(homeStartDate, homeEndDate);
     const times = defaultTimesForRangeMode(rangeMode);
 
     async function runHomeAutoSearch() {
@@ -468,8 +472,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
 
       try {
         const window = buildSearchWindowForRangeMode(
-          criteria.startDate,
-          criteria.endDate,
+          homeStartDate,
+          homeEndDate,
           rangeMode,
           times.startTime,
           times.endTime,
@@ -480,8 +484,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         }
 
         const result = await fetchBookingAvailability({
-          spaceType: criteria.spaceType,
-          partySize: criteria.partySize,
+          spaceType: homeSpaceType,
+          partySize: homePartySize,
           startAt: window.startAt,
           endAt: window.endAt,
         });
