@@ -6,6 +6,7 @@ import type { BookingClientKind } from "@coworkprysme/shared";
 
 import { checkBookingEmail, verifyBookingAccount } from "@/lib/booking-confirm-api";
 
+import { BookingAddressSuggestField } from "./BookingAddressSuggestField";
 import styles from "./BookingAccountStep.module.css";
 
 export type BookingAccountFormState = {
@@ -340,16 +341,19 @@ export function BookingAccountStep({
                 </p>
               </div>
 
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Adresse</span>
-                <input
-                  className={styles.input}
-                  type="text"
-                  autoComplete="street-address"
-                  value={value.street}
-                  onChange={(event) => patch({ street: event.target.value })}
-                />
-              </label>
+              <BookingAddressSuggestField
+                street={value.street}
+                zip={value.zip}
+                city={value.city}
+                onStreetChange={(street) => patch({ street })}
+                onSelect={(suggestion) =>
+                  patch({
+                    street: suggestion.street,
+                    zip: suggestion.zip,
+                    city: suggestion.city,
+                  })
+                }
+              />
 
               <div className={[styles.fieldGrid, styles.fieldGridTwo].join(" ")}>
                 <label className={styles.field}>
