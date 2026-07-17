@@ -84,4 +84,14 @@ describe("AvailabilityService.getCandidateSpaces", () => {
       floor: "1",
     });
   });
+
+  it("without buildingId does not constrain the building _id", async () => {
+    await service.getCandidateSpaces({
+      spaceType: "meeting_room",
+      partySize: 2,
+    });
+
+    expect(buildingFindMock).toHaveBeenCalledWith({ status: "active" });
+    expect(buildingFindMock.mock.calls[0]?.[0]).not.toHaveProperty("_id");
+  });
 });

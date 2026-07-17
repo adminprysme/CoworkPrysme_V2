@@ -33,6 +33,19 @@ describe("booking partySize bounds", () => {
       BookingSpacesQuerySchema.parse({ spaceType: "meeting_room", partySize: 501 }),
     ).toThrow();
   });
+
+  it("accepts optional buildingId on spaces and availability queries", () => {
+    expect(
+      BookingSpacesQuerySchema.parse({
+        spaceType: "meeting_room",
+        partySize: 4,
+        buildingId: "507f1f77bcf86cd799439012",
+      }).buildingId,
+    ).toBe("507f1f77bcf86cd799439012");
+    expect(
+      BookingSpacesQuerySchema.parse({ spaceType: "meeting_room", partySize: 4 }).buildingId,
+    ).toBeUndefined();
+  });
 });
 
 describe("sortSpacesByCapacityProximity", () => {

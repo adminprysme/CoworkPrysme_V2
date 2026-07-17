@@ -14,6 +14,7 @@ import {
   BOOKING_ERROR_CODES,
   ActiveBookingLockResponseSchema,
   BookingAvailabilityResponseSchema,
+  BookingBuildingsResponseSchema,
   BookingLockResponseSchema,
   BookingSpaceAvailabilityResponseSchema,
   BookingSpacesResponseSchema,
@@ -146,6 +147,20 @@ export class BookingService {
 
     return BookingAvailabilityResponseSchema.parse({
       spaces: await this.mapSpacesToCards(available),
+    });
+  }
+
+  async listActiveBuildings() {
+    await connectMongo();
+    const Building = await getBuildingModel();
+    const buildings = await Building.find({ status: "active" }).sort({ name: 1 }).lean().exec();
+
+    return BookingBuildingsResponseSchema.parse({
+      buildings: (buildings as BuildingLean[]).map((building) => ({
+        id: building._id.toString(),
+        name: building.name,
+        city: building.address.city,
+      })),
     });
   }
 

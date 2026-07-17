@@ -4,6 +4,7 @@ import {
   ActiveBookingLockResponseSchema,
   BookingAvailabilityQuerySchema,
   BookingAvailabilityResponseSchema,
+  BookingBuildingsResponseSchema,
   BookingCheckEmailRequestSchema,
   BookingCheckEmailResponseSchema,
   BookingConfirmRequestSchema,
@@ -52,6 +53,12 @@ export class BookingController {
     const parsed = BookingSpacesQuerySchema.parse(query);
     const payload = await this.booking.listSpaces(parsed);
     return BookingSpacesResponseSchema.parse(payload);
+  }
+
+  @Get("buildings")
+  async listBuildings() {
+    const payload = await this.booking.listActiveBuildings();
+    return BookingBuildingsResponseSchema.parse(payload);
   }
 
   @Get("spaces/:spaceId/availability")

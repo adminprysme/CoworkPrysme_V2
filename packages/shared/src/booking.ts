@@ -130,6 +130,17 @@ export const BookingSpacesResponseSchema = z.object({
   spaces: z.array(BookingSpaceCardSchema),
 });
 
+/** Active buildings for the reservation tunnel filter (not catalogue / SEO). */
+export const BookingBuildingOptionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  city: z.string().min(1),
+});
+
+export const BookingBuildingsResponseSchema = z.object({
+  buildings: z.array(BookingBuildingOptionSchema),
+});
+
 export const BookingSlotSchema = z.object({
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
@@ -204,6 +215,8 @@ export type BookingSpaceAvailabilityQuery = z.infer<typeof BookingSpaceAvailabil
 export type BookingSpaceCard = z.infer<typeof BookingSpaceCardSchema>;
 export type BookingAvailabilityResponse = z.infer<typeof BookingAvailabilityResponseSchema>;
 export type BookingSpacesResponse = z.infer<typeof BookingSpacesResponseSchema>;
+export type BookingBuildingOption = z.infer<typeof BookingBuildingOptionSchema>;
+export type BookingBuildingsResponse = z.infer<typeof BookingBuildingsResponseSchema>;
 export type BookingSlot = z.infer<typeof BookingSlotSchema>;
 export type BookingSpaceAvailabilityResponse = z.infer<
   typeof BookingSpaceAvailabilityResponseSchema
