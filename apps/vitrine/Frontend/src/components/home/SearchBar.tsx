@@ -7,11 +7,18 @@ import { useMemo, useState } from "react";
 import { BookingSearchDateRangeField } from "@/components/booking/BookingSearchDateRangeField";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
+import { SegmentedToggle } from "@/components/ui/SegmentedToggle";
 import { buildRecurringReservationMailto } from "@/lib/booking-recurring-contact";
 import { buildHomeBookingSearchHref } from "@/lib/booking-home-search";
 import { SITE } from "@/config/site";
 
 import styles from "./SearchBar.module.css";
+
+const SPACE_TYPE_OPTIONS = [
+  { value: "meeting_room" as const, label: "Salle de réunion" },
+  { value: "private_office" as const, label: "Bureau privatif" },
+];
 
 export function SearchBar() {
   const router = useRouter();
@@ -63,32 +70,17 @@ export function SearchBar() {
               <span className={styles.label} id="search-type-label">
                 Type d&apos;espace
               </span>
-              <div className={styles.typeToggle} role="group" aria-labelledby="search-type-label">
-                <button
-                  type="button"
-                  className={[
-                    styles.typeOption,
-                    spaceType === "meeting_room" ? styles.typeOptionActive : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => setSpaceType("meeting_room")}
-                >
-                  Salle de réunion
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    styles.typeOption,
-                    spaceType === "private_office" ? styles.typeOptionActive : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => setSpaceType("private_office")}
-                >
-                  Bureau
-                </button>
-              </div>
+              <SegmentedToggle
+                fullWidth
+                size="md"
+                aria-labelledby="search-type-label"
+                value={spaceType}
+                onChange={(next) => {
+                  setSpaceType(next);
+                  setError(null);
+                }}
+                options={SPACE_TYPE_OPTIONS}
+              />
             </div>
 
             <BookingSearchDateRangeField
@@ -103,22 +95,25 @@ export function SearchBar() {
               }}
             />
 
-            <label className={styles.field}>
-              <span className={styles.label}>Nombre de personnes</span>
-              <input
-                className={styles.input}
-                type="number"
+            <div className={styles.field}>
+              <span className={styles.label} id="search-party-size-label">
+                Nombre de personnes
+              </span>
+              <QuantityStepper
+                fullWidth
+                size="md"
                 min={1}
                 max={50}
                 value={partySize}
-                inputMode="numeric"
-                onChange={(event) => {
-                  const next = Number.parseInt(event.target.value, 10);
-                  setPartySize(Number.isFinite(next) ? next : 1);
+                onChange={(next) => {
+                  setPartySize(next);
                   setError(null);
                 }}
+                aria-label="Nombre de personnes"
+                decreaseLabel="Diminuer le nombre de personnes"
+                increaseLabel="Augmenter le nombre de personnes"
               />
-            </label>
+            </div>
 
             <div className={[styles.field, styles.submitField].join(" ")}>
               <span className={styles.label} aria-hidden="true">

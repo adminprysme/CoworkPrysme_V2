@@ -18,6 +18,8 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Container } from "@/components/ui/Container";
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
+import { SegmentedToggle } from "@/components/ui/SegmentedToggle";
 import {
   buildSearchWindowForRangeMode,
   defaultTimesForRangeMode,
@@ -958,67 +960,54 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                     aria-hidden={searchCollapsed}
                   >
                     <div className={styles.searchGrid}>
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Type d&apos;espace</span>
-                        <select
-                          className={styles.fieldSelect}
+                      <div className={styles.field}>
+                        <span className={styles.fieldLabel} id="booking-space-type-label">
+                          Type d&apos;espace
+                        </span>
+                        <SegmentedToggle
+                          fullWidth
+                          size="md"
+                          aria-labelledby="booking-space-type-label"
                           value={spaceType}
-                          onChange={(event) => setSpaceType(event.target.value as SpaceType)}
-                        >
-                          <option value="meeting_room">Salle de réunion</option>
-                          <option value="private_office">Bureau privatif</option>
-                        </select>
-                      </label>
-
-                      <label className={styles.field}>
-                        <span className={styles.fieldLabel}>Nombre de personnes</span>
-                        <input
-                          className={styles.fieldInput}
-                          type="number"
-                          min={1}
-                          value={partySize}
-                          onChange={(event) => setPartySize(Number(event.target.value))}
+                          onChange={setSpaceType}
+                          options={[
+                            { value: "meeting_room", label: "Salle de réunion" },
+                            { value: "private_office", label: "Bureau privatif" },
+                          ]}
                         />
-                      </label>
+                      </div>
+
+                      <div className={styles.field}>
+                        <span className={styles.fieldLabel} id="booking-party-size-label">
+                          Nombre de personnes
+                        </span>
+                        <QuantityStepper
+                          fullWidth
+                          size="md"
+                          min={1}
+                          max={50}
+                          value={partySize}
+                          onChange={setPartySize}
+                          aria-label="Nombre de personnes"
+                          decreaseLabel="Diminuer le nombre de personnes"
+                          increaseLabel="Augmenter le nombre de personnes"
+                        />
+                      </div>
                     </div>
 
                     <div className={styles.dateSection}>
                       <span className={styles.fieldLabel}>Dates et horaires</span>
 
-                      <div
-                        className={styles.searchModeToggle}
+                      <SegmentedToggle
                         role="tablist"
                         aria-label="Mode de recherche"
-                      >
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={searchMode === "dates"}
-                          className={[
-                            styles.searchModeToggleButton,
-                            searchMode === "dates" ? styles.searchModeToggleButtonActive : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() => setSearchMode("dates")}
-                        >
-                          Dates
-                        </button>
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={searchMode === "flexible"}
-                          className={[
-                            styles.searchModeToggleButton,
-                            searchMode === "flexible" ? styles.searchModeToggleButtonActive : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() => setSearchMode("flexible")}
-                        >
-                          Flexible
-                        </button>
-                      </div>
+                        value={searchMode}
+                        onChange={setSearchMode}
+                        options={[
+                          { value: "dates", label: "Dates" },
+                          { value: "flexible", label: "Flexible" },
+                        ]}
+                      />
 
                       {searchMode === "dates" ? (
                         <>

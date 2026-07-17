@@ -44,50 +44,6 @@
   color: var(--v-color-text-muted);
 }
 
-.typeToggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--v-space-2);
-  padding: 0.25rem;
-  border-radius: var(--v-radius-full);
-  background: var(--v-color-surface-muted);
-  border: 1px solid var(--v-color-border);
-}
-
-.typeOption {
-  padding: 0.65rem 0.85rem;
-  border: 0;
-  border-radius: var(--v-radius-full);
-  background: transparent;
-  color: var(--v-color-text-muted);
-  font-size: var(--v-text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color var(--v-duration-fast) var(--v-ease-out),
-    color var(--v-duration-fast) var(--v-ease-out),
-    box-shadow var(--v-duration-fast) var(--v-ease-out);
-}
-
-.typeOptionActive {
-  background: var(--v-color-surface);
-  color: var(--v-color-ink);
-  box-shadow: var(--v-shadow-sm);
-}
-
-.input {
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--v-color-border);
-  border-radius: var(--v-radius-md);
-  background: var(--v-color-surface);
-  color: var(--v-color-text);
-}
-
-.input:focus-visible {
-  border-color: var(--v-color-brand);
-}
-
 .dateField {
   min-width: 0;
 }
