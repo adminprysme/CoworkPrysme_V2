@@ -21,7 +21,7 @@ import { buildPublicImageUrl } from "../home-content/home-content.controller.js"
 type BuildingLean = Building & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
 
-function sortCatalogSpaces(spaces: SpaceLean[]): SpaceLean[] {
+export function sortCatalogSpaces(spaces: SpaceLean[]): SpaceLean[] {
   return [...spaces].sort((left, right) => {
     if (left.featuredOnVitrine !== right.featuredOnVitrine) {
       return left.featuredOnVitrine ? -1 : 1;
@@ -189,6 +189,7 @@ export class CatalogContentService {
     const groups = (spaces as SpaceLean[]).map((space) => ({
       spaceId: space._id.toString(),
       spaceName: space.name,
+      capacity: space.capacity,
       type: space.type,
       lines: space.tariffs
         .filter((tariff) => tariff.enabled !== false)

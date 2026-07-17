@@ -12,6 +12,7 @@ import {
   type RangeBlockingCache,
 } from "@coworkprysme/db";
 import type { SpaceType } from "@coworkprysme/shared";
+import { sortSpacesByCapacityProximity } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
 
 import { isObjectId, toObjectId } from "./object-id.util.js";
@@ -55,12 +56,9 @@ export class AvailabilityService {
       spaceQuery.floor = filters.floor;
     }
 
-    const spaces = await Space.find(spaceQuery)
-      .sort({ featuredOnVitrine: -1, vitrineOrder: 1, name: 1 })
-      .lean()
-      .exec();
-
-    return spaces as SpaceLean[];
+    // Tunnel sort = capacity proximity only (not featuredOnVitrine / vitrineOrder).
+    const spaces = (await Space.find(spaceQuery).lean().exec()) as SpaceLean[];
+    return sortSpacesByCapacityProximity(spaces, filters.partySize);
   }
 
   buildContext(
