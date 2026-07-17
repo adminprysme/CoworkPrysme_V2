@@ -2,6 +2,8 @@
   display: grid;
   gap: var(--v-space-5);
   align-content: start;
+  width: 100%;
+  min-width: 0;
 }
 
 .stepHeader {
