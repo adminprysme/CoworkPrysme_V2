@@ -1,0 +1,77 @@
+.field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--v-space-2);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--v-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v-color-text-muted);
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 3.05rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-surface);
+  color: var(--v-color-text);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--v-color-brand);
+  outline-offset: 2px;
+  border-color: var(--v-color-brand);
+}
+
+.triggerOpen {
+  border-color: var(--v-color-brand);
+}
+
+.triggerPlaceholder {
+  color: var(--v-color-text-muted);
+}
+
+.triggerValue {
+  color: var(--v-color-ink);
+  font-weight: 600;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 40;
+  width: min(100vw - 2rem, 36rem);
+  max-width: calc(100vw - 2rem);
+  max-height: min(70vh, 32rem);
+  overflow: auto;
+  padding: var(--v-space-4);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-surface);
+  box-shadow: var(--v-shadow-lg);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    max-height: min(65vh, 28rem);
+  }
+}
