@@ -8,6 +8,7 @@ const {
   getReservationModelMock,
   getClientAccountModelMock,
   getBuildingModelMock,
+  getQontoTransferCandidateModelMock,
 } = vi.hoisted(() => ({
   applyBankTransferPaymentMock: vi.fn(),
   confirmReservationAfterPaymentMock: vi.fn(),
@@ -16,6 +17,7 @@ const {
   getReservationModelMock: vi.fn(),
   getClientAccountModelMock: vi.fn(),
   getBuildingModelMock: vi.fn(),
+  getQontoTransferCandidateModelMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -26,6 +28,7 @@ vi.mock("@coworkprysme/db", () => ({
   getReservationModel: getReservationModelMock,
   getClientAccountModel: getClientAccountModelMock,
   getBuildingModel: getBuildingModelMock,
+  getQontoTransferCandidateModel: getQontoTransferCandidateModelMock,
 }));
 
 import { BillingService } from "./billing.service.js";
@@ -97,10 +100,22 @@ describe("BillingService.markTransferReceivedByReference", () => {
         }),
       }),
     });
+    getQontoTransferCandidateModelMock.mockResolvedValue({
+      findOne: () => ({
+        sort: () => ({
+          lean: () => ({
+            exec: async () => null,
+          }),
+        }),
+        lean: () => ({
+          exec: async () => null,
+        }),
+      }),
+    });
     applyBankTransferPaymentMock.mockResolvedValue({
       applied: true,
       invoice: { ...invoice, reference: "PF-BT01" },
-      payment: { _id: "pay1" },
+      payment: { _id: "pay1", reconciliation: { status: "matched" } },
     });
     confirmReservationAfterPaymentMock.mockResolvedValue({
       transitioned: true,
@@ -115,6 +130,7 @@ describe("BillingService.markTransferReceivedByReference", () => {
       invoiceId: "inv1",
       amountReceived: 12000,
       markedByStaffProfileId: "staff1",
+      qontoTxId: undefined,
     });
     expect(confirmReservationAfterPaymentMock).toHaveBeenCalledWith({
       reservationId: "res1",
@@ -134,6 +150,92 @@ describe("BillingService.markTransferReceivedByReference", () => {
       reservationStatus: "confirmed",
       amountReceivedCents: 12000,
       paymentId: "pay1",
+    });
+  });
+
+  it("links exact Qonto suggestion when staff confirms with qontoTxId", async () => {
+    getQontoTransferCandidateModelMock.mockResolvedValue({
+      findOne: () => ({
+        lean: () => ({
+          exec: async () => ({
+            qontoTxId: "tx-exact-1",
+            reservationReference: "RES-2026-BT01",
+            matchStatus: "exact",
+            amountCents: 12000,
+          }),
+        }),
+      }),
+    });
+    applyBankTransferPaymentMock.mockResolvedValue({
+      applied: true,
+      invoice: { reference: "PF-BT01" },
+      payment: {
+        _id: "pay2",
+        reconciliation: { status: "matched", qontoTxId: "tx-exact-1" },
+      },
+    });
+
+    const result = await service.markTransferReceivedByReference(
+      "RES-2026-BT01",
+      "staff1",
+      "tx-exact-1",
+    );
+
+    expect(applyBankTransferPaymentMock).toHaveBeenCalledWith(
+      expect.objectContaining({ qontoTxId: "tx-exact-1" }),
+    );
+    expect(result.qontoTxId).toBe("tx-exact-1");
+  });
+
+  it("rejects confirming a Qonto amount_mismatch suggestion", async () => {
+    getQontoTransferCandidateModelMock.mockResolvedValue({
+      findOne: () => ({
+        lean: () => ({
+          exec: async () => ({
+            qontoTxId: "tx-mismatch-1",
+            reservationReference: "RES-2026-BT01",
+            matchStatus: "amount_mismatch",
+            amountCents: 11000,
+          }),
+        }),
+      }),
+    });
+
+    await expect(
+      service.markTransferReceivedByReference("RES-2026-BT01", "staff1", "tx-mismatch-1"),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        message: expect.stringContaining("Montant Qonto"),
+      }),
+    });
+    expect(applyBankTransferPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it("attaches Qonto suggestion on lookup when candidate exists", async () => {
+    getQontoTransferCandidateModelMock.mockResolvedValue({
+      findOne: () => ({
+        sort: () => ({
+          lean: () => ({
+            exec: async () => ({
+              qontoTxId: "tx-sug-1",
+              matchStatus: "exact",
+              amountCents: 12000,
+              currency: "EUR",
+              settledAt: new Date("2026-07-16T10:00:00.000Z"),
+              observedLabel: "RES-2026-BT01",
+              reservationReference: "RES-2026-BT01",
+              amountDueCents: 12000,
+            }),
+          }),
+        }),
+      }),
+    });
+
+    const result = await service.lookupPendingTransfer("RES-2026-BT01");
+    expect(result.qontoSuggestion).toMatchObject({
+      matchStatus: "exact",
+      qontoTxId: "tx-sug-1",
+      amountCents: 12000,
     });
   });
 });

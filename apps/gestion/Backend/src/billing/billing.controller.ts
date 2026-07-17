@@ -49,6 +49,7 @@ export class BillingController {
     const payload = await this.billing.markTransferReceivedByReference(
       parsed.data.reference,
       profile._id.toString(),
+      parsed.data.qontoTxId,
     );
     return MarkBankTransferReceivedResponseSchema.parse(payload);
   }

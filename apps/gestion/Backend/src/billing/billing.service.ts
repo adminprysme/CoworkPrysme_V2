@@ -8,11 +8,13 @@ import {
   getBuildingModel,
   getClientAccountModel,
   getInvoiceModel,
+  getQontoTransferCandidateModel,
   getReservationModel,
 } from "@coworkprysme/db";
 import type {
   BankTransferPendingLookupResponse,
   MarkBankTransferReceivedResponse,
+  QontoTransferSuggestion,
 } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
@@ -67,12 +69,14 @@ export class BillingService {
       };
     }
 
-    return base;
+    const qontoSuggestion = await this.findQontoSuggestion(reservation.reference);
+    return qontoSuggestion ? { ...base, qontoSuggestion } : base;
   }
 
   async markTransferReceivedByReference(
     reference: string,
     staffProfileId?: string,
+    qontoTxId?: string,
   ): Promise<MarkBankTransferReceivedResponse> {
     const pair = await this.findTransferPair(reference);
     if (!pair) {
@@ -81,12 +85,13 @@ export class BillingService {
       });
     }
     this.assertAwaitingBankTransfer(pair.reservation);
-    return this.markTransferReceivedForPair(pair, staffProfileId);
+    return this.markTransferReceivedForPair(pair, staffProfileId, qontoTxId);
   }
 
   async markTransferReceivedByInvoiceId(
     invoiceId: string,
     staffProfileId?: string,
+    qontoTxId?: string,
   ): Promise<MarkBankTransferReceivedResponse> {
     await connectMongo();
     const Invoice = await getInvoiceModel();
@@ -101,7 +106,11 @@ export class BillingService {
     }
     this.assertAwaitingBankTransfer(reservation);
     const clientEmail = await this.resolveClientEmail(reservation.clientAccountId?.toString());
-    return this.markTransferReceivedForPair({ reservation, invoice, clientEmail }, staffProfileId);
+    return this.markTransferReceivedForPair(
+      { reservation, invoice, clientEmail },
+      staffProfileId,
+      qontoTxId,
+    );
   }
 
   private assertAwaitingBankTransfer(reservation: ReservationDocument) {
@@ -118,16 +127,23 @@ export class BillingService {
   private async markTransferReceivedForPair(
     pair: TransferPair,
     staffProfileId?: string,
+    qontoTxId?: string,
   ): Promise<MarkBankTransferReceivedResponse> {
     const amountReceived = pair.invoice.totals.balanceDue;
     if (!Number.isInteger(amountReceived) || amountReceived <= 0) {
       throw new BadRequestException({ message: "Aucun solde à encaisser sur cette facture." });
     }
 
+    const normalizedQontoTxId = qontoTxId?.trim() || undefined;
+    if (normalizedQontoTxId) {
+      await this.assertQontoTxIdConfirmable(pair.reservation.reference, normalizedQontoTxId);
+    }
+
     const paymentResult = await applyBankTransferPayment({
       invoiceId: pair.invoice._id,
       amountReceived,
       markedByStaffProfileId: staffProfileId,
+      qontoTxId: normalizedQontoTxId,
     });
 
     const confirmed = await confirmReservationAfterPayment({
@@ -149,7 +165,7 @@ export class BillingService {
     }
 
     this.logger.log(
-      `Bank transfer marked received ref=${pair.reservation.reference} applied=${paymentResult.applied} transitioned=${confirmed.transitioned}`,
+      `Bank transfer marked received ref=${pair.reservation.reference} applied=${paymentResult.applied} transitioned=${confirmed.transitioned} qontoTxId=${normalizedQontoTxId ?? "none"}`,
     );
 
     return {
@@ -160,6 +176,67 @@ export class BillingService {
       reservationStatus: confirmed.reservation.status,
       paymentId: paymentResult.payment?._id.toString() ?? null,
       amountReceivedCents: amountReceived,
+      qontoTxId: paymentResult.payment?.reconciliation.qontoTxId ?? normalizedQontoTxId ?? null,
+    };
+  }
+
+  private async assertQontoTxIdConfirmable(
+    reservationReference: string,
+    qontoTxId: string,
+  ): Promise<void> {
+    await connectMongo();
+    const Candidate = await getQontoTransferCandidateModel();
+    const candidate = await Candidate.findOne({ qontoTxId }).lean().exec();
+    if (!candidate || candidate.consumedAt) {
+      throw new BadRequestException({
+        message: "Transaction Qonto introuvable ou déjà rapprochée.",
+      });
+    }
+    if (candidate.reservationReference !== reservationReference) {
+      throw new BadRequestException({
+        message: "Cette transaction Qonto ne correspond pas à cette réservation.",
+      });
+    }
+    if (candidate.matchStatus === "amount_mismatch") {
+      throw new BadRequestException({
+        message:
+          "Montant Qonto différent du solde dû — rapprochement Qonto refusé. Utilisez l'encaissement manuel sans lier la transaction, ou corrigez le virement.",
+      });
+    }
+    if (candidate.matchStatus !== "exact") {
+      throw new BadRequestException({
+        message: "Cette transaction Qonto n'est pas une correspondance exacte.",
+      });
+    }
+  }
+
+  private async findQontoSuggestion(
+    reservationReference: string,
+  ): Promise<QontoTransferSuggestion | undefined> {
+    await connectMongo();
+    const Candidate = await getQontoTransferCandidateModel();
+    const candidate = await Candidate.findOne({
+      reservationReference,
+      consumedAt: { $exists: false },
+      matchStatus: { $in: ["exact", "amount_mismatch"] },
+    })
+      .sort({ settledAt: -1, updatedAt: -1 })
+      .lean()
+      .exec();
+
+    if (!candidate) {
+      return undefined;
+    }
+
+    return {
+      matchStatus: candidate.matchStatus as "exact" | "amount_mismatch",
+      qontoTxId: candidate.qontoTxId,
+      amountCents: candidate.amountCents,
+      currency: candidate.currency || "EUR",
+      settledAt: candidate.settledAt ? new Date(candidate.settledAt).toISOString() : null,
+      observedLabel: candidate.observedLabel || undefined,
+      reservationReference: candidate.reservationReference ?? reservationReference,
+      amountDueCents: candidate.amountDueCents ?? 0,
     };
   }
 
