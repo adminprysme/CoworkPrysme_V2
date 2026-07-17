@@ -1,15 +1,19 @@
 /**
  * Stripe redirect return for booking card payment.
  * Webhook remains the source of truth — this URL only resumes the UI and polls status.
+ *
+ * paymentAccessToken is NEVER put in return_url (Stripe logs / Referer). It lives in
+ * sessionStorage with the resume snapshot — see ARCHITECTURE.md for the XSS tradeoff.
  */
 
 export const BOOKING_PAYMENT_RETURN_PARAM = "payment_return";
 export const BOOKING_PAYMENT_RESUME_STORAGE_KEY = "vitrine-booking-payment-resume-v1";
 
 export type BookingPaymentResumeSnapshot = {
-  version: 1;
+  version: 2;
   reservationReference: string;
   invoiceReference: string;
+  paymentAccessToken: string;
   reservationStatus:
     "awaiting_payment" | "confirmed" | "cancelled" | "pending" | "completed" | "no_show";
   spaceLabel: string;
@@ -80,7 +84,11 @@ export function loadBookingPaymentResumeSnapshot(
       return null;
     }
     const parsed = JSON.parse(raw) as BookingPaymentResumeSnapshot;
-    if (parsed.version !== 1 || parsed.reservationReference !== reservationReference) {
+    if (
+      parsed.version !== 2 ||
+      parsed.reservationReference !== reservationReference ||
+      !parsed.paymentAccessToken?.trim()
+    ) {
       return null;
     }
     return parsed;

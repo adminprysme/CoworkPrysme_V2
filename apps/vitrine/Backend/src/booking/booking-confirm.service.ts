@@ -41,6 +41,7 @@ import {
 import { BookingEmailsService } from "./booking-emails.service.js";
 import { BookingPriceService } from "./booking-price.service.js";
 import { toObjectId } from "./object-id.util.js";
+import { issueBookingPaymentAccessToken } from "../stripe/booking-payment-token.js";
 
 type ServiceLean = Service & { _id: Types.ObjectId };
 type SpaceLean = Space & { _id: Types.ObjectId };
@@ -344,6 +345,11 @@ export class BookingConfirmService {
     return BookingConfirmResponseSchema.parse({
       reservationReference: result.reservation.reference,
       invoiceReference: result.invoiceReference,
+      paymentAccessToken: issueBookingPaymentAccessToken({
+        reservationReference: result.reservation.reference,
+        invoiceReference: result.invoiceReference,
+        awaitingPaymentExpiresAt: result.reservation.awaitingPaymentExpiresAt,
+      }),
       paymentMethod: input.paymentMethod,
       reservationStatus: result.reservation.status,
       bankTransfer,

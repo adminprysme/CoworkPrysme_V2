@@ -22,10 +22,12 @@ export async function createBookingPaymentIntent(
 export async function fetchBookingPaymentStatus(input: {
   reservationReference: string;
   invoiceReference: string;
+  paymentAccessToken: string;
 }): Promise<BookingPaymentStatusResponse> {
   const params = new URLSearchParams({
     reservationReference: input.reservationReference,
     invoiceReference: input.invoiceReference,
+    paymentAccessToken: input.paymentAccessToken,
   });
   return bookingFetch(`/booking/payments/status?${params}`, BookingPaymentStatusResponseSchema);
 }

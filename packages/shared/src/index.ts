@@ -391,6 +391,7 @@ export {
 } from "./bank-transfer.js";
 
 export {
+  BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS,
   BOOKING_PAYMENT_ERROR_CODES,
   BookingPaymentErrorResponseSchema,
   BookingPaymentStateSchema,
@@ -405,6 +406,13 @@ export {
   type CreateBookingPaymentIntentRequest,
   type CreateBookingPaymentIntentResponse,
 } from "./booking-payment.js";
+
+export {
+  signBookingPaymentAccessToken,
+  verifyBookingPaymentAccessToken,
+  type BookingPaymentAccessTokenPayload,
+  type VerifyBookingPaymentAccessTokenResult,
+} from "./booking-payment-token.js";
 
 export {
   DEFAULT_SERVICE_VAT_RATE,

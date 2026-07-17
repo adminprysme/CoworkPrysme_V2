@@ -81,6 +81,7 @@ describe("BookingConfirmService — email recipients", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.BOOKING_PAYMENT_TOKEN_SECRET = "test-booking-payment-token-secret-32chars!!";
     process.env.BANK_TRANSFER_IBAN = "FR7612345678901234567890123";
     process.env.BANK_TRANSFER_BIC = "QNTOFRP1";
     process.env.BANK_TRANSFER_ACCOUNT_HOLDER = "Cowork Prysme";
@@ -149,6 +150,7 @@ describe("BookingConfirmService — email recipients", () => {
     });
 
     expect(result.reservationStatus).toBe("awaiting_payment");
+    expect(result.paymentAccessToken).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
     expect(result.bankTransfer?.iban).toBe("FR7612345678901234567890123");
     expect(result.bankTransfer?.transferLabel).toBe("RES-2026-00100");
     expect(bookingEmails.sendBankTransferInstructionsEmails).toHaveBeenCalledTimes(1);
@@ -176,6 +178,7 @@ describe("BookingConfirmService — email recipients", () => {
     const result = await service.confirm({ ...confirmPayload, paymentMethod: "card" });
 
     expect(result.reservationStatus).toBe("awaiting_payment");
+    expect(result.paymentAccessToken).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
     expect(bookingEmails.sendClientConfirmationEmails).not.toHaveBeenCalled();
     expect(bookingEmails.sendBankTransferInstructionsEmails).not.toHaveBeenCalled();
     expect(bookingEmails.sendStaffBookingNotifications).not.toHaveBeenCalled();

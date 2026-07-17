@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 /**
- * SECURITY DEBT (Phase 4a): payment intent/status endpoints authorize via
- * sequential reservationReference + invoiceReference only (plus a 24h invoice TTL).
- * References like RES-2026-00001 are guessable — a third party could probe payment
- * status / amount for another booking. No card data is exposed, but this is an
- * information leak. Harden later with a per-reservation signed token returned at confirm.
+ * Card payment intent/status require an HMAC paymentAccessToken issued at confirm.
+ * @see ARCHITECTURE.md — Stripe Phase 4a / payment access token
  */
+
+/** Max lifetime for paymentAccessToken / intent eligibility (aligned with invoice issuedAt window). */
+export const BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const BOOKING_PAYMENT_ERROR_CODES = {
   INVOICE_NOT_FOUND: "INVOICE_NOT_FOUND",
@@ -15,6 +15,7 @@ export const BOOKING_PAYMENT_ERROR_CODES = {
   INVOICE_EXPIRED: "INVOICE_EXPIRED",
   ALREADY_PAID: "ALREADY_PAID",
   STRIPE_NOT_CONFIGURED: "STRIPE_NOT_CONFIGURED",
+  PAYMENT_TOKEN_INVALID: "PAYMENT_TOKEN_INVALID",
   VALIDATION_ERROR: "VALIDATION_ERROR",
 } as const;
 
@@ -24,6 +25,7 @@ export type BookingPaymentErrorCode =
 export const CreateBookingPaymentIntentRequestSchema = z.object({
   reservationReference: z.string().trim().min(1),
   invoiceReference: z.string().trim().min(1),
+  paymentAccessToken: z.string().trim().min(1),
   // Intentionally no amount field — server always recomputes from invoice.totals.balanceDue.
 });
 
@@ -45,6 +47,7 @@ export type CreateBookingPaymentIntentResponse = z.infer<
 export const BookingPaymentStatusQuerySchema = z.object({
   reservationReference: z.string().trim().min(1),
   invoiceReference: z.string().trim().min(1),
+  paymentAccessToken: z.string().trim().min(1),
 });
 
 export type BookingPaymentStatusQuery = z.infer<typeof BookingPaymentStatusQuerySchema>;
@@ -88,6 +91,7 @@ export const BookingPaymentErrorResponseSchema = z.object({
     BOOKING_PAYMENT_ERROR_CODES.INVOICE_EXPIRED,
     BOOKING_PAYMENT_ERROR_CODES.ALREADY_PAID,
     BOOKING_PAYMENT_ERROR_CODES.STRIPE_NOT_CONFIGURED,
+    BOOKING_PAYMENT_ERROR_CODES.PAYMENT_TOKEN_INVALID,
     BOOKING_PAYMENT_ERROR_CODES.VALIDATION_ERROR,
   ]),
   message: z.string(),

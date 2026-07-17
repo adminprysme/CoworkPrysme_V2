@@ -16,6 +16,7 @@ import {
   type Invoice,
 } from "@coworkprysme/db";
 import {
+  BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS,
   BOOKING_PAYMENT_ERROR_CODES,
   type BookingPaymentStatusResponse,
   type CreateBookingPaymentIntentRequest,
@@ -24,15 +25,16 @@ import {
 import type Stripe from "stripe";
 
 import { createStripeClient, loadStripeConfig } from "./stripe.config.js";
+import { assertBookingPaymentAccessToken } from "./booking-payment-token.js";
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI needs runtime class reference */
 import { BookingEmailsService } from "../booking/booking-emails.service.js";
 
-/** Payment intent / status may only target invoices issued within this window (Phase 4a). */
-export const BOOKING_PAYMENT_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
+/** @deprecated Prefer BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS from shared — kept for local imports. */
+export const BOOKING_PAYMENT_INTENT_TTL_MS = BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS;
 
 /**
- * SECURITY DEBT (Phase 4a): authorization is reservationReference + invoiceReference + 24h TTL.
- * Sequential references are guessable — harden later with a per-reservation signed token.
+ * Payment intent / status require HMAC paymentAccessToken issued at confirm
+ * (+ 24h invoice TTL). Sequential references alone are not sufficient.
  */
 @Injectable()
 export class BookingPaymentService {
@@ -76,6 +78,12 @@ export class BookingPaymentService {
   async createPaymentIntent(
     input: CreateBookingPaymentIntentRequest,
   ): Promise<CreateBookingPaymentIntentResponse> {
+    assertBookingPaymentAccessToken({
+      token: input.paymentAccessToken,
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
+    });
+
     const stripe = this.ensureStripe();
     const { invoice, reservation } = await this.loadPayableInvoicePair(input);
 
@@ -149,7 +157,14 @@ export class BookingPaymentService {
   async getPaymentStatus(input: {
     reservationReference: string;
     invoiceReference: string;
+    paymentAccessToken: string;
   }): Promise<BookingPaymentStatusResponse> {
+    assertBookingPaymentAccessToken({
+      token: input.paymentAccessToken,
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
+    });
+
     const { invoice, reservation } = await this.loadInvoicePair(input, { requirePayable: false });
 
     const paymentState = this.mapPaymentState(invoice);

@@ -10,8 +10,8 @@ import {
 import { BookingPaymentService } from "./booking-payment.service.js";
 
 /**
- * SECURITY DEBT (Phase 4a): these endpoints authenticate via guessable sequential
- * references only (+ 24h invoice TTL). Harden later with a signed per-reservation token.
+ * Payment intent/status require HMAC paymentAccessToken issued at confirm
+ * (+ 24h invoice TTL). Sequential references alone are not sufficient.
  * @see ARCHITECTURE.md — Stripe Phase 4a
  */
 @Controller("booking/payments")

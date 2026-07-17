@@ -114,6 +114,8 @@ export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
     ALLOWED_ORIGIN: allowedOriginsSchema,
     GESTION_API_URL: z.string().url(),
     UPLOADS_DIR: uploadsDirSchema(env),
+    /** HMAC secret for booking paymentAccessToken (≥32 chars). */
+    BOOKING_PAYMENT_TOKEN_SECRET: z.string().min(32),
   });
 
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
@@ -268,6 +270,7 @@ export function parseVitrineApiEnv(env: NodeJS.ProcessEnv = process.env): Vitrin
     ALLOWED_ORIGIN: env.ALLOWED_ORIGIN,
     GESTION_API_URL: env.GESTION_API_URL,
     UPLOADS_DIR: env.UPLOADS_DIR,
+    BOOKING_PAYMENT_TOKEN_SECRET: env.BOOKING_PAYMENT_TOKEN_SECRET,
   });
 
   if (!result.success) {

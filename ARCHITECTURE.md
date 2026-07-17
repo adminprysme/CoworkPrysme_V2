@@ -356,13 +356,24 @@ Flux carte : confirm atomique Phase 3 → `POST /booking/payments/intent` → Pa
 | ------------------------------------ | ----------- | ------------------------------- |
 | `STRIPE_SECRET_KEY`                  | vitrine-api | Création PaymentIntent          |
 | `STRIPE_WEBHOOK_SECRET`              | vitrine-api | Vérification signature webhook  |
+| `BOOKING_PAYMENT_TOKEN_SECRET`       | vitrine-api | HMAC `paymentAccessToken` (≥32) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | vitrine-web | Payment Element (iframe Stripe) |
 
 Local : `stripe listen --forward-to localhost:8002/stripe/webhook`.
 
-### Dette de sécurité — références séquentielles (à durcir)
+### Token d'accès paiement (`paymentAccessToken`)
 
-`POST /booking/payments/intent` et `GET /booking/payments/status` s'appuient sur `reservationReference` + `invoiceReference` (+ TTL facture 24 h), **sans token signé**. Les références (`RES-2026-00001`, …) sont **devinables** : un tiers pourrait interroger statut / montant d'une autre facture. Aucune donnée carte n'est exposée ; payer la facture d'autrui ne lui nuit pas — fuite d'information mineure. **À durcir** : token signé propre à chaque réservation, renvoyé à la confirm et exigé sur intent/status.
+À la confirm (`POST /booking/confirm`), l'API renvoie un **HMAC opaque** (`paymentAccessToken`) lié à `reservationReference` + `invoiceReference`, avec une durée de vie `min(24h, awaitingPaymentExpiresAt)`.
+
+| Appel                           | Transmission du token                                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `POST /booking/payments/intent` | Body JSON `paymentAccessToken`                                                               |
+| `GET /booking/payments/status`  | Query `paymentAccessToken`                                                                   |
+| Retour Stripe (`return_url`)    | **Jamais** dans l'URL (logs Stripe / Referer) — le front le recharge depuis `sessionStorage` |
+
+**Compromis sessionStorage vs cookie httpOnly** : le token est stocké en `sessionStorage` (snapshot de reprise carte) pour survivre au redirect Stripe sans le coller dans l'URL. `sessionStorage` est **moins protégé qu'un cookie httpOnly** contre une XSS : choix **conscient**. Acceptable ici parce que le token a une portée limitée (une seule réservation / facture), une durée de vie courte alignée sur le hold, et **aucune** identité de compte — ce n'est pas un oubli. Ne pas « durcir » en cookie httpOnly sans revoir le flux multi-origine vitrine-web → vitrine-api et le resume après redirect.
+
+Sans token valide (absent / faux / expiré / refs mismatch) → `401 PAYMENT_TOKEN_INVALID` (message uniforme).
 
 ## Modes de règlement du tunnel (vitrine)
 
@@ -459,6 +470,5 @@ pnpm --filter @coworkprysme/db test
 - Authentification staff via `prysma_bdd`
 - Moteur facturation / codes promo (schémas en place, logique à venir)
 - Module Permissions gestion : permission « Reçoit les emails de réservation » + remplacement du stub `resolveBookingNotificationRecipients`
-- Durcir auth paiement carte : token signé par réservation (remplacer refs séquentielles seules)
-- Automatisation rapprochement virements Qonto (`Payment.reconciliation.qontoTxId`)
+- Webhooks Qonto (V2) pour remplacer/compléter le polling des crédits
 - CI/CD automatisé

@@ -339,6 +339,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
     setConfirmResult({
       reservationReference: returned.reservationReference,
       invoiceReference: returned.invoiceReference,
+      paymentAccessToken: snapshot?.paymentAccessToken ?? "",
       paymentMethod: "card",
       reservationStatus: snapshot?.reservationStatus ?? "awaiting_payment",
     });

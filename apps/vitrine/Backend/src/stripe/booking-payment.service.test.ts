@@ -1,5 +1,8 @@
 import { BadRequestException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { signBookingPaymentAccessToken } from "@coworkprysme/shared";
+
+const TOKEN_SECRET = "test-booking-payment-token-secret-32chars!!";
 
 const {
   applyStripeCardPaymentMock,
@@ -102,9 +105,17 @@ function mockInvoicePair(
 
 describe("Stripe booking payment", () => {
   let service: BookingPaymentService;
+  let validToken: string;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.BOOKING_PAYMENT_TOKEN_SECRET = TOKEN_SECRET;
+    validToken = signBookingPaymentAccessToken({
+      reservationReference: "RES-2026-00042",
+      invoiceReference: "PF-2026-00042",
+      expiresAt: new Date(Date.now() + 60_000),
+      secret: TOKEN_SECRET,
+    });
     sendEmailsAfterCardPaymentMock.mockResolvedValue(undefined);
     const bookingEmails = {
       sendEmailsAfterCardPayment: sendEmailsAfterCardPaymentMock,
@@ -219,6 +230,7 @@ describe("Stripe booking payment", () => {
     const result = await service.createPaymentIntent({
       reservationReference: "RES-2026-00042",
       invoiceReference: "PF-2026-00042",
+      paymentAccessToken: validToken,
       // @ts-expect-error — clients must not send amount; schema strips it, service never reads it
       amount: 1,
     });
@@ -235,6 +247,19 @@ describe("Stripe booking payment", () => {
     expect(reservationUpdateOneMock).toHaveBeenCalled();
   });
 
+  it("rejects PaymentIntent creation without a valid paymentAccessToken", async () => {
+    await expect(
+      service.createPaymentIntent({
+        reservationReference: "RES-2026-00042",
+        invoiceReference: "PF-2026-00042",
+        paymentAccessToken: "not-a-valid-token",
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "PAYMENT_TOKEN_INVALID" }),
+    });
+    expect(paymentIntentsCreateMock).not.toHaveBeenCalled();
+  });
+
   it("rejects PaymentIntent creation for a bank_transfer awaiting_payment hold", async () => {
     mockInvoicePair(2400, { awaitingPaymentMethod: "bank_transfer" });
 
@@ -242,6 +267,7 @@ describe("Stripe booking payment", () => {
       service.createPaymentIntent({
         reservationReference: "RES-2026-00042",
         invoiceReference: "PF-2026-00042",
+        paymentAccessToken: validToken,
       }),
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: "INVOICE_NOT_PAYABLE" }),
@@ -256,11 +282,40 @@ describe("Stripe booking payment", () => {
       service.createPaymentIntent({
         reservationReference: "RES-2026-00042",
         invoiceReference: "PF-2026-00042",
+        paymentAccessToken: validToken,
       }),
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: "INVOICE_NOT_PAYABLE" }),
     });
     expect(paymentIntentsCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns payment status when paymentAccessToken is valid", async () => {
+    const status = await service.getPaymentStatus({
+      reservationReference: "RES-2026-00042",
+      invoiceReference: "PF-2026-00042",
+      paymentAccessToken: validToken,
+    });
+    expect(status.paymentState).toBe("awaiting_payment");
+    expect(status.balanceDue).toBe(4800);
+  });
+
+  it("rejects payment status with a mismatched paymentAccessToken", async () => {
+    const otherToken = signBookingPaymentAccessToken({
+      reservationReference: "RES-OTHER",
+      invoiceReference: "PF-OTHER",
+      expiresAt: new Date(Date.now() + 60_000),
+      secret: TOKEN_SECRET,
+    });
+    await expect(
+      service.getPaymentStatus({
+        reservationReference: "RES-2026-00042",
+        invoiceReference: "PF-2026-00042",
+        paymentAccessToken: otherToken,
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "PAYMENT_TOKEN_INVALID" }),
+    });
   });
 
   it("logs payment_intent.payment_failed without applying a payment, confirming, or emailing", async () => {

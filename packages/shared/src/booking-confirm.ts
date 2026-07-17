@@ -201,6 +201,11 @@ export const BookingConfirmRequestSchema = z
 export const BookingConfirmResponseSchema = z.object({
   reservationReference: z.string(),
   invoiceReference: z.string(),
+  /**
+   * HMAC access token required for POST /booking/payments/intent and GET /booking/payments/status.
+   * Front keeps it in memory + sessionStorage (not in Stripe return_url).
+   */
+  paymentAccessToken: z.string().min(1),
   paymentMethod: BookingPaymentMethodSchema,
   /** Real reservation.status after atomic create (awaiting_payment for card/bank_transfer). */
   reservationStatus: z.enum([

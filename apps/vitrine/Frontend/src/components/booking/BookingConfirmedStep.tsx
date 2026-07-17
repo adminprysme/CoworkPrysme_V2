@@ -73,15 +73,17 @@ export function BookingConfirmedStep({
 
   const persistResumeSnapshot = useCallback(() => {
     saveBookingPaymentResumeSnapshot({
-      version: 1,
+      version: 2,
       reservationReference: result.reservationReference,
       invoiceReference: result.invoiceReference,
+      paymentAccessToken: result.paymentAccessToken,
       reservationStatus: result.reservationStatus,
       spaceLabel,
       slotLabel,
     });
   }, [
     result.invoiceReference,
+    result.paymentAccessToken,
     result.reservationReference,
     result.reservationStatus,
     slotLabel,
@@ -106,6 +108,7 @@ export function BookingConfirmedStep({
       const intent = await createBookingPaymentIntent({
         reservationReference: result.reservationReference,
         invoiceReference: result.invoiceReference,
+        paymentAccessToken: result.paymentAccessToken,
       });
       setClientSecret(intent.clientSecret);
       setPaymentState("awaiting_payment");
@@ -116,7 +119,12 @@ export function BookingConfirmedStep({
     } finally {
       setIntentLoading(false);
     }
-  }, [persistResumeSnapshot, result.invoiceReference, result.reservationReference]);
+  }, [
+    persistResumeSnapshot,
+    result.invoiceReference,
+    result.paymentAccessToken,
+    result.reservationReference,
+  ]);
 
   useEffect(() => {
     if (!isCard) {
@@ -147,6 +155,7 @@ export function BookingConfirmedStep({
         const status = await fetchBookingPaymentStatus({
           reservationReference: result.reservationReference,
           invoiceReference: result.invoiceReference,
+          paymentAccessToken: result.paymentAccessToken,
         });
         if (cancelled) {
           return;
@@ -200,6 +209,7 @@ export function BookingConfirmedStep({
     isCard,
     paymentState,
     result.invoiceReference,
+    result.paymentAccessToken,
     result.reservationReference,
     resumeAfterRedirect,
     stripeRedirectStatus,
