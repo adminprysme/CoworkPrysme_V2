@@ -76,10 +76,14 @@ async function buildFromReference(ref, deps, db) {
   if (!cardex) throw new Error(`Cardex for ${ref} not found`);
   let reservationReference;
   let awaitingPaymentMethod;
+  let reservationStartAt;
+  let reservationEndAt;
   if (invoice.reservationId) {
     const reservation = await db.collection("reservations").findOne({ _id: invoice.reservationId });
     reservationReference = reservation?.reference;
     awaitingPaymentMethod = reservation?.awaitingPaymentMethod;
+    reservationStartAt = reservation?.startAt;
+    reservationEndAt = reservation?.endAt;
   }
   const payment = await db
     .collection("payments")
@@ -113,6 +117,8 @@ async function buildFromReference(ref, deps, db) {
     issuer: issuerConfig,
     logoDataUri: deps.logo.loadInvoiceLogoDataUri(),
     reservationReference,
+    reservationStartAt,
+    reservationEndAt,
     paymentMethod: payment?.method,
     awaitingPaymentMethod,
     bankRib: deps.bank.loadBankTransferRibConfig(),
@@ -131,6 +137,7 @@ function buildStressFixture(deps) {
       lines: [
         {
           label: "FOCUS — configuration modulable premium avec marquage directionnel",
+          kind: "space",
           qty: 1,
           unitPriceHT: 18000,
           vatRate: 20,
@@ -139,6 +146,7 @@ function buildStressFixture(deps) {
         },
         {
           label: "Café premium",
+          kind: "service",
           qty: 8,
           unitPriceHT: 1999,
           vatRate: 20,
@@ -148,6 +156,7 @@ function buildStressFixture(deps) {
         {
           label:
             "Plateau repas traiteur végétarien longue dénomination commerciale pour comité de direction",
+          kind: "service",
           qty: 6,
           unitPriceHT: 2500,
           vatRate: 10,
@@ -156,6 +165,7 @@ function buildStressFixture(deps) {
         },
         {
           label: "Vidéoprojecteur 4K",
+          kind: "service",
           qty: 1,
           unitPriceHT: 4500,
           vatRate: 20,
@@ -164,6 +174,7 @@ function buildStressFixture(deps) {
         },
         {
           label: "Paperboard + fournitures",
+          kind: "service",
           qty: 3,
           unitPriceHT: 800,
           vatRate: 20,
@@ -172,6 +183,7 @@ function buildStressFixture(deps) {
         },
         {
           label: "Accueil café d'accueil prolongé matinée",
+          kind: "service",
           qty: 1,
           unitPriceHT: 3500,
           vatRate: 20,
@@ -180,6 +192,7 @@ function buildStressFixture(deps) {
         },
         {
           label: "Location matériel visioconférence hybride",
+          kind: "service",
           qty: 1,
           unitPriceHT: 6000,
           vatRate: 20,
@@ -217,6 +230,8 @@ function buildStressFixture(deps) {
     issuer: issuerConfig,
     logoDataUri: deps.logo.loadInvoiceLogoDataUri(),
     reservationReference: "RES-2026-STRESS",
+    reservationStartAt: "2026-07-16T06:00:00.000Z",
+    reservationEndAt: "2026-07-18T17:00:00.000Z",
     awaitingPaymentMethod: "bank_transfer",
     bankRib: deps.bank.loadBankTransferRibConfig(),
   });

@@ -18,7 +18,7 @@ const issuer: InvoiceIssuerConfig = {
 };
 
 describe("invoice PDF template", () => {
-  it("renders a minimal space-only proforma with existing reference format", () => {
+  it("renders a minimal space-only proforma with reservation period instead of qty", () => {
     const model = buildInvoicePdfViewModel({
       invoice: {
         reference: "PF-2026-00022",
@@ -28,6 +28,7 @@ describe("invoice PDF template", () => {
         lines: [
           {
             label: "FOCUS",
+            kind: "space",
             qty: 1,
             unitPriceHT: 2000,
             vatRate: 20,
@@ -45,6 +46,8 @@ describe("invoice PDF template", () => {
       issuer,
       logoDataUri: "data:image/png;base64,aaa",
       reservationReference: "RES-2026-00022",
+      reservationStartAt: "2026-09-01T10:00:00.000Z",
+      reservationEndAt: "2026-09-01T11:00:00.000Z",
       paymentMethod: "card",
     });
 
@@ -53,6 +56,11 @@ describe("invoice PDF template", () => {
     expect(html).toContain("PROFORMA");
     expect(html).not.toContain("FAC-");
     expect(html).toContain("FOCUS");
+    expect(html).toContain("Qté / période");
+    expect(html).toContain("→");
+    expect(html).toContain("col-qty-period");
+    expect(model.lines[0]?.qtyOrPeriodLabel).not.toBe("1");
+    expect(model.lines[0]?.qtyOrPeriodLabel).toMatch(/→/);
     expect(html).toContain("E2E Listen");
     expect(html).toContain("Payé");
     expect(html).toContain("Carte bancaire");
@@ -62,7 +70,7 @@ describe("invoice PDF template", () => {
     expect(html).toContain("width: auto");
   });
 
-  it("renders a rich invoice with company, discounts, many lines and bank transfer RIB", () => {
+  it("keeps numeric qty for services and period for space on rich invoices", () => {
     const longName =
       "Société Européenne de Conseil Stratégique et d'Innovation Digitale Appliquée SASU";
     const model = buildInvoicePdfViewModel({
@@ -75,6 +83,7 @@ describe("invoice PDF template", () => {
         lines: [
           {
             label: "FOCUS — journée complète avec configuration salle modulable premium",
+            kind: "space",
             qty: 1,
             unitPriceHT: 18000,
             vatRate: 20,
@@ -83,6 +92,7 @@ describe("invoice PDF template", () => {
           },
           {
             label: "Café premium",
+            kind: "service",
             qty: 2,
             unitPriceHT: 1999,
             vatRate: 20,
@@ -91,6 +101,7 @@ describe("invoice PDF template", () => {
           },
           {
             label: "Plateau repas traiteur végétarien longue dénomination commerciale",
+            kind: "service",
             qty: 4,
             unitPriceHT: 2500,
             vatRate: 10,
@@ -99,6 +110,7 @@ describe("invoice PDF template", () => {
           },
           {
             label: "Vidéoprojecteur 4K",
+            kind: "service",
             qty: 1,
             unitPriceHT: 4500,
             vatRate: 20,
@@ -107,6 +119,7 @@ describe("invoice PDF template", () => {
           },
           {
             label: "Paperboard + fournitures",
+            kind: "service",
             qty: 2,
             unitPriceHT: 800,
             vatRate: 20,
@@ -143,6 +156,8 @@ describe("invoice PDF template", () => {
       issuer,
       logoDataUri: "data:image/png;base64,aaa",
       reservationReference: "RES-2026-00020",
+      reservationStartAt: "2026-07-24T06:00:00.000Z",
+      reservationEndAt: "2026-07-25T17:00:00.000Z",
       awaitingPaymentMethod: "bank_transfer",
       bankRib: {
         iban: "FR7612345678901234567890123",
@@ -161,6 +176,8 @@ describe("invoice PDF template", () => {
     expect(html).toContain("FR7612345678901234567890123");
     expect(html).toContain("RES-2026-00020");
     expect(html).toContain("Paperboard + fournitures");
+    expect(model.lines[0]?.qtyOrPeriodLabel).toMatch(/→/);
+    expect(model.lines[1]?.qtyOrPeriodLabel).toBe("2");
     expect(html).toContain(INVOICE_LATE_PAYMENT_LEGAL_NOTICE.replaceAll("'", "&#39;"));
   });
 });

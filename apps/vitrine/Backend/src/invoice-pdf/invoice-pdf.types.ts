@@ -6,7 +6,10 @@ export type InvoicePdfPaymentStatus = "paid" | "awaiting" | "other";
 
 export interface InvoicePdfLineView {
   label: string;
+  kind: string;
   qty: number;
+  /** Quantity for services, or reservation period label for space lines. */
+  qtyOrPeriodLabel: string;
   unitPriceHT: number;
   vatRate: number;
   discount: number;

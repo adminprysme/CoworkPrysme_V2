@@ -1,9 +1,11 @@
 import type { Address, CardexCompany, CardexIdentity } from "@coworkprysme/db";
+import { formatAvailabilityWindow } from "@coworkprysme/shared";
 
 import type { InvoiceIssuerConfig } from "./invoice-issuer.config.js";
 import type {
   InvoicePdfBankRibView,
   InvoicePdfClientView,
+  InvoicePdfLineView,
   InvoicePdfPaymentMethod,
   InvoicePdfPaymentStatus,
   InvoicePdfViewModel,
@@ -18,6 +20,7 @@ export interface InvoicePdfSourceInvoice {
   paidAt?: Date | string | null;
   lines: Array<{
     label: string;
+    kind?: string;
     qty: number;
     unitPriceHT: number;
     vatRate: number;
@@ -100,12 +103,43 @@ export function resolveInvoicePdfPaymentStatus(
   return "other";
 }
 
+export function isInvoicePdfSpaceLine(kind: string | undefined): boolean {
+  return (kind ?? "").trim() === "space";
+}
+
+export function buildInvoicePdfLineViews(
+  lines: InvoicePdfSourceInvoice["lines"],
+  reservation?: { startAt?: Date | string | null; endAt?: Date | string | null } | null,
+): InvoicePdfLineView[] {
+  const periodLabel =
+    reservation?.startAt && reservation?.endAt
+      ? formatAvailabilityWindow(reservation.startAt, reservation.endAt)
+      : "";
+
+  return lines.map((line) => {
+    const kind = (line.kind ?? "other").trim() || "other";
+    const isSpace = isInvoicePdfSpaceLine(kind);
+    return {
+      label: line.label,
+      kind,
+      qty: line.qty,
+      qtyOrPeriodLabel: isSpace && periodLabel ? periodLabel : String(line.qty),
+      unitPriceHT: line.unitPriceHT,
+      vatRate: line.vatRate,
+      discount: line.discount,
+      totalHT: line.totalHT,
+    };
+  });
+}
+
 export function buildInvoicePdfViewModel(input: {
   invoice: InvoicePdfSourceInvoice;
   cardex: InvoicePdfSourceCardex;
   issuer: InvoiceIssuerConfig;
   logoDataUri: string;
   reservationReference?: string | null;
+  reservationStartAt?: Date | string | null;
+  reservationEndAt?: Date | string | null;
   paymentMethod?: string | null;
   awaitingPaymentMethod?: string | null;
   bankRib?: InvoicePdfBankRibView | null;
@@ -124,14 +158,10 @@ export function buildInvoicePdfViewModel(input: {
     dueDate: input.invoice.dueDate ? asDate(input.invoice.dueDate, issuedAt) : undefined,
     issuer: input.issuer,
     client: buildInvoicePdfClientView(input.cardex),
-    lines: input.invoice.lines.map((line) => ({
-      label: line.label,
-      qty: line.qty,
-      unitPriceHT: line.unitPriceHT,
-      vatRate: line.vatRate,
-      discount: line.discount,
-      totalHT: line.totalHT,
-    })),
+    lines: buildInvoicePdfLineViews(input.invoice.lines, {
+      startAt: input.reservationStartAt,
+      endAt: input.reservationEndAt,
+    }),
     vatBreakdown: input.invoice.vatBreakdown.map((row) => ({
       rate: row.rate,
       baseHT: row.baseHT,

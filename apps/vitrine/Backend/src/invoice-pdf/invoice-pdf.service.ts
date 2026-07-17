@@ -107,11 +107,15 @@ export class InvoicePdfService {
 
     let reservationReference: string | undefined;
     let awaitingPaymentMethod: string | undefined;
+    let reservationStartAt: Date | undefined;
+    let reservationEndAt: Date | undefined;
     if (invoice.reservationId) {
       const Reservation = await getReservationModel();
       const reservation = await Reservation.findById(invoice.reservationId).lean().exec();
       reservationReference = reservation?.reference;
       awaitingPaymentMethod = reservation?.awaitingPaymentMethod;
+      reservationStartAt = reservation?.startAt;
+      reservationEndAt = reservation?.endAt;
     }
 
     const Payment = await getPaymentModel();
@@ -143,6 +147,8 @@ export class InvoicePdfService {
       issuer,
       logoDataUri: loadInvoiceLogoDataUri(),
       reservationReference,
+      reservationStartAt,
+      reservationEndAt,
       paymentMethod,
       awaitingPaymentMethod,
       bankRib,

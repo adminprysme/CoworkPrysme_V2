@@ -54,12 +54,13 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
         line.discount > 0
           ? `<div class="line-discount">Remise −${escapeHtml(formatEuro(line.discount))}</div>`
           : "";
+      const qtyClass = line.kind === "space" ? "col-qty col-qty-period" : "col-qty";
       return `<tr>
         <td class="col-desc">
           <div class="line-label">${escapeHtml(line.label)}</div>
           ${discountNote}
         </td>
-        <td class="col-num">${escapeHtml(String(line.qty))}</td>
+        <td class="${qtyClass}">${escapeHtml(line.qtyOrPeriodLabel)}</td>
         <td class="col-num">${escapeHtml(formatEuro(line.unitPriceHT))}</td>
         <td class="col-num">${escapeHtml(String(line.vatRate))}&nbsp;%</td>
         <td class="col-num">${escapeHtml(formatEuro(line.totalHT))}</td>
@@ -230,9 +231,25 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       overflow-wrap: anywhere;
     }
     table.lines tr { page-break-inside: avoid; }
-    .col-desc { width: 44%; }
-    .col-num { width: 14%; text-align: right; white-space: nowrap; }
-    th.col-num { text-align: right; }
+    .col-desc { width: 36%; }
+    .col-qty {
+      width: 24%;
+      text-align: right;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+    .col-qty-period {
+      text-align: left;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      font-variant-numeric: tabular-nums;
+    }
+    .col-num { width: 13%; text-align: right; white-space: nowrap; }
+    th.col-num, th.col-qty { text-align: right; }
+    th.col-qty { text-align: left; }
     .line-label { font-weight: 600; }
     .line-discount { margin-top: 2px; color: #666; font-size: 9pt; }
     .summary {
@@ -363,7 +380,7 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       <thead>
         <tr>
           <th class="col-desc">Description</th>
-          <th class="col-num">Qté</th>
+          <th class="col-qty">Qté / période</th>
           <th class="col-num">P.U. HT</th>
           <th class="col-num">TVA</th>
           <th class="col-num">Total HT</th>
