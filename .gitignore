@@ -38,3 +38,6 @@ pnpm-debug.log*
 
 # Secrets / local tooling
 pushgithub.txt
+
+# Local Mongo dumps (never commit)
+backups/
