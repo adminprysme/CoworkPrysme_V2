@@ -287,8 +287,8 @@ export class BookingConfirmService {
 
     let bankTransfer: BankTransferInstructions | undefined;
 
-    // Proforma + bank_transfer: emails at create. Card: deferred until webhook.
-    if (input.paymentMethod === "proforma" || input.paymentMethod === "bank_transfer") {
+    // Bank transfer: RIB + staff emails at create. Card: deferred until webhook.
+    if (input.paymentMethod === "bank_transfer" && bankTransferRib && bankTransferExpiresAt) {
       const buildingAccess = await this.bookingEmails.resolveBuildingAccess(
         (space as SpaceLean).buildingId,
       );
@@ -297,50 +297,30 @@ export class BookingConfirmService {
         ? `${input.identity.firstName} ${input.identity.lastName}`.trim()
         : null;
 
-      if (input.paymentMethod === "bank_transfer" && bankTransferRib && bankTransferExpiresAt) {
-        bankTransfer = {
-          iban: bankTransferRib.iban,
-          bic: bankTransferRib.bic,
-          accountHolder: bankTransferRib.accountHolder,
-          bankName: bankTransferRib.bankName,
-          transferLabel: result.reservation.reference,
-          amountCents: pricing.totalTTC,
-          expiresAt: bankTransferExpiresAt.toISOString(),
-        };
+      bankTransfer = {
+        iban: bankTransferRib.iban,
+        bic: bankTransferRib.bic,
+        accountHolder: bankTransferRib.accountHolder,
+        bankName: bankTransferRib.bankName,
+        transferLabel: result.reservation.reference,
+        amountCents: pricing.totalTTC,
+        expiresAt: bankTransferExpiresAt.toISOString(),
+      };
 
-        await this.bookingEmails.sendBankTransferInstructionsEmails({
-          clientEmail: result.clientEmail,
-          isNewAccount: result.isNewAccount,
-          reservationReference: result.reservation.reference,
-          invoiceReference: result.invoiceReference,
-          spaceName: space.name,
-          startAt: input.startAt,
-          endAt: input.endAt,
-          amountCents: pricing.totalTTC,
-          expiresAt: bankTransferExpiresAt,
-          rib: bankTransferRib,
-          transferLabel: result.reservation.reference,
-          building: buildingAccess,
-        });
-      } else {
-        await this.bookingEmails.sendClientConfirmationEmails({
-          clientEmail: result.clientEmail,
-          isNewAccount: result.isNewAccount,
-          reservationReference: result.reservation.reference,
-          invoiceReference: result.invoiceReference,
-          spaceName: space.name,
-          startAt: input.startAt,
-          endAt: input.endAt,
-          totalTTC: pricing.totalTTC,
-          lines: pricing.lines.map((line) => ({
-            label: line.label,
-            qty: line.qty,
-            totalTTC: line.totalTTC,
-          })),
-          vatBreakdown: pricing.vatBreakdown,
-          building: buildingAccess,
-        });
-      }
+      await this.bookingEmails.sendBankTransferInstructionsEmails({
+        clientEmail: result.clientEmail,
+        isNewAccount: result.isNewAccount,
+        reservationReference: result.reservation.reference,
+        invoiceReference: result.invoiceReference,
+        spaceName: space.name,
+        startAt: input.startAt,
+        endAt: input.endAt,
+        amountCents: pricing.totalTTC,
+        expiresAt: bankTransferExpiresAt,
+        rib: bankTransferRib,
+        transferLabel: result.reservation.reference,
+        building: buildingAccess,
+      });
 
       await this.bookingEmails.sendStaffBookingNotifications({
         buildingId,

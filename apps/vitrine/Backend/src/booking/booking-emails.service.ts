@@ -229,7 +229,7 @@ export class BookingEmailsService {
     startAt: Date | string;
     endAt: Date | string;
     totalTTC: number;
-    paymentMethod: "proforma" | "card" | "bank_transfer";
+    paymentMethod: "card" | "bank_transfer";
   }) {
     const recipients = await resolveBookingNotificationRecipients(input.buildingId);
     if (recipients.length === 0) {

@@ -174,7 +174,7 @@ describe("booking email templates", () => {
       totalTTC: 4800,
       clientEmail: "client@example.com",
       clientName: "Alice Martin",
-      paymentMethod: "proforma",
+      paymentMethod: "bank_transfer",
     });
 
     expect(staff.subject).toBe("Nouvelle réservation — FOCUS — 21/07/2026 10:00:00");
@@ -184,6 +184,7 @@ describe("booking email templates", () => {
     expect(staff.html).toContain("RES-2026-00101");
     expect(staff.html).toContain("Cowork GERLAND");
     expect(staff.html).toContain("Facture proforma");
+    expect(staff.html).toContain("Virement bancaire");
     expect(staff.html).not.toContain("Plan d'accès");
     expect(staff.html).not.toContain("Votre réservation est confirmée");
   });

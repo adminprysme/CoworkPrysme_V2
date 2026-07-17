@@ -54,7 +54,7 @@ describe("bank transfer config + eligibility", () => {
     const now = new Date("2026-07-16T10:00:00.000Z");
     const start = new Date("2026-07-19T10:00:00.000Z");
     const result = resolveAvailablePaymentMethods(start, now, env);
-    expect(result.paymentMethods).toEqual(["proforma", "card"]);
+    expect(result.paymentMethods).toEqual(["card"]);
     expect(result.bankTransferAvailable).toBe(false);
   });
 

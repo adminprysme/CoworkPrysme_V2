@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Types } from "mongoose";
 
 const {
@@ -43,6 +43,7 @@ describe("BookingConfirmService — email recipients", () => {
   let bookingEmails: {
     resolveBuildingAccess: ReturnType<typeof vi.fn>;
     sendClientConfirmationEmails: ReturnType<typeof vi.fn>;
+    sendBankTransferInstructionsEmails: ReturnType<typeof vi.fn>;
     sendStaffBookingNotifications: ReturnType<typeof vi.fn>;
   };
   let availability: AvailabilityService;
@@ -52,8 +53,8 @@ describe("BookingConfirmService — email recipients", () => {
     lockId: LOCK_ID,
     sessionId: "session-test-abcdefgh",
     spaceId: SPACE_ID,
-    startAt: "2026-07-21T08:00:00.000Z",
-    endAt: "2026-07-21T10:00:00.000Z",
+    startAt: "2026-08-21T08:00:00.000Z",
+    endAt: "2026-08-21T10:00:00.000Z",
     durationClass: "hourly" as const,
     partySize: 4,
     services: [] as [],
@@ -75,11 +76,17 @@ describe("BookingConfirmService — email recipients", () => {
     marketingCommunicationsAccepted: false,
     cgvAccepted: true as const,
     withdrawalAcknowledged: true as const,
-    paymentMethod: "proforma" as const,
+    paymentMethod: "card" as const,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.BANK_TRANSFER_IBAN = "FR7612345678901234567890123";
+    process.env.BANK_TRANSFER_BIC = "QNTOFRP1";
+    process.env.BANK_TRANSFER_ACCOUNT_HOLDER = "Cowork Prysme";
+    process.env.BANK_TRANSFER_MIN_LEAD_DAYS = "7";
+    process.env.BANK_TRANSFER_PAYMENT_WINDOW_DAYS = "8";
+    process.env.BANK_TRANSFER_SAFETY_MARGIN_DAYS = "2";
 
     bookingEmails = {
       resolveBuildingAccess: vi.fn().mockResolvedValue({
@@ -88,6 +95,7 @@ describe("BookingConfirmService — email recipients", () => {
         contactEmail: BUILDING_CONTACT_EMAIL,
       }),
       sendClientConfirmationEmails: vi.fn().mockResolvedValue(undefined),
+      sendBankTransferInstructionsEmails: vi.fn().mockResolvedValue(undefined),
       sendStaffBookingNotifications: vi.fn().mockResolvedValue(undefined),
     };
 
@@ -110,7 +118,7 @@ describe("BookingConfirmService — email recipients", () => {
     } as unknown as BookingPriceService;
 
     confirmBookingCheckoutMock.mockResolvedValue({
-      reservation: { reference: "RES-2026-00100", status: "confirmed" },
+      reservation: { reference: "RES-2026-00100", status: "awaiting_payment" },
       invoiceReference: "PF-2026-00100",
       clientAccountId: new Types.ObjectId(),
       cardexId: new Types.ObjectId(),
@@ -125,22 +133,31 @@ describe("BookingConfirmService — email recipients", () => {
     );
   });
 
-  it("sends confirmation emails for proforma at confirm time", async () => {
-    await service.confirm(confirmPayload);
+  afterEach(() => {
+    delete process.env.BANK_TRANSFER_IBAN;
+    delete process.env.BANK_TRANSFER_BIC;
+    delete process.env.BANK_TRANSFER_ACCOUNT_HOLDER;
+    delete process.env.BANK_TRANSFER_MIN_LEAD_DAYS;
+    delete process.env.BANK_TRANSFER_PAYMENT_WINDOW_DAYS;
+    delete process.env.BANK_TRANSFER_SAFETY_MARGIN_DAYS;
+  });
 
-    expect(bookingEmails.sendClientConfirmationEmails).toHaveBeenCalledTimes(1);
-    expect(bookingEmails.sendClientConfirmationEmails).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clientEmail: CLIENT_EMAIL,
-        isNewAccount: true,
-        reservationReference: "RES-2026-00100",
-      }),
-    );
+  it("sends bank-transfer instruction emails at confirm time", async () => {
+    const result = await service.confirm({
+      ...confirmPayload,
+      paymentMethod: "bank_transfer",
+    });
+
+    expect(result.reservationStatus).toBe("awaiting_payment");
+    expect(result.bankTransfer?.iban).toBe("FR7612345678901234567890123");
+    expect(result.bankTransfer?.transferLabel).toBe("RES-2026-00100");
+    expect(bookingEmails.sendBankTransferInstructionsEmails).toHaveBeenCalledTimes(1);
+    expect(bookingEmails.sendClientConfirmationEmails).not.toHaveBeenCalled();
     expect(bookingEmails.sendStaffBookingNotifications).toHaveBeenCalledTimes(1);
     expect(bookingEmails.sendStaffBookingNotifications).toHaveBeenCalledWith(
       expect.objectContaining({
         clientEmail: CLIENT_EMAIL,
-        paymentMethod: "proforma",
+        paymentMethod: "bank_transfer",
         buildingId: BUILDING_ID.toString(),
       }),
     );
@@ -160,19 +177,19 @@ describe("BookingConfirmService — email recipients", () => {
 
     expect(result.reservationStatus).toBe("awaiting_payment");
     expect(bookingEmails.sendClientConfirmationEmails).not.toHaveBeenCalled();
+    expect(bookingEmails.sendBankTransferInstructionsEmails).not.toHaveBeenCalled();
     expect(bookingEmails.sendStaffBookingNotifications).not.toHaveBeenCalled();
     expect(bookingEmails.resolveBuildingAccess).not.toHaveBeenCalled();
   });
 
-  it("still resolves staff path for proforma (regression: staff recipients)", async () => {
+  it("still resolves staff path for bank_transfer (regression: staff recipients)", async () => {
     bookingEmails.sendStaffBookingNotifications.mockImplementation(async (input) => {
       expect(input.clientName).toBe("Alice Martin");
       expect(input.buildingId).toBe(BUILDING_ID.toString());
-      // building contact must never be the SMTP destination — enforced in BookingEmailsService
       expect(STAFF_FALLBACK_EMAIL).toBeTruthy();
     });
 
-    await service.confirm(confirmPayload);
+    await service.confirm({ ...confirmPayload, paymentMethod: "bank_transfer" });
     expect(bookingEmails.sendStaffBookingNotifications).toHaveBeenCalled();
   });
 });

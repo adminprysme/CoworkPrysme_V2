@@ -72,7 +72,7 @@ export function resolveAvailablePaymentMethods(
 } {
   const thresholds = loadBankTransferThresholds(env);
   const rib = loadBankTransferRibConfig(env);
-  const methods: BookingPaymentMethod[] = ["proforma", "card"];
+  const methods: BookingPaymentMethod[] = ["card"];
   const bankTransferAvailable =
     rib !== null &&
     isBankTransferFullyEligible({

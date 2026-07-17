@@ -269,7 +269,7 @@ export interface StaffBookingNotificationEmailInput {
   totalTTC: number;
   clientEmail: string;
   clientName?: string | null;
-  paymentMethod: "proforma" | "card" | "bank_transfer";
+  paymentMethod: "card" | "bank_transfer";
   siteUrl?: string;
 }
 
@@ -279,12 +279,7 @@ export function renderStaffBookingNotificationEmail(input: StaffBookingNotificat
   html: string;
 } {
   const siteUrl = resolvePublicSiteUrl(input.siteUrl);
-  const paymentLabel =
-    input.paymentMethod === "card"
-      ? "Paiement par carte"
-      : input.paymentMethod === "bank_transfer"
-        ? "Virement bancaire"
-        : "Facture proforma";
+  const paymentLabel = input.paymentMethod === "card" ? "Paiement par carte" : "Virement bancaire";
   const clientName = input.clientName?.trim();
   const clientLine = clientName
     ? `${escapeHtml(clientName)} (${escapeHtml(input.clientEmail)})`
