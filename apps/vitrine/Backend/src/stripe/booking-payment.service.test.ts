@@ -1,6 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { signBookingPaymentAccessToken } from "@coworkprysme/shared";
+import { signBookingPaymentAccessToken } from "@coworkprysme/shared/server";
 
 const TOKEN_SECRET = "test-booking-payment-token-secret-32chars!!";
 

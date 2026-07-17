@@ -408,13 +408,6 @@ export {
 } from "./booking-payment.js";
 
 export {
-  signBookingPaymentAccessToken,
-  verifyBookingPaymentAccessToken,
-  type BookingPaymentAccessTokenPayload,
-  type VerifyBookingPaymentAccessTokenResult,
-} from "./booking-payment-token.js";
-
-export {
   DEFAULT_SERVICE_VAT_RATE,
   SERVICE_DESCRIPTION_MAX_LENGTH,
   SERVICE_LABEL_MAX_LENGTH,

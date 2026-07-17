@@ -18,6 +18,13 @@ export {
 
 export { resolveStorageKeyAbsolutePath, resolveUploadsDir } from "./uploads-server.js";
 
+export {
+  signBookingPaymentAccessToken,
+  verifyBookingPaymentAccessToken,
+  type BookingPaymentAccessTokenPayload,
+  type VerifyBookingPaymentAccessTokenResult,
+} from "./booking-payment-token.js";
+
 import { parseGestionApiEnv, parseServerEnv, parseVitrineApiEnv } from "./env.js";
 
 /** Validates API server env at startup — used by legacy Next gestion app. */

@@ -4,7 +4,7 @@ import {
   BOOKING_PAYMENT_ERROR_CODES,
   signBookingPaymentAccessToken,
   verifyBookingPaymentAccessToken,
-} from "@coworkprysme/shared";
+} from "@coworkprysme/shared/server";
 
 function loadPaymentTokenSecret(): string {
   const secret = process.env.BOOKING_PAYMENT_TOKEN_SECRET?.trim() ?? "";
