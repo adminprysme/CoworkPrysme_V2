@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Logger,
+  Post,
   Query,
   Res,
   ServiceUnavailableException,
@@ -15,6 +16,7 @@ import { BillingPermissionGuard } from "../auth/billing-permission.guard.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { QontoAuthService } from "./qonto-auth.service.js";
 import { QontoConfigService } from "./qonto-config.service.js";
+import { QontoSyncService } from "./qonto-sync.service.js";
 
 @Controller("integrations/qonto")
 export class QontoController {
@@ -23,6 +25,7 @@ export class QontoController {
   constructor(
     private readonly auth: QontoAuthService,
     private readonly qontoConfig: QontoConfigService,
+    private readonly syncService: QontoSyncService,
   ) {}
 
   /** Staff-only: start one-time OAuth bootstrap and redirect to Qonto. */
@@ -102,5 +105,15 @@ export class QontoController {
       env: this.qontoConfig.config.env,
       pollIntervalMs: this.qontoConfig.config.pollIntervalMs,
     };
+  }
+
+  /** Staff-only: force a credit sync now (same logic as the 10-minute poller). */
+  @Post("sync")
+  @UseGuards(SessionGuard, BillingPermissionGuard)
+  async sync() {
+    if (!this.qontoConfig.isEnabled()) {
+      throw new ServiceUnavailableException("Intégration Qonto non configurée.");
+    }
+    return this.syncService.syncRecentCredits();
   }
 }
