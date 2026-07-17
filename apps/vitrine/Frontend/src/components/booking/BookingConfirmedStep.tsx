@@ -216,30 +216,6 @@ export function BookingConfirmedStep({
       paymentState === "failed" ||
       paymentState === "confirming");
 
-  // --- Proforma: definitive confirmation ---
-  if (result.paymentMethod === "proforma") {
-    return (
-      <section className={styles.step}>
-        <div className={styles.confirmedCard}>
-          <h2 className={styles.title}>Réservation confirmée</h2>
-          <p className={styles.lead}>
-            Merci — votre réservation <strong>{result.reservationReference}</strong> est
-            enregistrée.
-          </p>
-          <BookingRecap
-            spaceLabel={spaceLabel}
-            slotLabel={slotLabel}
-            invoiceReference={result.invoiceReference}
-            reservationStatus={reservationStatus}
-          />
-          <p className={styles.lead}>
-            Un email de confirmation vous a été envoyé avec le détail et le plan d&apos;accès.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
   // --- Bank transfer: hold + RIB instructions ---
   if (result.paymentMethod === "bank_transfer") {
     const bt = result.bankTransfer;

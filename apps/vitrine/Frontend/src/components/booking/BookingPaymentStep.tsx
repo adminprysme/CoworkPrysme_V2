@@ -56,21 +56,6 @@ function IconTransfer() {
   );
 }
 
-function IconDeferred() {
-  return (
-    <svg className={styles.paymentOptionIconSvg} viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M12 8v4.5l3 1.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 const BASE_OPTIONS: PaymentOptionConfig[] = [
   {
     method: "card",
@@ -83,12 +68,6 @@ const BASE_OPTIONS: PaymentOptionConfig[] = [
     title: "Virement bancaire",
     description: "Recevez nos coordonnées bancaires par email et réglez par virement.",
     icon: <IconTransfer />,
-  },
-  {
-    method: "proforma",
-    title: "Paiement différé",
-    description: "Confirmez votre réservation maintenant et réglez plus tard.",
-    icon: <IconDeferred />,
   },
 ];
 
