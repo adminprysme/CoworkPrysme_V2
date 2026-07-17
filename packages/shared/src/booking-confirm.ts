@@ -78,17 +78,11 @@ export type BookingAddressInput = z.infer<typeof BookingAddressInputSchema>;
 export const BookingCompanyInputSchema = z.object({
   legalName: z.string().trim().min(1, "La raison sociale est requise"),
   siret: z
-    .string()
+    .string({ error: "Le SIRET est requis" })
     .trim()
-    .optional()
-    .transform((value) => {
-      if (!value) {
-        return undefined;
-      }
-      const digits = value.replaceAll(/\s/g, "");
-      return digits === "" ? undefined : digits;
-    })
-    .refine((value) => value === undefined || /^\d{14}$/.test(value), {
+    .min(1, "Le SIRET est requis")
+    .transform((value) => value.replaceAll(/\s/g, ""))
+    .refine((value) => /^\d{14}$/.test(value), {
       message: "Le SIRET doit contenir exactement 14 chiffres",
     }),
   vatNumber: z

@@ -40,7 +40,7 @@ describe("BookingConfirmRequestSchema — clientKind", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts company with billing address and optional siret", () => {
+  it("accepts company with billing address and required siret", () => {
     const parsed = BookingConfirmRequestSchema.parse({
       ...base,
       clientKind: "company",
@@ -53,6 +53,31 @@ describe("BookingConfirmRequestSchema — clientKind", () => {
     });
     expect(parsed.company?.siret).toBe("12345678901234");
     expect(parsed.company?.vatNumber).toBe("FR32123456789");
+  });
+
+  it("rejects company without siret", () => {
+    const result = BookingConfirmRequestSchema.safeParse({
+      ...base,
+      clientKind: "company",
+      company: {
+        legalName: "ACME SAS",
+        billingAddress: { street: "1 place Y", zip: "69002", city: "Lyon" },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects company with empty siret", () => {
+    const result = BookingConfirmRequestSchema.safeParse({
+      ...base,
+      clientKind: "company",
+      company: {
+        legalName: "ACME SAS",
+        siret: "   ",
+        billingAddress: { street: "1 place Y", zip: "69002", city: "Lyon" },
+      },
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects company with invalid siret length", () => {
