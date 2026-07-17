@@ -88,10 +88,14 @@
   border-color: var(--v-color-brand);
 }
 
-.note {
+.dateField {
+  min-width: 0;
+}
+
+.error {
   margin: var(--v-space-4) 0 0;
-  font-size: var(--v-text-xs);
-  color: var(--v-color-text-muted);
+  font-size: var(--v-text-sm);
+  color: var(--v-color-danger, #c45c4a);
 }
 
 @media (max-width: 960px) {
