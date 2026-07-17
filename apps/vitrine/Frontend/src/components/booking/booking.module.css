@@ -19,7 +19,8 @@
 
 @media (min-width: 960px) {
   .bookingLayoutWithSummary {
-    grid-template-columns: minmax(0, 1fr) 18.5rem;
+    grid-template-columns: minmax(0, 1fr) minmax(18.5rem, 20rem);
+    gap: var(--v-space-8);
   }
 }
 
