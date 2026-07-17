@@ -400,9 +400,42 @@ Option `paymentMethod: "bank_transfer"` dans le tunnel, offerte seulement si le 
 | `BANK_TRANSFER_PAYMENT_WINDOW_DAYS`             | vitrine-api | Fenêtre max           |
 | `BANK_TRANSFER_SAFETY_MARGIN_DAYS`              | vitrine-api | Plafond avant début   |
 
-### Automatisation Qonto — phase future
+### Rapprochement Qonto (semi-automatique)
 
-Le schéma `Payment.reconciliation.qontoTxId` est déjà prévu. **Non branché** ici : le matching automatique des virements Qonto (API / webhooks) reste une évolution séparée. Le flux actuel est **manuel** (staff marque reçu).
+Lecture seule (`organization.read` + `offline_access`). Le staff **confirme toujours** ; l’automation ne fait que **proposer**.
+
+| Élément     | Comportement                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| Matching    | Libellé Qonto contient `RES-YYYY-NNNNN` **et** `amount_cents === invoice.balanceDue` → suggestion `exact` |
+| Incohérence | Même réf. mais montant différent → suggestion `amount_mismatch` (pas de lien Qonto à la confirm)          |
+| Fallback    | Pas de candidate → encaissement manuel inchangé                                                           |
+| Confirm     | `POST /billing/transfers/mark-received` avec `qontoTxId` optionnel → `Payment.reconciliation.qontoTxId`   |
+| Sync        | Polling crédits toutes les **10 min** (+ `POST /integrations/qonto/sync`) — webhooks en V2                |
+| Tokens      | Refresh token **one-time** stocké chiffré (AES-GCM) dans `qontoOAuthCredentials`                          |
+
+#### Variables d'environnement (gestion-api)
+
+| Variable                                  | Rôle                                                    |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `QONTO_CLIENT_ID` / `QONTO_CLIENT_SECRET` | App Developer Portal (sandbox ou prod)                  |
+| `QONTO_STAGING_TOKEN`                     | Obligatoire si `QONTO_ENV=sandbox`                      |
+| `QONTO_REDIRECT_URI`                      | Ex. `http://localhost:8003/integrations/qonto/callback` |
+| `QONTO_TOKEN_ENCRYPTION_KEY`              | ≥32 caractères — chiffrement des jetons en base         |
+| `QONTO_ENV`                               | `sandbox` (défaut) ou `production`                      |
+| `QONTO_BANK_ACCOUNT_ID`                   | Optionnel (sinon découvert via `/v2/organization`)      |
+| `QONTO_POLL_INTERVAL_MS`                  | Défaut `600000` (10 min)                                |
+
+Toutes les variables Qonto (sauf optionnelles) sont **all-or-nothing** : partiel → échec au démarrage.
+
+#### Bootstrap OAuth (une fois)
+
+1. Renseigner les variables dans `apps/gestion/Backend/.env`, redémarrer gestion-api.
+2. Se connecter à la gestion (permission **billing**).
+3. Ouvrir `GET http://localhost:8003/integrations/qonto/authorize` (session cookie) **ou** `GET …/authorize-url` pour copier l’URL.
+4. Sandbox : être déjà connecté à l’app web sandbox Qonto ; SMS = `123456`.
+5. Autoriser l’app → redirect vers `/integrations/qonto/callback` → page « Qonto connecté ».
+6. Vérifier `GET /integrations/qonto/status` → `{ configured: true, authorized: true }`.
+7. Démo : crédit sandbox libellé = `RES-…` + montant = solde dû → `POST /integrations/qonto/sync` → Facturation → suggestion → **Confirmer suggestion Qonto**.
 
 ## Qualité
 
