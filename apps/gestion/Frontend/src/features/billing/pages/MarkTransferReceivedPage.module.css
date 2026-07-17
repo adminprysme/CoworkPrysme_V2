@@ -98,3 +98,42 @@
   margin: 0;
   color: var(--color-success, #067647);
 }
+
+.suggestionExact,
+.suggestionMismatch {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.suggestionExact {
+  background: color-mix(in srgb, var(--color-success, #067647) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-success, #067647) 35%, var(--color-border));
+}
+
+.suggestionMismatch {
+  background: color-mix(in srgb, var(--color-danger, #b42318) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-danger, #b42318) 35%, var(--color-border));
+}
+
+.suggestionTitle {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.suggestionHint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
