@@ -351,6 +351,8 @@ export {
   type CreateBookingLockRequest,
 } from "./booking.js";
 
+export { formatAvailabilityWindow } from "./booking-datetime.js";
+
 export {
   BOOKING_CONFIRM_ERROR_CODES,
   BankTransferInstructionsSchema,
