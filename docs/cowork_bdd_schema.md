@@ -1,8 +1,8 @@
 # Conception du schéma `cowork_bdd` — Cowork Prysme V2
 
-Document de conception (Phase 0). Il cartographie **l'ensemble** du domaine décrit dans le CDC, sans l'implémenter. Objectif : valider la cohérence globale du modèle de données avant d'écrire la moindre collection ou UI.
+Document de conception **maintenu** du schéma `cowork_bdd`. Il cartographie le domaine applicatif (CDC + évolutions tunnel paiement / Qonto). Source de vérité code : `packages/db` (schemas Mongoose).
 
-`cowork_bdd` est la base applicative partagée : **`gestion-api` y écrit** (source de toute la logique métier), **`vitrine-api` y lit** (données publiques/SEO) et **délègue les écritures** à `gestion-api`. `prysma_bdd` (SSO staff) reste externe et en lecture seule.
+`cowork_bdd` est la base applicative partagée : **`gestion-api` y écrit** (source de toute la logique métier), **`vitrine-api` y lit** (données publiques/SEO) et écrit le tunnel de réservation / paiements. `prysma_bdd` (SSO staff) reste externe et en lecture seule.
 
 ---
 
