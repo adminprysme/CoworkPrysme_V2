@@ -79,9 +79,9 @@ export class BookingService {
   private async getBuildingMap(buildingIds: Types.ObjectId[]): Promise<Map<string, BuildingLean>> {
     await connectMongo();
     const Building = await getBuildingModel();
+    // Same rule as getCandidateSpaces: catalogue flag must not gate tunnel cards.
     const buildings = await Building.find({
       _id: { $in: buildingIds },
-      visibleOnVitrine: true,
       status: "active",
     })
       .lean()

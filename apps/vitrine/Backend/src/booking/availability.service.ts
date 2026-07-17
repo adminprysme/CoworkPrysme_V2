@@ -31,8 +31,8 @@ export class AvailabilityService {
   async getCandidateSpaces(filters: SpaceSearchFilters): Promise<SpaceLean[]> {
     await connectMongo();
     const Building = await getBuildingModel();
+    // Tunnel discovery uses building status only — visibleOnVitrine is catalogue-only.
     const buildingQuery: Record<string, unknown> = {
-      visibleOnVitrine: true,
       status: "active",
     };
     if (filters.buildingId) {
