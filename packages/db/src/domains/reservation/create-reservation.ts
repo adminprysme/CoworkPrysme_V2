@@ -54,10 +54,14 @@ export async function ensureReservationIndexes(): Promise<void> {
   const connection = await getCoworkDb();
   const Reservation = connection.models.Reservation;
   const SlotLock = connection.models.SlotLock;
+  const SlotLockGate = connection.models.SlotLockGate;
   if (Reservation) {
     await Reservation.syncIndexes();
   }
   if (SlotLock) {
     await SlotLock.syncIndexes();
+  }
+  if (SlotLockGate) {
+    await SlotLockGate.syncIndexes();
   }
 }

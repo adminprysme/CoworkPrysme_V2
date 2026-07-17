@@ -1,6 +1,10 @@
 import type { Types } from "mongoose";
 
+import { connectMongo } from "../../connection.js";
 import { isDuplicateKeyError, SlotLockConflictError } from "../../lib/errors.js";
+import { assertReplicaSetForTransactions } from "../../lib/replica-set.js";
+import { findOverlappingActiveLock } from "./availability.js";
+import { getSlotLockGateModel } from "./slot-lock-gate.schema.js";
 import {
   getSlotLockModel,
   isSlotLockValid,
@@ -29,28 +33,75 @@ export interface ReleaseLockInput {
 }
 
 /**
- * Acquires a temporary slot lock (10 min TTL). Duplicate key => slot already locked.
+ * Acquires a temporary slot lock (10 min TTL) atomically.
+ *
+ * Inside a Mongo transaction:
+ * 1. Touch a per-space gate doc (serializes concurrent acquires on the same space)
+ * 2. Reject if any active lock overlaps the requested interval (not only exact tuple)
+ * 3. Insert the lock
+ *
+ * Duplicate exact-tuple key still maps to SlotLockConflictError.
  */
 export async function acquireLock(input: AcquireLockInput): Promise<SlotLockDocument> {
   const now = input.now ?? new Date();
-  const SlotLock = await getSlotLockModel();
+  const mongooseInstance = await connectMongo();
+  await assertReplicaSetForTransactions(mongooseInstance.connection);
 
+  const session = await mongooseInstance.startSession();
   try {
-    return await SlotLock.create({
-      spaceId: input.spaceId,
-      startAt: input.startAt,
-      endAt: input.endAt,
-      sessionId: input.sessionId,
-      clientAccountId: input.clientAccountId,
-      partySize: input.partySize,
-      durationClass: input.durationClass,
-      expiresAt: new Date(now.getTime() + SLOT_LOCK_DURATION_MS),
+    let created: SlotLockDocument | undefined;
+
+    await session.withTransaction(async () => {
+      const SlotLockGate = await getSlotLockGateModel();
+      await SlotLockGate.findOneAndUpdate(
+        { spaceId: input.spaceId },
+        { $set: { updatedAt: now } },
+        { upsert: true, session },
+      ).exec();
+
+      const overlap = await findOverlappingActiveLock(
+        input.spaceId,
+        input.startAt,
+        input.endAt,
+        now,
+        session,
+      );
+      if (overlap) {
+        throw new SlotLockConflictError();
+      }
+
+      const SlotLock = await getSlotLockModel();
+      try {
+        const [doc] = await SlotLock.create(
+          [
+            {
+              spaceId: input.spaceId,
+              startAt: input.startAt,
+              endAt: input.endAt,
+              sessionId: input.sessionId,
+              clientAccountId: input.clientAccountId,
+              partySize: input.partySize,
+              durationClass: input.durationClass,
+              expiresAt: new Date(now.getTime() + SLOT_LOCK_DURATION_MS),
+            },
+          ],
+          { session },
+        );
+        created = doc;
+      } catch (error) {
+        if (isDuplicateKeyError(error)) {
+          throw new SlotLockConflictError();
+        }
+        throw error;
+      }
     });
-  } catch (error) {
-    if (isDuplicateKeyError(error)) {
-      throw new SlotLockConflictError();
+
+    if (!created) {
+      throw new Error("Slot lock creation failed within transaction");
     }
-    throw error;
+    return created;
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -69,7 +120,7 @@ export async function releaseLock(input: ReleaseLockInput): Promise<boolean> {
   return result.deletedCount === 1;
 }
 
-/** Removes a lock by id, scoped to the owning anonymous session. */
+/** Removes a lock by id, scoped to the owning anonymous booking session. */
 export async function releaseLockById(
   lockId: Types.ObjectId | string,
   sessionId: string,

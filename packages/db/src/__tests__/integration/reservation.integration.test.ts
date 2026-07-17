@@ -10,6 +10,7 @@ import {
   findActiveLockBySessionId,
   findOverlappingActiveLock,
   registerReservationModel,
+  registerSlotLockGateModel,
   registerSlotLockModel,
   releaseLockById,
 } from "../../domains/reservation/index.js";
@@ -28,6 +29,7 @@ describe("integration: reservation core (replica set)", () => {
     await connectMongo();
     const connection = await getCoworkDb();
     registerSlotLockModel(connection);
+    registerSlotLockGateModel(connection);
     registerReservationModel(connection);
     await ensureReservationIndexes();
   }, 120_000);
@@ -53,7 +55,7 @@ describe("integration: reservation core (replica set)", () => {
       ).rejects.toBeInstanceOf(SlotLockConflictError);
     });
 
-    it("detects overlapping active locks even when tuples differ (10:00-11:00 vs 10:30-11:30)", async () => {
+    it("rejects acquireLock when intervals overlap even if tuples differ (10:00-11:00 vs 10:30-11:30)", async () => {
       const spaceId = new Types.ObjectId();
       const firstStart = new Date("2026-07-01T10:00:00.000Z");
       const firstEnd = new Date("2026-07-01T11:00:00.000Z");
@@ -71,6 +73,15 @@ describe("integration: reservation core (replica set)", () => {
       expect(overlappingLock).not.toBeNull();
 
       await expect(
+        acquireLock({
+          spaceId,
+          startAt: overlapStart,
+          endAt: overlapEnd,
+          sessionId: "session-b",
+        }),
+      ).rejects.toBeInstanceOf(SlotLockConflictError);
+
+      await expect(
         assertRangeAvailable({
           spaceId,
           buildingId: new Types.ObjectId(),
@@ -80,6 +91,41 @@ describe("integration: reservation core (replica set)", () => {
           endAt: overlapEnd,
         }),
       ).rejects.toMatchObject({ name: "SlotUnavailableError" });
+    });
+
+    it("allows only one success when two overlapping acquireLock run concurrently", async () => {
+      const spaceId = new Types.ObjectId();
+      const results = await Promise.allSettled([
+        acquireLock({
+          spaceId,
+          startAt: new Date("2026-07-01T10:00:00.000Z"),
+          endAt: new Date("2026-07-01T11:00:00.000Z"),
+          sessionId: "concurrent-a",
+        }),
+        acquireLock({
+          spaceId,
+          startAt: new Date("2026-07-01T10:30:00.000Z"),
+          endAt: new Date("2026-07-01T11:30:00.000Z"),
+          sessionId: "concurrent-b",
+        }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0]?.status).toBe("rejected");
+      if (rejected[0]?.status === "rejected") {
+        expect(rejected[0].reason).toBeInstanceOf(SlotLockConflictError);
+      }
+
+      const surviving = await findOverlappingActiveLock(
+        spaceId,
+        new Date("2026-07-01T10:00:00.000Z"),
+        new Date("2026-07-01T11:30:00.000Z"),
+      );
+      expect(surviving).not.toBeNull();
     });
 
     it("releaseLockById only deletes locks owned by the session", async () => {

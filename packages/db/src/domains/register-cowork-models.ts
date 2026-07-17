@@ -25,6 +25,7 @@ import {
 import {
   registerReservationModel,
   registerReservationRequestModel,
+  registerSlotLockGateModel,
   registerSlotLockModel,
 } from "./reservation/index.js";
 import {
@@ -41,6 +42,7 @@ export function registerAllCoworkModels(connection: Connection): void {
   registerSlotClosureModel(connection);
   registerReservationModel(connection);
   registerSlotLockModel(connection);
+  registerSlotLockGateModel(connection);
   registerReservationRequestModel(connection);
   registerClientAccountModel(connection);
   registerCardexModel(connection);
@@ -69,6 +71,7 @@ export const COWORK_COLLECTION_NAMES = [
   "slotClosures",
   "reservations",
   "slotLocks",
+  "slotLockGates",
   "reservationRequests",
   "clientAccounts",
   "cardex",

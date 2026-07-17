@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { registerPaymentModel } from "../domains/billing/payment.schema.js";
+import { registerSlotLockGateModel } from "../domains/reservation/slot-lock-gate.schema.js";
 import { registerSlotLockModel } from "../domains/reservation/slot-lock.schema.js";
 import { CENTS_VALIDATOR } from "../lib/schema-helpers.js";
 import { reservationPricingSnapshotSchema } from "../lib/subdocuments.js";
@@ -20,6 +21,18 @@ describe("slotLocks schema indexes", () => {
       ]),
     );
     connection.close();
+  });
+});
+
+describe("slotLockGates schema indexes", () => {
+  it("declares unique index on spaceId for acquireLock serialization", () => {
+    const connection = mongoose.createConnection();
+    registerSlotLockGateModel(connection);
+    const schema = connection.models.SlotLockGate!.schema;
+    const indexes = schema.indexes();
+
+    expect(indexes).toEqual(expect.arrayContaining([[{ spaceId: 1 }, { unique: true }]]));
+    void connection.close();
   });
 });
 

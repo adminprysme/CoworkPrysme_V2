@@ -66,17 +66,21 @@ export async function findOverlappingActiveLock(
   startAt: Date,
   endAt: Date,
   now: Date = new Date(),
+  session?: ClientSession,
 ): Promise<SlotLock | null> {
   const SlotLock = await getSlotLockModel();
-  const locks = await SlotLock.find({
+  const query = SlotLock.find({
     spaceId,
     expiresAt: { $gte: now },
     startAt: { $lt: endAt },
     endAt: { $gt: startAt },
-  })
-    .lean<SlotLock[]>()
-    .exec();
+  }).lean<SlotLock[]>();
 
+  if (session) {
+    query.session(session);
+  }
+
+  const locks = await query.exec();
   return locks.find((lock) => isSlotLockValid(lock, now)) ?? null;
 }
 

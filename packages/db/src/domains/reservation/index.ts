@@ -57,6 +57,13 @@ export {
   type ReservationRequestModel,
 } from "./reservation-request.schema.js";
 export {
+  getSlotLockGateModel,
+  registerSlotLockGateModel,
+  type SlotLockGate,
+  type SlotLockGateDocument,
+  type SlotLockGateModel,
+} from "./slot-lock-gate.schema.js";
+export {
   getSlotLockModel,
   isSlotLockValid,
   registerSlotLockModel,
