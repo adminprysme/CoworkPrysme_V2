@@ -52,7 +52,7 @@ export interface ConfirmBookingCheckoutInput {
   marketingCommunicationsAccepted?: boolean;
   cgvAcceptedAt: Date;
   withdrawalAcknowledgedAt: Date;
-  paymentMethod: "proforma" | "card" | "bank_transfer";
+  paymentMethod: "card" | "bank_transfer";
   pricing: BookingPriceResponse;
   /** Required when paymentMethod is bank_transfer — precomputed expiry. */
   awaitingPaymentExpiresAt?: Date;
@@ -308,13 +308,10 @@ export async function confirmBookingCheckout(
       const pricingSnapshot = mapPricingToReservationSnapshot(input.pricing);
       const totalVAT = pricingSnapshot.totalVAT;
 
-      // Card / bank_transfer: hold as awaiting_payment; proforma: confirmed now.
+      // Card and bank_transfer both hold the slot as awaiting_payment.
       const isCard = input.paymentMethod === "card";
       const isBankTransfer = input.paymentMethod === "bank_transfer";
-      const awaitsPayment = isCard || isBankTransfer;
-      const reservationStatus = awaitsPayment
-        ? ("awaiting_payment" as const)
-        : ("confirmed" as const);
+      const reservationStatus = "awaiting_payment" as const;
       const statusHistory = isCard
         ? [
             {
@@ -324,16 +321,14 @@ export async function confirmBookingCheckout(
               reason: "card_checkout",
             },
           ]
-        : isBankTransfer
-          ? [
-              {
-                from: "pending",
-                to: "awaiting_payment",
-                at: now,
-                reason: "bank_transfer_checkout",
-              },
-            ]
-          : [{ from: "pending", to: "confirmed", at: now }];
+        : [
+            {
+              from: "pending",
+              to: "awaiting_payment",
+              at: now,
+              reason: "bank_transfer_checkout",
+            },
+          ];
 
       const Reservation = await getReservationModel();
       const [reservation] = await Reservation.create(

@@ -93,7 +93,7 @@ function buildConfirmInput(
     privacyPolicyVersion: "2026-07-09",
     cgvAcceptedAt: new Date("2026-07-01T09:00:00.000Z"),
     withdrawalAcknowledgedAt: new Date("2026-07-01T09:00:00.000Z"),
-    paymentMethod: "proforma" as const,
+    paymentMethod: "card" as const,
     pricing: BASE_PRICING,
     ...overrides,
   };
@@ -155,13 +155,17 @@ describe("integration: confirm booking checkout (replica set)", () => {
     expect(result.isNewAccount).toBe(true);
     expect(result.reservation.reference).toMatch(/^RES-2026-\d{5}$/);
     expect(result.invoiceReference).toMatch(/^PF-2026-\d{5}$/);
-    expect(result.reservation.status).toBe("confirmed");
-    expect(result.reservation.awaitingPaymentExpiresAt).toBeUndefined();
+    expect(result.reservation.status).toBe("awaiting_payment");
+    expect(result.reservation.awaitingPaymentMethod).toBe("card");
+    expect(result.reservation.awaitingPaymentExpiresAt).toBeInstanceOf(Date);
 
     const ClientAccount = await getClientAccountModel();
     const Cardex = await getCardexModel();
     const Reservation = await getReservationModel();
     const Invoice = await getInvoiceModel();
+
+    const invoice = await Invoice.findOne({ reference: result.invoiceReference }).lean().exec();
+    expect(invoice?.type).toBe("proforma");
 
     await expect(ClientAccount.countDocuments()).resolves.toBe(1);
     await expect(Cardex.countDocuments()).resolves.toBe(1);
