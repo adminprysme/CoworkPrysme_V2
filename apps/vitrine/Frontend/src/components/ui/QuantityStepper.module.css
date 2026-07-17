@@ -40,12 +40,29 @@
 
 .value {
   min-width: 1.75rem;
-  padding-inline: 0.15rem;
+  width: 2.5rem;
+  flex: 1 1 auto;
+  padding: 0 0.15rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-variant-numeric: tabular-nums;
   font-size: 0.92rem;
   font-weight: 700;
   text-align: center;
   color: var(--v-color-ink);
+  appearance: textfield;
+}
+
+.value::-webkit-outer-spin-button,
+.value::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.value:focus-visible {
+  outline: none;
+  color: var(--v-color-brand-hover);
 }
 
 .md .button {
