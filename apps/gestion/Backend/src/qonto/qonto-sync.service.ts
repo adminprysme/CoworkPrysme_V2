@@ -9,7 +9,6 @@ import {
   type QontoCandidateMatchStatus,
 } from "@coworkprysme/db";
 import { extractReservationReference } from "@coworkprysme/shared";
-import { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI */
 import { QontoApiClient, type QontoTransactionDto } from "./qonto-api.client.js";
@@ -156,8 +155,8 @@ export class QontoSyncService implements OnModuleInit, OnModuleDestroy {
     };
 
     if (match.invoiceId && match.reservationId && typeof match.amountDueCents === "number") {
-      setFields.invoiceId = new Types.ObjectId(match.invoiceId);
-      setFields.reservationId = new Types.ObjectId(match.reservationId);
+      setFields.invoiceId = match.invoiceId;
+      setFields.reservationId = match.reservationId;
       setFields.amountDueCents = match.amountDueCents;
     }
 
