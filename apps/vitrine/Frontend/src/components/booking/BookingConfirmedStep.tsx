@@ -5,6 +5,7 @@ import type {
   BookingPaymentState,
   BookingPaymentStatusResponse,
 } from "@coworkprysme/shared";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createBookingPaymentIntent, fetchBookingPaymentStatus } from "@/lib/booking-payment-api";
@@ -14,8 +15,19 @@ import {
   saveBookingPaymentResumeSnapshot,
 } from "@/lib/booking-payment-return";
 
-import { BookingCardPaymentForm } from "./BookingCardPaymentForm";
 import styles from "./BookingTunnelStep.module.css";
+
+/** Stripe Elements load only when the card payment UI mounts — not with the tunnel entry chunk. */
+const BookingCardPaymentForm = dynamic(
+  () =>
+    import("./BookingCardPaymentForm").then((mod) => ({
+      default: mod.BookingCardPaymentForm,
+    })),
+  {
+    ssr: false,
+    loading: () => <p>Chargement du paiement sécurisé…</p>,
+  },
+);
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_MS = 60_000;

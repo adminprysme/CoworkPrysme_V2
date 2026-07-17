@@ -78,9 +78,7 @@ export class QontoController {
       this.logger.error(
         `Qonto OAuth callback failed: ${err instanceof Error ? err.message : String(err)}`,
       );
-      throw new BadRequestException(
-        err instanceof Error ? err.message : "Échec de l'autorisation Qonto",
-      );
+      throw new BadRequestException("Échec de l'autorisation Qonto");
     }
 
     res

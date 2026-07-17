@@ -211,4 +211,58 @@ describe("bank transfer reminders + expiry", () => {
       ),
     ).resolves.toBeNull();
   });
+
+  it("loads invoices in one batch query (no N+1 findOne per hold)", async () => {
+    const issuedAt = new Date("2026-07-01T10:00:00.000Z");
+    const expiresAt = new Date("2026-07-09T10:00:00.000Z");
+    const startAt = new Date("2026-07-11T10:00:00.000Z");
+    const endAt = new Date("2026-07-11T12:00:00.000Z");
+
+    await seedBankTransferHold({
+      reference: "RES-2026-BTN1",
+      issuedAt,
+      expiresAt,
+      startAt,
+      endAt,
+    });
+    await seedBankTransferHold({
+      reference: "RES-2026-BTN2",
+      issuedAt,
+      expiresAt,
+      startAt,
+      endAt,
+    });
+    await seedBankTransferHold({
+      reference: "RES-2026-BTN3",
+      issuedAt,
+      expiresAt,
+      startAt,
+      endAt,
+    });
+
+    const Invoice = await getInvoiceModel();
+    let findOneCalls = 0;
+    let findCalls = 0;
+    const originalFindOne = Invoice.findOne.bind(Invoice);
+    const originalFind = Invoice.find.bind(Invoice);
+    Invoice.findOne = ((...args: unknown[]) => {
+      findOneCalls += 1;
+      return originalFindOne(...(args as Parameters<typeof originalFindOne>));
+    }) as typeof Invoice.findOne;
+    Invoice.find = ((...args: unknown[]) => {
+      findCalls += 1;
+      return originalFind(...(args as Parameters<typeof originalFind>));
+    }) as typeof Invoice.find;
+
+    try {
+      const due = await findDueBankTransferReminders(new Date("2026-07-03T11:00:00.000Z"));
+      expect(due).toHaveLength(3);
+      // Before fix: 3× findOne. After: 1× find($in), 0× findOne.
+      expect(findOneCalls).toBe(0);
+      expect(findCalls).toBe(1);
+    } finally {
+      Invoice.findOne = originalFindOne;
+      Invoice.find = originalFind;
+    }
+  });
 });

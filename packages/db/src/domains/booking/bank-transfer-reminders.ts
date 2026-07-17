@@ -35,6 +35,8 @@ function addUtcDays(date: Date, days: number): Date {
 /**
  * Find bank_transfer holds that are due for a reminder tier and not yet emailed for that tier.
  * Only unpaid invoices; skips holds already past expiry (expiry sweeper handles those).
+ *
+ * Invoices are loaded in one batch (`reservationId ∈ holdIds`) — not N+1.
  */
 export async function findDueBankTransferReminders(
   now: Date = new Date(),
@@ -51,13 +53,29 @@ export async function findDueBankTransferReminders(
     .lean()
     .exec();
 
+  if (holds.length === 0) {
+    return [];
+  }
+
+  const holdIds = holds.map((hold) => hold._id);
+  const invoices = await Invoice.find({ reservationId: { $in: holdIds } })
+    .lean()
+    .exec();
+  const invoiceByReservationId = new Map<string, (typeof invoices)[number]>();
+  for (const invoice of invoices) {
+    if (!invoice.reservationId) {
+      continue;
+    }
+    invoiceByReservationId.set(invoice.reservationId.toString(), invoice);
+  }
+
   const due: BankTransferReminderCandidate[] = [];
 
   for (const hold of holds) {
     if (!hold.clientAccountId) {
       continue;
     }
-    const invoice = await Invoice.findOne({ reservationId: hold._id }).lean().exec();
+    const invoice = invoiceByReservationId.get(hold._id.toString());
     if (!invoice || invoice.totals.balanceDue <= 0 || invoice.status === "paid") {
       continue;
     }
