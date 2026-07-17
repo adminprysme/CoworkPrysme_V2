@@ -737,7 +737,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
           accountForm.mode === "new" && accountForm.clientKind === "company"
             ? {
                 legalName: accountForm.legalName.trim(),
-                siret: accountForm.siret.trim() || undefined,
+                siret: accountForm.siret.replaceAll(/\s/g, ""),
                 vatNumber: accountForm.vatNumber.trim() || undefined,
                 billingAddress: {
                   street: accountForm.street.trim(),
@@ -1018,7 +1018,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                   description={
                     searchMode === "flexible"
                       ? "Élargissez votre recherche (autre type d'espace, moins de personnes) ou contactez-nous pour une demande spécifique."
-                      : "Essayez d'autres dates, une autre plage horaire, ou moins de personnes — ou contactez-nous pour une demande spécifique."
+                      : "Essayez d'autres dates, une autre plage horaire, ou moins de personnes. Contactez notre équipe pour une demande spécifique."
                   }
                   onAdjustSearch={() => setSearchFormExpanded(true)}
                 />

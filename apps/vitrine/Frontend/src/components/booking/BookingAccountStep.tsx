@@ -149,12 +149,15 @@ export function BookingAccountStep({
       return "L'adresse (rue, code postal, ville) est requise.";
     }
     if (value.clientKind === "company") {
+      const siretDigits = value.siret.replaceAll(/\s/g, "");
+      if (!siretDigits) {
+        return "Le SIRET est requis.";
+      }
+      if (!/^\d{14}$/.test(siretDigits)) {
+        return "Le SIRET doit contenir exactement 14 chiffres.";
+      }
       if (!value.legalName.trim()) {
         return "La raison sociale est requise.";
-      }
-      const siretDigits = value.siret.replaceAll(/\s/g, "");
-      if (siretDigits && !/^\d{14}$/.test(siretDigits)) {
-        return "Le SIRET doit contenir exactement 14 chiffres.";
       }
     }
     if (value.password !== value.passwordConfirm) {
@@ -340,22 +343,9 @@ export function BookingAccountStep({
                   </p>
                 </div>
 
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Raison sociale</span>
-                  <input
-                    className={styles.input}
-                    type="text"
-                    autoComplete="organization"
-                    value={value.legalName}
-                    onChange={(event) => patch({ legalName: event.target.value })}
-                  />
-                </label>
-
                 <div className={styles.siretRow}>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>
-                      SIRET <span className={styles.fieldOptional}>(optionnel)</span>
-                    </span>
+                    <span className={styles.fieldLabel}>SIRET</span>
                     <input
                       className={styles.input}
                       type="text"
@@ -381,6 +371,17 @@ export function BookingAccountStep({
                     {siretLookupMessage}
                   </p>
                 ) : null}
+
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Raison sociale</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    autoComplete="organization"
+                    value={value.legalName}
+                    onChange={(event) => patch({ legalName: event.target.value })}
+                  />
+                </label>
 
                 <label className={styles.field}>
                   <span className={styles.fieldLabel}>
