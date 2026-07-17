@@ -2,6 +2,8 @@ import { ServiceUnavailableException, UnauthorizedException } from "@nestjs/comm
 import {
   BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS,
   BOOKING_PAYMENT_ERROR_CODES,
+} from "@coworkprysme/shared";
+import {
   signBookingPaymentAccessToken,
   verifyBookingPaymentAccessToken,
 } from "@coworkprysme/shared/server";
