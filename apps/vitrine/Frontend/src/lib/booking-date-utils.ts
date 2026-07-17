@@ -1,3 +1,5 @@
+import { formatAvailabilityWindow as formatAvailabilityWindowShared } from "@coworkprysme/shared";
+
 const WEEKDAY_LABELS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."] as const;
 
 export { WEEKDAY_LABELS };
@@ -89,28 +91,8 @@ export function defaultSearchEndTime(startTime: string): string {
 }
 
 export function formatAvailabilityWindow(startAt: string, endAt: string): string {
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  const sameDay = isSameDay(start, end);
-
-  const dateLabel = start.toLocaleDateString("fr-FR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-  const startTime = start.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  const endTime = end.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-
-  if (sameDay) {
-    return `${dateLabel} · ${startTime} → ${endTime}`;
-  }
-
-  const endDateLabel = end.toLocaleDateString("fr-FR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-  return `${dateLabel} ${startTime} → ${endDateLabel} ${endTime}`;
+  // Shared implementation (Europe/Paris) — keep calendar UI and PDF invoices aligned.
+  return formatAvailabilityWindowShared(startAt, endAt);
 }
 
 export function addMonths(date: Date, count: number): Date {
