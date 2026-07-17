@@ -288,6 +288,8 @@ export {
 
 export {
   BOOKING_ERROR_CODES,
+  BOOKING_PARTY_SIZE_MAX,
+  BOOKING_PARTY_SIZE_MIN,
   BOOKING_PHASE1_DURATION_CLASSES,
   BOOKING_PRICE_LINE_KINDS,
   BookingAvailabilityQuerySchema,
@@ -319,6 +321,9 @@ export {
   type ActiveBookingLockQuery,
   type ActiveBookingLockResponse,
   bookingDurationClassLabel,
+  bookingPartySizeOptionalSchema,
+  bookingPartySizeSchema,
+  sortSpacesByCapacityProximity,
   type BookingAvailabilityQuery,
   type BookingAvailabilityResponse,
   type BookingErrorCode,

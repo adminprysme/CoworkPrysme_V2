@@ -58,6 +58,19 @@ describe("booking-home-search", () => {
     expect(withoutFlag?.autoSearch).toBe(false);
   });
 
+  it("accepts partySize 80 and rejects 501", () => {
+    expect(
+      parseHomeBookingSearchParams(
+        "spaceType=meeting_room&partySize=80&startDate=2026-08-26&endDate=2026-08-26&autoSearch=1",
+      )?.partySize,
+    ).toBe(80);
+    expect(
+      parseHomeBookingSearchParams(
+        "spaceType=meeting_room&partySize=501&startDate=2026-08-26&endDate=2026-08-26&autoSearch=1",
+      ),
+    ).toBeNull();
+  });
+
   it("strips home search params from an href", () => {
     const cleaned = stripHomeBookingSearchQuery(
       "http://localhost:3001/reservation?spaceType=meeting_room&partySize=4&startDate=2026-08-26&endDate=2026-08-28&autoSearch=1&keep=1",

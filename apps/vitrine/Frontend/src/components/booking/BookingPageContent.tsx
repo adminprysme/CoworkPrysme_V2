@@ -11,6 +11,8 @@ import type {
   SpaceType,
 } from "@coworkprysme/shared";
 import {
+  BOOKING_PARTY_SIZE_MAX,
+  BOOKING_PARTY_SIZE_MIN,
   DISCOUNT_CODE_PREFERENTIAL_PENDING_MESSAGE,
   formatCentsAsEuroString,
 } from "@coworkprysme/shared";
@@ -984,8 +986,8 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
                         <QuantityStepper
                           fullWidth
                           size="md"
-                          min={1}
-                          max={50}
+                          min={BOOKING_PARTY_SIZE_MIN}
+                          max={BOOKING_PARTY_SIZE_MAX}
                           value={partySize}
                           onChange={setPartySize}
                           aria-label="Nombre de personnes"

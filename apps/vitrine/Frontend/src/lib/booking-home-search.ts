@@ -1,4 +1,5 @@
 import type { SpaceType } from "@coworkprysme/shared";
+import { BOOKING_PARTY_SIZE_MAX, BOOKING_PARTY_SIZE_MIN } from "@coworkprysme/shared";
 
 import { formatDayKey, isBeforeDay, startOfDay } from "./booking-date-utils";
 
@@ -69,7 +70,11 @@ export function parseHomeBookingSearchParams(
 
   const partySizeRaw = params.get(HOME_BOOKING_SEARCH_PARAMS.partySize)?.trim() ?? "";
   const partySize = Number.parseInt(partySizeRaw, 10);
-  if (!Number.isFinite(partySize) || partySize < 1 || partySize > 50) {
+  if (
+    !Number.isFinite(partySize) ||
+    partySize < BOOKING_PARTY_SIZE_MIN ||
+    partySize > BOOKING_PARTY_SIZE_MAX
+  ) {
     return null;
   }
 

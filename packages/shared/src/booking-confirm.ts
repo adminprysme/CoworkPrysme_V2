@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   BookingPhase1DurationClassSchema,
   BookingPriceServiceInputSchema,
+  bookingPartySizeSchema,
   isoDateTimeSchema,
 } from "./booking.js";
 
@@ -127,7 +128,7 @@ export const BookingConfirmRequestSchema = z
     startAt: isoDateTimeSchema,
     endAt: isoDateTimeSchema,
     durationClass: BookingPhase1DurationClassSchema,
-    partySize: z.number().int().min(1),
+    partySize: bookingPartySizeSchema,
     services: z.array(BookingPriceServiceInputSchema).default([]),
     discountCode: z.string().trim().min(1).optional(),
     accountMode: BookingAccountModeSchema,

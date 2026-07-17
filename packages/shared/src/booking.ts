@@ -14,6 +14,36 @@ export const BOOKING_ERROR_CODES = {
 
 export type BookingErrorCode = (typeof BOOKING_ERROR_CODES)[keyof typeof BOOKING_ERROR_CODES];
 
+/** Inclusive bounds for tunnel partySize (UI + Zod). 500 is a technical ceiling only. */
+export const BOOKING_PARTY_SIZE_MIN = 1;
+export const BOOKING_PARTY_SIZE_MAX = 500;
+
+export const bookingPartySizeSchema = z.coerce
+  .number()
+  .int()
+  .min(BOOKING_PARTY_SIZE_MIN)
+  .max(BOOKING_PARTY_SIZE_MAX);
+
+export const bookingPartySizeOptionalSchema = bookingPartySizeSchema.optional();
+
+/**
+ * Tunnel search sort: among spaces with capacity >= partySize, prefer the closest capacity,
+ * then name (fr). Catalog featured/vitrineOrder must NOT be used here.
+ */
+export function sortSpacesByCapacityProximity<T extends { capacity: number; name: string }>(
+  spaces: readonly T[],
+  partySize: number,
+): T[] {
+  return [...spaces].sort((left, right) => {
+    const leftDelta = Math.abs(left.capacity - partySize);
+    const rightDelta = Math.abs(right.capacity - partySize);
+    if (leftDelta !== rightDelta) {
+      return leftDelta - rightDelta;
+    }
+    return left.name.localeCompare(right.name, "fr");
+  });
+}
+
 export const BOOKING_PHASE1_DURATION_CLASSES = ["hourly", "daily"] as const;
 
 export const BookingPhase1DurationClassSchema = z.enum(BOOKING_PHASE1_DURATION_CLASSES);
@@ -33,7 +63,7 @@ export const BookingAvailabilityQuerySchema = z
     spaceType: SpaceTypeSchema,
     startAt: isoDateTimeSchema,
     endAt: isoDateTimeSchema,
-    partySize: z.coerce.number().int().min(1),
+    partySize: bookingPartySizeSchema,
     buildingId: z.string().trim().min(1).optional(),
     floor: z.string().trim().min(1).optional(),
   })
@@ -51,7 +81,7 @@ export const BookingAvailabilityQuerySchema = z
 
 export const BookingSpacesQuerySchema = z.object({
   spaceType: SpaceTypeSchema,
-  partySize: z.coerce.number().int().min(1),
+  partySize: bookingPartySizeSchema,
   buildingId: z.string().trim().min(1).optional(),
   floor: z.string().trim().min(1).optional(),
 });
@@ -119,7 +149,7 @@ export const CreateBookingLockRequestSchema = z
     startAt: isoDateTimeSchema,
     endAt: isoDateTimeSchema,
     sessionId: z.string().trim().min(8).max(128),
-    partySize: z.coerce.number().int().min(1).optional(),
+    partySize: bookingPartySizeOptionalSchema,
     durationClass: BookingPhase1DurationClassSchema.optional(),
   })
   .superRefine((value, context) => {
@@ -153,7 +183,7 @@ export const ActiveBookingLockQuerySchema = z.object({
 export const ActiveBookingLockResponseSchema = z.object({
   lock: BookingLockResponseSchema.nullable(),
   space: BookingSpaceCardSchema.nullable(),
-  partySize: z.number().int().min(1).optional(),
+  partySize: bookingPartySizeOptionalSchema,
   durationClass: BookingPhase1DurationClassSchema.optional(),
 });
 

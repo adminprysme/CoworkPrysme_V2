@@ -1,6 +1,7 @@
 "use client";
 
 import type { SpaceType } from "@coworkprysme/shared";
+import { BOOKING_PARTY_SIZE_MAX, BOOKING_PARTY_SIZE_MIN } from "@coworkprysme/shared";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -50,8 +51,10 @@ export function SearchBar() {
                 setError("Sélectionnez une plage de dates (début et fin).");
                 return;
               }
-              if (partySize < 1 || partySize > 50) {
-                setError("Indiquez un nombre de personnes entre 1 et 50.");
+              if (partySize < BOOKING_PARTY_SIZE_MIN || partySize > BOOKING_PARTY_SIZE_MAX) {
+                setError(
+                  `Indiquez un nombre de personnes entre ${BOOKING_PARTY_SIZE_MIN} et ${BOOKING_PARTY_SIZE_MAX}.`,
+                );
                 return;
               }
               setError(null);
@@ -102,8 +105,8 @@ export function SearchBar() {
               <QuantityStepper
                 fullWidth
                 size="md"
-                min={1}
-                max={50}
+                min={BOOKING_PARTY_SIZE_MIN}
+                max={BOOKING_PARTY_SIZE_MAX}
                 value={partySize}
                 onChange={(next) => {
                   setPartySize(next);
