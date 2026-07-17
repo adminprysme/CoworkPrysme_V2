@@ -389,15 +389,17 @@ Option `paymentMethod: "bank_transfer"` dans le tunnel, offerte seulement si le 
 
 ### Règles
 
-| Élément          | Valeur                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| Lead time min    | `BANK_TRANSFER_MIN_LEAD_DAYS` (défaut **7**)                                                |
-| Fenêtre paiement | `BANK_TRANSFER_PAYMENT_WINDOW_DAYS` (défaut **8**) depuis `issuedAt`                        |
-| Marge sécurité   | `BANK_TRANSFER_SAFETY_MARGIN_DAYS` (défaut **2**) avant `startAt`                           |
-| Expiration       | `min(issuedAt+8j, startAt−2j)` — si `expiresAt ≤ issuedAt` → **rejet** (`window_too_short`) |
-| Libellé virement | référence réservation seule (`RES-…`)                                                       |
-| Relances         | J+2 / J+4 / J+6 depuis `issuedAt` (sweep `AwaitingPaymentExpiryService`)                    |
-| Champ distinct   | `reservation.awaitingPaymentMethod: "card" \| "bank_transfer"`                              |
+| Élément          | Valeur                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| Lead time min    | `BANK_TRANSFER_MIN_LEAD_DAYS` (défaut **7**)                                                     |
+| Fenêtre paiement | `BANK_TRANSFER_PAYMENT_WINDOW_DAYS` (défaut **8**) depuis `issuedAt`                             |
+| Marge sécurité   | `BANK_TRANSFER_SAFETY_MARGIN_DAYS` (défaut **2**) avant `startAt`                                |
+| Expiration       | `min(issuedAt+8j, startAt−2j)` — si `expiresAt ≤ issuedAt` → **rejet** (`window_too_short`)      |
+| Libellé virement | référence réservation seule (`RES-…`)                                                            |
+| Relances         | **trois** paliers seulement : J+2 / J+4 / J+6 depuis `issuedAt` (`BANK_TRANSFER_REMINDER_TIERS`) |
+| Champ distinct   | `reservation.awaitingPaymentMethod: "card" \| "bank_transfer"`                                   |
+
+**J+8 n’est pas une 4ᵉ relance.** Le défaut `BANK_TRANSFER_PAYMENT_WINDOW_DAYS = 8` (`DEFAULT_BANK_TRANSFER_PAYMENT_WINDOW_DAYS`) fixe la **fenêtre d’encaissement** et donc `awaitingPaymentExpiresAt` (avec le plafond `startAt − safetyMargin`). Au-delà : expiration du hold (`cancelled`), pas un e-mail de rappel supplémentaire. Les seuls tiers de relance sont `j2` / `j4` / `j6` (sweep `AwaitingPaymentExpiryService`).
 
 À la confirm : statut `awaiting_payment`, emails J+0 (RIB + libellé + montant), payload `bankTransfer` dans la réponse. À l'expiration : `cancelled` + email client (pas d'annulation Stripe). Encaissement manuel : gestion → **Facturation** → `POST /billing/transfers/mark-received` (permission **`billing`**) → `Payment.method: "transfer"` + `confirmed` + email confirmation ; les relances s'arrêtent immédiatement (`markBankTransferReminderSent` ne matche plus `awaiting_payment`).
 
