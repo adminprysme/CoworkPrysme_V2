@@ -50,6 +50,23 @@ export {
 } from "./auth.js";
 
 export {
+  EMAIL_BRAND_COPPER,
+  EMAIL_BRAND_DARK,
+  EMAIL_DEFAULT_PUBLIC_SITE_URL,
+  emailDetailRow,
+  escapeEmailHtml,
+  formatEmailEuro,
+  renderCoworkEmailLayout,
+  renderFullAccessPlanSection,
+  renderPaymentConfirmedEmail,
+  resolvePublicSiteUrl,
+  siteHostname,
+  type PaymentConfirmedBuildingAccess,
+  type PaymentConfirmedEmailInput,
+  type PaymentConfirmedMethod,
+} from "./email.js";
+
+export {
   PERMISSIONS_PAGE_SIZES,
   PermissionsCompaniesResponseSchema,
   PermissionsPaginationSchema,
