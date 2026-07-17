@@ -364,6 +364,14 @@ Local : `stripe listen --forward-to localhost:8002/stripe/webhook`.
 
 `POST /booking/payments/intent` et `GET /booking/payments/status` s'appuient sur `reservationReference` + `invoiceReference` (+ TTL facture 24 h), **sans token signé**. Les références (`RES-2026-00001`, …) sont **devinables** : un tiers pourrait interroger statut / montant d'une autre facture. Aucune donnée carte n'est exposée ; payer la facture d'autrui ne lui nuit pas — fuite d'information mineure. **À durcir** : token signé propre à chaque réservation, renvoyé à la confirm et exigé sur intent/status.
 
+## Modes de règlement du tunnel (vitrine)
+
+Le tunnel expose au plus **deux** modes client : `paymentMethod: "card"` et `"bank_transfer"`.
+
+- L’ancien mode client `"proforma"` / « paiement différé » a été **retiré** : il créait une réservation `confirmed` avec accès immédiat, sans RIB à l’écran — désormais couvert uniquement par le virement (éligibilité ≥ 7 jours).
+- Ne pas confondre avec `invoice.type: "proforma"` (type de **document** facture), qui reste inchangé pour carte et virement.
+- Les réservations historiques déjà confirmées en « proforma classique » (ex. `RES-2026-00014`) ne sont **pas** migrées.
+
 ## Paiement par virement bancaire
 
 Option `paymentMethod: "bank_transfer"` dans le tunnel, offerte seulement si le RIB est configuré **et** si la réservation est pleinement éligible (lead time + fenêtre de paiement non vide).
