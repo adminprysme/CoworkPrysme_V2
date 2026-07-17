@@ -286,13 +286,11 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       display: flex;
       justify-content: space-between;
       gap: 16px;
-      margin: 4px 0;
+      margin: 6px 0;
       font-size: 10pt;
     }
     .total-row.grand {
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #d8cfc4;
+      margin-top: 10px;
       font-size: 12pt;
       font-weight: 700;
       color: #B87333;
