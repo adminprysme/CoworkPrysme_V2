@@ -13,6 +13,7 @@ import {
   getInvoiceModel,
   getReservationModel,
   InvoiceNotFoundError,
+  StripePaymentAmountMismatchError,
   type Invoice,
 } from "@coworkprysme/db";
 import {
@@ -240,6 +241,12 @@ export class BookingPaymentService {
     } catch (error) {
       if (error instanceof InvoiceNotFoundError) {
         this.logger.error(`payment_intent.succeeded ${pi.id}: invoice not found ${invoiceId}`);
+        return;
+      }
+      if (error instanceof StripePaymentAmountMismatchError) {
+        this.logger.error(
+          `payment_intent.succeeded ${pi.id}: amount mismatch received=${error.amountReceived} balanceDue=${error.balanceDue} invoice=${invoiceId}`,
+        );
         return;
       }
       throw error;

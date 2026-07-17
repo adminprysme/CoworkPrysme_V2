@@ -1,7 +1,7 @@
 import type { ClientSession, Types } from "mongoose";
 
 import { connectMongo, getCoworkDb } from "../../connection.js";
-import { InvoiceNotFoundError } from "../../lib/errors.js";
+import { InvoiceNotFoundError, StripePaymentAmountMismatchError } from "../../lib/errors.js";
 import { assertReplicaSetForTransactions } from "../../lib/replica-set.js";
 import { getInvoiceModel, type InvoiceDocument } from "./invoice.schema.js";
 import { getPaymentModel, type PaymentDocument } from "./payment.schema.js";
@@ -91,14 +91,18 @@ async function applyStripeCardPaymentInSession(
     throw new InvoiceNotFoundError();
   }
 
+  // Full settlement only — no silent partial card payments.
+  if (input.amountReceived !== invoice.totals.balanceDue) {
+    throw new StripePaymentAmountMismatchError(input.amountReceived, invoice.totals.balanceDue);
+  }
+
   // Permanent rule for Phase 4a: card payment never flips type to "final".
   const invoiceType = invoice.type;
 
   const nextPaidTotal = invoice.totals.paidTotal + input.amountReceived;
-  const nextBalanceDue = Math.max(0, invoice.totals.ttc - nextPaidTotal);
-  const nextStatus = nextBalanceDue === 0 ? "paid" : "partially_paid";
-  const kind =
-    nextBalanceDue === 0 && invoice.totals.paidTotal === 0 ? "full" : ("balance" as const);
+  const nextBalanceDue = 0;
+  const nextStatus = "paid" as const;
+  const kind = invoice.totals.paidTotal === 0 ? ("full" as const) : ("balance" as const);
 
   const created = await deps.Payment.create(
     [
@@ -127,9 +131,7 @@ async function applyStripeCardPaymentInSession(
   invoice.totals.balanceDue = nextBalanceDue;
   invoice.status = nextStatus;
   invoice.type = invoiceType; // explicitly preserve (must stay "proforma" in Phase 4a)
-  if (nextBalanceDue === 0) {
-    invoice.paidAt = input.receivedAt;
-  }
+  invoice.paidAt = input.receivedAt;
   await invoice.save({ session: deps.session });
 
   return { applied: true, invoice, payment };

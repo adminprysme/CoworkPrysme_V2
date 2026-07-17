@@ -38,6 +38,16 @@ vi.mock("@coworkprysme/db", () => ({
       this.name = "InvoiceNotFoundError";
     }
   },
+  StripePaymentAmountMismatchError: class StripePaymentAmountMismatchError extends Error {
+    amountReceived: number;
+    balanceDue: number;
+    constructor(amountReceived: number, balanceDue: number) {
+      super(`mismatch ${amountReceived} vs ${balanceDue}`);
+      this.name = "StripePaymentAmountMismatchError";
+      this.amountReceived = amountReceived;
+      this.balanceDue = balanceDue;
+    }
+  },
 }));
 
 vi.mock("./stripe.config.js", () => ({
@@ -54,6 +64,7 @@ vi.mock("./stripe.config.js", () => ({
 import { BookingPaymentService } from "./booking-payment.service.js";
 import { StripeWebhookController } from "./stripe-webhook.controller.js";
 import type { BookingEmailsService } from "../booking/booking-emails.service.js";
+import { StripePaymentAmountMismatchError } from "@coworkprysme/db";
 
 const RESERVATION_ID = "507f1f77bcf86cd799439011";
 const INVOICE_ID = "507f1f77bcf86cd799439012";
@@ -331,6 +342,31 @@ describe("Stripe booking payment", () => {
     } as never);
 
     expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
+    expect(confirmReservationAfterCardPaymentMock).not.toHaveBeenCalled();
+    expect(sendEmailsAfterCardPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it("swallows amount mismatch on webhook without confirming or emailing", async () => {
+    applyStripeCardPaymentMock.mockRejectedValue(new StripePaymentAmountMismatchError(4799, 4800));
+
+    await expect(
+      service.handleWebhookEvent({
+        id: "evt_mismatch",
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            id: "pi_mismatch",
+            amount: 4799,
+            amount_received: 4799,
+            metadata: {
+              invoiceId: INVOICE_ID,
+              reservationId: RESERVATION_ID,
+            },
+          },
+        },
+      } as never),
+    ).resolves.toBeUndefined();
+
     expect(confirmReservationAfterCardPaymentMock).not.toHaveBeenCalled();
     expect(sendEmailsAfterCardPaymentMock).not.toHaveBeenCalled();
   });

@@ -27,6 +27,7 @@ export {
   ReservationOverlapError,
   SlotLockConflictError,
   SlotUnavailableError,
+  StripePaymentAmountMismatchError,
 } from "./errors.js";
 export {
   getReferenceSequenceModel,

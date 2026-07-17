@@ -131,18 +131,27 @@ describe("applyStripeCardPayment", () => {
     expect(await Payment.countDocuments({ invoiceId: invoice._id })).toBe(1);
   });
 
-  it("marks partially_paid when amount does not cover balanceDue", async () => {
+  it("rejects when amountReceived does not exactly equal balanceDue", async () => {
     const invoice = await seedProformaInvoice({ ttc: 10_000 });
 
-    const result = await applyStripeCardPayment({
-      stripePaymentIntentId: "pi_test_partial_001",
-      invoiceId: invoice._id,
-      amountReceived: 4000,
+    await expect(
+      applyStripeCardPayment({
+        stripePaymentIntentId: "pi_test_mismatch_001",
+        invoiceId: invoice._id,
+        amountReceived: 9999,
+      }),
+    ).rejects.toMatchObject({
+      name: "StripePaymentAmountMismatchError",
+      amountReceived: 9999,
+      balanceDue: 10_000,
     });
 
-    expect(result.invoice.type).toBe("proforma");
-    expect(result.invoice.status).toBe("partially_paid");
-    expect(result.invoice.totals.paidTotal).toBe(4000);
-    expect(result.invoice.totals.balanceDue).toBe(6000);
+    const Payment = await getPaymentModel();
+    expect(await Payment.countDocuments({ invoiceId: invoice._id })).toBe(0);
+    const Invoice = await getInvoiceModel();
+    const fresh = await Invoice.findById(invoice._id).lean().exec();
+    expect(fresh?.totals.paidTotal).toBe(0);
+    expect(fresh?.totals.balanceDue).toBe(10_000);
+    expect(fresh?.status).toBe("proforma");
   });
 });

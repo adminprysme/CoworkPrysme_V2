@@ -73,6 +73,22 @@ export class InvoiceNotFoundError extends Error {
   }
 }
 
+/**
+ * Thrown when a Stripe card payment amount does not exactly match invoice.balanceDue.
+ * Partial card payments are intentionally rejected until an explicit product decision.
+ */
+export class StripePaymentAmountMismatchError extends Error {
+  readonly amountReceived: number;
+  readonly balanceDue: number;
+
+  constructor(amountReceived: number, balanceDue: number) {
+    super(`Stripe amount ${amountReceived} does not match invoice balanceDue ${balanceDue}`);
+    this.name = "StripePaymentAmountMismatchError";
+    this.amountReceived = amountReceived;
+    this.balanceDue = balanceDue;
+  }
+}
+
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&
