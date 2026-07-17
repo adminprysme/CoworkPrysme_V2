@@ -140,10 +140,14 @@ describe("BillingService.markTransferReceivedByReference", () => {
     const mailCall = (mail.sendMail as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
       html: string;
     };
+    expect(mailCall.html).toContain("background:#B87333");
+    expect(mailCall.html).toContain("Cowork Prysme</h1>");
+    expect(mailCall.html).toContain("Statut : confirmée");
     expect(mailCall.html).toContain("Code conciergerie");
     expect(mailCall.html).toContain("229");
     expect(mailCall.html).toContain("BLDG-9911");
     expect(mailCall.html).toContain("Sonner à CoworkPrysme");
+    expect(mailCall.html).toContain("Plan d'accès");
     expect(result).toMatchObject({
       applied: true,
       transitioned: true,

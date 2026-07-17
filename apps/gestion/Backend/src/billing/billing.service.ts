@@ -16,6 +16,7 @@ import type {
   MarkBankTransferReceivedResponse,
   QontoTransferSuggestion,
 } from "@coworkprysme/shared";
+import { renderPaymentConfirmedEmail } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { MailService } from "../mail/mail.service.js";
@@ -290,75 +291,55 @@ export class BillingService {
   }) {
     const startAt = input.startAt.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
     const endAt = input.endAt.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
-    const amount = `${(input.totalTTC / 100).toFixed(2).replace(".", ",")} €`;
-    const accessPlanHtml = await this.renderFullAccessPlanHtml(input.buildingId);
-    const html = `
-      <p>Bonjour,</p>
-      <p>Nous avons bien reçu votre virement. Votre réservation
-      <strong>${escapeHtml(input.reservationReference)}</strong> est désormais
-      <strong>confirmée</strong>.</p>
-      <p><strong>${escapeHtml(input.spaceName)}</strong><br>
-      Du ${escapeHtml(startAt)} au ${escapeHtml(endAt)}<br>
-      Facture ${escapeHtml(input.invoiceReference)} — Montant ${escapeHtml(amount)}</p>
-      ${accessPlanHtml}
-      <p>Merci et à bientôt au Cowork Prysme.</p>
-    `;
+    const building = await this.resolveBuildingAccessForEmail(input.buildingId);
+    const email = renderPaymentConfirmedEmail({
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
+      spaceName: input.spaceName,
+      startAt,
+      endAt,
+      totalTTC: input.totalTTC,
+      paymentMethod: "bank_transfer",
+      building,
+    });
     await this.mail.sendMail({
       to: input.clientEmail,
-      subject: `Réservation confirmée — ${input.reservationReference} — Cowork Prysme`,
-      html,
+      subject: email.subject,
+      html: email.html,
     });
   }
 
-  /** Full access plan — only after payment is confirmed (never on pre-payment emails). */
-  private async renderFullAccessPlanHtml(buildingId: string): Promise<string> {
+  private async resolveBuildingAccessForEmail(buildingId: string): Promise<{
+    name: string;
+    addressFull: string;
+    accessInfo?: string | null;
+    buildingAccessCode?: string | null;
+    conciergeAccessCode?: string | null;
+    conciergeUrl?: string | null;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+  }> {
     await connectMongo();
     const Building = await getBuildingModel();
     const building = await Building.findById(buildingId).lean().exec();
     if (!building) {
-      return "";
+      return {
+        name: "Cowork Prysme",
+        addressFull: "",
+      };
     }
 
     const locality = `${building.address.zip.trim()} ${building.address.city.trim()}`.trim();
     const addressFull = [building.address.street.trim(), locality].filter(Boolean).join(", ");
-    const items: string[] = [`<li><strong>Adresse :</strong> ${escapeHtml(addressFull)}</li>`];
-
-    const accessInfo = building.address.accessInfo?.trim();
-    if (accessInfo) {
-      items.push(
-        `<li><strong>Instructions d'accès :</strong> ${escapeHtml(accessInfo).replaceAll("\n", "<br>")}</li>`,
-      );
-    }
-    const buildingAccessCode = building.accessCode?.trim();
-    if (buildingAccessCode) {
-      items.push(`<li><strong>Code d'accès :</strong> ${escapeHtml(buildingAccessCode)}</li>`);
-    }
-    const conciergeAccessCode = building.concierge?.accessCode?.trim();
-    if (conciergeAccessCode) {
-      items.push(
-        `<li><strong>Code conciergerie :</strong> ${escapeHtml(conciergeAccessCode)}</li>`,
-      );
-    }
-    const conciergeUrl = building.concierge?.url?.trim();
-    if (conciergeUrl) {
-      items.push(
-        `<li><strong>Conciergerie :</strong> <a href="${escapeHtml(conciergeUrl)}">${escapeHtml(conciergeUrl)}</a></li>`,
-      );
-    }
-
-    return `
-      <p><strong>Plan d'accès — ${escapeHtml(building.name)}</strong></p>
-      <ul style="padding-left:20px;margin:8px 0 16px;">
-        ${items.join("\n        ")}
-      </ul>
-    `;
+    return {
+      name: building.name.trim(),
+      addressFull,
+      accessInfo: building.address.accessInfo?.trim() || null,
+      buildingAccessCode: building.accessCode?.trim() || null,
+      conciergeAccessCode: building.concierge?.accessCode?.trim() || null,
+      conciergeUrl: building.concierge?.url?.trim() || null,
+      contactEmail: building.email?.trim() || null,
+      contactPhone: building.phone?.trim() || null,
+    };
   }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }

@@ -69,7 +69,11 @@ describe("booking email templates", () => {
       siteUrl: "http://localhost:3001",
     });
 
-    expect(gerland.html).toContain("Plan d'accès — Cowork GERLAND");
+    expect(gerland.html).toContain("background:#B87333");
+    expect(gerland.html).toContain("Cowork Prysme</h1>");
+    expect(gerland.html).toContain("Statut : confirmée");
+    expect(gerland.html).toContain("Plan d'accès");
+    expect(gerland.html).toContain("Cowork GERLAND");
     expect(gerland.html).toContain("39 Rue Saint-Jean de Dieu, 69007 Lyon");
     expect(gerland.html).toContain("Sonner à CoworkPrysme");
     expect(gerland.html).toContain("Code conciergerie");
@@ -77,8 +81,10 @@ describe("booking email templates", () => {
     expect(gerland.html).toContain("BLDG-9911");
     expect(gerland.html).toContain("accueil-technopark-a1@coworkprysme.eu");
     expect(gerland.html).not.toContain("Bâtiment A1");
+    expect(gerland.html).not.toContain("coordonnées bancaires");
 
-    expect(partDieu.html).toContain("Plan d'accès — Cowork PART-DIEU");
+    expect(partDieu.html).toContain("Plan d'accès");
+    expect(partDieu.html).toContain("Cowork PART-DIEU");
     expect(partDieu.html).toContain("12 rue fictive Part-Dieu, 69003 Lyon");
     expect(partDieu.html).toContain("Hall B, 3e étage");
     expect(partDieu.html).toContain("PD-7788");
@@ -186,6 +192,6 @@ describe("booking email templates", () => {
     expect(staff.html).toContain("Facture proforma");
     expect(staff.html).toContain("Virement bancaire");
     expect(staff.html).not.toContain("Plan d'accès");
-    expect(staff.html).not.toContain("Votre réservation est confirmée");
+    expect(staff.html).not.toContain("Statut : confirmée");
   });
 });
