@@ -5,6 +5,8 @@ import { formatCentsAsEuroString } from "@coworkprysme/shared";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
+
 import {
   BookingCustomQuestionsForm,
   buildCustomAnswersFromForm,
@@ -145,32 +147,14 @@ export function BookingServicesStep({
 
                 <div className={styles.serviceQtyWrap}>
                   <span className={styles.qtyLabel}>Qté</span>
-                  <div
-                    className={styles.qtyStepper}
-                    role="group"
+                  <QuantityStepper
+                    value={qty}
+                    min={0}
+                    onChange={(next) => updateQty(service, next)}
                     aria-label={`Quantité ${service.label}`}
-                  >
-                    <button
-                      type="button"
-                      className={styles.qtyStepperButton}
-                      aria-label="Diminuer la quantité"
-                      disabled={qty === 0}
-                      onClick={() => updateQty(service, qty - 1)}
-                    >
-                      −
-                    </button>
-                    <span className={styles.qtyStepperValue} aria-live="polite">
-                      {qty}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.qtyStepperButton}
-                      aria-label="Augmenter la quantité"
-                      onClick={() => updateQty(service, qty + 1)}
-                    >
-                      +
-                    </button>
-                  </div>
+                    decreaseLabel="Diminuer la quantité"
+                    increaseLabel="Augmenter la quantité"
+                  />
                 </div>
               </div>
 

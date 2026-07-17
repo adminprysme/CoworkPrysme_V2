@@ -1,0 +1,40 @@
+.toggle {
+  display: inline-flex;
+  padding: 0.2rem;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-surface-muted);
+  width: fit-content;
+  gap: 0;
+}
+
+.fullWidth {
+  display: grid;
+  width: 100%;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.option {
+  padding: 0.45rem 0.85rem;
+  border: 0;
+  border-radius: var(--v-radius-full);
+  background: transparent;
+  color: var(--v-color-text-muted);
+  font: inherit;
+  font-size: var(--v-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--v-duration-fast) var(--v-ease-out),
+    color var(--v-duration-fast) var(--v-ease-out);
+}
+
+.optionActive {
+  background: var(--v-color-brand);
+  color: #fff;
+}
+
+.md .option {
+  padding: 0.65rem 0.85rem;
+}

@@ -1,0 +1,60 @@
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-full);
+  background: var(--v-color-bg);
+  overflow: hidden;
+}
+
+.fullWidth {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: var(--v-color-ink);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):hover {
+  background: var(--v-color-brand-muted);
+  color: var(--v-color-brand-hover);
+}
+
+.value {
+  min-width: 1.75rem;
+  padding-inline: 0.15rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--v-color-ink);
+}
+
+.md .button {
+  width: 2.65rem;
+  height: 2.65rem;
+  font-size: 1.2rem;
+}
+
+.md .value {
+  min-width: 2.25rem;
+  font-size: 1rem;
+}
