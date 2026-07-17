@@ -539,9 +539,15 @@ export {
 
 export {
   BankTransferPendingLookupResponseSchema,
+  extractReservationReference,
   MarkBankTransferReceivedRequestSchema,
   MarkBankTransferReceivedResponseSchema,
+  QontoTransferMatchStatusSchema,
+  QontoTransferSuggestionSchema,
+  RESERVATION_REFERENCE_PATTERN,
   type BankTransferPendingLookupResponse,
   type MarkBankTransferReceivedRequest,
   type MarkBankTransferReceivedResponse,
+  type QontoTransferMatchStatus,
+  type QontoTransferSuggestion,
 } from "./billing-transfer.js";

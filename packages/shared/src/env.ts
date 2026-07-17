@@ -118,6 +118,22 @@ export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
 
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
 
+/** Optional Qonto Business API credentials (gestion-api). All-or-nothing when enabling sync. */
+const qontoEnvFields = {
+  QONTO_CLIENT_ID: z.string().min(1).optional(),
+  QONTO_CLIENT_SECRET: z.string().min(1).optional(),
+  /** Sandbox OneLogin bypass — required for all sandbox OAuth/API calls. */
+  QONTO_STAGING_TOKEN: z.string().min(1).optional(),
+  QONTO_REDIRECT_URI: z.string().url().optional(),
+  /** ≥32 chars — AES-256-GCM key material for refresh/access tokens in Mongo. */
+  QONTO_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
+  QONTO_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  /** Optional fixed bank account id; otherwise discovered via GET /v2/organization. */
+  QONTO_BANK_ACCOUNT_ID: z.string().min(1).optional(),
+  /** Default 10 minutes. */
+  QONTO_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(600_000),
+};
+
 export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
   z
     .object({
@@ -136,6 +152,7 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
       CENTRALE_API_URL: z.string().url().optional(),
       CENTRALE_HOME_URL: z.string().url().optional(),
       UPLOADS_DIR: uploadsDirSchema(env),
+      ...qontoEnvFields,
     })
     .merge(UploadLimitsSchema)
     .superRefine((data, ctx) => {
@@ -146,6 +163,32 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
         if (!data.CENTRALE_API_URL) {
           ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR, path: ["CENTRALE_API_URL"] });
         }
+      }
+
+      const qontoParts = [
+        data.QONTO_CLIENT_ID,
+        data.QONTO_CLIENT_SECRET,
+        data.QONTO_REDIRECT_URI,
+        data.QONTO_TOKEN_ENCRYPTION_KEY,
+      ];
+      const present = qontoParts.filter(Boolean).length;
+      if (present > 0 && present < qontoParts.length) {
+        ctx.addIssue({
+          code: "custom",
+          message: GENERIC_ENV_ERROR,
+          path: ["QONTO_CLIENT_ID"],
+        });
+      }
+      if (
+        present === qontoParts.length &&
+        data.QONTO_ENV === "sandbox" &&
+        !data.QONTO_STAGING_TOKEN
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: GENERIC_ENV_ERROR,
+          path: ["QONTO_STAGING_TOKEN"],
+        });
       }
     });
 
@@ -258,6 +301,14 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     UPLOAD_MAX_PHOTOS_PER_BUILDING: env.UPLOAD_MAX_PHOTOS_PER_BUILDING,
     UPLOAD_MAX_PHOTOS_PER_SPACE: env.UPLOAD_MAX_PHOTOS_PER_SPACE,
     UPLOAD_MAX_DIMENSION_PX: env.UPLOAD_MAX_DIMENSION_PX,
+    QONTO_CLIENT_ID: env.QONTO_CLIENT_ID,
+    QONTO_CLIENT_SECRET: env.QONTO_CLIENT_SECRET,
+    QONTO_STAGING_TOKEN: env.QONTO_STAGING_TOKEN,
+    QONTO_REDIRECT_URI: env.QONTO_REDIRECT_URI,
+    QONTO_TOKEN_ENCRYPTION_KEY: env.QONTO_TOKEN_ENCRYPTION_KEY,
+    QONTO_ENV: env.QONTO_ENV,
+    QONTO_BANK_ACCOUNT_ID: env.QONTO_BANK_ACCOUNT_ID,
+    QONTO_POLL_INTERVAL_MS: env.QONTO_POLL_INTERVAL_MS,
   });
 
   if (!result.success) {

@@ -105,4 +105,34 @@ describe("parseServerEnv", () => {
 
     expect(env.AUTH_MODE).toBe("local");
   });
+
+  it("rejects partial Qonto configuration", () => {
+    expect(() =>
+      parseGestionApiEnv({
+        NODE_ENV: "development",
+        MONGODB_URI: "mongodb://localhost:27017",
+        ALLOWED_ORIGIN: "http://localhost:3002",
+        SESSION_SECRET: "x".repeat(32),
+        QONTO_CLIENT_ID: "client-id",
+      }),
+    ).toThrow(GENERIC_ENV_ERROR);
+  });
+
+  it("accepts complete Qonto sandbox configuration", () => {
+    const env = parseGestionApiEnv({
+      NODE_ENV: "development",
+      MONGODB_URI: "mongodb://localhost:27017",
+      ALLOWED_ORIGIN: "http://localhost:3002",
+      SESSION_SECRET: "x".repeat(32),
+      QONTO_CLIENT_ID: "client-id",
+      QONTO_CLIENT_SECRET: "client-secret",
+      QONTO_STAGING_TOKEN: "staging-token",
+      QONTO_REDIRECT_URI: "http://localhost:8003/integrations/qonto/callback",
+      QONTO_TOKEN_ENCRYPTION_KEY: "k".repeat(32),
+      QONTO_ENV: "sandbox",
+    });
+
+    expect(env.QONTO_CLIENT_ID).toBe("client-id");
+    expect(env.QONTO_POLL_INTERVAL_MS).toBe(600_000);
+  });
 });
