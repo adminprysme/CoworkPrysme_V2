@@ -8,6 +8,7 @@ import { DiscountCodesModule } from "./discount-codes/discount-codes.module.js";
 import { GestionModule } from "./gestion/gestion.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { HomeContentModule } from "./home-content/home-content.module.js";
+import { InvoicePdfModule } from "./invoice-pdf/invoice-pdf.module.js";
 import { MediaModule } from "./media/media.module.js";
 import { ServicesContentModule } from "./services-content/services-content.module.js";
 import { SiteContactModule } from "./site-contact/site-contact.module.js";
@@ -27,6 +28,7 @@ import { StripeModule } from "./stripe/stripe.module.js";
     ServicesContentModule,
     SiteContactModule,
     StripeModule,
+    InvoicePdfModule,
   ],
 })
 export class AppModule {}

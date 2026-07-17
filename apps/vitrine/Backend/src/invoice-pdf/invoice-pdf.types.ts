@@ -1,0 +1,55 @@
+import type { InvoiceIssuerConfig } from "./invoice-issuer.config.js";
+
+export type InvoicePdfPaymentMethod = "card" | "bank_transfer" | "unknown";
+
+export type InvoicePdfPaymentStatus = "paid" | "awaiting" | "other";
+
+export interface InvoicePdfLineView {
+  label: string;
+  qty: number;
+  unitPriceHT: number;
+  vatRate: number;
+  discount: number;
+  totalHT: number;
+}
+
+export interface InvoicePdfVatLineView {
+  rate: number;
+  baseHT: number;
+  vat: number;
+}
+
+export interface InvoicePdfClientView {
+  displayName: string;
+  secondaryLines: string[];
+  addressLines: string[];
+}
+
+export interface InvoicePdfBankRibView {
+  iban: string;
+  bic: string;
+  accountHolder: string;
+  bankName?: string;
+}
+
+export interface InvoicePdfViewModel {
+  documentKindLabel: "PROFORMA";
+  invoiceReference: string;
+  reservationReference?: string;
+  issuedAt: Date;
+  dueDate?: Date;
+  issuer: InvoiceIssuerConfig;
+  client: InvoicePdfClientView;
+  lines: InvoicePdfLineView[];
+  vatBreakdown: InvoicePdfVatLineView[];
+  totals: {
+    ht: number;
+    vat: number;
+    ttc: number;
+    discountTotal: number;
+  };
+  paymentMethod: InvoicePdfPaymentMethod;
+  paymentStatus: InvoicePdfPaymentStatus;
+  bankRib?: InvoicePdfBankRibView | null;
+  logoDataUri: string;
+}
