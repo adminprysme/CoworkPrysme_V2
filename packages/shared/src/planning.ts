@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ServiceCustomAnswerSchema } from "./service-custom-questions.js";
+import { SpaceDurationClassSchema } from "./spaces.js";
 
 export const PlanningViewModeSchema = z.enum(["month", "week", "day"]);
 export type PlanningViewMode = z.infer<typeof PlanningViewModeSchema>;
@@ -112,13 +113,18 @@ export const PlanningReservationDetailSchema = z.object({
   readOnly: z.boolean(),
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
+  partySize: z.number().int().positive(),
+  durationClass: SpaceDurationClassSchema,
   space: z.object({
     id: z.string(),
     name: z.string(),
     type: PlanningSpaceTypeSchema,
     buildingId: z.string(),
     buildingName: z.string(),
+    capacity: z.number().int().positive().optional(),
   }),
+  clientAccountId: z.string().optional(),
+  cardexId: z.string().optional(),
   client: z.object({
     label: z.string(),
     firstName: z.string().optional(),
@@ -161,6 +167,9 @@ export const PlanningHistoryEventTypeSchema = z.enum([
   "space_change",
   "restoration",
   "closure",
+  "date_change",
+  "party_size_change",
+  "contact_transfer",
 ]);
 export type PlanningHistoryEventType = z.infer<typeof PlanningHistoryEventTypeSchema>;
 
@@ -385,3 +394,148 @@ export const PlanningRestoreResultSchema = z.object({
   reservation: PlanningReservationDetailSchema,
 });
 export type PlanningRestoreResult = z.infer<typeof PlanningRestoreResultSchema>;
+
+export const PlanningDateChangeKindSchema = z.enum(["extend", "shorten", "shift"]);
+export type PlanningDateChangeKind = z.infer<typeof PlanningDateChangeKindSchema>;
+
+export const PlanningShortenRefundBasisSchema = z.enum([
+  "cgv_scale",
+  "prorata_removed",
+  "ended",
+  "unpaid",
+]);
+export type PlanningShortenRefundBasis = z.infer<typeof PlanningShortenRefundBasisSchema>;
+
+/**
+ * Preview for a date/duration change (extend / shorten / shift).
+ * Amounts are integer centimes, recalculated server-side from the space
+ * tariff for `durationClass` — never trusted from the client.
+ */
+export const PlanningDateChangePreviewSchema = z.object({
+  reservationId: z.string(),
+  kind: PlanningDateChangeKindSchema,
+  previousStartAt: z.string().datetime(),
+  previousEndAt: z.string().datetime(),
+  nextStartAt: z.string().datetime(),
+  nextEndAt: z.string().datetime(),
+  available: z.boolean(),
+  conflictMessage: z.string().optional(),
+  conflictingReservation: PlanningRestoreConflictSchema.nullable(),
+  /** True when fewer than 48h remain before the ORIGINAL start. */
+  within48h: z.boolean(),
+  previousUnits: z.number().int().nonnegative(),
+  nextUnits: z.number().int().nonnegative(),
+  unitPriceHT: z.number().int().nonnegative(),
+  vatRate: z.number().nonnegative(),
+  previousSpaceTTC: z.number().int().nonnegative(),
+  nextSpaceTTC: z.number().int().nonnegative(),
+  /** Positive amount to bill (extend / shift-up), 0 otherwise. */
+  complementTTC: z.number().int().nonnegative(),
+  /** Suggested refund (shorten only, never auto-applied), 0 otherwise. */
+  suggestedRefundCents: z.number().int().nonnegative(),
+  refundBasis: PlanningShortenRefundBasisSchema.optional(),
+  paidTotalCents: z.number().int().nonnegative(),
+  /** Whether the complement would be billed to the proforma by default. */
+  billable: z.boolean(),
+});
+export type PlanningDateChangePreview = z.infer<typeof PlanningDateChangePreviewSchema>;
+
+export const PlanningDateChangeRequestSchema = z
+  .object({
+    startAt: z.string().datetime(),
+    endAt: z.string().datetime(),
+    /** Explicit staff confirmation — required (true) when within48h. */
+    confirmLateChange: z.boolean(),
+    lateChangeReason: z.string().trim().min(3).max(2000).optional(),
+    /** For extend/shift-up: bill the complement to the proforma now (default true). */
+    billDifference: z.boolean(),
+    /**
+     * Required server-side when complementTTC > 0 and billDifference is false
+     * (commercial gesture — traced to cardex audit).
+     */
+    skipBillingReason: z.string().trim().min(3).max(2000).optional(),
+    acknowledgePriceGap: z.boolean(),
+    /** For shorten: refund mode, mirroring the cancel flow (never auto-applied). */
+    refundMode: PlanningCancelRefundModeSchema.optional(),
+    acceptedRefundCents: z.number().int().nonnegative().optional(),
+    refundDeviationReason: z.string().trim().min(3).max(2000).optional(),
+    confirm: z.literal(true),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.confirmLateChange &&
+      (!value.lateChangeReason || value.lateChangeReason.trim().length < 3)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["lateChangeReason"],
+        message: "Un motif est obligatoire pour une modification à moins de 48h de l'arrivée",
+      });
+    }
+    if (value.refundMode && value.refundMode !== "suggested" && !value.refundDeviationReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["refundDeviationReason"],
+        message: "Une justification est obligatoire lorsque le montant diffère du suggéré",
+      });
+    }
+  });
+export type PlanningDateChangeRequest = z.infer<typeof PlanningDateChangeRequestSchema>;
+
+export const PlanningDateChangeResultSchema = z.object({
+  reservation: PlanningReservationDetailSchema,
+  kind: PlanningDateChangeKindSchema,
+  complementTTC: z.number().int().nonnegative(),
+  billedDifference: z.boolean(),
+  suggestedRefundCents: z.number().int().nonnegative(),
+  acceptedRefundCents: z.number().int().nonnegative().optional(),
+});
+export type PlanningDateChangeResult = z.infer<typeof PlanningDateChangeResultSchema>;
+
+export const PlanningPartySizePreviewSchema = z.object({
+  reservationId: z.string(),
+  currentPartySize: z.number().int().positive(),
+  newPartySize: z.number().int().positive(),
+  capacity: z.number().int().positive().optional(),
+  exceedsCapacity: z.boolean(),
+  suggestSpaceChange: z.boolean(),
+});
+export type PlanningPartySizePreview = z.infer<typeof PlanningPartySizePreviewSchema>;
+
+export const PlanningPartySizeRequestSchema = z.object({
+  newPartySize: z.number().int().positive(),
+  note: z.string().trim().max(2000).optional(),
+  confirm: z.literal(true),
+});
+export type PlanningPartySizeRequest = z.infer<typeof PlanningPartySizeRequestSchema>;
+
+export const PlanningPartySizeResultSchema = z.object({
+  reservation: PlanningReservationDetailSchema,
+  previousPartySize: z.number().int().positive(),
+  newPartySize: z.number().int().positive(),
+});
+export type PlanningPartySizeResult = z.infer<typeof PlanningPartySizeResultSchema>;
+
+export const PlanningContactTransferPreviewSchema = z.object({
+  reservationId: z.string(),
+  currentContact: PlanningContactSchema.nullable(),
+  /** Null when nextClientAccountId does not resolve to a contact on this reservation. */
+  nextContact: PlanningContactSchema.nullable(),
+  /** True when nextContact belongs to the same cardex/company contact set. */
+  eligible: z.boolean(),
+  reason: z.string().optional(),
+});
+export type PlanningContactTransferPreview = z.infer<typeof PlanningContactTransferPreviewSchema>;
+
+export const PlanningContactTransferRequestSchema = z.object({
+  nextClientAccountId: z.string().min(1),
+  confirm: z.literal(true),
+});
+export type PlanningContactTransferRequest = z.infer<typeof PlanningContactTransferRequestSchema>;
+
+export const PlanningContactTransferResultSchema = z.object({
+  reservation: PlanningReservationDetailSchema,
+  previousClientAccountId: z.string().optional(),
+  nextClientAccountId: z.string(),
+});
+export type PlanningContactTransferResult = z.infer<typeof PlanningContactTransferResultSchema>;

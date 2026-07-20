@@ -3,7 +3,16 @@ import type {
   PlanningCancelPreview,
   PlanningCancelRequest,
   PlanningCancelResult,
+  PlanningContactTransferPreview,
+  PlanningContactTransferRequest,
+  PlanningContactTransferResult,
+  PlanningDateChangePreview,
+  PlanningDateChangeRequest,
+  PlanningDateChangeResult,
   PlanningManageSpaceOption,
+  PlanningPartySizePreview,
+  PlanningPartySizeRequest,
+  PlanningPartySizeResult,
   PlanningRestorePreview,
   PlanningRestoreRequest,
   PlanningRestoreResult,
@@ -147,6 +156,67 @@ export function confirmRestoreReservation(
 ): Promise<PlanningRestoreResult> {
   return planningFetch(
     `/planning/reservations/${encodeURIComponent(reservationId)}/manage/restore`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function fetchDateChangePreview(
+  reservationId: string,
+  startAt: string,
+  endAt: string,
+): Promise<PlanningDateChangePreview> {
+  const search = new URLSearchParams({ startAt, endAt });
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/date-change/preview?${search.toString()}`,
+  );
+}
+
+export function confirmDateChange(
+  reservationId: string,
+  request: PlanningDateChangeRequest,
+): Promise<PlanningDateChangeResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/date-change`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function fetchPartySizePreview(
+  reservationId: string,
+  newPartySize: number,
+): Promise<PlanningPartySizePreview> {
+  const search = new URLSearchParams({ newPartySize: String(newPartySize) });
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/party-size/preview?${search.toString()}`,
+  );
+}
+
+export function confirmPartySize(
+  reservationId: string,
+  request: PlanningPartySizeRequest,
+): Promise<PlanningPartySizeResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/party-size`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function fetchContactTransferPreview(
+  reservationId: string,
+  nextClientAccountId: string,
+): Promise<PlanningContactTransferPreview> {
+  const search = new URLSearchParams({ nextClientAccountId });
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/contact-transfer/preview?${search.toString()}`,
+  );
+}
+
+export function confirmContactTransfer(
+  reservationId: string,
+  request: PlanningContactTransferRequest,
+): Promise<PlanningContactTransferResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/contact-transfer`,
     { method: "POST", body: JSON.stringify(request) },
   );
 }

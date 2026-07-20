@@ -92,6 +92,21 @@ function toIso(date: Date): string {
   return date.toISOString();
 }
 
+function formatFrDateTime(value: Date): string {
+  return value.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+}
+
+function auditDiffDateLabel(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return formatFrDateTime(date);
+}
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -588,7 +603,7 @@ export class PlanningService {
 
     const [building, space, invoice, cardex] = await Promise.all([
       Building.findById(reservation.buildingId).select({ name: 1 }).lean().exec(),
-      Space.findById(reservation.spaceId).select({ name: 1, type: 1 }).lean().exec(),
+      Space.findById(reservation.spaceId).select({ name: 1, type: 1, capacity: 1 }).lean().exec(),
       Invoice.findOne({ reservationId: reservation._id })
         .select({ reference: 1, status: 1, totals: 1, lines: 1 })
         .lean()
@@ -705,13 +720,21 @@ export class PlanningService {
       readOnly: isReservationReadOnly(status),
       startAt: toIso(reservation.startAt),
       endAt: toIso(reservation.endAt),
+      partySize: Math.max(1, Math.trunc(reservation.partySize ?? 1)),
+      durationClass: reservation.durationClass,
       space: {
         id: String(reservation.spaceId),
         name: space?.name ?? reservation.spaceSnapshot?.name ?? "Espace",
         type: asSpaceType(space?.type ?? reservation.spaceSnapshot?.type ?? "meeting_room"),
         buildingId: String(reservation.buildingId),
         buildingName: building?.name ?? "—",
+        capacity:
+          typeof space?.capacity === "number" && space.capacity > 0 ? space.capacity : undefined,
       },
+      clientAccountId: reservation.clientAccountId
+        ? String(reservation.clientAccountId)
+        : undefined,
+      cardexId: reservation.cardexId ? String(reservation.cardexId) : undefined,
       client: {
         label: formatClientLabel({
           firstName: cardex?.identity?.firstName,
@@ -816,6 +839,9 @@ export class PlanningService {
           "space_change",
           "restoration",
           "closure",
+          "date_change",
+          "party_size_change",
+          "contact_transfer",
         ]
       )
         .map((t) => t.trim())
@@ -1226,6 +1252,67 @@ export class PlanningService {
       }
     }
 
+    if (typeFilter.has("date_change")) {
+      events.push(
+        ...(await this.buildManageActionEvents(String(id), from, to, {
+          action: "reservation.date_change",
+          type: "date_change",
+          titleFallback: "Modification des dates",
+          detail: (log) => {
+            const kindRaw = log.diff?.kind?.after;
+            const kindLabel =
+              kindRaw === "extend"
+                ? "Agrandissement du créneau"
+                : kindRaw === "shorten"
+                  ? "Raccourcissement du créneau"
+                  : "Report du créneau";
+            const nextStart = auditDiffDateLabel(log.diff?.startAt?.after);
+            const nextEnd = auditDiffDateLabel(log.diff?.endAt?.after);
+            if (nextStart && nextEnd) {
+              return `${kindLabel} — nouveau créneau du ${nextStart} au ${nextEnd}`;
+            }
+            return kindLabel;
+          },
+        })),
+      );
+    }
+
+    if (typeFilter.has("party_size_change")) {
+      events.push(
+        ...(await this.buildManageActionEvents(String(id), from, to, {
+          action: "reservation.party_size_change",
+          type: "party_size_change",
+          titleFallback: "Modification du nombre de personnes",
+          detail: (log) => {
+            const before = log.diff?.partySize?.before;
+            const after = log.diff?.partySize?.after;
+            if (typeof before === "number" && typeof after === "number") {
+              return `Effectif modifié : ${before} → ${after} personne${after > 1 ? "s" : ""}`;
+            }
+            return "Effectif modifié";
+          },
+        })),
+      );
+    }
+
+    if (typeFilter.has("contact_transfer")) {
+      events.push(
+        ...(await this.buildManageActionEvents(String(id), from, to, {
+          action: "reservation.contact_transfer",
+          type: "contact_transfer",
+          titleFallback: "Transfert de contact",
+          detail: (log) => {
+            const before = log.diff?.contactEmail?.before;
+            const after = log.diff?.contactEmail?.after;
+            if (typeof before === "string" && typeof after === "string") {
+              return `Contact transféré : ${before} → ${after}`;
+            }
+            return "Contact transféré à un autre interlocuteur";
+          },
+        })),
+      );
+    }
+
     events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
     const payload: PlanningSpaceHistoryResponse = {
@@ -1243,5 +1330,135 @@ export class PlanningService {
     };
 
     return PlanningSpaceHistoryResponseSchema.parse(payload);
+  }
+
+  /**
+   * Generic builder for audit-based history events (mirrors the `restoration`
+   * block): finds `AuditLog` entries for `action` scoped to this space via
+   * `diff.spaceId.after` (always present on Wave 2 manage-action audits, even
+   * when the space itself did not change — it is only used for filtering).
+   */
+  private async buildManageActionEvents(
+    spaceId: string,
+    from: Date,
+    to: Date,
+    input: {
+      action: string;
+      type: PlanningHistoryEventType;
+      titleFallback: string;
+      detail: (log: {
+        diff?: Record<string, { before: unknown; after: unknown }>;
+        reason?: string;
+      }) => string | undefined;
+    },
+  ): Promise<PlanningHistoryEvent[]> {
+    const AuditLog = await getAuditLogModel();
+    const logs = await AuditLog.find({
+      action: input.action,
+      "entity.type": "reservation",
+      at: { $gte: from, $lt: to },
+      "diff.spaceId.after": spaceId,
+    })
+      .sort({ at: -1 })
+      .lean()
+      .exec();
+
+    if (logs.length === 0) {
+      return [];
+    }
+
+    const Reservation = await getReservationModel();
+    const Invoice = await getInvoiceModel();
+    const Cardex = await getCardexModel();
+
+    const linkedReservationIds = [
+      ...new Set(
+        logs
+          .map((log) => (log.entity?.id != null ? String(log.entity.id) : null))
+          .filter((entityId): entityId is string => Boolean(entityId))
+          .filter((entityId) => OBJECT_ID_PATTERN.test(entityId)),
+      ),
+    ];
+
+    const linkedReservations = linkedReservationIds.length
+      ? await Reservation.find({ _id: { $in: linkedReservationIds } })
+          .select({ reference: 1, status: 1, startAt: 1, endAt: 1, cardexId: 1 })
+          .lean()
+          .exec()
+      : [];
+    const reservationById = new Map(
+      linkedReservations.map((reservation) => [String(reservation._id), reservation]),
+    );
+
+    const linkedInvoices = linkedReservations.length
+      ? await Invoice.find({
+          reservationId: { $in: linkedReservations.map((reservation) => reservation._id) },
+        })
+          .select({ reservationId: 1, status: 1, totals: 1 })
+          .lean()
+          .exec()
+      : [];
+    const invoiceByRes = new Map(
+      linkedInvoices
+        .filter((invoice) => invoice.reservationId)
+        .map((invoice) => [String(invoice.reservationId), invoice]),
+    );
+
+    const cardexIds = [
+      ...new Set(
+        linkedReservations
+          .map((reservation) => reservation.cardexId)
+          .filter((cid): cid is Types.ObjectId => Boolean(cid))
+          .map((cid) => String(cid)),
+      ),
+    ];
+    const cardexDocs = cardexIds.length
+      ? await Cardex.find({ _id: { $in: cardexIds } })
+          .select({ identity: 1, company: 1 })
+          .lean()
+          .exec()
+      : [];
+    const cardexById = new Map(cardexDocs.map((doc) => [String(doc._id), doc]));
+
+    return logs.map((log) => {
+      const reservationId = log.entity?.id ? String(log.entity.id) : undefined;
+      const reservation = reservationId ? reservationById.get(reservationId) : undefined;
+      const cardex = reservation?.cardexId
+        ? cardexById.get(String(reservation.cardexId))
+        : undefined;
+      const clientLabel = reservation
+        ? formatClientLabel({
+            firstName: cardex?.identity?.firstName,
+            lastName: cardex?.identity?.lastName,
+            companyName: cardex?.company?.legalName,
+          })
+        : undefined;
+      const status = reservation ? asReservationStatus(reservation.status) : undefined;
+      const invoice = reservationId ? invoiceByRes.get(reservationId) : undefined;
+      const paymentStatus =
+        reservation && status
+          ? mapInvoicePaymentStatus({
+              invoiceStatus: invoice?.status,
+              paidTotal: invoice?.totals?.paidTotal,
+              balanceDue: invoice?.totals?.balanceDue,
+              reservationStatus: status,
+            })
+          : undefined;
+
+      return {
+        id: `${input.type}-${String(log._id)}`,
+        type: input.type,
+        at: toIso(log.at),
+        startAt: reservation ? toIso(reservation.startAt) : undefined,
+        endAt: reservation ? toIso(reservation.endAt) : undefined,
+        title: clientLabel ?? input.titleFallback,
+        detail: input.detail(log) ?? log.reason ?? input.titleFallback,
+        clientLabel,
+        reservationId,
+        reservationReference: reservation?.reference,
+        reservationStatus: status,
+        paymentStatus,
+      } satisfies PlanningHistoryEvent;
+    });
   }
 }

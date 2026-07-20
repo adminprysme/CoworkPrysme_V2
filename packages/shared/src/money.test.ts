@@ -6,9 +6,21 @@ import {
   eurosToCents,
   formatCentsAsEuroString,
   isValidEuroAmount,
+  parseEuroInputToCents,
 } from "./money.js";
 
 describe("money", () => {
+  it("parses euro input strings to integer cents without floats", () => {
+    expect(parseEuroInputToCents("239,99")).toBe(23999);
+    expect(parseEuroInputToCents("239.99")).toBe(23999);
+    expect(parseEuroInputToCents("0")).toBe(0);
+    expect(parseEuroInputToCents("12,5")).toBe(1250);
+    expect(parseEuroInputToCents("")).toBeNull();
+    expect(parseEuroInputToCents("12.555")).toBeNull();
+    expect(parseEuroInputToCents("-1")).toBeNull();
+    expect(parseEuroInputToCents("abc")).toBeNull();
+  });
+
   it("converts 19.99 € to 1999 centimes and back without drift", () => {
     const cents = eurosToCents(19.99);
     expect(cents).toBe(1999);

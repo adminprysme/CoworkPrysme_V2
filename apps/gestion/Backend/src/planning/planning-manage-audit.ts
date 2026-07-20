@@ -11,7 +11,13 @@ export interface PlanningAuditDiff {
  */
 export async function writePlanningManageAudit(input: {
   profile: StaffProfileDocument;
-  action: "reservation.space_change" | "reservation.cancel" | "reservation.restore";
+  action:
+    | "reservation.space_change"
+    | "reservation.cancel"
+    | "reservation.restore"
+    | "reservation.date_change"
+    | "reservation.party_size_change"
+    | "reservation.contact_transfer";
   reservationId: Types.ObjectId | string;
   diff?: PlanningAuditDiff;
   reason?: string;

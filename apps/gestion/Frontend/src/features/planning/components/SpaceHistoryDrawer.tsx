@@ -18,7 +18,10 @@ function isReservationLinkedEvent(type: PlanningHistoryEventType): boolean {
     type === "reservation" ||
     type === "cancellation" ||
     type === "space_change" ||
-    type === "restoration"
+    type === "restoration" ||
+    type === "date_change" ||
+    type === "party_size_change" ||
+    type === "contact_transfer"
   );
 }
 
@@ -53,12 +56,23 @@ const RANGE_PRESETS: Array<{ id: RangePreset; label: string }> = [
 const TYPE_OPTIONS: Array<{
   id: PlanningHistoryEventType;
   label: string;
-  tone: "reservation" | "cancellation" | "spaceChange" | "restoration" | "closure";
+  tone:
+    | "reservation"
+    | "cancellation"
+    | "spaceChange"
+    | "restoration"
+    | "dateChange"
+    | "partySize"
+    | "contactTransfer"
+    | "closure";
 }> = [
   { id: "reservation", label: "Réservations", tone: "reservation" },
   { id: "cancellation", label: "Annulations", tone: "cancellation" },
   { id: "space_change", label: "Changements de salle", tone: "spaceChange" },
   { id: "restoration", label: "Restaurations", tone: "restoration" },
+  { id: "date_change", label: "Dates", tone: "dateChange" },
+  { id: "party_size_change", label: "Effectif", tone: "partySize" },
+  { id: "contact_transfer", label: "Transferts", tone: "contactTransfer" },
   { id: "closure", label: "Fermetures", tone: "closure" },
 ];
 
@@ -72,6 +86,12 @@ function toneClassName(tone: (typeof TYPE_OPTIONS)[number]["tone"]): string {
       return styles.toneSpaceChange ?? "";
     case "restoration":
       return styles.toneRestoration ?? "";
+    case "dateChange":
+      return styles.toneDateChange ?? "";
+    case "partySize":
+      return styles.tonePartySize ?? "";
+    case "contactTransfer":
+      return styles.toneContactTransfer ?? "";
     case "closure":
       return styles.toneClosure ?? "";
   }

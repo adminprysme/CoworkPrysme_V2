@@ -3,6 +3,11 @@
   --history-cancellation: #d97706;
   --history-space-change: #3b6fa8;
   --history-restoration: #0f766e;
+  /* date_change / party_size_change / contact_transfer reuse the existing
+     teal (restoration) and slate (space-change) tones — no new brand colors. */
+  --history-date-change: var(--history-space-change);
+  --history-party-size: var(--history-restoration);
+  --history-contact-transfer: var(--history-space-change);
   --history-closure: #94a3b8;
   display: flex;
   flex-direction: column;
@@ -225,6 +230,30 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--history-space-change) 18%, transparent);
 }
 
+.typePillActive.toneDateChange {
+  border-color: color-mix(in srgb, var(--history-date-change) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--history-date-change) 14%, var(--color-surface));
+  color: var(--history-date-change);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--history-date-change) 18%, transparent);
+}
+
+.typePillActive.tonePartySize {
+  border-color: color-mix(in srgb, var(--history-party-size) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--history-party-size) 14%, var(--color-surface));
+  color: var(--history-party-size);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--history-party-size) 18%, transparent);
+}
+
+.typePillActive.toneContactTransfer {
+  border-color: color-mix(in srgb, var(--history-contact-transfer) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--history-contact-transfer) 14%, var(--color-surface));
+  color: var(--history-contact-transfer);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--history-contact-transfer) 18%, transparent);
+}
+
 .typePillActive.toneClosure {
   border-color: color-mix(in srgb, var(--history-closure) 50%, var(--color-border));
   background: color-mix(in srgb, var(--history-closure) 16%, var(--color-surface));
@@ -328,6 +357,18 @@
 
 .toneRestoration {
   --event-tone: var(--history-restoration);
+}
+
+.toneDateChange {
+  --event-tone: var(--history-date-change);
+}
+
+.tonePartySize {
+  --event-tone: var(--history-party-size);
+}
+
+.toneContactTransfer {
+  --event-tone: var(--history-contact-transfer);
 }
 
 .toneClosure {

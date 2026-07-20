@@ -1,3 +1,26 @@
+/**
+ * Parses a user-entered euro amount string ("12,50" / "12.50" / "12") into
+ * integer centimes. Returns null when the input is empty or malformed.
+ * Never uses floating-point arithmetic on the monetary value.
+ */
+export function parseEuroInputToCents(input: string): number | null {
+  const trimmed = input.trim().replace(/\s/g, "");
+  if (!trimmed) {
+    return null;
+  }
+  const normalized = trimmed.replace(",", ".");
+  if (!/^\d+([.]\d{1,2})?$/.test(normalized)) {
+    return null;
+  }
+  const [wholePart = "0", fractionPart = ""] = normalized.split(".");
+  const whole = Number.parseInt(wholePart, 10);
+  const fraction = Number.parseInt(fractionPart.padEnd(2, "0").slice(0, 2) || "0", 10);
+  if (!Number.isFinite(whole) || !Number.isFinite(fraction) || whole < 0 || fraction < 0) {
+    return null;
+  }
+  return whole * 100 + fraction;
+}
+
 /** Converts a euro amount (max 2 decimal places) to integer centimes without float drift. */
 export function eurosToCents(euros: number): number {
   if (!Number.isFinite(euros) || euros < 0) {

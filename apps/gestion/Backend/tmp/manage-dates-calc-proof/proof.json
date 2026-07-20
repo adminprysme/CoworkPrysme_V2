@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-07-20T14:13:37.562Z",
+  "cgvBeforeStart": {
+    "case": "shorten_before_start_cgv_50pct",
+    "durationClass": "daily",
+    "original": {
+      "startAt": "2026-08-10T06:00:00.000Z",
+      "endAt": "2026-08-12T17:00:00.000Z"
+    },
+    "shortened": {
+      "startAt": "2026-08-10T06:00:00.000Z",
+      "endAt": "2026-08-11T17:00:00.000Z"
+    },
+    "now": "2026-08-05T12:00:00.000Z",
+    "paidTotalCents": 20000,
+    "cgvScale": {
+      "ratio": 0.5,
+      "hoursBeforeStart": 114,
+      "band": "Entre 3 et 7 jours"
+    },
+    "fullCancelSuggestedIfEntire": {
+      "ratio": 0.5,
+      "hoursBeforeStart": 114,
+      "band": "Entre 3 et 7 jours",
+      "paidTotalCents": 20000,
+      "suggestedRefundCents": 10000
+    },
+    "shortenSuggestion": {
+      "basis": "cgv_scale",
+      "suggestedRefundCents": 4068,
+      "removedValueCents": 8136,
+      "cgvRatio": 0.5,
+      "detail": "Non démarrée — barème CGV Entre 3 et 7 jours (ratio 0.5) sur la portion retirée."
+    },
+    "detail": [
+      "Hours/days before original start → band Entre 3 et 7 jours, ratio 0.5",
+      "Removed portion value = round(20000 × removedMs/oldMs) = 8136¢",
+      "CGV ratio 0.5 applied → suggestedRefundCents = 4068¢"
+    ]
+  },
+  "prorataInProgress": {
+    "case": "shorten_in_progress_prorata_removed",
+    "durationClass": "hourly",
+    "original": {
+      "startAt": "2026-07-20T06:00:00.000Z",
+      "endAt": "2026-07-20T18:00:00.000Z"
+    },
+    "shortened": {
+      "startAt": "2026-07-20T06:00:00.000Z",
+      "endAt": "2026-07-20T14:00:00.000Z"
+    },
+    "now": "2026-07-20T10:00:00.000Z",
+    "paidTotalCents": 12000,
+    "shortenSuggestion": {
+      "basis": "prorata_removed",
+      "suggestedRefundCents": 4000,
+      "removedValueCents": 4000,
+      "detail": "En cours — remboursement prorata de la portion retirée."
+    },
+    "detail": [
+      "Stay already started → CGV scale not used; prorata on removed portion",
+      "removedMs/oldMs × paid = 4000¢ → suggested 4000¢",
+      "basis=prorata_removed"
+    ]
+  },
+  "extendRecalc": {
+    "case": "extend_recalc_units",
+    "kind": "extend",
+    "durationClass": "daily",
+    "unitPriceHT": 10000,
+    "vatRate": 20,
+    "previous": {
+      "endAt": "2026-09-02T17:00:00.000Z",
+      "units": 2,
+      "spaceHT": 20000,
+      "spaceTTC": 24000
+    },
+    "next": {
+      "endAt": "2026-09-04T17:00:00.000Z",
+      "units": 4,
+      "spaceHT": 40000,
+      "spaceTTC": 48000
+    },
+    "complement": {
+      "ht": 20000,
+      "vat": 4000,
+      "ttc": 24000
+    },
+    "detail": [
+      "classifyDateChange → extend",
+      "units 2 → 4 (Paris inclusive days)",
+      "complement TTC = 24000¢ (post-master append line; snapshot not rewritten)"
+    ]
+  }
+}

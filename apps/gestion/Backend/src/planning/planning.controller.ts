@@ -12,6 +12,9 @@ import {
 import type { Request } from "express";
 import {
   PlanningCancelRequestSchema,
+  PlanningContactTransferRequestSchema,
+  PlanningDateChangeRequestSchema,
+  PlanningPartySizeRequestSchema,
   PlanningRestoreRequestSchema,
   PlanningSpaceChangeRequestSchema,
 } from "@coworkprysme/shared";
@@ -129,6 +132,98 @@ export class PlanningController {
       throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
     }
     return this.planningManage.confirmRestore(profile, id, parsed.data);
+  }
+
+  @Get("reservations/:id/manage/date-change/preview")
+  async manageDateChangePreview(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Query("startAt") startAt?: string,
+    @Query("endAt") endAt?: string,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    if (!startAt || !endAt) {
+      throw new BadRequestException({
+        code: "MISSING_DATE",
+        message: "startAt et endAt requis",
+      });
+    }
+    return this.planningManage.previewDateChange(profile, id, startAt, endAt);
+  }
+
+  @Post("reservations/:id/manage/date-change")
+  async manageDateChangeConfirm(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningDateChangeRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
+    }
+    return this.planningManage.confirmDateChange(profile, id, parsed.data);
+  }
+
+  @Get("reservations/:id/manage/party-size/preview")
+  async managePartySizePreview(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Query("newPartySize") newPartySize?: string,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsedSize = Number.parseInt(newPartySize ?? "", 10);
+    if (!Number.isInteger(parsedSize) || parsedSize <= 0) {
+      throw new BadRequestException({
+        code: "INVALID_PARTY_SIZE",
+        message: "newPartySize doit être un entier positif",
+      });
+    }
+    return this.planningManage.previewPartySize(profile, id, parsedSize);
+  }
+
+  @Post("reservations/:id/manage/party-size")
+  async managePartySizeConfirm(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningPartySizeRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
+    }
+    return this.planningManage.confirmPartySize(profile, id, parsed.data);
+  }
+
+  @Get("reservations/:id/manage/contact-transfer/preview")
+  async manageContactTransferPreview(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Query("nextClientAccountId") nextClientAccountId?: string,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    if (!nextClientAccountId) {
+      throw new BadRequestException({
+        code: "MISSING_NEXT_CLIENT_ACCOUNT_ID",
+        message: "nextClientAccountId requis",
+      });
+    }
+    return this.planningManage.previewContactTransfer(profile, id, nextClientAccountId);
+  }
+
+  @Post("reservations/:id/manage/contact-transfer")
+  async manageContactTransferConfirm(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningContactTransferRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
+    }
+    return this.planningManage.confirmContactTransfer(profile, id, parsed.data);
   }
 
   @Get("reservations/:id")

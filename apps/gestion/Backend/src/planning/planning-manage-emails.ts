@@ -167,3 +167,147 @@ export function renderRestoreEmail(input: RestoreEmailInput): {
     html: renderCoworkEmailLayout("Réservation restaurée", body, siteUrl),
   };
 }
+
+export interface DateChangeEmailInput {
+  reservationReference: string;
+  kind: "extend" | "shorten" | "shift";
+  previousStartAt: string;
+  previousEndAt: string;
+  nextStartAt: string;
+  nextEndAt: string;
+  /** Positive complement TTC in centimes actually billed (0 when not billed). */
+  complementTTC: number;
+  /** When false, the email must not mention any amount. */
+  billedDifference: boolean;
+}
+
+const DATE_CHANGE_KIND_LABELS: Record<DateChangeEmailInput["kind"], string> = {
+  extend: "agrandie",
+  shorten: "raccourcie",
+  shift: "reportée",
+};
+
+export function renderDateChangeEmail(input: DateChangeEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl();
+  const showAmount = input.billedDifference && input.complementTTC > 0;
+  const kindLabel = DATE_CHANGE_KIND_LABELS[input.kind];
+
+  const amountRow = showAmount
+    ? emailDetailRow(
+        "Complément facturé TTC",
+        `<strong>${formatEmailEuro(input.complementTTC)}</strong>`,
+        { last: true },
+      )
+    : "";
+
+  const billingNote = showAmount
+    ? `<p style="margin:12px 0 0;">Un complément de <strong>${formatEmailEuro(input.complementTTC)}</strong> a été ajouté à votre facture proforma.</p>`
+    : "";
+
+  const body = `
+    <p style="margin-top:0;">Votre réservation a été <strong>${kindLabel}</strong> par notre équipe.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+      ${emailDetailRow("Référence", `<strong>${escapeEmailHtml(input.reservationReference)}</strong>`)}
+      ${emailDetailRow(
+        "Ancien créneau",
+        `Du ${escapeEmailHtml(input.previousStartAt)} au ${escapeEmailHtml(input.previousEndAt)}`,
+      )}
+      ${emailDetailRow(
+        "Nouveau créneau",
+        `<strong>Du ${escapeEmailHtml(input.nextStartAt)} au ${escapeEmailHtml(input.nextEndAt)}</strong>`,
+        { last: !showAmount },
+      )}
+      ${amountRow}
+    </table>
+    ${billingNote}
+    <p style="margin:24px 0 0;">Pour toute question, notre équipe reste à votre disposition.</p>
+  `;
+
+  return {
+    subject: `Modification des dates de votre réservation ${input.reservationReference} — Cowork Prysme`,
+    html: renderCoworkEmailLayout("Dates de réservation modifiées", body, siteUrl),
+  };
+}
+
+export interface PartySizeEmailInput {
+  reservationReference: string;
+  spaceName: string;
+  startAt: string;
+  endAt: string;
+  previousPartySize: number;
+  newPartySize: number;
+}
+
+export function renderPartySizeEmail(input: PartySizeEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl();
+  const body = `
+    <p style="margin-top:0;">Le nombre de personnes prévu pour votre réservation a été mis à jour par notre équipe.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+      ${emailDetailRow("Référence", `<strong>${escapeEmailHtml(input.reservationReference)}</strong>`)}
+      ${emailDetailRow("Espace", escapeEmailHtml(input.spaceName))}
+      ${emailDetailRow(
+        "Créneau",
+        `Du ${escapeEmailHtml(input.startAt)} au ${escapeEmailHtml(input.endAt)}`,
+      )}
+      ${emailDetailRow(
+        "Nombre de personnes",
+        `<strong>${input.previousPartySize} → ${input.newPartySize}</strong>`,
+        { last: true },
+      )}
+    </table>
+    <p style="margin:24px 0 0;">Pour toute question, notre équipe reste à votre disposition.</p>
+  `;
+
+  return {
+    subject: `Effectif mis à jour pour votre réservation ${input.reservationReference} — Cowork Prysme`,
+    html: renderCoworkEmailLayout("Nombre de personnes mis à jour", body, siteUrl),
+  };
+}
+
+export interface ContactTransferEmailInput {
+  reservationReference: string;
+  spaceName: string;
+  startAt: string;
+  endAt: string;
+  previousContactLabel: string;
+  nextContactLabel: string;
+  /** Which recipient this render targets — copy is tailored accordingly. */
+  audience: "previous" | "next";
+}
+
+export function renderContactTransferEmail(input: ContactTransferEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl();
+  const intro =
+    input.audience === "previous"
+      ? `<p style="margin-top:0;">Le contact principal de cette réservation a été transféré à <strong>${escapeEmailHtml(input.nextContactLabel)}</strong> par notre équipe. Vous ne recevrez plus les communications liées à cette réservation.</p>`
+      : `<p style="margin-top:0;">Vous êtes désormais le <strong>contact principal</strong> de la réservation ci-dessous, transférée par notre équipe.</p>`;
+
+  const body = `
+    ${intro}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+      ${emailDetailRow("Référence", `<strong>${escapeEmailHtml(input.reservationReference)}</strong>`)}
+      ${emailDetailRow("Espace", escapeEmailHtml(input.spaceName))}
+      ${emailDetailRow(
+        "Créneau",
+        `Du ${escapeEmailHtml(input.startAt)} au ${escapeEmailHtml(input.endAt)}`,
+      )}
+      ${emailDetailRow("Ancien contact", escapeEmailHtml(input.previousContactLabel))}
+      ${emailDetailRow("Nouveau contact", `<strong>${escapeEmailHtml(input.nextContactLabel)}</strong>`, { last: true })}
+    </table>
+    <p style="margin:24px 0 0;">Pour toute question, notre équipe reste à votre disposition.</p>
+  `;
+
+  return {
+    subject: `Transfert de contact — réservation ${input.reservationReference} — Cowork Prysme`,
+    html: renderCoworkEmailLayout("Transfert de contact", body, siteUrl),
+  };
+}
