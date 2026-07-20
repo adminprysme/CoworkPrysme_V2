@@ -508,7 +508,7 @@ export class PlanningManageService {
         startAt: formatFrDateTime(reservation.startAt),
         endAt: formatFrDateTime(reservation.endAt),
         paidTotalCents,
-        suggestedRefundCents: suggestion.suggestedRefundCents,
+        refundCents: request.acceptedRefundCents,
       });
       await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
     }
