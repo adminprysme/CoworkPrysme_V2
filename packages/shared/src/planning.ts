@@ -39,6 +39,7 @@ export const PlanningSpaceRowSchema = z.object({
   name: z.string(),
   type: PlanningSpaceTypeSchema,
   floor: z.string().optional(),
+  capacity: z.number().int().positive().optional(),
 });
 export type PlanningSpaceRow = z.infer<typeof PlanningSpaceRowSchema>;
 

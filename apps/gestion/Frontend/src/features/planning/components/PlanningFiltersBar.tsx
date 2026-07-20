@@ -8,6 +8,7 @@ import {
   type PlanningSpaceFilter,
   type PlanningTypeFilter,
 } from "../planning-filters.js";
+import { PLANNING_SPACE_SORT_OPTIONS, type PlanningSpaceSort } from "../planning-sort.js";
 import styles from "./PlanningFiltersBar.module.css";
 
 interface FilterPillProps {
@@ -36,9 +37,11 @@ export interface PlanningFiltersBarProps {
   typeFilter: PlanningTypeFilter;
   paymentStatuses: PlanningPaymentStatusFilter;
   spaceFilter: PlanningSpaceFilter;
+  sort: PlanningSpaceSort;
   onTypeChange: (value: PlanningTypeFilter) => void;
   onPaymentStatusesChange: (value: PlanningPaymentStatusFilter) => void;
   onSpaceChange: (value: PlanningSpaceFilter) => void;
+  onSortChange: (value: PlanningSpaceSort) => void;
   onReset: () => void;
 }
 
@@ -47,9 +50,11 @@ export function PlanningFiltersBar({
   typeFilter,
   paymentStatuses,
   spaceFilter,
+  sort,
   onTypeChange,
   onPaymentStatusesChange,
   onSpaceChange,
+  onSortChange,
   onReset,
 }: PlanningFiltersBarProps) {
   const showReset = hasActivePlanningFilters({ typeFilter, paymentStatuses, spaceFilter });
@@ -153,6 +158,20 @@ export function PlanningFiltersBar({
           </div>
         </div>
       </div>
+
+      <label className={styles.sortControl}>
+        <span className={styles.sortLabel}>Trier par</span>
+        <select
+          value={sort}
+          onChange={(event) => onSortChange(event.target.value as PlanningSpaceSort)}
+        >
+          {PLANNING_SPACE_SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       {showReset ? (
         <button type="button" className={styles.resetBtn} onClick={onReset}>

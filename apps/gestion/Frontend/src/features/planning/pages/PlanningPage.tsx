@@ -24,6 +24,7 @@ import {
   type PlanningSpaceFilter,
   type PlanningTypeFilter,
 } from "../planning-filters.js";
+import { sortPlanningSpaces, type PlanningSpaceSort } from "../planning-sort.js";
 import {
   addDays,
   formatRangeLabel,
@@ -55,6 +56,7 @@ export function PlanningPage() {
   const [paymentStatuses, setPaymentStatuses] =
     useState<PlanningPaymentStatusFilter>(emptyPaymentStatusFilter);
   const [spaceFilter, setSpaceFilter] = useState<PlanningSpaceFilter>("all");
+  const [spaceSort, setSpaceSort] = useState<PlanningSpaceSort>("name_asc");
 
   const { from: displayFrom, to: displayTo } = useMemo(
     () => rangeForView(anchor, mode),
@@ -154,16 +156,31 @@ export function PlanningPage() {
 
   const filteredSpaces = useMemo(() => {
     const spaces = filterPlanningSpaces(data?.spaces ?? [], typeFilter, spaceFilter);
-    if (!isPaymentStatusFilterActive(paymentStatuses)) {
-      return spaces;
-    }
-    const matchingSpaceIds = new Set(
-      (data?.reservations ?? [])
-        .filter((reservation) => paymentStatuses.has(reservation.paymentStatus))
-        .map((reservation) => reservation.spaceId),
+    const paymentScoped = !isPaymentStatusFilterActive(paymentStatuses)
+      ? spaces
+      : spaces.filter((space) =>
+          (data?.reservations ?? []).some(
+            (reservation) =>
+              reservation.spaceId === space.id && paymentStatuses.has(reservation.paymentStatus),
+          ),
+        );
+    return sortPlanningSpaces(
+      paymentScoped,
+      data?.reservations ?? [],
+      spaceSort,
+      displayFrom.getTime(),
+      displayTo.getTime(),
     );
-    return spaces.filter((space) => matchingSpaceIds.has(space.id));
-  }, [data?.spaces, data?.reservations, typeFilter, spaceFilter, paymentStatuses]);
+  }, [
+    data?.spaces,
+    data?.reservations,
+    typeFilter,
+    spaceFilter,
+    paymentStatuses,
+    spaceSort,
+    displayFrom,
+    displayTo,
+  ]);
 
   const filteredReservations = useMemo(() => {
     const spaceIds = new Set(filteredSpaces.map((space) => space.id));
@@ -250,9 +267,11 @@ export function PlanningPage() {
           typeFilter={typeFilter}
           paymentStatuses={paymentStatuses}
           spaceFilter={spaceFilter}
+          sort={spaceSort}
           onTypeChange={setTypeFilter}
           onPaymentStatusesChange={setPaymentStatuses}
           onSpaceChange={setSpaceFilter}
+          onSortChange={setSpaceSort}
           onReset={resetFilters}
         />
       </div>

@@ -261,7 +261,7 @@ export class PlanningService {
           status: "active",
           buildingId: { $in: buildingIds },
         })
-          .select({ name: 1, type: 1, buildingId: 1, floor: 1 })
+          .select({ name: 1, type: 1, buildingId: 1, floor: 1, capacity: 1 })
           .sort({ type: 1, name: 1 })
           .lean()
           .exec()
@@ -351,6 +351,7 @@ export class PlanningService {
         name: s.name,
         type: asSpaceType(s.type),
         floor: s.floor != null ? String(s.floor) : undefined,
+        capacity: typeof s.capacity === "number" && s.capacity > 0 ? s.capacity : undefined,
       })),
       reservations: reservations.map((r) => {
         const status = asReservationStatus(r.status);
@@ -376,6 +377,9 @@ export class PlanningService {
             lastName: cardex?.identity?.lastName,
             companyName: cardex?.company?.legalName,
           }),
+          clientFirstName: cardex?.identity?.firstName,
+          clientLastName: cardex?.identity?.lastName,
+          clientCompanyName: cardex?.company?.legalName,
           spaceName: r.spaceSnapshot?.name ?? "Espace",
           totalTTC: Math.trunc(r.pricing?.totalTTC ?? 0),
           invoiceReference: invoice?.reference,
