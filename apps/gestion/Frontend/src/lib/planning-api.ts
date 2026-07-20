@@ -1,18 +1,25 @@
 import type {
   PlanningCalendarResponse,
+  PlanningManageSpaceOption,
   PlanningOccupancyResponse,
   PlanningReservationDetail,
   PlanningSearchResponse,
+  PlanningSpaceChangePreview,
+  PlanningSpaceChangeRequest,
+  PlanningSpaceChangeResult,
   PlanningSpaceHistoryResponse,
 } from "@coworkprysme/shared";
 
 import { API_URL } from "./api.js";
 
-async function planningFetch<T>(path: string): Promise<T> {
+async function planningFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
+    ...init,
     credentials: "include",
     headers: {
       Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
     },
   });
 
@@ -77,5 +84,31 @@ export function fetchSpaceHistory(params: {
   }
   return planningFetch(
     `/planning/spaces/${encodeURIComponent(params.spaceId)}/history?${search.toString()}`,
+  );
+}
+
+export function fetchManageCandidateSpaces(
+  reservationId: string,
+): Promise<PlanningManageSpaceOption[]> {
+  return planningFetch(`/planning/reservations/${encodeURIComponent(reservationId)}/manage/spaces`);
+}
+
+export function fetchSpaceChangePreview(
+  reservationId: string,
+  nextSpaceId: string,
+): Promise<PlanningSpaceChangePreview> {
+  const search = new URLSearchParams({ nextSpaceId });
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/space-change/preview?${search.toString()}`,
+  );
+}
+
+export function confirmSpaceChange(
+  reservationId: string,
+  request: PlanningSpaceChangeRequest,
+): Promise<PlanningSpaceChangeResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/space-change`,
+    { method: "POST", body: JSON.stringify(request) },
   );
 }

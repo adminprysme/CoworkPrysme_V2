@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { IconCalendar, IconChevronDown, IconDoor, IconMail, IconPhone } from "@tabler/icons-react";
 import {
   formatAvailabilityWindow,
@@ -15,6 +15,7 @@ import {
   SPACE_TYPE_LABELS,
 } from "../planning-ui.js";
 import { formatCentsEur, formatDateShort, formatDateTime } from "../planning-utils.js";
+import { ReservationManagePanel } from "./ReservationManagePanel.js";
 import styles from "./ReservationDetailDrawer.module.css";
 
 type TabId = "summary" | "contacts" | "manage" | "documents";
@@ -54,32 +55,43 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const loadDetail = useCallback(
+    (options?: { silent?: boolean }) => {
+      let cancelled = false;
+      if (!options?.silent) {
+        setLoading(true);
+        setError(null);
+      }
+      void fetchPlanningReservation(reservationId)
+        .then((payload) => {
+          if (!cancelled) {
+            setDetail(payload);
+          }
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : "Erreur de chargement");
+            if (!options?.silent) {
+              setDetail(null);
+            }
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    },
+    [reservationId],
+  );
+
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
     setTab("summary");
-    void fetchPlanningReservation(reservationId)
-      .then((payload) => {
-        if (!cancelled) {
-          setDetail(payload);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Erreur de chargement");
-          setDetail(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [reservationId]);
+    return loadDetail();
+  }, [reservationId, loadDetail]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -147,12 +159,11 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
         <button
           type="button"
           role="tab"
-          aria-selected={false}
-          className={styles.tabDisabled}
-          disabled
-          title="À venir"
+          aria-selected={tab === "manage"}
+          className={tab === "manage" ? styles.tabActive : styles.tab}
+          onClick={() => setTab("manage")}
         >
-          Gérer <span className={styles.soon}>à venir</span>
+          Gérer
         </button>
         <button
           type="button"
@@ -370,6 +381,14 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
               </ul>
             )}
           </div>
+        ) : null}
+
+        {!loading && detail && tab === "manage" ? (
+          <ReservationManagePanel
+            reservationId={reservationId}
+            detail={detail}
+            onChanged={() => loadDetail({ silent: true })}
+          />
         ) : null}
       </div>
     </aside>

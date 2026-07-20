@@ -1,0 +1,174 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--planning-slate, #3b6fa8);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+}
+
+.fieldLabel {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.select,
+.textarea {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.86rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.previewBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.amountLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.divider {
+  height: 1px;
+  margin: 0.15rem 0;
+  background: var(--color-border);
+}
+
+.ttcRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.deltaNeutral {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.deltaPositive {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-danger, #c0392b);
+}
+
+.deltaNegative {
+  font-variant-numeric: tabular-nums;
+  color: var(--planning-paid, #2f9e6b);
+}
+
+.refundValue {
+  font-variant-numeric: tabular-nums;
+  color: var(--planning-slate, #3b6fa8);
+}
+
+.basisNote {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.checkboxRow input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.primaryBtn,
+.dangerBtn {
+  align-self: flex-start;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.primaryBtn {
+  background: var(--color-primary, #3b6fa8);
+  color: #fff;
+}
+
+.primaryBtn:disabled,
+.dangerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dangerBtn {
+  background: var(--color-danger, #c0392b);
+  color: #fff;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+.error {
+  color: var(--color-danger, #c0392b);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.banner {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+}
