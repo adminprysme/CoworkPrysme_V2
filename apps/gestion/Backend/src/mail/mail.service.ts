@@ -4,10 +4,17 @@ import type Transporter from "nodemailer/lib/mailer/index.js";
 
 import { isMailConfigured, loadMailConfig, type MailConfig } from "./mail.config.js";
 
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface SendMailInput {
   to: string;
   subject: string;
   html: string;
+  attachments?: MailAttachment[];
 }
 
 @Injectable()
@@ -36,9 +43,15 @@ export class MailService {
   async sendMail(input: SendMailInput): Promise<void> {
     const from = `"${this.config.fromName}" <${this.config.fromAddress}>`;
 
+    const attachmentNames =
+      input.attachments
+        ?.map((a) => a.filename)
+        .filter(Boolean)
+        .join(", ") || "(none)";
+
     if (!this.transporter) {
       this.logger.log(
-        `[MAIL DRY-RUN] to=${input.to} subject=${input.subject}\n${input.html.slice(0, 500)}…`,
+        `[MAIL DRY-RUN] to=${input.to} subject=${input.subject} attachments=${attachmentNames}\n${input.html.slice(0, 500)}…`,
       );
       return;
     }
@@ -49,6 +62,11 @@ export class MailService {
         to: input.to,
         subject: input.subject,
         html: input.html,
+        attachments: input.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType ?? "application/pdf",
+        })),
       });
     } catch (error) {
       this.logger.error(`Failed to send email to ${input.to}: ${String(error)}`);
