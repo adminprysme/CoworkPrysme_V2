@@ -19,6 +19,7 @@ import type {
 import { renderPaymentConfirmedEmail } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
 import { MailService } from "../mail/mail.service.js";
 
 interface TransferPair {
@@ -31,7 +32,10 @@ interface TransferPair {
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
 
-  constructor(private readonly mail: MailService) {}
+  constructor(
+    private readonly mail: MailService,
+    private readonly invoicePdf: InvoicePdfService,
+  ) {}
 
   async lookupPendingTransfer(reference: string): Promise<BankTransferPendingLookupResponse> {
     const pair = await this.findTransferPair(reference);
@@ -302,10 +306,30 @@ export class BillingService {
       paymentMethod: "bank_transfer",
       building,
     });
+
+    let attachments: Array<{ filename: string; content: Buffer; contentType?: string }> | undefined;
+    try {
+      const { pdf, model } = await this.invoicePdf.generatePdfForInvoiceReference(
+        input.invoiceReference,
+      );
+      attachments = [
+        {
+          filename: `${model.invoiceReference}.pdf`,
+          content: pdf,
+          contentType: "application/pdf",
+        },
+      ];
+    } catch (error) {
+      this.logger.error(
+        `Invoice PDF attachment failed for ${input.invoiceReference}: ${String(error)}`,
+      );
+    }
+
     await this.mail.sendMail({
       to: input.clientEmail,
       subject: email.subject,
       html: email.html,
+      attachments,
     });
   }
 

@@ -42,7 +42,14 @@ describe("BillingService.markTransferReceivedByReference", () => {
     vi.clearAllMocks();
     connectMongoMock.mockResolvedValue(undefined);
     mail = { sendMail: vi.fn() } as unknown as MailService;
-    service = new BillingService(mail);
+    const invoicePdf = {
+      generatePdfForInvoiceReference: vi.fn().mockResolvedValue({
+        pdf: Buffer.from("%PDF-1.4 mock"),
+        model: { invoiceReference: "PF-BT01" },
+        html: "<html></html>",
+      }),
+    };
+    service = new BillingService(mail, invoicePdf as never);
 
     const reservation = {
       _id: "res1",
@@ -139,6 +146,7 @@ describe("BillingService.markTransferReceivedByReference", () => {
     expect(mail.sendMail).toHaveBeenCalled();
     const mailCall = (mail.sendMail as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
       html: string;
+      attachments?: Array<{ filename: string; content: Buffer }>;
     };
     expect(mailCall.html).toContain("background:#B87333");
     expect(mailCall.html).toContain("Cowork Prysme</h1>");
@@ -148,6 +156,9 @@ describe("BillingService.markTransferReceivedByReference", () => {
     expect(mailCall.html).toContain("BLDG-9911");
     expect(mailCall.html).toContain("Sonner à CoworkPrysme");
     expect(mailCall.html).toContain("Plan d'accès");
+    expect(mailCall.attachments).toHaveLength(1);
+    expect(mailCall.attachments?.[0]?.filename).toBe("PF-BT01.pdf");
+    expect(mailCall.attachments?.[0]?.content.toString()).toContain("%PDF");
     expect(result).toMatchObject({
       applied: true,
       transitioned: true,

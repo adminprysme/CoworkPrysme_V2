@@ -11,10 +11,11 @@ import { BookingService } from "./booking.service.js";
 import { SlotGenerationService } from "./slot-generation.service.js";
 import { DbModule } from "../db/db.module.js";
 import { DiscountCodesModule } from "../discount-codes/discount-codes.module.js";
+import { InvoicePdfModule } from "../invoice-pdf/invoice-pdf.module.js";
 import { MailModule } from "../mail/mail.module.js";
 
 @Module({
-  imports: [DbModule, DiscountCodesModule, MailModule],
+  imports: [DbModule, DiscountCodesModule, MailModule, InvoicePdfModule],
   controllers: [BookingController],
   providers: [
     AvailabilityService,

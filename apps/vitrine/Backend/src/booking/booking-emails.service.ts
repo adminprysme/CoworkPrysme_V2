@@ -10,7 +10,8 @@ import { BOOKING_CONFIRM_ERROR_CODES } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
-import { MailService } from "../mail/mail.service.js";
+import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
+import { MailService, type MailAttachment } from "../mail/mail.service.js";
 import { resolveBookingNotificationRecipients } from "../mail/resolve-booking-notification-recipients.js";
 import {
   buildingToEmailAccess,
@@ -41,7 +42,10 @@ export interface BookingEmailVatLine {
 export class BookingEmailsService {
   private readonly logger = new Logger(BookingEmailsService.name);
 
-  constructor(private readonly mail: MailService) {}
+  constructor(
+    private readonly mail: MailService,
+    private readonly invoicePdf: InvoicePdfService,
+  ) {}
 
   async resolveBuildingAccess(
     buildingId: Types.ObjectId | string,
@@ -89,11 +93,14 @@ export class BookingEmailsService {
       building: input.building,
     });
 
+    const attachments = await this.invoicePdfAttachment(input.invoiceReference);
+
     // Permanent rule: building contact email is display-only, never a send recipient.
     await this.mail.sendMail({
       to: clientEmail,
       subject: bookingEmail.subject,
       html: bookingEmail.html,
+      attachments,
     });
 
     if (input.isNewAccount) {
@@ -140,10 +147,13 @@ export class BookingEmailsService {
       building: input.building,
     });
 
+    const attachments = await this.invoicePdfAttachment(input.invoiceReference);
+
     await this.mail.sendMail({
       to: clientEmail,
       subject: email.subject,
       html: email.html,
+      attachments,
     });
 
     if (input.isNewAccount) {
@@ -190,6 +200,7 @@ export class BookingEmailsService {
       building: input.building,
       tier: input.tier,
     });
+    // Phase 2: reminders intentionally have no PDF attachment.
     await this.mail.sendMail({
       to: clientEmail,
       subject: email.subject,
@@ -216,7 +227,7 @@ export class BookingEmailsService {
 
   /**
    * Staff notification — recipients ONLY via resolveBookingNotificationRecipients.
-   * Never uses buildings.email as SMTP destination.
+   * Never uses buildings.email as SMTP destination. No PDF (staff uses gestion UI).
    */
   async sendStaffBookingNotifications(input: {
     buildingId: string;
@@ -348,5 +359,24 @@ export class BookingEmailsService {
       totalTTC: reservation.pricing.totalTTC,
       paymentMethod: "card",
     });
+  }
+
+  /** Best-effort PDF attach — email still sends if generation fails. */
+  private async invoicePdfAttachment(
+    invoiceReference: string,
+  ): Promise<MailAttachment[] | undefined> {
+    try {
+      const { pdf, model } = await this.invoicePdf.generatePdfForInvoiceReference(invoiceReference);
+      return [
+        {
+          filename: `${model.invoiceReference}.pdf`,
+          content: pdf,
+          contentType: "application/pdf",
+        },
+      ];
+    } catch (error) {
+      this.logger.error(`Invoice PDF attachment failed for ${invoiceReference}: ${String(error)}`);
+      return undefined;
+    }
   }
 }
