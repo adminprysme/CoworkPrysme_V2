@@ -209,6 +209,15 @@ export function ReservationManagePanel({
   const [restoreSubmitting, setRestoreSubmitting] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
+  /** One modify/cancel accordion open at a time. */
+  const [openAccordion, setOpenAccordion] = useState<
+    "space" | "dates" | "party" | "transfer" | "cancel" | null
+  >("space");
+
+  function toggleAccordion(id: "space" | "dates" | "party" | "transfer" | "cancel") {
+    setOpenAccordion((current) => (current === id ? null : id));
+  }
+
   useEffect(() => {
     setSelectedSpaceId("");
     setPreview(null);
@@ -452,62 +461,66 @@ export function ReservationManagePanel({
           est libre.
         </p>
 
-        {restorePreviewLoading ? (
-          <p className={styles.muted}>Vérification de l&apos;éligibilité…</p>
-        ) : null}
-        {restorePreviewError ? <p className={styles.error}>{restorePreviewError}</p> : null}
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Annuler ou restaurer</h2>
 
-        {showRestoreAction ? (
-          <section className={styles.card}>
-            <h3 className={styles.cardTitle}>Restaurer la réservation</h3>
-            {restorePreview && !restorePreview.slotAvailable ? (
-              <div className={styles.restoreConflict}>
-                <p className={styles.error}>
-                  Le créneau est actuellement occupé
-                  {restorePreview.conflictingReservation
-                    ? ` par ${restorePreview.conflictingReservation.reference} (${restorePreview.conflictingReservation.clientLabel})`
-                    : ""}
-                  . Déplacez ou annulez d&apos;abord la réservation conflictuelle avant de
-                  restaurer.
-                </p>
-                {restorePreview.conflictingReservation && onOpenReservation ? (
+          {restorePreviewLoading ? (
+            <p className={styles.muted}>Vérification de l&apos;éligibilité…</p>
+          ) : null}
+          {restorePreviewError ? <p className={styles.error}>{restorePreviewError}</p> : null}
+
+          {showRestoreAction ? (
+            <section className={styles.card}>
+              <h3 className={styles.cardTitle}>Restaurer la réservation</h3>
+              {restorePreview && !restorePreview.slotAvailable ? (
+                <div className={styles.restoreConflict}>
+                  <p className={styles.error}>
+                    Le créneau est actuellement occupé
+                    {restorePreview.conflictingReservation
+                      ? ` par ${restorePreview.conflictingReservation.reference} (${restorePreview.conflictingReservation.clientLabel})`
+                      : ""}
+                    . Déplacez ou annulez d&apos;abord la réservation conflictuelle avant de
+                    restaurer.
+                  </p>
+                  {restorePreview.conflictingReservation && onOpenReservation ? (
+                    <button
+                      type="button"
+                      className={styles.linkBtn}
+                      onClick={() => onOpenReservation(restorePreview.conflictingReservation!.id)}
+                    >
+                      Ouvrir {restorePreview.conflictingReservation.reference}
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <p className={styles.muted}>
+                    La réservation repassera au statut confirmé sur le même espace et le même
+                    créneau. Un email de notification sera envoyé au client.
+                  </p>
+                  <label className={styles.checkboxRow}>
+                    <input
+                      type="checkbox"
+                      checked={confirmRestore}
+                      disabled={restoreSubmitting}
+                      onChange={(event) => setConfirmRestore(event.target.checked)}
+                    />
+                    <span>Je confirme vouloir restaurer cette réservation</span>
+                  </label>
+                  {restoreError ? <p className={styles.error}>{restoreError}</p> : null}
                   <button
                     type="button"
-                    className={styles.linkBtn}
-                    onClick={() => onOpenReservation(restorePreview.conflictingReservation!.id)}
+                    className={styles.primaryBtn}
+                    disabled={!canSubmitRestore}
+                    onClick={() => void handleRestore()}
                   >
-                    Ouvrir {restorePreview.conflictingReservation.reference}
+                    {restoreSubmitting ? "Restauration en cours…" : "Restaurer la réservation"}
                   </button>
-                ) : null}
-              </div>
-            ) : (
-              <>
-                <p className={styles.muted}>
-                  La réservation repassera au statut confirmé sur le même espace et le même créneau.
-                  Un email de notification sera envoyé au client.
-                </p>
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={confirmRestore}
-                    disabled={restoreSubmitting}
-                    onChange={(event) => setConfirmRestore(event.target.checked)}
-                  />
-                  <span>Je confirme vouloir restaurer cette réservation</span>
-                </label>
-                {restoreError ? <p className={styles.error}>{restoreError}</p> : null}
-                <button
-                  type="button"
-                  className={styles.primaryBtn}
-                  disabled={!canSubmitRestore}
-                  onClick={() => void handleRestore()}
-                >
-                  {restoreSubmitting ? "Restauration en cours…" : "Restaurer la réservation"}
-                </button>
-              </>
-            )}
-          </section>
-        ) : null}
+                </>
+              )}
+            </section>
+          ) : null}
+        </section>
       </div>
     );
   }
@@ -557,232 +570,389 @@ export function ReservationManagePanel({
 
   return (
     <div className={styles.panel}>
-      <section className={styles.card}>
-        <h3 className={styles.cardTitle}>Changement de salle</h3>
-
-        {spacesError ? <p className={styles.error}>{spacesError}</p> : null}
-        {spacesLoading ? <p className={styles.muted}>Chargement des espaces…</p> : null}
-
-        {!spacesLoading && !spacesError ? (
-          spaces.length === 0 ? (
-            <p className={styles.muted}>Aucun autre espace disponible dans votre périmètre.</p>
-          ) : (
-            <div className={styles.field}>
-              <span className={styles.fieldLabel}>Nouvel espace</span>
-              <ManageSpaceSelect
-                spaces={spaces}
-                value={selectedSpaceId}
-                onChange={onSelectSpace}
-                disabled={spaceChangeSubmitting}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Modifier la réservation</h2>
+        <div className={styles.accordion}>
+          <div className={styles.accordionItem}>
+            <button
+              type="button"
+              className={styles.accordionTrigger}
+              aria-expanded={openAccordion === "space"}
+              onClick={() => toggleAccordion("space")}
+            >
+              <span className={styles.accordionTriggerLabel}>
+                <strong>Changer de salle</strong>
+                <span>Déplacer la réservation vers un autre espace du même type</span>
+              </span>
+              <IconChevronDown
+                size={16}
+                stroke={1.7}
+                className={
+                  openAccordion === "space" ? styles.accordionChevronOpen : styles.accordionChevron
+                }
+                aria-hidden
               />
-            </div>
-          )
-        ) : null}
+            </button>
+            {openAccordion === "space" ? (
+              <div className={styles.accordionBody}>
+                {spacesError ? <p className={styles.error}>{spacesError}</p> : null}
+                {spacesLoading ? <p className={styles.muted}>Chargement des espaces…</p> : null}
 
-        {previewLoading ? <p className={styles.muted}>Calcul du nouveau tarif…</p> : null}
-        {previewError ? <p className={styles.error}>{previewError}</p> : null}
+                {!spacesLoading && !spacesError ? (
+                  spaces.length === 0 ? (
+                    <p className={styles.muted}>
+                      Aucun autre espace disponible dans votre périmètre.
+                    </p>
+                  ) : (
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>Nouvel espace</span>
+                      <ManageSpaceSelect
+                        spaces={spaces}
+                        value={selectedSpaceId}
+                        onChange={onSelectSpace}
+                        disabled={spaceChangeSubmitting}
+                      />
+                    </div>
+                  )
+                ) : null}
 
-        {preview && !previewLoading ? (
-          !preview.available ? (
-            <p className={styles.error}>
-              {preview.conflictMessage ?? "Cet espace n'est plus disponible sur ce créneau."}
-            </p>
-          ) : (
-            <div className={styles.previewBlock}>
-              <div className={styles.amountLine}>
-                <span>Montant actuel TTC</span>
-                <span>{formatCentsEur(preview.previousPricing.totalTTC)}</span>
-              </div>
-              <div className={styles.amountLine}>
-                <span>Nouveau montant TTC</span>
-                <span>{formatCentsEur(preview.nextPricing.totalTTC)}</span>
-              </div>
-              <div className={styles.divider} />
-              <div className={styles.ttcRow}>
-                <span>Écart</span>
-                <span
-                  className={
-                    preview.deltaTTC === 0
-                      ? styles.deltaNeutral
-                      : preview.deltaTTC > 0
-                        ? styles.deltaPositive
-                        : styles.deltaNegative
-                  }
+                {previewLoading ? <p className={styles.muted}>Calcul du nouveau tarif…</p> : null}
+                {previewError ? <p className={styles.error}>{previewError}</p> : null}
+
+                {preview && !previewLoading ? (
+                  !preview.available ? (
+                    <p className={styles.error}>
+                      {preview.conflictMessage ??
+                        "Cet espace n'est plus disponible sur ce créneau."}
+                    </p>
+                  ) : (
+                    <div className={styles.previewBlock}>
+                      <div className={styles.amountLine}>
+                        <span>Montant actuel TTC</span>
+                        <span>{formatCentsEur(preview.previousPricing.totalTTC)}</span>
+                      </div>
+                      <div className={styles.amountLine}>
+                        <span>Nouveau montant TTC</span>
+                        <span>{formatCentsEur(preview.nextPricing.totalTTC)}</span>
+                      </div>
+                      <div className={styles.divider} />
+                      <div className={styles.ttcRow}>
+                        <span>Écart</span>
+                        <span
+                          className={
+                            preview.deltaTTC === 0
+                              ? styles.deltaNeutral
+                              : preview.deltaTTC > 0
+                                ? styles.deltaPositive
+                                : styles.deltaNegative
+                          }
+                        >
+                          {preview.deltaTTC > 0 ? "+" : ""}
+                          {formatCentsEur(preview.deltaTTC)}
+                        </span>
+                      </div>
+
+                      <label className={styles.checkboxRow}>
+                        <input
+                          type="checkbox"
+                          checked={billDifference}
+                          onChange={(event) => setBillDifference(event.target.checked)}
+                        />
+                        <span>Faire payer la différence sur la facture proforma</span>
+                      </label>
+
+                      {priceGapRequired ? (
+                        <label className={styles.checkboxRow}>
+                          <input
+                            type="checkbox"
+                            checked={acknowledgePriceGap}
+                            onChange={(event) => setAcknowledgePriceGap(event.target.checked)}
+                          />
+                          <span>Je confirme avoir pris connaissance de l'écart de prix</span>
+                        </label>
+                      ) : null}
+                    </div>
+                  )
+                ) : null}
+
+                {spaceChangeError ? <p className={styles.error}>{spaceChangeError}</p> : null}
+
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  disabled={!canSubmitSpaceChange}
+                  onClick={() => void submitSpaceChange()}
                 >
-                  {preview.deltaTTC > 0 ? "+" : ""}
-                  {formatCentsEur(preview.deltaTTC)}
-                </span>
+                  {spaceChangeSubmitting
+                    ? "Changement en cours…"
+                    : "Confirmer le changement de salle"}
+                </button>
               </div>
-
-              <label className={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={billDifference}
-                  onChange={(event) => setBillDifference(event.target.checked)}
-                />
-                <span>Faire payer la différence sur la facture proforma</span>
-              </label>
-
-              {priceGapRequired ? (
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={acknowledgePriceGap}
-                    onChange={(event) => setAcknowledgePriceGap(event.target.checked)}
-                  />
-                  <span>Je confirme avoir pris connaissance de l'écart de prix</span>
-                </label>
-              ) : null}
-            </div>
-          )
-        ) : null}
-
-        {spaceChangeError ? <p className={styles.error}>{spaceChangeError}</p> : null}
-
-        <button
-          type="button"
-          className={styles.primaryBtn}
-          disabled={!canSubmitSpaceChange}
-          onClick={() => void submitSpaceChange()}
-        >
-          {spaceChangeSubmitting ? "Changement en cours…" : "Confirmer le changement de salle"}
-        </button>
-      </section>
-
-      <section className={styles.card}>
-        <h3 className={styles.cardTitle}>Annulation de la réservation</h3>
-
-        {cancelPreviewError ? <p className={styles.error}>{cancelPreviewError}</p> : null}
-        {cancelPreviewLoading ? (
-          <p className={styles.muted}>Calcul du remboursement suggéré…</p>
-        ) : null}
-
-        {cancelPreview && !cancelPreviewLoading ? (
-          <div className={styles.previewBlock}>
-            <div className={styles.amountLine}>
-              <span>Créneau</span>
-              <span>
-                {formatDateTime(cancelPreview.startAt)} → {formatDateTime(cancelPreview.endAt)}
-              </span>
-            </div>
-            <div className={styles.amountLine}>
-              <span>Montant réglé</span>
-              <span>{formatCentsEur(cancelPreview.paidTotalCents)}</span>
-            </div>
-            <div className={styles.divider} />
-            <div className={styles.ttcRow}>
-              <span>Remboursement suggéré</span>
-              <span className={styles.refundValue}>
-                {formatCentsEur(cancelPreview.suggestedRefundCents)}
-              </span>
-            </div>
-            <p className={styles.basisNote}>{REFUND_BASIS_LABELS[cancelPreview.basis]}</p>
-
-            <div className={styles.modeRow} role="radiogroup" aria-label="Mode de remboursement">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={refundMode === "suggested"}
-                className={refundMode === "suggested" ? styles.modePillActive : styles.modePill}
-                onClick={() => onRefundModeChange("suggested")}
-              >
-                Suggéré ({formatCentsEur(cancelPreview.suggestedRefundCents)})
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={refundMode === "custom"}
-                className={refundMode === "custom" ? styles.modePillActive : styles.modePill}
-                onClick={() => onRefundModeChange("custom")}
-              >
-                Montant libre
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={refundMode === "none"}
-                className={refundMode === "none" ? styles.modePillActive : styles.modePill}
-                onClick={() => onRefundModeChange("none")}
-              >
-                Ne pas rembourser
-              </button>
-            </div>
-
-            {refundMode === "custom" ? (
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Montant à rembourser (€)</span>
-                <input
-                  className={styles.input}
-                  inputMode="decimal"
-                  value={customRefundInput}
-                  onChange={(event) => {
-                    setCustomRefundInput(event.target.value);
-                    setConfirmRefund(false);
-                  }}
-                  placeholder="0,00"
-                />
-                {acceptedRefundCents == null ? (
-                  <span className={styles.fieldHintError}>
-                    Saisissez un montant valide (max. {formatCentsEur(cancelPreview.paidTotalCents)}
-                    ).
-                  </span>
-                ) : (
-                  <span className={styles.fieldHint}>
-                    Soit {formatCentsEur(acceptedRefundCents)} (plafonné au montant réglé).
-                  </span>
-                )}
-              </label>
-            ) : null}
-
-            {refundMode !== "suggested" ? (
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>
-                  Pourquoi ce montant diffère du remboursement suggéré ?
-                </span>
-                <textarea
-                  className={styles.textarea}
-                  value={refundDeviationReason}
-                  onChange={(event) => setRefundDeviationReason(event.target.value)}
-                  placeholder="Justification obligatoire pour le cardex…"
-                  rows={2}
-                />
-              </label>
             ) : null}
           </div>
-        ) : null}
 
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>Motif de l'annulation</span>
-          <textarea
-            className={styles.textarea}
-            value={cancelReason}
-            onChange={(event) => setCancelReason(event.target.value)}
-            placeholder="Expliquez la raison de cette annulation…"
-            rows={3}
-          />
-        </label>
+          <div className={styles.accordionItem}>
+            <button
+              type="button"
+              className={styles.accordionTrigger}
+              aria-expanded={openAccordion === "dates"}
+              onClick={() => toggleAccordion("dates")}
+            >
+              <span className={styles.accordionTriggerLabel}>
+                <strong>Modifier les dates</strong>
+                <span>Raccourcir, agrandir ou reporter le créneau</span>
+              </span>
+              <IconChevronDown
+                size={16}
+                stroke={1.7}
+                className={
+                  openAccordion === "dates" ? styles.accordionChevronOpen : styles.accordionChevron
+                }
+                aria-hidden
+              />
+            </button>
+            {openAccordion === "dates" ? (
+              <div className={styles.accordionBody}>
+                <p className={styles.muted}>
+                  Formulaire de modification des dates — disponible dans la prochaine livraison.
+                </p>
+              </div>
+            ) : null}
+          </div>
 
-        {cancelPreview ? (
-          <label className={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={confirmRefund}
-              onChange={(event) => setConfirmRefund(event.target.checked)}
-            />
-            <span>{confirmLabel}</span>
-          </label>
-        ) : null}
+          <div className={styles.accordionItem}>
+            <button
+              type="button"
+              className={styles.accordionTrigger}
+              aria-expanded={openAccordion === "party"}
+              onClick={() => toggleAccordion("party")}
+            >
+              <span className={styles.accordionTriggerLabel}>
+                <strong>Modifier le nombre de personnes</strong>
+                <span>Ajuster la capacité réservée sur cet espace</span>
+              </span>
+              <IconChevronDown
+                size={16}
+                stroke={1.7}
+                className={
+                  openAccordion === "party" ? styles.accordionChevronOpen : styles.accordionChevron
+                }
+                aria-hidden
+              />
+            </button>
+            {openAccordion === "party" ? (
+              <div className={styles.accordionBody}>
+                <p className={styles.muted}>
+                  Formulaire de modification du nombre de personnes — disponible dans la prochaine
+                  livraison.
+                </p>
+              </div>
+            ) : null}
+          </div>
 
-        {cancelError ? <p className={styles.error}>{cancelError}</p> : null}
+          <div className={styles.accordionItem}>
+            <button
+              type="button"
+              className={styles.accordionTrigger}
+              aria-expanded={openAccordion === "transfer"}
+              onClick={() => toggleAccordion("transfer")}
+            >
+              <span className={styles.accordionTriggerLabel}>
+                <strong>Transférer à un autre contact</strong>
+                <span>Changer le contact principal sans modifier la facture</span>
+              </span>
+              <IconChevronDown
+                size={16}
+                stroke={1.7}
+                className={
+                  openAccordion === "transfer"
+                    ? styles.accordionChevronOpen
+                    : styles.accordionChevron
+                }
+                aria-hidden
+              />
+            </button>
+            {openAccordion === "transfer" ? (
+              <div className={styles.accordionBody}>
+                <p className={styles.muted}>
+                  Formulaire de transfert de contact — disponible dans la prochaine livraison.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
 
-        <button
-          type="button"
-          className={styles.dangerBtn}
-          disabled={!canSubmitCancel}
-          onClick={() => void submitCancel()}
-        >
-          {cancelSubmitting ? "Annulation en cours…" : "Annuler la réservation"}
-        </button>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Annuler ou restaurer</h2>
+        <div className={styles.accordion}>
+          <div className={styles.accordionItem}>
+            <button
+              type="button"
+              className={styles.accordionTrigger}
+              aria-expanded={openAccordion === "cancel"}
+              onClick={() => toggleAccordion("cancel")}
+            >
+              <span className={styles.accordionTriggerLabel}>
+                <strong>Annuler la réservation</strong>
+                <span>Clôturer avec remboursement suggéré (barème / prorata)</span>
+              </span>
+              <IconChevronDown
+                size={16}
+                stroke={1.7}
+                className={
+                  openAccordion === "cancel" ? styles.accordionChevronOpen : styles.accordionChevron
+                }
+                aria-hidden
+              />
+            </button>
+            {openAccordion === "cancel" ? (
+              <div className={styles.accordionBody}>
+                {cancelPreviewError ? <p className={styles.error}>{cancelPreviewError}</p> : null}
+                {cancelPreviewLoading ? (
+                  <p className={styles.muted}>Calcul du remboursement suggéré…</p>
+                ) : null}
+
+                {cancelPreview && !cancelPreviewLoading ? (
+                  <div className={styles.previewBlock}>
+                    <div className={styles.amountLine}>
+                      <span>Créneau</span>
+                      <span>
+                        {formatDateTime(cancelPreview.startAt)} →{" "}
+                        {formatDateTime(cancelPreview.endAt)}
+                      </span>
+                    </div>
+                    <div className={styles.amountLine}>
+                      <span>Montant réglé</span>
+                      <span>{formatCentsEur(cancelPreview.paidTotalCents)}</span>
+                    </div>
+                    <div className={styles.divider} />
+                    <div className={styles.ttcRow}>
+                      <span>Remboursement suggéré</span>
+                      <span className={styles.refundValue}>
+                        {formatCentsEur(cancelPreview.suggestedRefundCents)}
+                      </span>
+                    </div>
+                    <p className={styles.basisNote}>{REFUND_BASIS_LABELS[cancelPreview.basis]}</p>
+
+                    <div
+                      className={styles.modeRow}
+                      role="radiogroup"
+                      aria-label="Mode de remboursement"
+                    >
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={refundMode === "suggested"}
+                        className={
+                          refundMode === "suggested" ? styles.modePillActive : styles.modePill
+                        }
+                        onClick={() => onRefundModeChange("suggested")}
+                      >
+                        Suggéré ({formatCentsEur(cancelPreview.suggestedRefundCents)})
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={refundMode === "custom"}
+                        className={
+                          refundMode === "custom" ? styles.modePillActive : styles.modePill
+                        }
+                        onClick={() => onRefundModeChange("custom")}
+                      >
+                        Montant libre
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={refundMode === "none"}
+                        className={refundMode === "none" ? styles.modePillActive : styles.modePill}
+                        onClick={() => onRefundModeChange("none")}
+                      >
+                        Ne pas rembourser
+                      </button>
+                    </div>
+
+                    {refundMode === "custom" ? (
+                      <label className={styles.field}>
+                        <span className={styles.fieldLabel}>Montant à rembourser (€)</span>
+                        <input
+                          className={styles.input}
+                          inputMode="decimal"
+                          value={customRefundInput}
+                          onChange={(event) => {
+                            setCustomRefundInput(event.target.value);
+                            setConfirmRefund(false);
+                          }}
+                          placeholder="0,00"
+                        />
+                        {acceptedRefundCents == null ? (
+                          <span className={styles.fieldHintError}>
+                            Saisissez un montant valide (max.{" "}
+                            {formatCentsEur(cancelPreview.paidTotalCents)}
+                            ).
+                          </span>
+                        ) : (
+                          <span className={styles.fieldHint}>
+                            Soit {formatCentsEur(acceptedRefundCents)} (plafonné au montant réglé).
+                          </span>
+                        )}
+                      </label>
+                    ) : null}
+
+                    {refundMode !== "suggested" ? (
+                      <label className={styles.field}>
+                        <span className={styles.fieldLabel}>
+                          Pourquoi ce montant diffère du remboursement suggéré ?
+                        </span>
+                        <textarea
+                          className={styles.textarea}
+                          value={refundDeviationReason}
+                          onChange={(event) => setRefundDeviationReason(event.target.value)}
+                          placeholder="Justification obligatoire pour le cardex…"
+                          rows={2}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Motif de l'annulation</span>
+                  <textarea
+                    className={styles.textarea}
+                    value={cancelReason}
+                    onChange={(event) => setCancelReason(event.target.value)}
+                    placeholder="Expliquez la raison de cette annulation…"
+                    rows={3}
+                  />
+                </label>
+
+                {cancelPreview ? (
+                  <label className={styles.checkboxRow}>
+                    <input
+                      type="checkbox"
+                      checked={confirmRefund}
+                      onChange={(event) => setConfirmRefund(event.target.checked)}
+                    />
+                    <span>{confirmLabel}</span>
+                  </label>
+                ) : null}
+
+                {cancelError ? <p className={styles.error}>{cancelError}</p> : null}
+
+                <button
+                  type="button"
+                  className={styles.dangerBtn}
+                  disabled={!canSubmitCancel}
+                  onClick={() => void submitCancel()}
+                >
+                  {cancelSubmitting ? "Annulation en cours…" : "Annuler la réservation"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </section>
     </div>
   );

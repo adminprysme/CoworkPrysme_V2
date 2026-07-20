@@ -84,55 +84,71 @@ export function PlanningPage() {
   }, [anchor, mode, displayFrom, displayTo]);
   const rangeLabel = useMemo(() => formatRangeLabel(anchor, mode), [anchor, mode]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = await fetchPlanningCalendar({
-        from: apiFrom.toISOString(),
-        to: apiTo.toISOString(),
-        buildingId: buildingId === "all" ? undefined : buildingId,
-      });
-      setData(payload);
-      setBuildingsCatalog((current) => {
-        if (current.length > 0) return current;
-        return payload.buildings;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Impossible de charger le planning");
-      setData(null);
-    } finally {
-      setLoading(false);
+  const load = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const payload = await fetchPlanningCalendar({
+          from: apiFrom.toISOString(),
+          to: apiTo.toISOString(),
+          buildingId: buildingId === "all" ? undefined : buildingId,
+        });
+        setData(payload);
+        setBuildingsCatalog((current) => {
+          if (current.length > 0) return current;
+          return payload.buildings;
+        });
+      } catch (err) {
+        if (!options?.silent) {
+          setError(err instanceof Error ? err.message : "Impossible de charger le planning");
+          setData(null);
+        }
+      } finally {
+        if (!options?.silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [apiFrom, apiTo, buildingId],
+  );
+
+  const loadOccupancy = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setOccupancyLoading(true);
     }
-  }, [apiFrom, apiTo, buildingId]);
+    try {
+      const payload = await fetchPlanningOccupancy();
+      setOccupancy(payload);
+    } catch {
+      if (!options?.silent) {
+        setOccupancy(null);
+      }
+    } finally {
+      if (!options?.silent) {
+        setOccupancyLoading(false);
+      }
+    }
+  }, []);
+
+  /** After Manage mutations (restore, cancel, space change): refresh grid without full reload flash. */
+  const refreshAfterReservationMutation = useCallback(() => {
+    void load({ silent: true });
+    void loadOccupancy({ silent: true });
+    setHoveredReservation(null);
+    setHoverAnchor(null);
+    setHoverMeta(null);
+  }, [load, loadOccupancy]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    let cancelled = false;
-    setOccupancyLoading(true);
-    void fetchPlanningOccupancy()
-      .then((payload) => {
-        if (!cancelled) {
-          setOccupancy(payload);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setOccupancy(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setOccupancyLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadOccupancy();
+  }, [loadOccupancy]);
 
   useEffect(() => {
     if (buildingsCatalog.length > 0) return;
@@ -360,6 +376,7 @@ export function PlanningPage() {
               initialTab={selectedReservationTab}
               onClose={closeDetailPanel}
               onOpenReservation={(id) => openReservation(id, "summary")}
+              onReservationMutated={refreshAfterReservationMutation}
             />
           </div>
         ) : selectedSpaceId ? (

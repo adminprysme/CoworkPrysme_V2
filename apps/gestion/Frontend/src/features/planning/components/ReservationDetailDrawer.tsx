@@ -39,6 +39,8 @@ interface ReservationDetailDrawerProps {
   /** Open directly on a given tab (e.g. from context menu). */
   initialTab?: PlanningDrawerTab;
   onOpenReservation?: (reservationId: string) => void;
+  /** Refresh calendar/occupancy after Manage mutations (restore, cancel, space change). */
+  onReservationMutated?: () => void;
 }
 
 function contactDisplayName(contact: PlanningContact): string {
@@ -58,6 +60,7 @@ export function ReservationDetailDrawer({
   onClose,
   initialTab = "summary",
   onOpenReservation,
+  onReservationMutated,
 }: ReservationDetailDrawerProps) {
   const titleId = useId();
   const [tab, setTab] = useState<TabId>(initialTab);
@@ -396,7 +399,10 @@ export function ReservationDetailDrawer({
           <ReservationManagePanel
             reservationId={reservationId}
             detail={detail}
-            onChanged={() => loadDetail({ silent: true })}
+            onChanged={() => {
+              loadDetail({ silent: true });
+              onReservationMutated?.();
+            }}
             onOpenReservation={onOpenReservation}
           />
         ) : null}
