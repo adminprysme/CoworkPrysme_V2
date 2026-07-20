@@ -7,11 +7,13 @@ import type {
   PlanningViewMode,
 } from "@coworkprysme/shared";
 
-import { PAYMENT_STATUS_COLORS, blockGeometry, buildTimeColumns } from "../planning-utils.js";
+import {
+  PAYMENT_STATUS_COLORS,
+  RESERVATION_LABEL_MIN_WIDTH_PX,
+  blockGeometry,
+  buildTimeColumns,
+} from "../planning-utils.js";
 import styles from "./PlanningCalendar.module.css";
-
-/** Minimum painted block width (px) before showing client + reference text. */
-export const RESERVATION_LABEL_MIN_WIDTH_PX = 90;
 
 const SPACE_TYPE_ORDER: PlanningSpaceType[] = ["private_office", "meeting_room"];
 const SPACE_TYPE_LABELS: Record<PlanningSpaceType, string> = {

@@ -102,6 +102,9 @@ export function formatCentsEur(cents: number): string {
   return `${euros},${String(fraction).padStart(2, "0")} €`;
 }
 
+/** Min painted block width (px) before showing client + reference on the block. */
+export const RESERVATION_LABEL_MIN_WIDTH_PX = 90;
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR", {
     dateStyle: "short",
