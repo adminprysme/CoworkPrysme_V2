@@ -223,3 +223,89 @@ export const PlanningSearchResponseSchema = z.object({
   results: z.array(PlanningSearchHitSchema),
 });
 export type PlanningSearchResponse = z.infer<typeof PlanningSearchResponseSchema>;
+
+export const PlanningManageSpaceOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: PlanningSpaceTypeSchema,
+  buildingId: z.string(),
+  buildingName: z.string(),
+  floor: z.string().optional(),
+  capacity: z.number().int().positive().optional(),
+  available: z.boolean(),
+  unavailableReason: z.string().optional(),
+});
+export type PlanningManageSpaceOption = z.infer<typeof PlanningManageSpaceOptionSchema>;
+
+export const PlanningSpaceChangePreviewSchema = z.object({
+  reservationId: z.string(),
+  currentSpace: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: PlanningSpaceTypeSchema,
+  }),
+  nextSpace: z.object({
+    id: z.string(),
+    name: z.string(),
+    type: PlanningSpaceTypeSchema,
+  }),
+  available: z.boolean(),
+  conflictMessage: z.string().optional(),
+  previousPricing: z.object({
+    subtotalHT: z.number().int().nonnegative(),
+    totalVAT: z.number().int().nonnegative(),
+    totalTTC: z.number().int().nonnegative(),
+  }),
+  nextPricing: z.object({
+    subtotalHT: z.number().int().nonnegative(),
+    totalVAT: z.number().int().nonnegative(),
+    totalTTC: z.number().int().nonnegative(),
+  }),
+  deltaTTC: z.number().int(),
+});
+export type PlanningSpaceChangePreview = z.infer<typeof PlanningSpaceChangePreviewSchema>;
+
+export const PlanningSpaceChangeRequestSchema = z.object({
+  nextSpaceId: z.string().min(1),
+  billDifference: z.boolean(),
+  acknowledgePriceGap: z.boolean(),
+});
+export type PlanningSpaceChangeRequest = z.infer<typeof PlanningSpaceChangeRequestSchema>;
+
+export const PlanningSpaceChangeResultSchema = z.object({
+  reservation: PlanningReservationDetailSchema,
+  billedDifference: z.boolean(),
+  deltaTTC: z.number().int(),
+});
+export type PlanningSpaceChangeResult = z.infer<typeof PlanningSpaceChangeResultSchema>;
+
+export const PlanningCancelPreviewSchema = z.object({
+  reservationId: z.string(),
+  reference: z.string(),
+  status: PlanningReservationStatusSchema,
+  startAt: z.string().datetime(),
+  endAt: z.string().datetime(),
+  paidTotalCents: z.number().int().nonnegative(),
+  suggestedRefundCents: z.number().int().nonnegative(),
+  basis: z.enum(["not_started", "in_progress", "ended", "unpaid"]),
+  totalDurationMs: z.number().int().nonnegative(),
+  remainingMs: z.number().int().nonnegative(),
+  elapsedMs: z.number().int().nonnegative(),
+});
+export type PlanningCancelPreview = z.infer<typeof PlanningCancelPreviewSchema>;
+
+export const PlanningCancelRequestSchema = z.object({
+  reason: z.string().trim().min(3).max(2000),
+  confirmSuggestedRefund: z.boolean(),
+  /** Echo of the suggested amount the staff confirmed (must match server recalc). */
+  acceptedRefundCents: z.number().int().nonnegative(),
+});
+export type PlanningCancelRequest = z.infer<typeof PlanningCancelRequestSchema>;
+
+export const PlanningCancelResultSchema = z.object({
+  reservation: PlanningReservationDetailSchema,
+  suggestedRefundCents: z.number().int().nonnegative(),
+  acceptedRefundCents: z.number().int().nonnegative(),
+  basis: z.enum(["not_started", "in_progress", "ended", "unpaid"]),
+});
+export type PlanningCancelResult = z.infer<typeof PlanningCancelResultSchema>;

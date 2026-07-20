@@ -45,14 +45,19 @@ export async function findOverlappingReservation(
   startAt: Date,
   endAt: Date,
   session?: ClientSession,
+  excludeReservationId?: Types.ObjectId,
 ): Promise<ReservationDocument | null> {
   const Reservation = await getReservationModel();
-  const query = Reservation.findOne({
+  const filter: Record<string, unknown> = {
     spaceId,
     status: { $in: BLOCKING_RESERVATION_STATUSES },
     startAt: { $lt: endAt },
     endAt: { $gt: startAt },
-  });
+  };
+  if (excludeReservationId) {
+    filter._id = { $ne: excludeReservationId };
+  }
+  const query = Reservation.findOne(filter);
 
   if (session) {
     query.session(session);
