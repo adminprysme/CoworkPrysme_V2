@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+# After pull/merge: rebuild libs if their sources changed (dist/ is gitignored).
+#
+# LIMITES : ne s'exécute pas si HUSKY=0 ; un merge avec --no-verify n'existe
+# pas ici, mais un pull suivi d'édition locale sans rebuild reste à risque.
+# Voir ARCHITECTURE.md § « dist/ des packages library ».
+set -e
+
+changed=$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null || true)
+[ -z "$changed" ] && exit 0
+
+if echo "$changed" | grep -q '^packages/shared/'; then
+  echo "husky(post-merge): building @coworkprysme/shared → dist/"
+  pnpm --filter @coworkprysme/shared build
+fi
+
+if echo "$changed" | grep -q '^packages/db/'; then
+  echo "husky(post-merge): building @coworkprysme/db → dist/"
+  pnpm --filter @coworkprysme/db build
+fi

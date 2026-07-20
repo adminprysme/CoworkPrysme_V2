@@ -85,6 +85,31 @@ Les **noms npm** (`@coworkprysme/vitrine-web`, etc.) sont inchangés — seuls l
 
 **pnpm workspaces** avec glob `apps/*/*` + `packages/*`. **Turborepo** orchestre le cache et l'ordre de build (`dependsOn: ["^build"]`).
 
+### `dist/` des packages library (`shared`, `db`)
+
+`packages/shared` et `packages/db` publient via `main` / `exports` vers **`dist/*.js`**, et `dist/` est **gitignoré**. Les apps (Next, Nest, Vite) consomment donc le build local, pas le `src/` TypeScript.
+
+Husky régénère `dist/` automatiquement quand les sources de ces packages changent :
+
+| Hook            | Quand                                                     |
+| --------------- | --------------------------------------------------------- |
+| `pre-commit`    | fichiers sous `packages/shared/` ou `packages/db/` stagés |
+| `post-merge`    | pull/merge qui touche ces packages                        |
+| `post-checkout` | changement de branche qui touche ces packages             |
+
+**Limites assumées** (le hook ne peut pas tout couvrir) :
+
+- `git commit --no-verify` (ou `HUSKY=0`) → le rebuild pre-commit est sauté
+- édition de `packages/shared` ou `packages/db` **sans** commit → `dist/` peut rester périmé jusqu’à un rebuild manuel
+
+Dans ces cas :
+
+```bash
+pnpm --filter @coworkprysme/shared build
+pnpm --filter @coworkprysme/db build
+# ou : pnpm turbo run build --filter=@coworkprysme/shared --filter=@coworkprysme/db
+```
+
 Presets TypeScript dans `packages/config` :
 
 - `typescript/nextjs.json` — vitrine-web
@@ -453,6 +478,7 @@ Toutes les variables Qonto (sauf optionnelles) sont **all-or-nothing** : partiel
 ## Qualité
 
 - TypeScript strict, ESLint 9, Prettier, Husky + Commitlint
+- Husky rebuild `packages/shared` / `packages/db` → `dist/` (voir § monorepo ci-dessus ; limites `--no-verify` / édition sans commit)
 - Tests : `packages/db` (connexion, modèles cowork, lock/overlap transactionnels, isolation prysma), `packages/shared` (env)
 
 ## Lancer une app individuellement

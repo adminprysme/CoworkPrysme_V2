@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+# After branch checkout: rebuild libs if their sources differ from previous HEAD.
+# $1 = previous HEAD, $2 = new HEAD, $3 = 1 if branch checkout / 0 if file checkout.
+#
+# LIMITES : file checkout ($3=0) ignoré ; HUSKY=0 désactive le hook.
+# Édition locale de shared/db sans commit → rebuild manuel (voir pre-commit).
+# Voir ARCHITECTURE.md § « dist/ des packages library ».
+set -e
+
+prev=$1
+new=$2
+branch_checkout=$3
+
+[ "$branch_checkout" != "1" ] && exit 0
+[ -z "$prev" ] || [ -z "$new" ] && exit 0
+[ "$prev" = "$new" ] && exit 0
+
+changed=$(git diff-tree -r --name-only --no-commit-id "$prev" "$new" 2>/dev/null || true)
+[ -z "$changed" ] && exit 0
+
+if echo "$changed" | grep -q '^packages/shared/'; then
+  echo "husky(post-checkout): building @coworkprysme/shared → dist/"
+  pnpm --filter @coworkprysme/shared build
+fi
+
+if echo "$changed" | grep -q '^packages/db/'; then
+  echo "husky(post-checkout): building @coworkprysme/db → dist/"
+  pnpm --filter @coworkprysme/db build
+fi

@@ -1,2 +1,28 @@
+#!/usr/bin/env sh
+# Rebuild library packages whose sources are staged.
+# Their dist/ is gitignored — consumers resolve main/exports to dist/*.js,
+# so a commit that only updates src/ leaves a stale local dist and breaks
+# Next/Nest until someone remembers to build (seen twice already).
+#
+# LIMITES (hooks ne couvrent PAS) :
+# - git commit --no-verify → rebuild sauté
+# - édition de packages/shared|db sans commit → rebuild manuel requis :
+#     pnpm --filter @coworkprysme/shared build
+#     pnpm --filter @coworkprysme/db build
+# Voir aussi ARCHITECTURE.md § « dist/ des packages library ».
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if echo "$staged" | grep -q '^packages/shared/'; then
+  echo "husky(pre-commit): building @coworkprysme/shared → dist/"
+  pnpm --filter @coworkprysme/shared build
+fi
+
+if echo "$staged" | grep -q '^packages/db/'; then
+  echo "husky(pre-commit): building @coworkprysme/db → dist/"
+  pnpm --filter @coworkprysme/db build
+fi
+
 pnpm exec lint-staged
 pnpm exec turbo lint --filter=...[HEAD]
