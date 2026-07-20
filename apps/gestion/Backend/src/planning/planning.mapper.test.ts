@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatClientLabel,
+  formatOccupancyDayLabel,
+  formatOccupancyMonthLabel,
+  formatOccupancyWeekLabel,
   isReservationReadOnly,
   mapInvoicePaymentStatus,
   mergeContactAccountIds,
+  occupancyRatePercent,
   splitReservationSubtotalHT,
+  startOfWeekMondayLocal,
+  endOfWeekSundayLocal,
 } from "./planning.mapper.js";
 
 describe("planning.mapper", () => {
@@ -88,5 +94,23 @@ describe("planning.mapper", () => {
         services: [{ qty: 2, unitPriceHT: 500 }],
       }),
     ).toEqual({ spaceHT: 19_000, servicesHT: 1_000 });
+  });
+
+  it("rounds occupancy rate to integer percent", () => {
+    expect(occupancyRatePercent(1, 3)).toBe(33);
+    expect(occupancyRatePercent(1, 2)).toBe(50);
+    expect(occupancyRatePercent(0, 5)).toBe(0);
+    expect(occupancyRatePercent(2, 0)).toBe(0);
+  });
+
+  it("formats occupancy period labels in French", () => {
+    const day = new Date(2026, 6, 20, 12, 0, 0);
+    expect(formatOccupancyDayLabel(day)).toMatch(/20.*juillet.*2026/i);
+    expect(formatOccupancyMonthLabel(day)).toMatch(/juillet.*2026/i);
+    const weekStart = startOfWeekMondayLocal(day);
+    const weekEnd = endOfWeekSundayLocal(day);
+    expect(formatOccupancyWeekLabel(weekStart, weekEnd)).toMatch(
+      /Semaine du \d+ au \d+ juillet 2026/i,
+    );
   });
 });

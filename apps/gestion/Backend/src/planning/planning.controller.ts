@@ -15,6 +15,12 @@ export class PlanningController {
     private readonly staffContext: StaffContextService,
   ) {}
 
+  @Get("occupancy")
+  async occupancy(@Req() request: Request) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planning.getOccupancy(profile);
+  }
+
   @Get("calendar")
   async calendar(
     @Req() request: Request,

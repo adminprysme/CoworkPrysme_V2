@@ -183,3 +183,24 @@ export const PlanningSpaceHistoryResponseSchema = z.object({
   events: z.array(PlanningHistoryEventSchema),
 });
 export type PlanningSpaceHistoryResponse = z.infer<typeof PlanningSpaceHistoryResponseSchema>;
+
+export const PlanningOccupancyMetricSchema = z.object({
+  rate: z.number().int().min(0).max(100),
+  occupiedSpaces: z.number().int().nonnegative(),
+  totalActiveSpaces: z.number().int().nonnegative(),
+  /** Null for instantaneous "actuelle". */
+  periodLabel: z.string().nullable(),
+  periodStart: z.string().datetime().optional(),
+  periodEnd: z.string().datetime().optional(),
+});
+export type PlanningOccupancyMetric = z.infer<typeof PlanningOccupancyMetricSchema>;
+
+export const PlanningOccupancyResponseSchema = z.object({
+  computedAt: z.string().datetime(),
+  totalActiveSpaces: z.number().int().nonnegative(),
+  current: PlanningOccupancyMetricSchema,
+  day: PlanningOccupancyMetricSchema,
+  week: PlanningOccupancyMetricSchema,
+  month: PlanningOccupancyMetricSchema,
+});
+export type PlanningOccupancyResponse = z.infer<typeof PlanningOccupancyResponseSchema>;

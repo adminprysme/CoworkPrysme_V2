@@ -6,12 +6,15 @@ import {
 } from "@nestjs/common";
 import {
   PlanningCalendarResponseSchema,
+  PlanningOccupancyResponseSchema,
   PlanningReservationDetailSchema,
   PlanningSpaceHistoryResponseSchema,
   ServiceCustomAnswerSchema,
   type PlanningCalendarResponse,
   type PlanningHistoryEvent,
   type PlanningHistoryEventType,
+  type PlanningOccupancyMetric,
+  type PlanningOccupancyResponse,
   type PlanningPaymentStatus,
   type PlanningReservationDetail,
   type PlanningSpaceHistoryResponse,
@@ -34,12 +37,24 @@ import type { Types } from "mongoose";
 import {
   asReservationStatus,
   asSpaceType,
+  coversInstant,
+  endOfLocalDay,
+  endOfMonthLocal,
+  endOfWeekSundayLocal,
   formatClientLabel,
+  formatOccupancyDayLabel,
+  formatOccupancyMonthLabel,
+  formatOccupancyWeekLabel,
   isBuildingIdInScope,
   isReservationReadOnly,
   mapInvoicePaymentStatus,
   mergeContactAccountIds,
+  occupancyRatePercent,
+  rangesOverlap,
   splitReservationSubtotalHT,
+  startOfLocalDay,
+  startOfMonthLocal,
+  startOfWeekMondayLocal,
   type PlanningContactLinkVia,
 } from "./planning.mapper.js";
 
@@ -78,6 +93,125 @@ function toIso(date: Date): string {
 
 @Injectable()
 export class PlanningService {
+  async getOccupancy(profile: StaffProfileDocument): Promise<PlanningOccupancyResponse> {
+    await connectMongo();
+
+    const now = new Date();
+    const dayStart = startOfLocalDay(now);
+    const dayEnd = endOfLocalDay(now);
+    const weekStart = startOfWeekMondayLocal(now);
+    const weekEnd = endOfWeekSundayLocal(now);
+    const monthStart = startOfMonthLocal(now);
+    const monthEnd = endOfMonthLocal(now);
+
+    const rangeStart = new Date(
+      Math.min(dayStart.getTime(), weekStart.getTime(), monthStart.getTime()),
+    );
+    const rangeEnd = new Date(Math.max(dayEnd.getTime(), weekEnd.getTime(), monthEnd.getTime()));
+
+    const Building = await getBuildingModel();
+    const Space = await getSpaceModel();
+    const Reservation = await getReservationModel();
+
+    const activeBuildingsQuery: Record<string, unknown> = { status: "active" };
+    if (profile.scope.buildingIds.length > 0) {
+      activeBuildingsQuery._id = { $in: profile.scope.buildingIds };
+    }
+
+    const buildings = await Building.find(activeBuildingsQuery).select({ _id: 1 }).lean().exec();
+    const buildingIds = buildings.map((b) => b._id);
+
+    const spaces = buildingIds.length
+      ? await Space.find({
+          status: "active",
+          buildingId: { $in: buildingIds },
+        })
+          .select({ _id: 1 })
+          .lean()
+          .exec()
+      : [];
+
+    const spaceIds = spaces.map((s) => s._id);
+    const totalActiveSpaces = spaceIds.length;
+
+    const reservations =
+      spaceIds.length === 0
+        ? []
+        : await Reservation.find({
+            spaceId: { $in: spaceIds },
+            status: { $ne: "cancelled" },
+            $or: [
+              { startAt: { $lte: now }, endAt: { $gt: now } },
+              { startAt: { $lt: rangeEnd }, endAt: { $gt: rangeStart } },
+            ],
+          })
+            .select({ spaceId: 1, startAt: 1, endAt: 1, status: 1, reference: 1 })
+            .lean()
+            .exec();
+
+    const countOccupied = (predicate: (startAt: Date, endAt: Date) => boolean): number => {
+      const occupied = new Set<string>();
+      for (const reservation of reservations) {
+        const startAt = new Date(reservation.startAt);
+        const endAt = new Date(reservation.endAt);
+        if (!predicate(startAt, endAt)) {
+          continue;
+        }
+        occupied.add(String(reservation.spaceId));
+      }
+      return occupied.size;
+    };
+
+    const buildMetric = (input: {
+      occupiedSpaces: number;
+      periodLabel: string | null;
+      periodStart?: Date;
+      periodEnd?: Date;
+    }): PlanningOccupancyMetric => ({
+      rate: occupancyRatePercent(input.occupiedSpaces, totalActiveSpaces),
+      occupiedSpaces: input.occupiedSpaces,
+      totalActiveSpaces,
+      periodLabel: input.periodLabel,
+      periodStart: input.periodStart ? toIso(input.periodStart) : undefined,
+      periodEnd: input.periodEnd ? toIso(input.periodEnd) : undefined,
+    });
+
+    const payload: PlanningOccupancyResponse = {
+      computedAt: toIso(now),
+      totalActiveSpaces,
+      current: buildMetric({
+        occupiedSpaces: countOccupied((startAt, endAt) => coversInstant(startAt, endAt, now)),
+        periodLabel: null,
+      }),
+      day: buildMetric({
+        occupiedSpaces: countOccupied((startAt, endAt) =>
+          rangesOverlap(startAt, endAt, dayStart, dayEnd),
+        ),
+        periodLabel: formatOccupancyDayLabel(now),
+        periodStart: dayStart,
+        periodEnd: dayEnd,
+      }),
+      week: buildMetric({
+        occupiedSpaces: countOccupied((startAt, endAt) =>
+          rangesOverlap(startAt, endAt, weekStart, weekEnd),
+        ),
+        periodLabel: formatOccupancyWeekLabel(weekStart, weekEnd),
+        periodStart: weekStart,
+        periodEnd: weekEnd,
+      }),
+      month: buildMetric({
+        occupiedSpaces: countOccupied((startAt, endAt) =>
+          rangesOverlap(startAt, endAt, monthStart, monthEnd),
+        ),
+        periodLabel: formatOccupancyMonthLabel(now),
+        periodStart: monthStart,
+        periodEnd: monthEnd,
+      }),
+    };
+
+    return PlanningOccupancyResponseSchema.parse(payload);
+  }
+
   async getCalendar(
     profile: StaffProfileDocument,
     query: { from?: string; to?: string; buildingId?: string },
