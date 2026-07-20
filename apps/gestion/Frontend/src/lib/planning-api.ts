@@ -1,5 +1,6 @@
 import type {
   PlanningCalendarResponse,
+  PlanningOccupancyResponse,
   PlanningReservationDetail,
   PlanningSpaceHistoryResponse,
 } from "@coworkprysme/shared";
@@ -45,6 +46,10 @@ export function fetchPlanningCalendar(params: {
     search.set("buildingId", params.buildingId);
   }
   return planningFetch(`/planning/calendar?${search.toString()}`);
+}
+
+export function fetchPlanningOccupancy(): Promise<PlanningOccupancyResponse> {
+  return planningFetch("/planning/occupancy");
 }
 
 export function fetchPlanningReservation(id: string): Promise<PlanningReservationDetail> {

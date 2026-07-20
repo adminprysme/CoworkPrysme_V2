@@ -3,12 +3,14 @@ import type {
   PlanningBuildingOption,
   PlanningCalendarReservation,
   PlanningCalendarResponse,
+  PlanningOccupancyResponse,
   PlanningSpaceType,
   PlanningViewMode,
 } from "@coworkprysme/shared";
 
-import { fetchPlanningCalendar } from "../../../lib/planning-api.js";
+import { fetchPlanningCalendar, fetchPlanningOccupancy } from "../../../lib/planning-api.js";
 import { PlanningCalendar } from "../components/PlanningCalendar.js";
+import { PlanningOccupancyStats } from "../components/PlanningOccupancyStats.js";
 import { PlanningToolbar } from "../components/PlanningToolbar.js";
 import { ReservationDetailDrawer } from "../components/ReservationDetailDrawer.js";
 import { ReservationTooltip } from "../components/ReservationTooltip.js";
@@ -28,6 +30,8 @@ export function PlanningPage() {
   const [buildingId, setBuildingId] = useState<string | "all">("all");
   const [buildingsCatalog, setBuildingsCatalog] = useState<PlanningBuildingOption[]>([]);
   const [data, setData] = useState<PlanningCalendarResponse | null>(null);
+  const [occupancy, setOccupancy] = useState<PlanningOccupancyResponse | null>(null);
+  const [occupancyLoading, setOccupancyLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
@@ -78,6 +82,30 @@ export function PlanningPage() {
   }, [load]);
 
   useEffect(() => {
+    let cancelled = false;
+    setOccupancyLoading(true);
+    void fetchPlanningOccupancy()
+      .then((payload) => {
+        if (!cancelled) {
+          setOccupancy(payload);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOccupancy(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setOccupancyLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (buildingsCatalog.length > 0) return;
     void fetchPlanningCalendar({
       from: apiFrom.toISOString(),
@@ -122,6 +150,10 @@ export function PlanningPage() {
         onToday={() => setAnchor(new Date())}
         onBuildingChange={setBuildingId}
       />
+
+      <div className={styles.kpiStrip}>
+        <PlanningOccupancyStats occupancy={occupancy} loading={occupancyLoading} />
+      </div>
 
       <div className={styles.workspace}>
         <div className={styles.calendarPane}>
