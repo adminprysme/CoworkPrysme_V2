@@ -25,6 +25,38 @@
   gap: 0.45rem;
 }
 
+.breadcrumb {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.breadcrumbPrimary {
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.breadcrumbSep {
+  color: var(--color-border);
+  font-weight: 500;
+}
+
+.breadcrumbMode {
+  font-weight: 500;
+}
+
 .headerBadges {
   display: flex;
   flex-wrap: wrap;

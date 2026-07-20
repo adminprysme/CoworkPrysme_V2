@@ -19,6 +19,17 @@ import styles from "./ReservationDetailDrawer.module.css";
 
 type TabId = "summary" | "contacts" | "manage" | "documents";
 
+const TAB_LABELS: Record<TabId, string> = {
+  summary: "Résumé",
+  contacts: "Contacts",
+  manage: "Gérer",
+  documents: "Documents",
+};
+
+function tabLabel(tab: TabId): string {
+  return TAB_LABELS[tab];
+}
+
 interface ReservationDetailDrawerProps {
   reservationId: string;
   onClose: () => void;
@@ -89,6 +100,13 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
     <aside className={styles.panel} aria-labelledby={titleId}>
       <header className={styles.header}>
         <div className={styles.headerMain}>
+          <p className={styles.breadcrumb} aria-label="Navigation du panneau">
+            <span className={styles.breadcrumbPrimary}>{detail?.reference ?? "…"}</span>
+            <span className={styles.breadcrumbSep} aria-hidden="true">
+              /
+            </span>
+            <span className={styles.breadcrumbMode}>{tabLabel(tab)}</span>
+          </p>
           {detail ? (
             <div className={styles.headerBadges}>
               <span className={styles.statusChip}>
@@ -97,9 +115,7 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
               <PaymentStatusBadge status={detail.paymentStatus} />
               {readOnly ? <span className={styles.readOnlyChip}>Lecture seule</span> : null}
             </div>
-          ) : (
-            <p className={styles.kicker}>Réservation</p>
-          )}
+          ) : null}
           <h2 id={titleId} className={styles.title}>
             {detail?.reference ?? "…"}
           </h2>

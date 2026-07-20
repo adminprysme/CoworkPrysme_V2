@@ -44,6 +44,7 @@ export function SpaceHistoryDrawer({
   const [loading, setLoading] = useState(true);
 
   const typeKey = useMemo(() => types.slice().sort().join(","), [types]);
+  const spaceName = data?.space.name ?? "…";
 
   useEffect(() => {
     let cancelled = false;
@@ -94,90 +95,88 @@ export function SpaceHistoryDrawer({
   }
 
   return (
-    <div className={styles.overlay} role="presentation" onClick={onClose}>
-      <aside
-        className={styles.drawer}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className={styles.header}>
-          <div>
-            <p className={styles.kicker}>Historique par espace</p>
-            <h2 id={titleId} className={styles.title}>
-              {data?.space.name ?? "…"}
-            </h2>
-            <p className={styles.meta}>Lecture seule · chronologique</p>
-          </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Fermer">
-            ×
-          </button>
-        </header>
+    <aside className={styles.panel} aria-labelledby={titleId}>
+      <header className={styles.header}>
+        <div className={styles.headerMain}>
+          <p className={styles.breadcrumb} aria-label="Navigation du panneau">
+            <span className={styles.breadcrumbPrimary}>{spaceName}</span>
+            <span className={styles.breadcrumbSep} aria-hidden="true">
+              /
+            </span>
+            <span className={styles.breadcrumbMode}>Historique</span>
+          </p>
+          <h2 id={titleId} className={styles.title}>
+            Historique
+          </h2>
+          <p className={styles.meta}>Lecture seule · chronologique</p>
+        </div>
+        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Fermer">
+          ×
+        </button>
+      </header>
 
-        <div className={styles.filters}>
-          <label>
-            Du
-            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-          </label>
-          <label>
-            Au
-            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-          </label>
-          <div className={styles.typeFilters}>
-            {TYPE_OPTIONS.map((option) => (
-              <label key={option.id} className={styles.chip}>
-                <input
-                  type="checkbox"
-                  checked={types.includes(option.id)}
-                  onChange={() => toggleType(option.id)}
-                />
-                {option.label}
-              </label>
+      <div className={styles.filters}>
+        <label>
+          Du
+          <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+        </label>
+        <label>
+          Au
+          <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+        </label>
+        <div className={styles.typeFilters}>
+          {TYPE_OPTIONS.map((option) => (
+            <label key={option.id} className={styles.chip}>
+              <input
+                type="checkbox"
+                checked={types.includes(option.id)}
+                onChange={() => toggleType(option.id)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className={styles.body}>
+        {loading ? <p className={styles.muted}>Chargement…</p> : null}
+        {error ? <p className={styles.error}>{error}</p> : null}
+        {!loading && data && data.events.length === 0 ? (
+          <p className={styles.muted}>Aucun événement sur cette période.</p>
+        ) : null}
+        {!loading && data ? (
+          <ol className={styles.timeline}>
+            {data.events.map((event) => (
+              <li key={event.id} className={styles.event}>
+                <div className={styles.eventHead}>
+                  <span className={styles.eventType}>{labelForType(event.type)}</span>
+                  <time dateTime={event.at}>{formatDateTime(event.at)}</time>
+                </div>
+                <strong className={styles.eventTitle}>{event.title}</strong>
+                {event.detail ? <p className={styles.eventDetail}>{event.detail}</p> : null}
+                {event.endAt ? (
+                  <p className={styles.eventDetail}>Fin : {formatDateTime(event.endAt)}</p>
+                ) : null}
+                {event.paymentStatus ? (
+                  <p className={styles.eventDetail}>
+                    Paiement : {PAYMENT_STATUS_LABELS[event.paymentStatus]}
+                  </p>
+                ) : null}
+                {event.reservationId && onOpenReservation ? (
+                  <button
+                    type="button"
+                    className={styles.linkBtn}
+                    onClick={() => onOpenReservation(event.reservationId!)}
+                  >
+                    Ouvrir la réservation
+                  </button>
+                ) : null}
+              </li>
             ))}
-          </div>
-        </div>
-
-        <div className={styles.body}>
-          {loading ? <p className={styles.muted}>Chargement…</p> : null}
-          {error ? <p className={styles.error}>{error}</p> : null}
-          {!loading && data && data.events.length === 0 ? (
-            <p className={styles.muted}>Aucun événement sur cette période.</p>
-          ) : null}
-          {!loading && data ? (
-            <ol className={styles.timeline}>
-              {data.events.map((event) => (
-                <li key={event.id} className={styles.event}>
-                  <div className={styles.eventHead}>
-                    <span className={styles.eventType}>{labelForType(event.type)}</span>
-                    <time dateTime={event.at}>{formatDateTime(event.at)}</time>
-                  </div>
-                  <strong className={styles.eventTitle}>{event.title}</strong>
-                  {event.detail ? <p className={styles.eventDetail}>{event.detail}</p> : null}
-                  {event.endAt ? (
-                    <p className={styles.eventDetail}>Fin : {formatDateTime(event.endAt)}</p>
-                  ) : null}
-                  {event.paymentStatus ? (
-                    <p className={styles.eventDetail}>
-                      Paiement : {PAYMENT_STATUS_LABELS[event.paymentStatus]}
-                    </p>
-                  ) : null}
-                  {event.reservationId && onOpenReservation ? (
-                    <button
-                      type="button"
-                      className={styles.linkBtn}
-                      onClick={() => onOpenReservation(event.reservationId!)}
-                    >
-                      Ouvrir la réservation
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          ) : null}
-        </div>
-      </aside>
-    </div>
+          </ol>
+        ) : null}
+      </div>
+    </aside>
   );
 }
 

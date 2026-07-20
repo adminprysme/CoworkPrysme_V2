@@ -196,7 +196,7 @@ export function PlanningPage() {
     });
   }, [data?.closures, filteredSpaces, typeFilter]);
 
-  const splitOpen = Boolean(selectedReservationId);
+  const splitOpen = Boolean(selectedReservationId || selectedSpaceId);
 
   const handleReservationHover = useCallback(
     (
@@ -210,6 +210,21 @@ export function PlanningPage() {
     },
     [],
   );
+
+  function openReservation(reservationId: string) {
+    setSelectedSpaceId(null);
+    setSelectedReservationId(reservationId);
+  }
+
+  function openSpaceHistory(spaceId: string) {
+    setSelectedReservationId(null);
+    setSelectedSpaceId(spaceId);
+  }
+
+  function closeDetailPanel() {
+    setSelectedReservationId(null);
+    setSelectedSpaceId(null);
+  }
 
   function resetFilters() {
     setTypeFilter("all");
@@ -227,7 +242,7 @@ export function PlanningPage() {
       setMode(durationMs <= dayMs ? "day" : "week");
       setAnchor(start);
     }
-    setSelectedReservationId(hit.reservationId);
+    openReservation(hit.reservationId);
   }
 
   return (
@@ -286,8 +301,8 @@ export function PlanningPage() {
             reservations={filteredReservations}
             closures={filteredClosures}
             selectedReservationId={selectedReservationId}
-            onReservationClick={setSelectedReservationId}
-            onSpaceNameClick={setSelectedSpaceId}
+            onReservationClick={openReservation}
+            onSpaceNameClick={openSpaceHistory}
             onReservationHover={handleReservationHover}
           />
         </div>
@@ -296,24 +311,21 @@ export function PlanningPage() {
           <div className={styles.detailPane}>
             <ReservationDetailDrawer
               reservationId={selectedReservationId}
-              onClose={() => setSelectedReservationId(null)}
+              onClose={closeDetailPanel}
+            />
+          </div>
+        ) : selectedSpaceId ? (
+          <div className={styles.detailPane}>
+            <SpaceHistoryDrawer
+              spaceId={selectedSpaceId}
+              onClose={closeDetailPanel}
+              onOpenReservation={openReservation}
             />
           </div>
         ) : null}
       </div>
 
       <ReservationTooltip reservation={hoveredReservation} anchor={hoverAnchor} meta={hoverMeta} />
-
-      {selectedSpaceId ? (
-        <SpaceHistoryDrawer
-          spaceId={selectedSpaceId}
-          onClose={() => setSelectedSpaceId(null)}
-          onOpenReservation={(reservationId) => {
-            setSelectedSpaceId(null);
-            setSelectedReservationId(reservationId);
-          }}
-        />
-      ) : null}
     </div>
   );
 }
