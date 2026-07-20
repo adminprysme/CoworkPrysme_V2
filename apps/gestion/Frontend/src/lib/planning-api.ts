@@ -1,5 +1,8 @@
 import type {
   PlanningCalendarResponse,
+  PlanningCancelPreview,
+  PlanningCancelRequest,
+  PlanningCancelResult,
   PlanningManageSpaceOption,
   PlanningOccupancyResponse,
   PlanningReservationDetail,
@@ -109,6 +112,22 @@ export function confirmSpaceChange(
 ): Promise<PlanningSpaceChangeResult> {
   return planningFetch(
     `/planning/reservations/${encodeURIComponent(reservationId)}/manage/space-change`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function fetchCancelPreview(reservationId: string): Promise<PlanningCancelPreview> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/cancel/preview`,
+  );
+}
+
+export function confirmCancelReservation(
+  reservationId: string,
+  request: PlanningCancelRequest,
+): Promise<PlanningCancelResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/cancel`,
     { method: "POST", body: JSON.stringify(request) },
   );
 }

@@ -10,7 +10,10 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
-import { PlanningSpaceChangeRequestSchema } from "@coworkprysme/shared";
+import {
+  PlanningCancelRequestSchema,
+  PlanningSpaceChangeRequestSchema,
+} from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { PlanningPermissionGuard } from "../auth/planning-permission.guard.js";
@@ -85,6 +88,26 @@ export class PlanningController {
       throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
     }
     return this.planningManage.confirmSpaceChange(profile, id, parsed.data);
+  }
+
+  @Get("reservations/:id/manage/cancel/preview")
+  async manageCancelPreview(@Req() request: Request, @Param("id") id: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planningManage.previewCancel(profile, id);
+  }
+
+  @Post("reservations/:id/manage/cancel")
+  async manageCancelConfirm(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningCancelRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
+    }
+    return this.planningManage.confirmCancel(profile, id, parsed.data);
   }
 
   @Get("reservations/:id")

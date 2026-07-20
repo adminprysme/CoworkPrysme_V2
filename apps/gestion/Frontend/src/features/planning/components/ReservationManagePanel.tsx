@@ -1,17 +1,28 @@
 import { useEffect, useState } from "react";
 import type {
+  PlanningCancelPreview,
   PlanningManageSpaceOption,
   PlanningReservationDetail,
   PlanningSpaceChangePreview,
+  SuggestedRefundBasis,
 } from "@coworkprysme/shared";
 
 import {
+  confirmCancelReservation,
   confirmSpaceChange,
+  fetchCancelPreview,
   fetchManageCandidateSpaces,
   fetchSpaceChangePreview,
 } from "../../../lib/planning-api.js";
-import { formatCentsEur } from "../planning-utils.js";
+import { formatCentsEur, formatDateTime } from "../planning-utils.js";
 import styles from "./ReservationManagePanel.module.css";
+
+const REFUND_BASIS_LABELS: Record<SuggestedRefundBasis, string> = {
+  not_started: "La réservation n'a pas encore commencé : remboursement intégral suggéré.",
+  in_progress: "La réservation est en cours : remboursement calculé au prorata du temps restant.",
+  ended: "La réservation est terminée : aucun remboursement n'est suggéré.",
+  unpaid: "Aucun paiement n'a été enregistré : aucun remboursement à effectuer.",
+};
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Une erreur est survenue";
@@ -44,6 +55,14 @@ export function ReservationManagePanel({
   const [spaceChangeSubmitting, setSpaceChangeSubmitting] = useState(false);
   const [spaceChangeError, setSpaceChangeError] = useState<string | null>(null);
 
+  const [cancelPreview, setCancelPreview] = useState<PlanningCancelPreview | null>(null);
+  const [cancelPreviewLoading, setCancelPreviewLoading] = useState(false);
+  const [cancelPreviewError, setCancelPreviewError] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [confirmRefund, setConfirmRefund] = useState(false);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
   useEffect(() => {
     setSelectedSpaceId("");
     setPreview(null);
@@ -51,6 +70,9 @@ export function ReservationManagePanel({
     setBillDifference(false);
     setAcknowledgePriceGap(false);
     setSpaceChangeError(null);
+    setCancelReason("");
+    setConfirmRefund(false);
+    setCancelError(null);
   }, [reservationId]);
 
   useEffect(() => {
@@ -74,6 +96,34 @@ export function ReservationManagePanel({
       .finally(() => {
         if (!cancelled) {
           setSpacesLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reservationId, readOnly]);
+
+  useEffect(() => {
+    if (readOnly) {
+      return;
+    }
+    let cancelled = false;
+    setCancelPreviewLoading(true);
+    setCancelPreviewError(null);
+    fetchCancelPreview(reservationId)
+      .then((data) => {
+        if (!cancelled) {
+          setCancelPreview(data);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setCancelPreviewError(errorMessage(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCancelPreviewLoading(false);
         }
       });
     return () => {
@@ -121,6 +171,26 @@ export function ReservationManagePanel({
     }
   }
 
+  async function submitCancel() {
+    if (!cancelPreview) {
+      return;
+    }
+    setCancelSubmitting(true);
+    setCancelError(null);
+    try {
+      await confirmCancelReservation(reservationId, {
+        reason: cancelReason.trim(),
+        confirmSuggestedRefund: confirmRefund,
+        acceptedRefundCents: cancelPreview.suggestedRefundCents,
+      });
+      onChanged();
+    } catch (err) {
+      setCancelError(errorMessage(err));
+    } finally {
+      setCancelSubmitting(false);
+    }
+  }
+
   if (readOnly) {
     return (
       <div className={styles.panel}>
@@ -140,6 +210,10 @@ export function ReservationManagePanel({
     !previewLoading &&
     !spaceChangeSubmitting &&
     (!priceGapRequired || acknowledgePriceGap);
+
+  const reasonValid = cancelReason.trim().length >= 3;
+  const canSubmitCancel =
+    !!cancelPreview && reasonValid && confirmRefund && !cancelSubmitting && !cancelPreviewLoading;
 
   return (
     <div className={styles.panel}>
@@ -239,6 +313,74 @@ export function ReservationManagePanel({
           onClick={() => void submitSpaceChange()}
         >
           {spaceChangeSubmitting ? "Changement en cours…" : "Confirmer le changement de salle"}
+        </button>
+      </section>
+
+      <section className={styles.card}>
+        <h3 className={styles.cardTitle}>Annulation de la réservation</h3>
+
+        {cancelPreviewError ? <p className={styles.error}>{cancelPreviewError}</p> : null}
+        {cancelPreviewLoading ? (
+          <p className={styles.muted}>Calcul du remboursement suggéré…</p>
+        ) : null}
+
+        {cancelPreview && !cancelPreviewLoading ? (
+          <div className={styles.previewBlock}>
+            <div className={styles.amountLine}>
+              <span>Créneau</span>
+              <span>
+                {formatDateTime(cancelPreview.startAt)} → {formatDateTime(cancelPreview.endAt)}
+              </span>
+            </div>
+            <div className={styles.amountLine}>
+              <span>Montant réglé</span>
+              <span>{formatCentsEur(cancelPreview.paidTotalCents)}</span>
+            </div>
+            <div className={styles.divider} />
+            <div className={styles.ttcRow}>
+              <span>Remboursement suggéré</span>
+              <span className={styles.refundValue}>
+                {formatCentsEur(cancelPreview.suggestedRefundCents)}
+              </span>
+            </div>
+            <p className={styles.basisNote}>{REFUND_BASIS_LABELS[cancelPreview.basis]}</p>
+          </div>
+        ) : null}
+
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Motif de l'annulation</span>
+          <textarea
+            className={styles.textarea}
+            value={cancelReason}
+            onChange={(event) => setCancelReason(event.target.value)}
+            placeholder="Expliquez la raison de cette annulation…"
+            rows={3}
+          />
+        </label>
+
+        {cancelPreview ? (
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={confirmRefund}
+              onChange={(event) => setConfirmRefund(event.target.checked)}
+            />
+            <span>
+              Je confirme le remboursement suggéré de{" "}
+              {formatCentsEur(cancelPreview.suggestedRefundCents)}
+            </span>
+          </label>
+        ) : null}
+
+        {cancelError ? <p className={styles.error}>{cancelError}</p> : null}
+
+        <button
+          type="button"
+          className={styles.dangerBtn}
+          disabled={!canSubmitCancel}
+          onClick={() => void submitCancel()}
+        >
+          {cancelSubmitting ? "Annulation en cours…" : "Annuler la réservation"}
         </button>
       </section>
     </div>

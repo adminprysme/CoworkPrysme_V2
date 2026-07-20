@@ -8,10 +8,16 @@ import {
 import {
   computeBookingPrice,
   computePriceDeltaCents,
+  computeSuggestedRefundCents,
+  PlanningCancelPreviewSchema,
+  PlanningCancelResultSchema,
   PlanningManageSpaceOptionSchema,
   PlanningSpaceChangePreviewSchema,
   PlanningSpaceChangeResultSchema,
   type BookingPriceLineInput,
+  type PlanningCancelPreview,
+  type PlanningCancelRequest,
+  type PlanningCancelResult,
   type PlanningManageSpaceOption,
   type PlanningSpaceChangePreview,
   type PlanningSpaceChangeRequest,
@@ -26,12 +32,13 @@ import {
   getSpaceModel,
   findOverlappingReservation,
   type StaffProfileDocument,
+  type StatusHistoryEntry,
 } from "@coworkprysme/db";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { MailService } from "../mail/mail.service.js";
 import { writePlanningManageAudit } from "./planning-manage-audit.js";
-import { renderSpaceChangeEmail } from "./planning-manage-emails.js";
+import { renderCancellationEmail, renderSpaceChangeEmail } from "./planning-manage-emails.js";
 import { PlanningService } from "./planning.service.js";
 import { asSpaceType, isBuildingIdInScope, isReservationReadOnly } from "./planning.mapper.js";
 
@@ -45,6 +52,10 @@ function assertObjectId(value: string, label: string): string {
     });
   }
   return value;
+}
+
+function toIso(date: Date): string {
+  return date.toISOString();
 }
 
 function formatFrDateTime(date: Date): string {
@@ -362,6 +373,154 @@ export class PlanningManageService {
       deltaTTC,
     };
     return PlanningSpaceChangeResultSchema.parse(result);
+  }
+
+  async previewCancel(
+    profile: StaffProfileDocument,
+    reservationId: string,
+  ): Promise<PlanningCancelPreview> {
+    await connectMongo();
+    const id = assertObjectId(reservationId, "reservationId");
+
+    const Reservation = await getReservationModel();
+    const reservation = await Reservation.findById(id).lean().exec();
+    if (!reservation) {
+      throw new NotFoundException({
+        code: "RESERVATION_NOT_FOUND",
+        message: "Réservation introuvable",
+      });
+    }
+    if (!isBuildingIdInScope(reservation.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+
+    const Invoice = await getInvoiceModel();
+    const invoice = await Invoice.findOne({ reservationId: reservation._id })
+      .select({ totals: 1 })
+      .lean()
+      .exec();
+    const paidTotalCents = Math.trunc(invoice?.totals?.paidTotal ?? 0);
+
+    const suggestion = computeSuggestedRefundCents({
+      startAt: reservation.startAt,
+      endAt: reservation.endAt,
+      paidTotalCents,
+    });
+
+    const payload: PlanningCancelPreview = {
+      reservationId: String(reservation._id),
+      reference: reservation.reference,
+      status: reservation.status,
+      startAt: toIso(reservation.startAt),
+      endAt: toIso(reservation.endAt),
+      paidTotalCents: suggestion.paidTotalCents,
+      suggestedRefundCents: suggestion.suggestedRefundCents,
+      basis: suggestion.basis,
+      totalDurationMs: suggestion.totalDurationMs,
+      remainingMs: suggestion.remainingMs,
+      elapsedMs: suggestion.elapsedMs,
+    };
+    return PlanningCancelPreviewSchema.parse(payload);
+  }
+
+  async confirmCancel(
+    profile: StaffProfileDocument,
+    reservationId: string,
+    request: PlanningCancelRequest,
+  ): Promise<PlanningCancelResult> {
+    await connectMongo();
+    const id = assertObjectId(reservationId, "reservationId");
+
+    const Reservation = await getReservationModel();
+    const reservation = await Reservation.findById(id).exec();
+    if (!reservation) {
+      throw new NotFoundException({
+        code: "RESERVATION_NOT_FOUND",
+        message: "Réservation introuvable",
+      });
+    }
+    if (!isBuildingIdInScope(reservation.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+    if (isReservationReadOnly(reservation.status)) {
+      throw new ConflictException({
+        code: "RESERVATION_READ_ONLY",
+        message: "Cette réservation est déjà annulée, terminée ou en no-show",
+      });
+    }
+
+    const Invoice = await getInvoiceModel();
+    const invoice = await Invoice.findOne({ reservationId: reservation._id })
+      .select({ totals: 1 })
+      .lean()
+      .exec();
+    const paidTotalCents = Math.trunc(invoice?.totals?.paidTotal ?? 0);
+
+    const suggestion = computeSuggestedRefundCents({
+      startAt: reservation.startAt,
+      endAt: reservation.endAt,
+      paidTotalCents,
+    });
+
+    if (!request.confirmSuggestedRefund) {
+      throw new BadRequestException({
+        code: "REFUND_NOT_CONFIRMED",
+        message: "Veuillez confirmer le remboursement suggéré",
+      });
+    }
+    if (request.acceptedRefundCents !== suggestion.suggestedRefundCents) {
+      throw new BadRequestException({
+        code: "REFUND_MISMATCH",
+        message:
+          "Le montant du remboursement suggéré a changé, veuillez rafraîchir la prévisualisation",
+      });
+    }
+
+    const previousStatus = reservation.status;
+    const now = new Date();
+    reservation.status = "cancelled";
+    reservation.statusHistory.push({
+      from: previousStatus,
+      to: "cancelled",
+      at: now,
+      by: profile._id,
+      reason: request.reason,
+    } as unknown as StatusHistoryEntry);
+    await reservation.save();
+
+    await writePlanningManageAudit({
+      profile,
+      action: "reservation.cancel",
+      reservationId: reservation._id,
+      diff: {
+        status: { before: previousStatus, after: "cancelled" },
+        acceptedRefundCents: { before: 0, after: request.acceptedRefundCents },
+      },
+      reason: request.reason,
+      at: now,
+    });
+
+    const clientEmail = await this.resolveClientEmail(reservation.clientAccountId?.toString());
+    if (clientEmail) {
+      const email = renderCancellationEmail({
+        reservationReference: reservation.reference,
+        spaceName: reservation.spaceSnapshot?.name ?? "Espace",
+        startAt: formatFrDateTime(reservation.startAt),
+        endAt: formatFrDateTime(reservation.endAt),
+        paidTotalCents,
+        suggestedRefundCents: suggestion.suggestedRefundCents,
+      });
+      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+    }
+
+    const detail = await this.planning.getReservationDetail(profile, reservationId);
+    const result: PlanningCancelResult = {
+      reservation: detail,
+      suggestedRefundCents: suggestion.suggestedRefundCents,
+      acceptedRefundCents: request.acceptedRefundCents,
+      basis: suggestion.basis,
+    };
+    return PlanningCancelResultSchema.parse(result);
   }
 
   private async loadReservationAndNextSpace(
