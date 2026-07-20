@@ -296,31 +296,57 @@
 
 .contactCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 0.75rem;
-  padding: 0.75rem 0.8rem;
+  padding: 0.8rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
-  font-size: 0.86rem;
 }
 
 .contactInfo {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.35rem;
   min-width: 0;
+  flex: 1;
 }
 
-.contactInfo strong {
+.contactName {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.contactMeta {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.contactMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactMetaRow svg {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--color-text-muted) 85%, #3b6fa8);
+}
+
 .contactMailBtn {
   display: inline-flex;
   align-items: center;
+  align-self: center;
   gap: 0.35rem;
   flex-shrink: 0;
   padding: 0.4rem 0.7rem;

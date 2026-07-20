@@ -50,6 +50,9 @@ export const PlanningCalendarReservationSchema = z.object({
   status: PlanningReservationStatusSchema,
   paymentStatus: PlanningPaymentStatusSchema,
   clientLabel: z.string(),
+  clientFirstName: z.string().optional(),
+  clientLastName: z.string().optional(),
+  clientCompanyName: z.string().optional(),
   spaceName: z.string(),
   totalTTC: z.number().int().nonnegative(),
   invoiceReference: z.string().optional(),
@@ -90,9 +93,10 @@ export type PlanningServiceLine = z.infer<typeof PlanningServiceLineSchema>;
 export const PlanningContactSchema = z.object({
   id: z.string(),
   email: z.string(),
-  status: z.string(),
-  emailVerified: z.boolean(),
-  linkedVia: z.enum(["reservation", "cardex"]),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phone: z.string().optional(),
+  createdAt: z.string().datetime(),
 });
 export type PlanningContact = z.infer<typeof PlanningContactSchema>;
 

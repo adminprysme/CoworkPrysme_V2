@@ -112,6 +112,15 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+/** Calendar date only, JJ/MM/AAAA. */
+export function formatDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 /** Column definitions for the time axis. */
 export interface TimeColumn {
   key: string;

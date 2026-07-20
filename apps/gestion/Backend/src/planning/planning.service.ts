@@ -361,7 +361,7 @@ export class PlanningService {
         ? await ClientAccount.find({
             _id: { $in: [...contactIds.keys()] },
           })
-            .select({ email: 1, status: 1, emailVerifiedAt: 1 })
+            .select({ email: 1, createdAt: 1 })
             .lean()
             .exec()
         : [];
@@ -377,6 +377,28 @@ export class PlanningService {
       }
       return String(a.email).localeCompare(String(b.email), "fr");
     });
+
+    const contactCardexes =
+      accounts.length > 0
+        ? await Cardex.find({
+            clientAccountId: { $in: accounts.map((account) => account._id) },
+          })
+            .select({ clientAccountId: 1, identity: 1 })
+            .lean()
+            .exec()
+        : [];
+
+    const cardexByAccountId = new Map<
+      string,
+      { firstName?: string; lastName?: string; phone?: string }
+    >();
+    for (const doc of contactCardexes) {
+      cardexByAccountId.set(String(doc.clientAccountId), {
+        firstName: doc.identity?.firstName?.trim() || undefined,
+        lastName: doc.identity?.lastName?.trim() || undefined,
+        phone: doc.identity?.phone?.trim() || undefined,
+      });
+    }
 
     const primaryEmail =
       accounts.find((a) => contactIds.get(String(a._id)) === "reservation")?.email ??
@@ -436,13 +458,17 @@ export class PlanningService {
       awaitingPaymentExpiresAt: reservation.awaitingPaymentExpiresAt
         ? toIso(reservation.awaitingPaymentExpiresAt)
         : undefined,
-      contacts: accounts.map((account) => ({
-        id: String(account._id),
-        email: account.email,
-        status: account.status,
-        emailVerified: Boolean(account.emailVerifiedAt),
-        linkedVia: contactIds.get(String(account._id)) ?? "cardex",
-      })),
+      contacts: accounts.map((account) => {
+        const identity = cardexByAccountId.get(String(account._id));
+        return {
+          id: String(account._id),
+          email: account.email,
+          firstName: identity?.firstName,
+          lastName: identity?.lastName,
+          phone: identity?.phone,
+          createdAt: toIso(account.createdAt),
+        };
+      }),
       createdChannel: reservation.createdChannel,
     };
 
