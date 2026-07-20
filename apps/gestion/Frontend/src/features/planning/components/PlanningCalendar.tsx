@@ -68,6 +68,72 @@ function closuresForSpace(
   });
 }
 
+function ReservationEventBlock({
+  reservation,
+  leftPct,
+  widthPct,
+  selected,
+  onReservationClick,
+  onReservationHover,
+}: {
+  reservation: PlanningCalendarReservation;
+  leftPct: number;
+  widthPct: number;
+  selected: boolean;
+  onReservationClick: (reservationId: string) => void;
+  onReservationHover?: (
+    reservation: PlanningCalendarReservation | null,
+    anchor: DOMRect | null,
+  ) => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [showLabel, setShowLabel] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      setShowLabel(el.getBoundingClientRect().width >= RESERVATION_LABEL_MIN_WIDTH_PX);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [leftPct, widthPct]);
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={styles.eventBlock}
+      data-selected={selected ? "true" : undefined}
+      data-has-label={showLabel ? "true" : undefined}
+      style={{
+        left: `${leftPct}%`,
+        width: `${widthPct}%`,
+        background: PAYMENT_STATUS_COLORS[reservation.paymentStatus],
+      }}
+      aria-label={`${reservation.reference} · ${reservation.clientLabel}`}
+      onClick={() => onReservationClick(reservation.id)}
+      onMouseEnter={(event) => {
+        onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect());
+      }}
+      onMouseLeave={() => onReservationHover?.(null, null)}
+      onFocus={(event) => {
+        onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect());
+      }}
+      onBlur={() => onReservationHover?.(null, null)}
+    >
+      {showLabel ? (
+        <span className={styles.eventLabel}>
+          <span className={styles.eventClient}>{reservation.clientLabel}</span>
+          <span className={styles.eventRef}>{reservation.reference}</span>
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
 export function PlanningCalendar({
   mode,
   from,
@@ -85,25 +151,6 @@ export function PlanningCalendar({
   const rangeEndMs = to.getTime();
   const colMin = COL_MIN_WIDTH[mode];
   const trackMinWidth = columns.length * colMin;
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [trackWidthPx, setTrackWidthPx] = useState(0);
-
-  useLayoutEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-
-    const measure = () => {
-      const corner = root.querySelector(`.${styles.corner}`) as HTMLElement | null;
-      const labelWidth = corner?.offsetWidth ?? 180;
-      const available = Math.max(root.clientWidth - labelWidth, 0);
-      setTrackWidthPx(Math.max(available, trackMinWidth));
-    };
-
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(root);
-    return () => observer.disconnect();
-  }, [trackMinWidth, mode, columns.length]);
 
   const grouped = SPACE_TYPE_ORDER.map((type) => ({
     type,
@@ -121,7 +168,7 @@ export function PlanningCalendar({
   } as CSSProperties;
 
   return (
-    <div ref={scrollRef} className={styles.scroll} style={cssVars}>
+    <div className={styles.scroll} style={cssVars}>
       <div className={styles.grid}>
         <div className={styles.corner}>Espace</div>
         <div className={styles.headerTrack}>
@@ -190,48 +237,16 @@ export function PlanningCalendar({
                           rangeEndMs,
                         );
                         if (!geo) return null;
-                        const blockWidthPx =
-                          trackWidthPx > 0 ? (geo.widthPct / 100) * trackWidthPx : 0;
-                        const showLabel = blockWidthPx >= RESERVATION_LABEL_MIN_WIDTH_PX;
-                        const selected = selectedReservationId === reservation.id;
                         return (
-                          <button
+                          <ReservationEventBlock
                             key={reservation.id}
-                            type="button"
-                            className={styles.eventBlock}
-                            data-selected={selected ? "true" : undefined}
-                            data-has-label={showLabel ? "true" : undefined}
-                            style={{
-                              left: `${geo.leftPct}%`,
-                              width: `${geo.widthPct}%`,
-                              background: PAYMENT_STATUS_COLORS[reservation.paymentStatus],
-                            }}
-                            aria-label={`${reservation.reference} · ${reservation.clientLabel}`}
-                            onClick={() => onReservationClick(reservation.id)}
-                            onMouseEnter={(event) => {
-                              onReservationHover?.(
-                                reservation,
-                                event.currentTarget.getBoundingClientRect(),
-                              );
-                            }}
-                            onMouseLeave={() => onReservationHover?.(null, null)}
-                            onFocus={(event) => {
-                              onReservationHover?.(
-                                reservation,
-                                event.currentTarget.getBoundingClientRect(),
-                              );
-                            }}
-                            onBlur={() => onReservationHover?.(null, null)}
-                          >
-                            {showLabel ? (
-                              <span className={styles.eventLabel}>
-                                <span className={styles.eventClient}>
-                                  {reservation.clientLabel}
-                                </span>
-                                <span className={styles.eventRef}>{reservation.reference}</span>
-                              </span>
-                            ) : null}
-                          </button>
+                            reservation={reservation}
+                            leftPct={geo.leftPct}
+                            widthPct={geo.widthPct}
+                            selected={selectedReservationId === reservation.id}
+                            onReservationClick={onReservationClick}
+                            onReservationHover={onReservationHover}
+                          />
                         );
                       })}
                     </div>
