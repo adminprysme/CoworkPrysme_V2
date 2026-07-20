@@ -17,6 +17,12 @@ export interface SendMailInput {
   attachments?: MailAttachment[];
 }
 
+export interface SendMailResult {
+  dryRun: boolean;
+  messageId?: string;
+  response?: string;
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
@@ -40,7 +46,7 @@ export class MailService {
     }
   }
 
-  async sendMail(input: SendMailInput): Promise<void> {
+  async sendMail(input: SendMailInput): Promise<SendMailResult> {
     const from = `"${this.config.fromName}" <${this.config.fromAddress}>`;
 
     const attachmentNames =
@@ -53,11 +59,11 @@ export class MailService {
       this.logger.log(
         `[MAIL DRY-RUN] to=${input.to} subject=${input.subject} attachments=${attachmentNames}\n${input.html.slice(0, 500)}…`,
       );
-      return;
+      return { dryRun: true };
     }
 
     try {
-      await this.transporter.sendMail({
+      const info = await this.transporter.sendMail({
         from,
         to: input.to,
         subject: input.subject,
@@ -68,8 +74,15 @@ export class MailService {
           contentType: a.contentType ?? "application/pdf",
         })),
       });
+      const messageId = typeof info.messageId === "string" ? info.messageId : undefined;
+      const response = typeof info.response === "string" ? info.response : undefined;
+      this.logger.log(
+        `[MAIL SENT] to=${input.to} subject=${input.subject} messageId=${messageId ?? "?"} response=${response ?? "?"}`,
+      );
+      return { dryRun: false, messageId, response };
     } catch (error) {
       this.logger.error(`Failed to send email to ${input.to}: ${String(error)}`);
+      throw error;
     }
   }
 }
