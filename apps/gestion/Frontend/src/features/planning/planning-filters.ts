@@ -32,11 +32,13 @@ export function hasActivePlanningFilters(input: {
   typeFilter: PlanningTypeFilter;
   paymentStatuses: PlanningPaymentStatusFilter;
   withReservationsOnly: boolean;
+  showCancelled?: boolean;
 }): boolean {
   return (
     input.typeFilter !== "all" ||
     isPaymentStatusFilterActive(input.paymentStatuses) ||
-    input.withReservationsOnly
+    input.withReservationsOnly ||
+    Boolean(input.showCancelled)
   );
 }
 

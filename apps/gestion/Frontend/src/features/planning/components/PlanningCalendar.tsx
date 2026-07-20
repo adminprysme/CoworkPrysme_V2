@@ -49,6 +49,11 @@ interface PlanningCalendarProps {
     anchor: DOMRect | null,
     spaceType?: PlanningSpaceType,
   ) => void;
+  onReservationContextMenu?: (
+    reservation: PlanningCalendarReservation,
+    clientX: number,
+    clientY: number,
+  ) => void;
 }
 
 function reservationsForSpace(
@@ -56,6 +61,33 @@ function reservationsForSpace(
   reservations: PlanningCalendarReservation[],
 ): PlanningCalendarReservation[] {
   return reservations.filter((item) => item.spaceId === spaceId);
+}
+
+function intervalsOverlap(
+  a: Pick<PlanningCalendarReservation, "startAt" | "endAt">,
+  b: Pick<PlanningCalendarReservation, "startAt" | "endAt">,
+): boolean {
+  return (
+    new Date(a.startAt).getTime() < new Date(b.endAt).getTime() &&
+    new Date(a.endAt).getTime() > new Date(b.startAt).getTime()
+  );
+}
+
+type EventLane = "full" | "top" | "bottom";
+
+/** Stack cancelled under active when they share a slot; otherwise keep full height. */
+function resolveEventLane(
+  reservation: PlanningCalendarReservation,
+  siblings: PlanningCalendarReservation[],
+): EventLane {
+  const cancelled = reservation.status === "cancelled";
+  const overlapsOpposite = siblings.some((other) => {
+    if (other.id === reservation.id) return false;
+    if (cancelled === (other.status === "cancelled")) return false;
+    return intervalsOverlap(reservation, other);
+  });
+  if (!overlapsOpposite) return "full";
+  return cancelled ? "bottom" : "top";
 }
 
 function closuresForSpace(
@@ -81,14 +113,17 @@ function ReservationEventBlock({
   leftPct,
   widthPct,
   selected,
+  lane,
   spaceType,
   onReservationClick,
   onReservationHover,
+  onReservationContextMenu,
 }: {
   reservation: PlanningCalendarReservation;
   leftPct: number;
   widthPct: number;
   selected: boolean;
+  lane: EventLane;
   spaceType: PlanningSpaceType;
   onReservationClick: (reservationId: string) => void;
   onReservationHover?: (
@@ -96,9 +131,15 @@ function ReservationEventBlock({
     anchor: DOMRect | null,
     spaceType?: PlanningSpaceType,
   ) => void;
+  onReservationContextMenu?: (
+    reservation: PlanningCalendarReservation,
+    clientX: number,
+    clientY: number,
+  ) => void;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [showLabel, setShowLabel] = useState(false);
+  const cancelled = reservation.status === "cancelled";
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -110,22 +151,43 @@ function ReservationEventBlock({
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [leftPct, widthPct]);
+  }, [leftPct, widthPct, lane]);
+
+  const clientLabel = cancelled ? `Annulée · ${reservation.clientLabel}` : reservation.clientLabel;
 
   return (
     <button
       ref={ref}
       type="button"
-      className={styles.eventBlock}
+      className={[
+        styles.eventBlock,
+        cancelled ? styles.eventBlockCancelled : "",
+        lane === "top" ? styles.eventLaneTop : "",
+        lane === "bottom" ? styles.eventLaneBottom : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-selected={selected ? "true" : undefined}
       data-has-label={showLabel ? "true" : undefined}
+      data-cancelled={cancelled ? "true" : undefined}
       style={{
         left: `${leftPct}%`,
         width: `${widthPct}%`,
-        background: PAYMENT_STATUS_COLORS[reservation.paymentStatus],
+        background: cancelled ? undefined : PAYMENT_STATUS_COLORS[reservation.paymentStatus],
+        zIndex: selected ? 2 : cancelled ? 0 : 1,
       }}
-      aria-label={`${reservation.reference} · ${reservation.clientLabel}`}
+      aria-label={`${cancelled ? "Annulée · " : ""}${reservation.reference} · ${reservation.clientLabel}`}
       onClick={() => onReservationClick(reservation.id)}
+      onContextMenu={(event) => {
+        // Maj + clic droit : laisser le menu natif du navigateur (pas de preventDefault).
+        if (event.shiftKey) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        onReservationHover?.(null, null);
+        onReservationContextMenu?.(reservation, event.clientX, event.clientY);
+      }}
       onMouseEnter={(event) => {
         onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect(), spaceType);
       }}
@@ -137,7 +199,7 @@ function ReservationEventBlock({
     >
       {showLabel ? (
         <span className={styles.eventLabel}>
-          <span className={styles.eventClient}>{reservation.clientLabel}</span>
+          <span className={styles.eventClient}>{clientLabel}</span>
           <span className={styles.eventRef}>{reservation.reference}</span>
         </span>
       ) : null}
@@ -156,6 +218,7 @@ export function PlanningCalendar({
   onReservationClick,
   onSpaceNameClick,
   onReservationHover,
+  onReservationContextMenu,
 }: PlanningCalendarProps) {
   const columns = buildTimeColumns(from, to, mode);
   const rangeStartMs = from.getTime();
@@ -293,7 +356,14 @@ export function PlanningCalendar({
                 <div className={styles.groupLabel}>{group.label}</div>
                 <div className={styles.groupTrackSpacer} />
                 {group.spaces.map((space) => {
-                  const spaceReservations = reservationsForSpace(space.id, reservations);
+                  const spaceReservations = reservationsForSpace(space.id, reservations)
+                    .slice()
+                    .sort((a, b) => {
+                      const aCancelled = a.status === "cancelled" ? 0 : 1;
+                      const bCancelled = b.status === "cancelled" ? 0 : 1;
+                      if (aCancelled !== bCancelled) return aCancelled - bCancelled;
+                      return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+                    });
                   const spaceClosures = closuresForSpace(space, closures);
                   return (
                     <div key={space.id} className={styles.row}>
@@ -352,10 +422,12 @@ export function PlanningCalendar({
                                 reservation={reservation}
                                 leftPct={geo.leftPct}
                                 widthPct={geo.widthPct}
+                                lane={resolveEventLane(reservation, spaceReservations)}
                                 selected={selectedReservationId === reservation.id}
                                 spaceType={space.type}
                                 onReservationClick={onReservationClick}
                                 onReservationHover={onReservationHover}
+                                onReservationContextMenu={onReservationContextMenu}
                               />
                             );
                           })}

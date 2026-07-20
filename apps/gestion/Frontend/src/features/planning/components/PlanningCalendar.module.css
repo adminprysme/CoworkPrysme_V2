@@ -292,6 +292,43 @@
   overflow: hidden;
 }
 
+.eventLaneTop {
+  top: 3px;
+  height: calc(50% - 5px);
+}
+
+.eventLaneBottom {
+  top: calc(50% + 1px);
+  height: calc(50% - 5px);
+}
+
+.eventBlockCancelled {
+  background: repeating-linear-gradient(
+    -45deg,
+    #d1d5db 0,
+    #d1d5db 3px,
+    #eef0f3 3px,
+    #eef0f3 7px
+  );
+  border: 1.5px dashed #6b7280;
+  color: #374151;
+  opacity: 0.92;
+}
+
+.eventBlockCancelled .eventLabel {
+  color: #374151;
+}
+
+.eventBlockCancelled .eventRef {
+  opacity: 0.8;
+}
+
+.eventBlockCancelled:hover {
+  filter: none;
+  opacity: 1;
+  outline-color: #6b7280;
+}
+
 .eventBlock[data-has-label="true"] {
   display: flex;
   align-items: center;
@@ -301,7 +338,11 @@
 .eventBlock[data-selected="true"] {
   outline: 2px solid #3b6fa8;
   outline-offset: 1px;
-  z-index: 1;
+  z-index: 2;
+}
+
+.eventBlockCancelled[data-selected="true"] {
+  outline-color: #6b7280;
 }
 
 .eventBlock:hover {

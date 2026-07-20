@@ -36,10 +36,12 @@ export interface PlanningFiltersBarProps {
   typeFilter: PlanningTypeFilter;
   paymentStatuses: PlanningPaymentStatusFilter;
   withReservationsOnly: boolean;
+  showCancelled: boolean;
   sort: PlanningSpaceSort;
   onTypeChange: (value: PlanningTypeFilter) => void;
   onPaymentStatusesChange: (value: PlanningPaymentStatusFilter) => void;
   onWithReservationsOnlyChange: (value: boolean) => void;
+  onShowCancelledChange: (value: boolean) => void;
   onSortChange: (value: PlanningSpaceSort) => void;
   onReset: () => void;
   searchSlot?: ReactNode;
@@ -49,10 +51,12 @@ export function PlanningFiltersBar({
   typeFilter,
   paymentStatuses,
   withReservationsOnly,
+  showCancelled,
   sort,
   onTypeChange,
   onPaymentStatusesChange,
   onWithReservationsOnlyChange,
+  onShowCancelledChange,
   onSortChange,
   onReset,
   searchSlot,
@@ -61,6 +65,7 @@ export function PlanningFiltersBar({
     typeFilter,
     paymentStatuses,
     withReservationsOnly,
+    showCancelled,
   });
   const paymentAll = paymentStatuses.size === 0;
 
@@ -157,6 +162,11 @@ export function PlanningFiltersBar({
               active={withReservationsOnly}
               label="Avec réservation uniquement"
               onClick={() => onWithReservationsOnlyChange(true)}
+            />
+            <FilterPill
+              active={showCancelled}
+              label="Afficher les annulées"
+              onClick={() => onShowCancelledChange(!showCancelled)}
             />
           </div>
         </div>

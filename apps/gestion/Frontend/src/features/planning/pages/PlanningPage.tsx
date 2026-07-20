@@ -15,7 +15,14 @@ import { PlanningFiltersBar } from "../components/PlanningFiltersBar.js";
 import { PlanningOccupancyStats } from "../components/PlanningOccupancyStats.js";
 import { PlanningSearch } from "../components/PlanningSearch.js";
 import { PlanningToolbar } from "../components/PlanningToolbar.js";
-import { ReservationDetailDrawer } from "../components/ReservationDetailDrawer.js";
+import {
+  ReservationDetailDrawer,
+  type PlanningDrawerTab,
+} from "../components/ReservationDetailDrawer.js";
+import {
+  ReservationContextMenu,
+  type ReservationContextMenuState,
+} from "../components/ReservationContextMenu.js";
 import { ReservationTooltip } from "../components/ReservationTooltip.js";
 import { SpaceHistoryDrawer } from "../components/SpaceHistoryDrawer.js";
 import {
@@ -47,17 +54,21 @@ export function PlanningPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const [selectedReservationTab, setSelectedReservationTab] =
+    useState<PlanningDrawerTab>("summary");
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [hoveredReservation, setHoveredReservation] = useState<PlanningCalendarReservation | null>(
     null,
   );
   const [hoverAnchor, setHoverAnchor] = useState<DOMRect | null>(null);
   const [hoverMeta, setHoverMeta] = useState<{ spaceType?: PlanningSpaceType } | null>(null);
+  const [contextMenu, setContextMenu] = useState<ReservationContextMenuState | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<PlanningTypeFilter>("all");
   const [paymentStatuses, setPaymentStatuses] =
     useState<PlanningPaymentStatusFilter>(emptyPaymentStatusFilter);
   const [withReservationsOnly, setWithReservationsOnly] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   const [spaceSort, setSpaceSort] = useState<PlanningSpaceSort>("name_asc");
 
   const { from: displayFrom, to: displayTo } = useMemo(
@@ -144,17 +155,26 @@ export function PlanningPage() {
     const reservations = data?.reservations ?? [];
     let spaces = filterPlanningSpacesByType(data?.spaces ?? [], typeFilter);
 
-    const paymentScopedReservations = !isPaymentStatusFilterActive(paymentStatuses)
-      ? reservations
-      : reservations.filter((reservation) => paymentStatuses.has(reservation.paymentStatus));
+    const visibleReservations = reservations.filter((reservation) => {
+      if (reservation.status === "cancelled") {
+        return showCancelled;
+      }
+      if (
+        isPaymentStatusFilterActive(paymentStatuses) &&
+        !paymentStatuses.has(reservation.paymentStatus)
+      ) {
+        return false;
+      }
+      return true;
+    });
 
     if (isPaymentStatusFilterActive(paymentStatuses)) {
-      const spaceIdsWithMatch = new Set(paymentScopedReservations.map((r) => r.spaceId));
+      const spaceIdsWithMatch = new Set(visibleReservations.map((r) => r.spaceId));
       spaces = spaces.filter((space) => spaceIdsWithMatch.has(space.id));
     }
 
     if (withReservationsOnly) {
-      spaces = filterSpacesWithReservationsInRange(spaces, paymentScopedReservations, fromMs, toMs);
+      spaces = filterSpacesWithReservationsInRange(spaces, visibleReservations, fromMs, toMs);
     }
 
     return sortPlanningSpaces(spaces, reservations, spaceSort, fromMs, toMs);
@@ -164,6 +184,7 @@ export function PlanningPage() {
     typeFilter,
     paymentStatuses,
     withReservationsOnly,
+    showCancelled,
     spaceSort,
     displayFrom,
     displayTo,
@@ -173,6 +194,9 @@ export function PlanningPage() {
     const spaceIds = new Set(filteredSpaces.map((space) => space.id));
     return (data?.reservations ?? []).filter((reservation) => {
       if (!spaceIds.has(reservation.spaceId)) return false;
+      if (reservation.status === "cancelled") {
+        return showCancelled;
+      }
       if (
         isPaymentStatusFilterActive(paymentStatuses) &&
         !paymentStatuses.has(reservation.paymentStatus)
@@ -181,7 +205,7 @@ export function PlanningPage() {
       }
       return true;
     });
-  }, [data?.reservations, filteredSpaces, paymentStatuses]);
+  }, [data?.reservations, filteredSpaces, paymentStatuses, showCancelled]);
 
   const filteredClosures = useMemo(() => {
     const spaceIds = new Set(filteredSpaces.map((space) => space.id));
@@ -204,32 +228,50 @@ export function PlanningPage() {
       anchorRect: DOMRect | null,
       spaceType?: PlanningSpaceType,
     ) => {
+      if (contextMenu) {
+        return;
+      }
       setHoveredReservation(reservation);
       setHoverAnchor(anchorRect);
       setHoverMeta(reservation ? { spaceType } : null);
     },
+    [contextMenu],
+  );
+
+  const handleReservationContextMenu = useCallback(
+    (reservation: PlanningCalendarReservation, clientX: number, clientY: number) => {
+      setHoveredReservation(null);
+      setHoverAnchor(null);
+      setHoverMeta(null);
+      setContextMenu({ reservation, x: clientX, y: clientY });
+    },
     [],
   );
 
-  function openReservation(reservationId: string) {
+  function openReservation(reservationId: string, tab: PlanningDrawerTab = "summary") {
     setSelectedSpaceId(null);
+    setSelectedReservationTab(tab);
     setSelectedReservationId(reservationId);
+    setContextMenu(null);
   }
 
   function openSpaceHistory(spaceId: string) {
     setSelectedReservationId(null);
     setSelectedSpaceId(spaceId);
+    setContextMenu(null);
   }
 
   function closeDetailPanel() {
     setSelectedReservationId(null);
     setSelectedSpaceId(null);
+    setSelectedReservationTab("summary");
   }
 
   function resetFilters() {
     setTypeFilter("all");
     setPaymentStatuses(emptyPaymentStatusFilter());
     setWithReservationsOnly(false);
+    setShowCancelled(false);
   }
 
   function handleSearchSelect(hit: PlanningSearchHit) {
@@ -281,10 +323,12 @@ export function PlanningPage() {
           typeFilter={typeFilter}
           paymentStatuses={paymentStatuses}
           withReservationsOnly={withReservationsOnly}
+          showCancelled={showCancelled}
           sort={spaceSort}
           onTypeChange={setTypeFilter}
           onPaymentStatusesChange={setPaymentStatuses}
           onWithReservationsOnlyChange={setWithReservationsOnly}
+          onShowCancelledChange={setShowCancelled}
           onSortChange={setSpaceSort}
           onReset={resetFilters}
           searchSlot={<PlanningSearch onSelect={handleSearchSelect} />}
@@ -301,16 +345,19 @@ export function PlanningPage() {
             reservations={filteredReservations}
             closures={filteredClosures}
             selectedReservationId={selectedReservationId}
-            onReservationClick={openReservation}
+            onReservationClick={(id) => openReservation(id, "summary")}
             onSpaceNameClick={openSpaceHistory}
             onReservationHover={handleReservationHover}
+            onReservationContextMenu={handleReservationContextMenu}
           />
         </div>
 
         {selectedReservationId ? (
           <div className={styles.detailPane}>
             <ReservationDetailDrawer
+              key={`${selectedReservationId}:${selectedReservationTab}`}
               reservationId={selectedReservationId}
+              initialTab={selectedReservationTab}
               onClose={closeDetailPanel}
             />
           </div>
@@ -319,13 +366,25 @@ export function PlanningPage() {
             <SpaceHistoryDrawer
               spaceId={selectedSpaceId}
               onClose={closeDetailPanel}
-              onOpenReservation={openReservation}
+              onOpenReservation={(id) => openReservation(id, "summary")}
             />
           </div>
         ) : null}
       </div>
 
-      <ReservationTooltip reservation={hoveredReservation} anchor={hoverAnchor} meta={hoverMeta} />
+      {!contextMenu ? (
+        <ReservationTooltip
+          reservation={hoveredReservation}
+          anchor={hoverAnchor}
+          meta={hoverMeta}
+        />
+      ) : null}
+
+      <ReservationContextMenu
+        state={contextMenu}
+        onClose={() => setContextMenu(null)}
+        onOpenDetails={openReservation}
+      />
     </div>
   );
 }

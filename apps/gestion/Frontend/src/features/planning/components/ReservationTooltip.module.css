@@ -23,16 +23,48 @@
   gap: 0.65rem;
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.cancelledBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--color-text) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-text-muted) 22%, var(--color-surface));
+  color: var(--color-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .identity {
   display: flex;
-  align-items: center;
-  gap: 0.55rem;
+  flex-direction: column;
+  gap: 0.15rem;
   min-width: 0;
+  flex: 1;
 }
 
 .clientName {
   font-weight: 650;
   font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.companyName {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -20,6 +20,8 @@ import styles from "./ReservationDetailDrawer.module.css";
 
 type TabId = "summary" | "contacts" | "manage" | "documents";
 
+export type PlanningDrawerTab = TabId;
+
 const TAB_LABELS: Record<TabId, string> = {
   summary: "Résumé",
   contacts: "Contacts",
@@ -34,6 +36,8 @@ function tabLabel(tab: TabId): string {
 interface ReservationDetailDrawerProps {
   reservationId: string;
   onClose: () => void;
+  /** Open directly on a given tab (e.g. from context menu). */
+  initialTab?: PlanningDrawerTab;
 }
 
 function contactDisplayName(contact: PlanningContact): string {
@@ -48,9 +52,13 @@ function serviceAnswerCount(service: PlanningServiceLine): number {
   return service.customAnswers?.length ?? 0;
 }
 
-export function ReservationDetailDrawer({ reservationId, onClose }: ReservationDetailDrawerProps) {
+export function ReservationDetailDrawer({
+  reservationId,
+  onClose,
+  initialTab = "summary",
+}: ReservationDetailDrawerProps) {
   const titleId = useId();
-  const [tab, setTab] = useState<TabId>("summary");
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [detail, setDetail] = useState<PlanningReservationDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,9 +97,9 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
   );
 
   useEffect(() => {
-    setTab("summary");
+    setTab(initialTab);
     return loadDetail();
-  }, [reservationId, loadDetail]);
+  }, [reservationId, loadDetail, initialTab]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -168,10 +176,9 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
         <button
           type="button"
           role="tab"
-          aria-selected={false}
-          className={styles.tabDisabled}
-          disabled
-          title="À venir"
+          aria-selected={tab === "documents"}
+          className={tab === "documents" ? styles.tabActive : styles.tab}
+          onClick={() => setTab("documents")}
         >
           Documents <span className={styles.soon}>à venir</span>
         </button>
@@ -389,6 +396,15 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
             detail={detail}
             onChanged={() => loadDetail({ silent: true })}
           />
+        ) : null}
+
+        {!loading && detail && tab === "documents" ? (
+          <div className={styles.cards}>
+            <p className={styles.banner}>
+              Les documents de réservation (contrats, factures PDF, etc.) seront disponibles ici
+              prochainement.
+            </p>
+          </div>
         ) : null}
       </div>
     </aside>

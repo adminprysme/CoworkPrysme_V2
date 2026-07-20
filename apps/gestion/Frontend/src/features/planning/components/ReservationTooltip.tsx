@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { IconCalendar, IconDoor } from "@tabler/icons-react";
 import type { PlanningCalendarReservation, PlanningSpaceType } from "@coworkprysme/shared";
 
-import { ClientAvatar, PaymentStatusBadge, SPACE_TYPE_LABELS } from "../planning-ui.js";
+import { PaymentStatusBadge, SPACE_TYPE_LABELS } from "../planning-ui.js";
 import { formatCentsEur, formatDateTime } from "../planning-utils.js";
 import styles from "./ReservationTooltip.module.css";
 
@@ -14,6 +14,14 @@ interface ReservationTooltipProps {
   reservation: PlanningCalendarReservation | null;
   anchor: DOMRect | null;
   meta?: ReservationTooltipMeta | null;
+}
+
+function formatPersonName(reservation: PlanningCalendarReservation): string {
+  const name = [reservation.clientFirstName, reservation.clientLastName]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
+  return name || reservation.clientLabel;
 }
 
 export function ReservationTooltip({ reservation, anchor, meta }: ReservationTooltipProps) {
@@ -48,6 +56,9 @@ export function ReservationTooltip({ reservation, anchor, meta }: ReservationToo
   }
 
   const spaceTypeLabel = meta?.spaceType ? SPACE_TYPE_LABELS[meta.spaceType] : null;
+  const personName = formatPersonName(reservation);
+  const companyName = reservation.clientCompanyName?.trim() || null;
+  const cancelled = reservation.status === "cancelled";
 
   return (
     <div
@@ -62,10 +73,13 @@ export function ReservationTooltip({ reservation, anchor, meta }: ReservationToo
     >
       <div className={styles.header}>
         <div className={styles.identity}>
-          <ClientAvatar label={reservation.clientLabel} size={34} />
-          <span className={styles.clientName}>{reservation.clientLabel}</span>
+          <span className={styles.clientName}>{personName}</span>
+          {companyName ? <span className={styles.companyName}>{companyName}</span> : null}
         </div>
-        <PaymentStatusBadge status={reservation.paymentStatus} />
+        <div className={styles.badges}>
+          {cancelled ? <span className={styles.cancelledBadge}>Annulée</span> : null}
+          <PaymentStatusBadge status={reservation.paymentStatus} />
+        </div>
       </div>
 
       <p className={styles.reference}>{reservation.reference}</p>
