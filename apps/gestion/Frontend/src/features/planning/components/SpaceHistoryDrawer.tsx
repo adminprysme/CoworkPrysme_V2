@@ -1,16 +1,71 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { IconCalendarOff } from "@tabler/icons-react";
 import type { PlanningHistoryEventType, PlanningSpaceHistoryResponse } from "@coworkprysme/shared";
 
 import { fetchSpaceHistory } from "../../../lib/planning-api.js";
 import { PAYMENT_STATUS_LABELS, formatDateTime } from "../planning-utils.js";
 import styles from "./SpaceHistoryDrawer.module.css";
 
-const TYPE_OPTIONS: Array<{ id: PlanningHistoryEventType; label: string }> = [
-  { id: "reservation", label: "Réservations" },
-  { id: "cancellation", label: "Annulations" },
-  { id: "space_change", label: "Changements de salle" },
-  { id: "closure", label: "Fermetures exceptionnelles" },
+type RangePreset = "7d" | "30d" | "year" | "custom";
+
+const RANGE_PRESETS: Array<{ id: RangePreset; label: string }> = [
+  { id: "7d", label: "7 jours" },
+  { id: "30d", label: "30 jours" },
+  { id: "year", label: "Cette année" },
+  { id: "custom", label: "Personnalisé" },
 ];
+
+const TYPE_OPTIONS: Array<{
+  id: PlanningHistoryEventType;
+  label: string;
+  tone: "reservation" | "cancellation" | "spaceChange" | "closure";
+}> = [
+  { id: "reservation", label: "Réservations", tone: "reservation" },
+  { id: "cancellation", label: "Annulations", tone: "cancellation" },
+  { id: "space_change", label: "Changements de salle", tone: "spaceChange" },
+  { id: "closure", label: "Fermetures", tone: "closure" },
+];
+
+function toneClassName(tone: (typeof TYPE_OPTIONS)[number]["tone"]): string {
+  switch (tone) {
+    case "reservation":
+      return styles.toneReservation ?? "";
+    case "cancellation":
+      return styles.toneCancellation ?? "";
+    case "spaceChange":
+      return styles.toneSpaceChange ?? "";
+    case "closure":
+      return styles.toneClosure ?? "";
+  }
+}
+
+function toDateInputValue(date: Date): string {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  const y = copy.getFullYear();
+  const m = String(copy.getMonth() + 1).padStart(2, "0");
+  const d = String(copy.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function rangeForPreset(preset: Exclude<RangePreset, "custom">): { from: string; to: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const to = toDateInputValue(today);
+
+  if (preset === "7d") {
+    const from = new Date(today);
+    from.setDate(from.getDate() - 6);
+    return { from: toDateInputValue(from), to };
+  }
+  if (preset === "30d") {
+    const from = new Date(today);
+    from.setDate(from.getDate() - 29);
+    return { from: toDateInputValue(from), to };
+  }
+  const from = new Date(today.getFullYear(), 0, 1);
+  return { from: toDateInputValue(from), to };
+}
 
 interface SpaceHistoryDrawerProps {
   spaceId: string;
@@ -27,18 +82,10 @@ export function SpaceHistoryDrawer({
   const [types, setTypes] = useState<PlanningHistoryEventType[]>(
     TYPE_OPTIONS.map((option) => option.id),
   );
-  const [from, setFrom] = useState(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 3);
-    date.setHours(0, 0, 0, 0);
-    return date.toISOString().slice(0, 10);
-  });
-  const [to, setTo] = useState(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() + 3);
-    date.setHours(0, 0, 0, 0);
-    return date.toISOString().slice(0, 10);
-  });
+  const [rangePreset, setRangePreset] = useState<RangePreset>("30d");
+  const initialRange = rangeForPreset("30d");
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
   const [data, setData] = useState<PlanningSpaceHistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +131,14 @@ export function SpaceHistoryDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  function applyPreset(preset: RangePreset) {
+    setRangePreset(preset);
+    if (preset === "custom") return;
+    const next = rangeForPreset(preset);
+    setFrom(next.from);
+    setTo(next.to);
+  }
+
   function toggleType(type: PlanningHistoryEventType) {
     setTypes((current) => {
       if (current.includes(type)) {
@@ -116,25 +171,77 @@ export function SpaceHistoryDrawer({
       </header>
 
       <div className={styles.filters}>
-        <label>
-          Du
-          <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-        </label>
-        <label>
-          Au
-          <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-        </label>
-        <div className={styles.typeFilters}>
-          {TYPE_OPTIONS.map((option) => (
-            <label key={option.id} className={styles.chip}>
-              <input
-                type="checkbox"
-                checked={types.includes(option.id)}
-                onChange={() => toggleType(option.id)}
-              />
-              {option.label}
+        <div className={styles.filterGroup}>
+          <span className={styles.filterGroupLabel} id="space-history-range-label">
+            Période
+          </span>
+          <div
+            className={styles.filterPills}
+            role="group"
+            aria-labelledby="space-history-range-label"
+          >
+            {RANGE_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={[
+                  styles.filterPill,
+                  rangePreset === preset.id ? styles.filterPillActive : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-pressed={rangePreset === preset.id}
+                onClick={() => applyPreset(preset.id)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {rangePreset === "custom" ? (
+          <div className={styles.customDates}>
+            <label>
+              Du
+              <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
             </label>
-          ))}
+            <label>
+              Au
+              <input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+            </label>
+          </div>
+        ) : null}
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterGroupLabel} id="space-history-types-label">
+            Événements
+          </span>
+          <div
+            className={styles.filterPills}
+            role="group"
+            aria-labelledby="space-history-types-label"
+          >
+            {TYPE_OPTIONS.map((option) => {
+              const active = types.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={[
+                    styles.typePill,
+                    toneClassName(option.tone),
+                    active ? styles.typePillActive : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-pressed={active}
+                  onClick={() => toggleType(option.id)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -142,44 +249,51 @@ export function SpaceHistoryDrawer({
         {loading ? <p className={styles.muted}>Chargement…</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
         {!loading && data && data.events.length === 0 ? (
-          <p className={styles.muted}>Aucun événement sur cette période.</p>
+          <div className={styles.empty}>
+            <IconCalendarOff size={28} stroke={1.5} aria-hidden className={styles.emptyIcon} />
+            <p className={styles.emptyTitle}>Aucun événement sur cette période</p>
+            <p className={styles.emptyHint}>
+              Élargissez la plage de dates ou activez d&apos;autres types d&apos;événements.
+            </p>
+          </div>
         ) : null}
-        {!loading && data ? (
+        {!loading && data && data.events.length > 0 ? (
           <ol className={styles.timeline}>
-            {data.events.map((event) => (
-              <li key={event.id} className={styles.event}>
-                <div className={styles.eventHead}>
-                  <span className={styles.eventType}>{labelForType(event.type)}</span>
-                  <time dateTime={event.at}>{formatDateTime(event.at)}</time>
-                </div>
-                <strong className={styles.eventTitle}>{event.title}</strong>
-                {event.detail ? <p className={styles.eventDetail}>{event.detail}</p> : null}
-                {event.endAt ? (
-                  <p className={styles.eventDetail}>Fin : {formatDateTime(event.endAt)}</p>
-                ) : null}
-                {event.paymentStatus ? (
-                  <p className={styles.eventDetail}>
-                    Paiement : {PAYMENT_STATUS_LABELS[event.paymentStatus]}
-                  </p>
-                ) : null}
-                {event.reservationId && onOpenReservation ? (
-                  <button
-                    type="button"
-                    className={styles.linkBtn}
-                    onClick={() => onOpenReservation(event.reservationId!)}
-                  >
-                    Ouvrir la réservation
-                  </button>
-                ) : null}
-              </li>
-            ))}
+            {data.events.map((event) => {
+              const option = TYPE_OPTIONS.find((item) => item.id === event.type);
+              const toneClass = toneClassName(option?.tone ?? "reservation");
+              return (
+                <li key={event.id} className={[styles.event, toneClass].join(" ")}>
+                  <span className={styles.eventDot} aria-hidden="true" />
+                  <div className={styles.eventContent}>
+                    <time className={styles.eventTime} dateTime={event.at}>
+                      {formatDateTime(event.at)}
+                    </time>
+                    <strong className={styles.eventTitle}>{event.title}</strong>
+                    <div className={styles.eventDetails}>
+                      {event.reservationReference ? <p>Réf. {event.reservationReference}</p> : null}
+                      {event.detail ? <p>{event.detail}</p> : null}
+                      {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
+                      {event.paymentStatus ? (
+                        <p>Paiement : {PAYMENT_STATUS_LABELS[event.paymentStatus]}</p>
+                      ) : null}
+                    </div>
+                    {event.reservationId && onOpenReservation ? (
+                      <button
+                        type="button"
+                        className={styles.linkBtn}
+                        onClick={() => onOpenReservation(event.reservationId!)}
+                      >
+                        Ouvrir la réservation
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         ) : null}
       </div>
     </aside>
   );
-}
-
-function labelForType(type: PlanningHistoryEventType): string {
-  return TYPE_OPTIONS.find((option) => option.id === type)?.label ?? type;
 }
