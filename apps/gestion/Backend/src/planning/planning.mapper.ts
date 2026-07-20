@@ -102,6 +102,30 @@ export function mergeContactAccountIds(
   return contactIds;
 }
 
+/**
+ * Breaks down reservation.pricing.subtotalHT into space + services using
+ * server-stored snapshots only (never re-priced from tariffs).
+ */
+export function splitReservationSubtotalHT(input: {
+  subtotalHT: number;
+  services: ReadonlyArray<{ qty: number; unitPriceHT: number }>;
+  invoiceSpaceLines?: ReadonlyArray<{ qty: number; unitPriceHT: number }>;
+}): { spaceHT: number; servicesHT: number } {
+  const servicesHT = input.services.reduce(
+    (sum, line) => sum + Math.trunc(line.qty) * Math.trunc(line.unitPriceHT),
+    0,
+  );
+  const invoiceSpaceHT = (input.invoiceSpaceLines ?? []).reduce(
+    (sum, line) => sum + Math.trunc(line.qty) * Math.trunc(line.unitPriceHT),
+    0,
+  );
+  const spaceHT =
+    input.invoiceSpaceLines && input.invoiceSpaceLines.length > 0
+      ? invoiceSpaceHT
+      : Math.max(0, Math.trunc(input.subtotalHT) - servicesHT);
+  return { spaceHT, servicesHT };
+}
+
 export function asSpaceType(value: string): PlanningSpaceType {
   return value === "private_office" ? "private_office" : "meeting_room";
 }

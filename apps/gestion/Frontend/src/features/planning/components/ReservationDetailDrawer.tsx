@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { IconCalendar, IconChevronDown, IconDoor, IconMail, IconPhone } from "@tabler/icons-react";
 import {
+  formatAvailabilityWindow,
   formatServiceCustomAnswerValue,
   type PlanningContact,
   type PlanningReservationDetail,
@@ -9,7 +10,6 @@ import {
 
 import { fetchPlanningReservation } from "../../../lib/planning-api.js";
 import {
-  ClientAvatar,
   PaymentStatusBadge,
   RESERVATION_STATUS_LABELS,
   SPACE_TYPE_LABELS,
@@ -194,6 +194,26 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
             </section>
 
             <section className={styles.card}>
+              <h3 className={styles.cardTitle}>Réservation</h3>
+              <ul className={styles.serviceList}>
+                <li className={styles.serviceItem}>
+                  <div className={styles.serviceRow}>
+                    <span>
+                      {detail.space.name}
+                      <span className={styles.infoMuted}>
+                        {" "}
+                        · {formatAvailabilityWindow(detail.startAt, detail.endAt)}
+                      </span>
+                    </span>
+                    <span className={styles.servicePrice}>
+                      {formatCentsEur(detail.pricing.spaceHT)}
+                    </span>
+                  </div>
+                </li>
+              </ul>
+            </section>
+
+            <section className={styles.card}>
               <h3 className={styles.cardTitle}>Services</h3>
               {detail.services.length === 0 ? (
                 <p className={styles.muted}>Aucun service associé.</p>
@@ -251,6 +271,15 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
             <section className={styles.card}>
               <h3 className={styles.cardTitle}>Montants</h3>
               <div className={styles.amountLines}>
+                <div className={styles.amountLineMuted}>
+                  <span>Réservation</span>
+                  <span>{formatCentsEur(detail.pricing.spaceHT)}</span>
+                </div>
+                <div className={styles.amountLineMuted}>
+                  <span>Services</span>
+                  <span>{formatCentsEur(detail.pricing.servicesHT)}</span>
+                </div>
+                <div className={styles.amountSubDivider} />
                 <div className={styles.amountLine}>
                   <span>Total HT</span>
                   <span>{formatCentsEur(detail.pricing.subtotalHT)}</span>
@@ -291,7 +320,6 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
                   const phone = contact.phone?.trim();
                   return (
                     <li key={contact.id} className={styles.contactCard}>
-                      <ClientAvatar label={displayName} size={40} />
                       <div className={styles.contactInfo}>
                         <strong className={styles.contactName}>{displayName}</strong>
                         <div className={styles.contactMeta}>

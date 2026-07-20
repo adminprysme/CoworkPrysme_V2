@@ -128,10 +128,15 @@ export const PlanningReservationDetailSchema = z.object({
   }),
   services: z.array(PlanningServiceLineSchema),
   pricing: z.object({
+    /** Gross HT before discount — server snapshot from booking (space + services). */
     subtotalHT: z.number().int().nonnegative(),
     totalVAT: z.number().int().nonnegative(),
     totalTTC: z.number().int().nonnegative(),
     discountTotal: z.number().int().nonnegative(),
+    /** Space line HT (qty × unitPriceHT) from booking snapshot / invoice. */
+    spaceHT: z.number().int().nonnegative(),
+    /** Sum of service lines HT (qty × unitPriceHT) from reservation snapshot. */
+    servicesHT: z.number().int().nonnegative(),
   }),
   invoice: z
     .object({

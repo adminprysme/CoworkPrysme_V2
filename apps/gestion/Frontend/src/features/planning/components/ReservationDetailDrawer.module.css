@@ -292,13 +292,23 @@
   gap: 0.3rem;
 }
 
-.amountLine {
+.amountLine,
+.amountLineMuted {
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
   font-size: 0.82rem;
-  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.amountLineMuted {
+  color: var(--color-text-muted);
+}
+
+.amountSubDivider {
+  height: 1px;
+  margin: 0.25rem 0 0.1rem;
+  background: var(--color-border);
 }
 
 .divider {

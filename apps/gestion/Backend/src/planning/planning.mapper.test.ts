@@ -5,6 +5,7 @@ import {
   isReservationReadOnly,
   mapInvoicePaymentStatus,
   mergeContactAccountIds,
+  splitReservationSubtotalHT,
 } from "./planning.mapper.js";
 
 describe("planning.mapper", () => {
@@ -70,5 +71,22 @@ describe("planning.mapper", () => {
     expect(merged.get("booker")).toBe("reservation");
     expect(merged.get("colleague")).toBe("cardex");
     expect(merged.size).toBe(2);
+  });
+
+  it("splits subtotalHT into space + services from stored snapshots", () => {
+    expect(
+      splitReservationSubtotalHT({
+        subtotalHT: 19_999,
+        services: [{ qty: 1, unitPriceHT: 1_999 }],
+        invoiceSpaceLines: [{ qty: 1, unitPriceHT: 18_000 }],
+      }),
+    ).toEqual({ spaceHT: 18_000, servicesHT: 1_999 });
+
+    expect(
+      splitReservationSubtotalHT({
+        subtotalHT: 20_000,
+        services: [{ qty: 2, unitPriceHT: 500 }],
+      }),
+    ).toEqual({ spaceHT: 19_000, servicesHT: 1_000 });
   });
 });

@@ -39,6 +39,7 @@ import {
   isReservationReadOnly,
   mapInvoicePaymentStatus,
   mergeContactAccountIds,
+  splitReservationSubtotalHT,
   type PlanningContactLinkVia,
 } from "./planning.mapper.js";
 
@@ -299,7 +300,7 @@ export class PlanningService {
       Building.findById(reservation.buildingId).select({ name: 1 }).lean().exec(),
       Space.findById(reservation.spaceId).select({ name: 1, type: 1 }).lean().exec(),
       Invoice.findOne({ reservationId: reservation._id })
-        .select({ reference: 1, status: 1, totals: 1 })
+        .select({ reference: 1, status: 1, totals: 1, lines: 1 })
         .lean()
         .exec(),
       reservation.cardexId
@@ -452,12 +453,25 @@ export class PlanningService {
           ...(customAnswers.length > 0 ? { customAnswers } : {}),
         } satisfies PlanningReservationDetail["services"][number];
       }),
-      pricing: {
-        subtotalHT: Math.trunc(reservation.pricing?.subtotalHT ?? 0),
-        totalVAT: Math.trunc(reservation.pricing?.totalVAT ?? 0),
-        totalTTC: Math.trunc(reservation.pricing?.totalTTC ?? 0),
-        discountTotal: Math.trunc(reservation.pricing?.discountTotal ?? 0),
-      },
+      pricing: (() => {
+        const subtotalHT = Math.trunc(reservation.pricing?.subtotalHT ?? 0);
+        const invoiceSpaceLines = (invoice?.lines ?? []).filter(
+          (line) => String(line.kind ?? "").trim() === "space",
+        );
+        const { spaceHT, servicesHT } = splitReservationSubtotalHT({
+          subtotalHT,
+          services: reservation.services ?? [],
+          invoiceSpaceLines,
+        });
+        return {
+          subtotalHT,
+          totalVAT: Math.trunc(reservation.pricing?.totalVAT ?? 0),
+          totalTTC: Math.trunc(reservation.pricing?.totalTTC ?? 0),
+          discountTotal: Math.trunc(reservation.pricing?.discountTotal ?? 0),
+          spaceHT,
+          servicesHT,
+        };
+      })(),
       invoice: invoice
         ? {
             id: String(invoice._id),
