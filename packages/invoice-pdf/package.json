@@ -1,0 +1,33 @@
+{
+  "name": "@coworkprysme/invoice-pdf",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc && mkdir -p dist/assets && cp -a src/assets/. dist/assets/",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coworkprysme/db": "workspace:*",
+    "@coworkprysme/shared": "workspace:*",
+    "@nestjs/common": "^11.1.27",
+    "playwright": "1.52.0"
+  },
+  "devDependencies": {
+    "@coworkprysme/config": "workspace:*",
+    "@types/node": "^22.15.29",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

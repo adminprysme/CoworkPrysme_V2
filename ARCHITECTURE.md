@@ -85,29 +85,30 @@ Les **noms npm** (`@coworkprysme/vitrine-web`, etc.) sont inchangés — seuls l
 
 **pnpm workspaces** avec glob `apps/*/*` + `packages/*`. **Turborepo** orchestre le cache et l'ordre de build (`dependsOn: ["^build"]`).
 
-### `dist/` des packages library (`shared`, `db`)
+### `dist/` des packages library (`shared`, `db`, `invoice-pdf`)
 
-`packages/shared` et `packages/db` publient via `main` / `exports` vers **`dist/*.js`**, et `dist/` est **gitignoré**. Les apps (Next, Nest, Vite) consomment donc le build local, pas le `src/` TypeScript.
+`packages/shared`, `packages/db` et `packages/invoice-pdf` publient via `main` / `exports` vers **`dist/*.js`**, et `dist/` est **gitignoré**. Les apps (Next, Nest, Vite) consomment donc le build local, pas le `src/` TypeScript.
 
 Husky régénère `dist/` automatiquement quand les sources de ces packages changent :
 
-| Hook            | Quand                                                     |
-| --------------- | --------------------------------------------------------- |
-| `pre-commit`    | fichiers sous `packages/shared/` ou `packages/db/` stagés |
-| `post-merge`    | pull/merge qui touche ces packages                        |
-| `post-checkout` | changement de branche qui touche ces packages             |
+| Hook            | Quand                                                                              |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `pre-commit`    | fichiers sous `packages/shared/`, `packages/db/` ou `packages/invoice-pdf/` stagés |
+| `post-merge`    | pull/merge qui touche ces packages                                                 |
+| `post-checkout` | changement de branche qui touche ces packages                                      |
 
 **Limites assumées** (le hook ne peut pas tout couvrir) :
 
 - `git commit --no-verify` (ou `HUSKY=0`) → le rebuild pre-commit est sauté
-- édition de `packages/shared` ou `packages/db` **sans** commit → `dist/` peut rester périmé jusqu’à un rebuild manuel
+- édition de `packages/shared`, `packages/db` ou `packages/invoice-pdf` **sans** commit → `dist/` peut rester périmé jusqu’à un rebuild manuel
 
 Dans ces cas :
 
 ```bash
 pnpm --filter @coworkprysme/shared build
 pnpm --filter @coworkprysme/db build
-# ou : pnpm turbo run build --filter=@coworkprysme/shared --filter=@coworkprysme/db
+pnpm --filter @coworkprysme/invoice-pdf build
+# ou : pnpm turbo run build --filter=@coworkprysme/shared --filter=@coworkprysme/db --filter=@coworkprysme/invoice-pdf
 ```
 
 Presets TypeScript dans `packages/config` :

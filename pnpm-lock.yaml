@@ -42,6 +42,9 @@ importers:
       '@coworkprysme/db':
         specifier: workspace:*
         version: link:../../../packages/db
+      '@coworkprysme/invoice-pdf':
+        specifier: workspace:*
+        version: link:../../../packages/invoice-pdf
       '@coworkprysme/shared':
         specifier: workspace:*
         version: link:../../../packages/shared
@@ -179,6 +182,9 @@ importers:
       '@coworkprysme/db':
         specifier: workspace:*
         version: link:../../../packages/db
+      '@coworkprysme/invoice-pdf':
+        specifier: workspace:*
+        version: link:../../../packages/invoice-pdf
       '@coworkprysme/shared':
         specifier: workspace:*
         version: link:../../../packages/shared
@@ -197,9 +203,6 @@ importers:
       nodemailer:
         specifier: ^9.0.3
         version: 9.0.3
-      playwright:
-        specifier: 1.52.0
-        version: 1.52.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -347,6 +350,37 @@ importers:
       mongodb-memory-server:
         specifier: 10.1.4
         version: 10.1.4
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.6(@types/node@22.20.0)(jiti@2.6.1)(terser@5.48.0)(yaml@2.9.0)
+
+  packages/invoice-pdf:
+    dependencies:
+      '@coworkprysme/db':
+        specifier: workspace:*
+        version: link:../db
+      '@coworkprysme/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@nestjs/common':
+        specifier: ^11.1.27
+        version: 11.1.27(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      playwright:
+        specifier: 1.52.0
+        version: 1.52.0
+    devDependencies:
+      '@coworkprysme/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^22.15.29
+        version: 22.20.0
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.4(jiti@2.6.1)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

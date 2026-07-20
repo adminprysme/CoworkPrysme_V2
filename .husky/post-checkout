@@ -27,3 +27,8 @@ if echo "$changed" | grep -q '^packages/db/'; then
   echo "husky(post-checkout): building @coworkprysme/db → dist/"
   pnpm --filter @coworkprysme/db build
 fi
+
+if echo "$changed" | grep -q '^packages/invoice-pdf/'; then
+  echo "husky(post-checkout): building @coworkprysme/invoice-pdf → dist/"
+  pnpm --filter @coworkprysme/invoice-pdf build
+fi

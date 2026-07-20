@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { InvoicePdfModule as SharedInvoicePdfModule } from "@coworkprysme/invoice-pdf";
 
-/** Re-export shared InvoicePdfModule for Nest DI in this app. */
 @Module({
   imports: [SharedInvoicePdfModule],
   exports: [SharedInvoicePdfModule],

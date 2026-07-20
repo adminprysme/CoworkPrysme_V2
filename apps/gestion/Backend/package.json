@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@coworkprysme/db": "workspace:*",
+    "@coworkprysme/invoice-pdf": "workspace:*",
     "@coworkprysme/shared": "workspace:*",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",

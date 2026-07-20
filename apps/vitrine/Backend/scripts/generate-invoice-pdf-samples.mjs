@@ -16,23 +16,23 @@ import { chromium } from "playwright";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = join(ROOT, "..");
 const OUT_DIR = join(BACKEND_ROOT, "tmp", "invoice-pdf-samples");
-const DIST = join(BACKEND_ROOT, "dist", "invoice-pdf");
+const INVOICE_PDF_PKG = join(BACKEND_ROOT, "..", "..", "..", "packages", "invoice-pdf");
 const DB_PKG = join(BACKEND_ROOT, "..", "..", "..", "packages", "db");
 
 const require = createRequire(import.meta.url);
 const mongoose = require(require.resolve("mongoose", { paths: [DB_PKG] }));
 const { MongoClient } = mongoose.mongo;
 async function loadBuilt() {
-  const mapper = await import(pathToFileURL(join(DIST, "invoice-pdf.mapper.js")).href);
-  const logo = await import(pathToFileURL(join(DIST, "invoice-pdf.logo.js")).href);
-  const issuer = await import(pathToFileURL(join(DIST, "invoice-issuer.config.js")).href);
-  const template = await import(
-    pathToFileURL(join(DIST, "templates", "invoice-proforma.html.js")).href
+  const pkg = await import(
+    pathToFileURL(join(INVOICE_PDF_PKG, "dist", "index.js")).href
   );
-  const bank = await import(
-    pathToFileURL(join(BACKEND_ROOT, "dist", "booking", "bank-transfer.config.js")).href
-  );
-  return { mapper, logo, issuer, template, bank };
+  return {
+    mapper: pkg,
+    logo: pkg,
+    issuer: pkg,
+    template: pkg,
+    bank: { loadBankTransferRibConfig: pkg.loadInvoicePdfBankRib },
+  };
 }
 
 async function loadMongo() {

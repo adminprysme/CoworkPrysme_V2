@@ -6,9 +6,10 @@
 #
 # LIMITES (hooks ne couvrent PAS) :
 # - git commit --no-verify → rebuild sauté
-# - édition de packages/shared|db sans commit → rebuild manuel requis :
+# - édition de packages/shared|db|invoice-pdf sans commit → rebuild manuel requis :
 #     pnpm --filter @coworkprysme/shared build
 #     pnpm --filter @coworkprysme/db build
+#     pnpm --filter @coworkprysme/invoice-pdf build
 # Voir aussi ARCHITECTURE.md § « dist/ des packages library ».
 set -e
 
@@ -22,6 +23,11 @@ fi
 if echo "$staged" | grep -q '^packages/db/'; then
   echo "husky(pre-commit): building @coworkprysme/db → dist/"
   pnpm --filter @coworkprysme/db build
+fi
+
+if echo "$staged" | grep -q '^packages/invoice-pdf/'; then
+  echo "husky(pre-commit): building @coworkprysme/invoice-pdf → dist/"
+  pnpm --filter @coworkprysme/invoice-pdf build
 fi
 
 pnpm exec lint-staged

@@ -71,16 +71,16 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
   const vatRows = model.vatBreakdown
     .map(
       (row) => `<tr>
-        <td>TVA ${escapeHtml(String(row.rate))}&nbsp;%</td>
-        <td class="col-num">${escapeHtml(formatEuro(row.baseHT))}</td>
-        <td class="col-num">${escapeHtml(formatEuro(row.vat))}</td>
+        <td class="vat-rate">TVA ${escapeHtml(String(row.rate))}&nbsp;%</td>
+        <td class="vat-base">${escapeHtml(formatEuro(row.baseHT))}</td>
+        <td class="vat-amount">${escapeHtml(formatEuro(row.vat))}</td>
       </tr>`,
     )
     .join("");
 
   const discountTotalRow =
     model.totals.discountTotal > 0
-      ? `<div class="total-row"><span>Remises</span><span>−${escapeHtml(formatEuro(model.totals.discountTotal))}</span></div>`
+      ? `<tr><td>Remises</td><td class="totals-num">−${escapeHtml(formatEuro(model.totals.discountTotal))}</td></tr>`
       : "";
 
   const bankBlock =
@@ -255,12 +255,28 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
     .summary {
       display: flex;
       justify-content: flex-end;
-      gap: 24px;
+      align-items: flex-start;
+      gap: 28px;
       margin-top: 16px;
       page-break-inside: avoid;
     }
-    .vat-box, .totals-box {
+    .vat-box {
+      min-width: 300px;
+      flex: 1 1 auto;
+      max-width: 360px;
+    }
+    .totals-box {
       min-width: 240px;
+      flex: 0 0 auto;
+      padding: 12px 14px;
+      background: #f6f3ef;
+      border-radius: 8px;
+      border-left: 4px solid #B87333;
+      /* Isolate from neighbouring table borders in Chromium print. */
+      isolation: isolate;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .section-title {
       margin: 0 0 8px;
@@ -270,27 +286,82 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       color: #B87333;
       font-weight: 700;
     }
+    /* Explicit 3-column VAT grid — never concatenate base + VAT amounts. */
     table.vat {
       width: 100%;
       border-collapse: collapse;
+      border-spacing: 0;
       font-size: 9.5pt;
+      table-layout: fixed;
+      border: none;
     }
-    table.vat td { padding: 4px 0; border-bottom: 1px solid #eee; }
-    .totals-box {
-      padding: 12px 14px;
-      background: #f6f3ef;
-      border-radius: 8px;
-      border-left: 4px solid #B87333;
+    table.vat th,
+    table.vat td {
+      border: none !important;
+      border-top: none !important;
+      border-bottom: none !important;
+      border-left: none !important;
+      border-right: none !important;
+      background: transparent;
+      vertical-align: baseline;
+      padding: 5px 0;
     }
-    .total-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      margin: 6px 0;
+    table.vat thead th {
+      color: #888;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding-bottom: 6px;
+    }
+    table.vat .vat-rate {
+      width: 30%;
+      padding-right: 14px;
+      white-space: nowrap;
+      font-weight: 600;
+      text-align: left;
+    }
+    table.vat .vat-base,
+    table.vat .vat-amount {
+      width: 35%;
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    table.vat .vat-base {
+      padding-right: 18px;
+    }
+    table.vat .vat-amount {
+      padding-left: 18px;
+      border-left: 1px solid #e0d8ce !important;
+    }
+    th.vat-amount {
+      border-left: 1px solid #e0d8ce !important;
+    }
+    /* Totaux as borderless table — avoids flex hairlines in PDF engines. */
+    table.totals {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      border: none;
       font-size: 10pt;
     }
-    .total-row.grand {
-      margin-top: 10px;
+    table.totals td {
+      border: none !important;
+      border-top: none !important;
+      border-bottom: none !important;
+      padding: 6px 0;
+      background: transparent;
+      vertical-align: baseline;
+    }
+    table.totals .totals-num {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      padding-left: 16px;
+    }
+    table.totals tr.grand td {
+      padding-top: 10px;
       font-size: 12pt;
       font-weight: 700;
       color: #B87333;
@@ -393,6 +464,13 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       <div class="vat-box">
         <div class="section-title">Ventilation TVA</div>
         <table class="vat">
+          <thead>
+            <tr>
+              <th class="vat-rate">Taux</th>
+              <th class="vat-base">Base HT</th>
+              <th class="vat-amount">Montant TVA</th>
+            </tr>
+          </thead>
           <tbody>
             ${vatRows}
           </tbody>
@@ -400,10 +478,14 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       </div>
       <div class="totals-box">
         <div class="section-title">Totaux</div>
-        ${discountTotalRow}
-        <div class="total-row"><span>Total HT</span><span>${escapeHtml(formatEuro(model.totals.ht))}</span></div>
-        <div class="total-row"><span>Total TVA</span><span>${escapeHtml(formatEuro(model.totals.vat))}</span></div>
-        <div class="total-row grand"><span>Total TTC</span><span>${escapeHtml(formatEuro(model.totals.ttc))}</span></div>
+        <table class="totals">
+          <tbody>
+            ${discountTotalRow}
+            <tr><td>Total HT</td><td class="totals-num">${escapeHtml(formatEuro(model.totals.ht))}</td></tr>
+            <tr><td>Total TVA</td><td class="totals-num">${escapeHtml(formatEuro(model.totals.vat))}</td></tr>
+            <tr class="grand"><td>Total TTC</td><td class="totals-num">${escapeHtml(formatEuro(model.totals.ttc))}</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 

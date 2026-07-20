@@ -68,6 +68,10 @@ describe("invoice PDF template", () => {
     expect(html).toContain('class="logo"');
     expect(html).toContain("height: 48px");
     expect(html).toContain("width: auto");
+    expect(html).toContain("Base HT");
+    expect(html).toContain("Montant TVA");
+    expect(html).toContain('class="totals"');
+    expect(html).not.toContain("total-row");
   });
 
   it("keeps numeric qty for services and period for space on rich invoices", () => {

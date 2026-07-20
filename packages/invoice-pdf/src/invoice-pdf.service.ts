@@ -13,13 +13,17 @@ import {
 } from "@coworkprysme/db";
 import { chromium, type Browser } from "playwright";
 
-import { loadBankTransferRibConfig } from "../booking/bank-transfer.config.js";
+import { loadInvoicePdfBankRib } from "./invoice-pdf.bank-rib.js";
 import { loadInvoiceIssuerConfig } from "./invoice-issuer.config.js";
 import { loadInvoiceLogoDataUri } from "./invoice-pdf.logo.js";
 import { buildInvoicePdfViewModel } from "./invoice-pdf.mapper.js";
 import type { InvoicePdfViewModel } from "./invoice-pdf.types.js";
 import { renderInvoiceProformaHtml } from "./templates/invoice-proforma.html.js";
 
+/**
+ * Proforma PDF generation.
+ * Gate is invoice.type === "proforma" only — status paid / unpaid / awaiting all work.
+ */
 @Injectable()
 export class InvoicePdfService {
   private readonly logger = new Logger(InvoicePdfService.name);
@@ -92,7 +96,7 @@ export class InvoicePdfService {
     if (invoice.type !== "proforma") {
       throw new BadRequestException({
         code: "INVOICE_TYPE_UNSUPPORTED",
-        message: "Seules les factures de type proforma sont supportées pour le PDF Phase 1",
+        message: "Seules les factures de type proforma sont supportées pour le PDF",
       });
     }
 
@@ -125,8 +129,6 @@ export class InvoicePdfService {
       .exec();
     const paymentMethod = payment?.method;
 
-    const bankRib = loadBankTransferRibConfig();
-
     return buildInvoicePdfViewModel({
       invoice: {
         reference: invoice.reference,
@@ -151,7 +153,7 @@ export class InvoicePdfService {
       reservationEndAt,
       paymentMethod,
       awaitingPaymentMethod,
-      bankRib,
+      bankRib: loadInvoicePdfBankRib(),
     });
   }
 
