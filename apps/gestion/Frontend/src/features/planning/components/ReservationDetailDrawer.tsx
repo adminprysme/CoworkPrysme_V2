@@ -1,10 +1,9 @@
 import { useEffect, useId, useState } from "react";
-import { IconCalendar, IconDoor } from "@tabler/icons-react";
+import { IconCalendar, IconDoor, IconMail } from "@tabler/icons-react";
 import type { PlanningReservationDetail } from "@coworkprysme/shared";
 
 import { fetchPlanningReservation } from "../../../lib/planning-api.js";
 import {
-  ClientAvatar,
   PaymentStatusBadge,
   RESERVATION_STATUS_LABELS,
   SPACE_TYPE_LABELS,
@@ -140,15 +139,20 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
         {!loading && detail && tab === "summary" ? (
           <div className={styles.cards}>
             <section className={styles.card}>
-              <div className={styles.clientRow}>
-                <ClientAvatar label={detail.client.label} size={40} />
-                <div className={styles.clientText}>
-                  <strong className={styles.clientName}>{detail.client.label}</strong>
-                  <p className={styles.clientSub}>
-                    {[detail.client.email, detail.client.phone].filter(Boolean).join(" · ") ||
-                      "Coordonnées non renseignées"}
-                  </p>
-                </div>
+              <div className={styles.clientText}>
+                <strong className={styles.clientName}>
+                  {[detail.client.firstName, detail.client.lastName]
+                    .map((part) => part?.trim())
+                    .filter(Boolean)
+                    .join(" ") || detail.client.label}
+                </strong>
+                {detail.client.companyName ? (
+                  <p className={styles.clientCompany}>{detail.client.companyName}</p>
+                ) : null}
+                <p className={styles.clientSub}>
+                  {[detail.client.email, detail.client.phone].filter(Boolean).join(" · ") ||
+                    "Coordonnées non renseignées"}
+                </p>
               </div>
             </section>
 
@@ -232,14 +236,25 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
               <ul className={styles.contactList}>
                 {detail.contacts.map((contact) => (
                   <li key={contact.id} className={styles.contactCard}>
-                    <strong>{contact.email}</strong>
-                    <span>
-                      {contact.status}
-                      {contact.emailVerified ? " · email vérifié" : " · email non vérifié"}
-                    </span>
-                    <span className={styles.muted}>
-                      Lié via {contact.linkedVia === "reservation" ? "réservation" : "cardex"}
-                    </span>
+                    <div className={styles.contactInfo}>
+                      <strong>{contact.email}</strong>
+                      <span>
+                        {contact.status}
+                        {contact.emailVerified ? " · email vérifié" : " · email non vérifié"}
+                      </span>
+                      <span className={styles.muted}>
+                        Lié via {contact.linkedVia === "reservation" ? "réservation" : "cardex"}
+                      </span>
+                    </div>
+                    <a
+                      className={styles.contactMailBtn}
+                      href={`mailto:${contact.email}`}
+                      title="Contacter par email"
+                      aria-label={`Contacter ${contact.email} par email`}
+                    >
+                      <IconMail size={16} stroke={1.6} aria-hidden />
+                      Contacter
+                    </a>
                   </li>
                 ))}
               </ul>

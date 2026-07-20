@@ -36,6 +36,8 @@ import {
   isBuildingIdInScope,
   isReservationReadOnly,
   mapInvoicePaymentStatus,
+  mergeContactAccountIds,
+  type PlanningContactLinkVia,
 } from "./planning.mapper.js";
 
 const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
@@ -311,16 +313,48 @@ export class PlanningService {
       reservationStatus: status,
     });
 
-    const contactIds = new Map<string, { via: "reservation" | "cardex" }>();
+    const contactSeeds: Array<{ id: string; via: PlanningContactLinkVia }> = [];
     if (reservation.clientAccountId) {
-      contactIds.set(String(reservation.clientAccountId), { via: "reservation" });
+      contactSeeds.push({ id: String(reservation.clientAccountId), via: "reservation" });
     }
     if (cardex?.clientAccountId) {
-      const key = String(cardex.clientAccountId);
-      if (!contactIds.has(key)) {
-        contactIds.set(key, { via: "cardex" });
+      contactSeeds.push({ id: String(cardex.clientAccountId), via: "cardex" });
+    }
+
+    if (reservation.cardexId) {
+      const accountsOnCardex = await ClientAccount.find({ cardexId: reservation.cardexId })
+        .select({ _id: 1 })
+        .lean()
+        .exec();
+      for (const account of accountsOnCardex) {
+        contactSeeds.push({ id: String(account._id), via: "cardex" });
       }
     }
+
+    const companySiret = cardex?.company?.siret?.trim();
+    if (companySiret) {
+      const siblingCardexes = await Cardex.find({ "company.siret": companySiret })
+        .select({ _id: 1, clientAccountId: 1 })
+        .lean()
+        .exec();
+      const siblingCardexIds = siblingCardexes.map((doc) => doc._id);
+      for (const sibling of siblingCardexes) {
+        contactSeeds.push({ id: String(sibling.clientAccountId), via: "cardex" });
+      }
+      if (siblingCardexIds.length > 0) {
+        const companyAccounts = await ClientAccount.find({
+          cardexId: { $in: siblingCardexIds },
+        })
+          .select({ _id: 1 })
+          .lean()
+          .exec();
+        for (const account of companyAccounts) {
+          contactSeeds.push({ id: String(account._id), via: "cardex" });
+        }
+      }
+    }
+
+    const contactIds = mergeContactAccountIds(contactSeeds);
 
     const accounts =
       contactIds.size > 0
@@ -332,8 +366,20 @@ export class PlanningService {
             .exec()
         : [];
 
+    accounts.sort((a, b) => {
+      const viaA = contactIds.get(String(a._id));
+      const viaB = contactIds.get(String(b._id));
+      if (viaA === "reservation" && viaB !== "reservation") {
+        return -1;
+      }
+      if (viaB === "reservation" && viaA !== "reservation") {
+        return 1;
+      }
+      return String(a.email).localeCompare(String(b.email), "fr");
+    });
+
     const primaryEmail =
-      accounts.find((a) => contactIds.get(String(a._id))?.via === "reservation")?.email ??
+      accounts.find((a) => contactIds.get(String(a._id)) === "reservation")?.email ??
       accounts[0]?.email;
 
     const payload: PlanningReservationDetail = {
@@ -395,7 +441,7 @@ export class PlanningService {
         email: account.email,
         status: account.status,
         emailVerified: Boolean(account.emailVerifiedAt),
-        linkedVia: contactIds.get(String(account._id))?.via ?? "cardex",
+        linkedVia: contactIds.get(String(account._id)) ?? "cardex",
       })),
       createdChannel: reservation.createdChannel,
     };

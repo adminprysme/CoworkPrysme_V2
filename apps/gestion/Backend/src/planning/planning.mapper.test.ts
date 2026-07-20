@@ -4,6 +4,7 @@ import {
   formatClientLabel,
   isReservationReadOnly,
   mapInvoicePaymentStatus,
+  mergeContactAccountIds,
 } from "./planning.mapper.js";
 
 describe("planning.mapper", () => {
@@ -57,5 +58,17 @@ describe("planning.mapper", () => {
     expect(isReservationReadOnly("completed")).toBe(true);
     expect(isReservationReadOnly("cancelled")).toBe(true);
     expect(isReservationReadOnly("confirmed")).toBe(false);
+  });
+
+  it("merges company contacts without dropping the reservation booker", () => {
+    const merged = mergeContactAccountIds([
+      { id: "booker", via: "reservation" },
+      { id: "colleague", via: "cardex" },
+      { id: "booker", via: "cardex" },
+      { id: "colleague", via: "cardex" },
+    ]);
+    expect(merged.get("booker")).toBe("reservation");
+    expect(merged.get("colleague")).toBe("cardex");
+    expect(merged.size).toBe(2);
   });
 });

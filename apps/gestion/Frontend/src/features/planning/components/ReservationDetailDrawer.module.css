@@ -150,12 +150,6 @@
   color: var(--planning-slate);
 }
 
-.clientRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
 .clientText {
   min-width: 0;
 }
@@ -163,6 +157,12 @@
 .clientName {
   display: block;
   font-size: 0.95rem;
+}
+
+.clientCompany {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
 }
 
 .clientSub {
@@ -295,11 +295,51 @@
 }
 
 .contactCard {
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.75rem 0.8rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
   font-size: 0.86rem;
+}
+
+.contactInfo {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.contactInfo strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactMailBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.contactMailBtn:hover {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.contactMailBtn:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
 }

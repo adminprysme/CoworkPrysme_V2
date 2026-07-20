@@ -79,6 +79,29 @@ export function isReservationReadOnly(status: PlanningReservationStatus): boolea
   return status === "cancelled" || status === "completed" || status === "no_show";
 }
 
+export type PlanningContactLinkVia = "reservation" | "cardex";
+
+/**
+ * Merges contact account ids for the Contacts tab.
+ * Reservation booker wins over cardex/company siblings for `linkedVia`.
+ */
+export function mergeContactAccountIds(
+  seeds: ReadonlyArray<{ id: string; via: PlanningContactLinkVia }>,
+): Map<string, PlanningContactLinkVia> {
+  const contactIds = new Map<string, PlanningContactLinkVia>();
+  for (const seed of seeds) {
+    const id = seed.id.trim();
+    if (!id) {
+      continue;
+    }
+    const existing = contactIds.get(id);
+    if (!existing || (existing === "cardex" && seed.via === "reservation")) {
+      contactIds.set(id, seed.via);
+    }
+  }
+  return contactIds;
+}
+
 export function asSpaceType(value: string): PlanningSpaceType {
   return value === "private_office" ? "private_office" : "meeting_room";
 }
