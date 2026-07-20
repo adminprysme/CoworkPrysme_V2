@@ -1,4 +1,5 @@
 .panel {
+  --planning-slate: #3b6fa8;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -17,6 +18,33 @@
   flex-shrink: 0;
 }
 
+.headerMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.headerBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.statusChip,
+.readOnlyChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
+}
+
 .kicker {
   margin: 0;
   font-size: 0.72rem;
@@ -27,14 +55,11 @@
 }
 
 .title {
-  margin: 0.2rem 0 0;
-  font-size: 1.15rem;
-}
-
-.meta {
-  margin: 0.25rem 0 0;
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
+  margin: 0;
+  font-size: 1.2rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 650;
+  letter-spacing: 0.01em;
 }
 
 .closeBtn {
@@ -46,6 +71,7 @@
   cursor: pointer;
   font-size: 1.2rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .tabs {
@@ -102,58 +128,149 @@
   padding: 1rem 1.1rem 1.4rem;
 }
 
-.sections {
+.cards {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 0.75rem;
 }
 
-.sections h3 {
-  margin: 0 0 0.45rem;
-  font-size: 0.78rem;
+.card {
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
+}
+
+.cardTitle {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-secondary);
+  font-weight: 700;
+  color: var(--planning-slate);
 }
 
-.dl {
-  margin: 0;
+.clientRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.clientText {
+  min-width: 0;
+}
+
+.clientName {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.clientSub {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.infoRows {
   display: grid;
   gap: 0.45rem;
 }
 
-.dl > div {
-  display: grid;
-  grid-template-columns: 7.5rem 1fr;
-  gap: 0.5rem;
-  font-size: 0.88rem;
+.infoRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.86rem;
 }
 
-.dl dt {
-  margin: 0;
+.infoIcon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--planning-slate);
+}
+
+.infoMuted {
   color: var(--color-text-muted);
 }
 
-.dl dd {
+.serviceList {
+  list-style: none;
   margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
 }
 
-.emphasis {
-  font-weight: 700;
-  color: var(--color-primary-hover);
+.serviceRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
 }
 
-.list {
-  margin: 0;
-  padding-left: 1.1rem;
+.servicePrice {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.amountLines {
   display: grid;
   gap: 0.3rem;
-  font-size: 0.88rem;
+}
+
+.amountLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.divider {
+  height: 1px;
+  margin: 0.65rem 0;
+  background: var(--color-border);
+}
+
+.ttcRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+}
+
+.ttcValue {
+  font-size: 1.05rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.paymentSettled,
+.paymentOpen {
+  margin: 0;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.paymentSettled {
+  color: var(--planning-paid, #2f9e6b);
+  font-weight: 600;
+}
+
+.paymentOpen {
+  color: var(--color-text-muted);
 }
 
 .muted {
   color: var(--color-text-muted);
   font-size: 0.88rem;
+  margin: 0;
 }
 
 .error {
@@ -163,7 +280,7 @@
 .banner {
   margin: 0;
   padding: 0.65rem 0.75rem;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   font-size: 0.82rem;
@@ -182,7 +299,7 @@
   gap: 0.2rem;
   padding: 0.75rem 0.8rem;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-surface-muted);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
   font-size: 0.86rem;
 }

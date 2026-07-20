@@ -1,8 +1,15 @@
 import { useEffect, useId, useState } from "react";
+import { IconCalendar, IconDoor } from "@tabler/icons-react";
 import type { PlanningReservationDetail } from "@coworkprysme/shared";
 
 import { fetchPlanningReservation } from "../../../lib/planning-api.js";
-import { PAYMENT_STATUS_LABELS, formatCentsEur, formatDateTime } from "../planning-utils.js";
+import {
+  ClientAvatar,
+  PaymentStatusBadge,
+  RESERVATION_STATUS_LABELS,
+  SPACE_TYPE_LABELS,
+} from "../planning-ui.js";
+import { formatCentsEur, formatDateTime } from "../planning-utils.js";
 import styles from "./ReservationDetailDrawer.module.css";
 
 type TabId = "summary" | "contacts" | "manage" | "documents";
@@ -11,11 +18,6 @@ interface ReservationDetailDrawerProps {
   reservationId: string;
   onClose: () => void;
 }
-
-const SPACE_TYPE_LABELS = {
-  meeting_room: "Salle de réunion",
-  private_office: "Bureau privatif",
-} as const;
 
 export function ReservationDetailDrawer({ reservationId, onClose }: ReservationDetailDrawerProps) {
   const titleId = useId();
@@ -62,21 +64,28 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
   }, [onClose]);
 
   const readOnly = detail?.readOnly ?? false;
+  const paidTotal = detail?.invoice?.paidTotal ?? 0;
+  const balanceDue = detail?.invoice?.balanceDue ?? detail?.pricing.totalTTC ?? 0;
+  const settled = detail?.paymentStatus === "paid" || balanceDue === 0;
 
   return (
     <aside className={styles.panel} aria-labelledby={titleId}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.kicker}>Réservation</p>
+        <div className={styles.headerMain}>
+          {detail ? (
+            <div className={styles.headerBadges}>
+              <span className={styles.statusChip}>
+                {RESERVATION_STATUS_LABELS[detail.status] ?? detail.status}
+              </span>
+              <PaymentStatusBadge status={detail.paymentStatus} />
+              {readOnly ? <span className={styles.readOnlyChip}>Lecture seule</span> : null}
+            </div>
+          ) : (
+            <p className={styles.kicker}>Réservation</p>
+          )}
           <h2 id={titleId} className={styles.title}>
             {detail?.reference ?? "…"}
           </h2>
-          {detail ? (
-            <p className={styles.meta}>
-              {PAYMENT_STATUS_LABELS[detail.paymentStatus]}
-              {readOnly ? " · Lecture seule" : null}
-            </p>
-          ) : null}
         </div>
         <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Fermer">
           ×
@@ -127,146 +136,93 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
       <div className={styles.body}>
         {loading ? <p className={styles.muted}>Chargement…</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
+
         {!loading && detail && tab === "summary" ? (
-          <div className={styles.sections}>
-            <section>
-              <h3>Client</h3>
-              <dl className={styles.dl}>
-                <div>
-                  <dt>Nom</dt>
-                  <dd>{detail.client.label}</dd>
+          <div className={styles.cards}>
+            <section className={styles.card}>
+              <div className={styles.clientRow}>
+                <ClientAvatar label={detail.client.label} size={40} />
+                <div className={styles.clientText}>
+                  <strong className={styles.clientName}>{detail.client.label}</strong>
+                  <p className={styles.clientSub}>
+                    {[detail.client.email, detail.client.phone].filter(Boolean).join(" · ") ||
+                      "Coordonnées non renseignées"}
+                  </p>
                 </div>
-                {detail.client.email ? (
-                  <div>
-                    <dt>Email</dt>
-                    <dd>{detail.client.email}</dd>
-                  </div>
-                ) : null}
-                {detail.client.phone ? (
-                  <div>
-                    <dt>Téléphone</dt>
-                    <dd>{detail.client.phone}</dd>
-                  </div>
-                ) : null}
-                {detail.client.companyName ? (
-                  <div>
-                    <dt>Société</dt>
-                    <dd>{detail.client.companyName}</dd>
-                  </div>
-                ) : null}
-              </dl>
+              </div>
             </section>
 
-            <section>
-              <h3>Espace & dates</h3>
-              <dl className={styles.dl}>
-                <div>
-                  <dt>Espace</dt>
-                  <dd>
-                    {detail.space.name} ({SPACE_TYPE_LABELS[detail.space.type]})
-                  </dd>
+            <section className={styles.card}>
+              <h3 className={styles.cardTitle}>Espace et dates</h3>
+              <div className={styles.infoRows}>
+                <div className={styles.infoRow}>
+                  <IconDoor size={16} stroke={1.6} className={styles.infoIcon} aria-hidden />
+                  <span>
+                    {detail.space.name} · {SPACE_TYPE_LABELS[detail.space.type]}
+                    <span className={styles.infoMuted}> · {detail.space.buildingName}</span>
+                  </span>
                 </div>
-                <div>
-                  <dt>Bâtiment</dt>
-                  <dd>{detail.space.buildingName}</dd>
+                <div className={styles.infoRow}>
+                  <IconCalendar size={16} stroke={1.6} className={styles.infoIcon} aria-hidden />
+                  <span>
+                    {formatDateTime(detail.startAt)} → {formatDateTime(detail.endAt)}
+                  </span>
                 </div>
-                <div>
-                  <dt>Début</dt>
-                  <dd>{formatDateTime(detail.startAt)}</dd>
-                </div>
-                <div>
-                  <dt>Fin</dt>
-                  <dd>{formatDateTime(detail.endAt)}</dd>
-                </div>
-                <div>
-                  <dt>Statut réservation</dt>
-                  <dd>{detail.status}</dd>
-                </div>
-                <div>
-                  <dt>Canal</dt>
-                  <dd>{detail.createdChannel}</dd>
-                </div>
-              </dl>
+              </div>
             </section>
 
-            <section>
-              <h3>Services</h3>
+            <section className={styles.card}>
+              <h3 className={styles.cardTitle}>Services</h3>
               {detail.services.length === 0 ? (
                 <p className={styles.muted}>Aucun service associé.</p>
               ) : (
-                <ul className={styles.list}>
+                <ul className={styles.serviceList}>
                   {detail.services.map((service) => (
-                    <li key={`${service.serviceId}-${service.label}`}>
-                      {service.label} × {service.qty} — {formatCentsEur(service.unitPriceHT)} HT
+                    <li key={`${service.serviceId}-${service.label}`} className={styles.serviceRow}>
+                      <span>
+                        {service.label}
+                        {service.qty > 1 ? ` × ${service.qty}` : null}
+                      </span>
+                      <span className={styles.servicePrice}>
+                        {formatCentsEur(service.unitPriceHT * service.qty)}
+                      </span>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
 
-            <section>
-              <h3>Montants</h3>
-              <dl className={styles.dl}>
-                <div>
-                  <dt>Total HT</dt>
-                  <dd>{formatCentsEur(detail.pricing.subtotalHT)}</dd>
+            <section className={styles.card}>
+              <h3 className={styles.cardTitle}>Montants</h3>
+              <div className={styles.amountLines}>
+                <div className={styles.amountLine}>
+                  <span>Total HT</span>
+                  <span>{formatCentsEur(detail.pricing.subtotalHT)}</span>
                 </div>
-                <div>
-                  <dt>TVA</dt>
-                  <dd>{formatCentsEur(detail.pricing.totalVAT)}</dd>
+                <div className={styles.amountLine}>
+                  <span>TVA</span>
+                  <span>{formatCentsEur(detail.pricing.totalVAT)}</span>
                 </div>
-                <div>
-                  <dt>Remise</dt>
-                  <dd>{formatCentsEur(detail.pricing.discountTotal)}</dd>
+                <div className={styles.amountLine}>
+                  <span>Remise</span>
+                  <span>{formatCentsEur(detail.pricing.discountTotal)}</span>
                 </div>
-                <div>
-                  <dt>Total TTC</dt>
-                  <dd className={styles.emphasis}>{formatCentsEur(detail.pricing.totalTTC)}</dd>
-                </div>
-              </dl>
-            </section>
-
-            <section>
-              <h3>Paiement</h3>
-              <dl className={styles.dl}>
-                <div>
-                  <dt>Statut</dt>
-                  <dd>{PAYMENT_STATUS_LABELS[detail.paymentStatus]}</dd>
-                </div>
-                {detail.invoice ? (
-                  <>
-                    <div>
-                      <dt>Facture</dt>
-                      <dd>{detail.invoice.reference}</dd>
-                    </div>
-                    <div>
-                      <dt>Payé</dt>
-                      <dd>{formatCentsEur(detail.invoice.paidTotal)}</dd>
-                    </div>
-                    <div>
-                      <dt>Reste dû</dt>
-                      <dd>{formatCentsEur(detail.invoice.balanceDue)}</dd>
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <dt>Facture</dt>
-                    <dd>Aucune</dd>
-                  </div>
-                )}
-                {detail.awaitingPaymentMethod ? (
-                  <div>
-                    <dt>Mode en attente</dt>
-                    <dd>{detail.awaitingPaymentMethod}</dd>
-                  </div>
-                ) : null}
-              </dl>
+              </div>
+              <div className={styles.divider} />
+              <div className={styles.ttcRow}>
+                <span>Total TTC</span>
+                <span className={styles.ttcValue}>{formatCentsEur(detail.pricing.totalTTC)}</span>
+              </div>
+              <div className={styles.divider} />
+              <p className={settled ? styles.paymentSettled : styles.paymentOpen}>
+                Payé {formatCentsEur(paidTotal)} · Reste dû {formatCentsEur(balanceDue)}
+              </p>
             </section>
           </div>
         ) : null}
 
         {!loading && detail && tab === "contacts" ? (
-          <div className={styles.sections}>
+          <div className={styles.cards}>
             {readOnly ? (
               <p className={styles.banner}>Réservation terminée ou annulée — lecture pure.</p>
             ) : null}
