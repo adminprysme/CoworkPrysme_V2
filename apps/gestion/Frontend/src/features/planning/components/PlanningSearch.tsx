@@ -21,6 +21,7 @@ function formatHitDate(iso: string): string {
 export function PlanningSearch({ onSelect }: PlanningSearchProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const suppressOpenRef = useRef(false);
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlanningSearchHit[]>([]);
@@ -35,6 +36,16 @@ export function PlanningSearch({ onSelect }: PlanningSearchProps) {
 
   useEffect(() => {
     if (query.length < 2) {
+      setResults([]);
+      setLoading(false);
+      setError(null);
+      setOpen(false);
+      suppressOpenRef.current = false;
+      return;
+    }
+
+    if (suppressOpenRef.current) {
+      suppressOpenRef.current = false;
       setResults([]);
       setLoading(false);
       setError(null);
@@ -88,9 +99,12 @@ export function PlanningSearch({ onSelect }: PlanningSearchProps) {
           aria-autocomplete="list"
           aria-controls={listId}
           aria-expanded={open}
-          onChange={(event) => setInput(event.target.value)}
           onFocus={() => {
-            if (query.length >= 2) setOpen(true);
+            if (query.length >= 2 && results.length > 0) setOpen(true);
+          }}
+          onChange={(event) => {
+            suppressOpenRef.current = false;
+            setInput(event.target.value);
           }}
         />
       </label>
@@ -110,8 +124,10 @@ export function PlanningSearch({ onSelect }: PlanningSearchProps) {
                   role="option"
                   className={styles.hit}
                   onClick={() => {
+                    suppressOpenRef.current = true;
                     onSelect(hit);
                     setOpen(false);
+                    setResults([]);
                     setInput(hit.reference);
                   }}
                 >
