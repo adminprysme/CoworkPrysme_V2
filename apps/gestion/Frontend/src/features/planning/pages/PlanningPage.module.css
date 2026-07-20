@@ -18,9 +18,49 @@
   background: var(--color-bg);
 }
 
+.topStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 1.15rem 1.15rem 0;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.headerIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
 .kpiStrip {
   flex-shrink: 0;
-  padding: 0.85rem 1rem 0.15rem;
+}
+
+.separator {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
 }
 
 .workspace {
@@ -29,6 +69,9 @@
   min-height: 0;
   min-width: 0;
   width: 100%;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .calendarPane {

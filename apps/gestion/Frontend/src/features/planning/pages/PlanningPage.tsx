@@ -137,22 +137,35 @@ export function PlanningPage() {
 
   return (
     <div className={styles.page} data-split={splitOpen ? "true" : undefined}>
-      <PlanningToolbar
-        mode={mode}
-        rangeLabel={rangeLabel}
-        buildings={buildingsForFilter}
-        buildingId={buildingId}
-        loading={loading}
-        error={error}
-        onModeChange={setMode}
-        onPrev={() => setAnchor((current) => shiftAnchor(current, mode, -1))}
-        onNext={() => setAnchor((current) => shiftAnchor(current, mode, 1))}
-        onToday={() => setAnchor(new Date())}
-        onBuildingChange={setBuildingId}
-      />
+      <div className={styles.topStack}>
+        <header className={styles.header}>
+          <div className={styles.headerIntro}>
+            <h1>Planning</h1>
+            <p className={styles.subtitle}>
+              Vue d&apos;ensemble des réservations, disponibilités et occupation en temps réel.
+            </p>
+          </div>
+        </header>
 
-      <div className={styles.kpiStrip}>
-        <PlanningOccupancyStats occupancy={occupancy} loading={occupancyLoading} />
+        <div className={styles.kpiStrip}>
+          <PlanningOccupancyStats occupancy={occupancy} loading={occupancyLoading} />
+        </div>
+
+        <div className={styles.separator} role="separator" />
+
+        <PlanningToolbar
+          mode={mode}
+          rangeLabel={rangeLabel}
+          buildings={buildingsForFilter}
+          buildingId={buildingId}
+          loading={loading}
+          error={error}
+          onModeChange={setMode}
+          onPrev={() => setAnchor((current) => shiftAnchor(current, mode, -1))}
+          onNext={() => setAnchor((current) => shiftAnchor(current, mode, 1))}
+          onToday={() => setAnchor(new Date())}
+          onBuildingChange={setBuildingId}
+        />
       </div>
 
       <div className={styles.workspace}>

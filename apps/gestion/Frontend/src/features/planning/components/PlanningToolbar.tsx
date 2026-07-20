@@ -35,13 +35,8 @@ export function PlanningToolbar({
   onBuildingChange,
 }: PlanningToolbarProps) {
   return (
-    <header className={styles.toolbar}>
-      <div className={styles.left}>
-        <h1 className={styles.title}>Planning</h1>
-        <p className={styles.subtitle}>Vue calendrier · lecture seule</p>
-      </div>
-
-      <div className={styles.center}>
+    <div className={styles.controls}>
+      <div className={styles.manageRow}>
         <div className={styles.navGroup} role="group" aria-label="Navigation temporelle">
           <button
             type="button"
@@ -63,29 +58,8 @@ export function PlanningToolbar({
             ›
           </button>
         </div>
-        <p className={styles.rangeLabel}>{rangeLabel}</p>
-      </div>
 
-      <div className={styles.right}>
-        {buildings.length > 1 ? (
-          <label className={styles.buildingFilter}>
-            <span className={styles.buildingLabel}>Bâtiment</span>
-            <select
-              value={buildingId}
-              onChange={(event) => {
-                const value = event.target.value;
-                onBuildingChange(value === "all" ? "all" : value);
-              }}
-            >
-              <option value="all">Tous les bâtiments</option>
-              {buildings.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+        <p className={styles.rangeLabel}>{rangeLabel}</p>
 
         <div className={styles.modeSwitch} role="tablist" aria-label="Zoom temporel">
           {(Object.keys(VIEW_MODE_LABELS) as PlanningViewMode[]).map((key) => (
@@ -116,6 +90,28 @@ export function PlanningToolbar({
         {loading ? <span className={styles.statusNote}>Chargement…</span> : null}
         {error ? <span className={styles.errorNote}>{error}</span> : null}
       </div>
-    </header>
+
+      {buildings.length > 1 ? (
+        <div className={styles.filtersRow}>
+          <label className={styles.buildingFilter}>
+            <span className={styles.buildingLabel}>Bâtiment</span>
+            <select
+              value={buildingId}
+              onChange={(event) => {
+                const value = event.target.value;
+                onBuildingChange(value === "all" ? "all" : value);
+              }}
+            >
+              <option value="all">Tous les bâtiments</option>
+              {buildings.map((building) => (
+                <option key={building.id} value={building.id}>
+                  {building.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -37,7 +37,6 @@ import type { Types } from "mongoose";
 import {
   asReservationStatus,
   asSpaceType,
-  coversInstant,
   endOfLocalDay,
   endOfMonthLocal,
   endOfWeekSundayLocal,
@@ -140,10 +139,8 @@ export class PlanningService {
         : await Reservation.find({
             spaceId: { $in: spaceIds },
             status: { $ne: "cancelled" },
-            $or: [
-              { startAt: { $lte: now }, endAt: { $gt: now } },
-              { startAt: { $lt: rangeEnd }, endAt: { $gt: rangeStart } },
-            ],
+            startAt: { $lt: rangeEnd },
+            endAt: { $gt: rangeStart },
           })
             .select({ spaceId: 1, startAt: 1, endAt: 1, status: 1, reference: 1 })
             .lean()
@@ -164,25 +161,21 @@ export class PlanningService {
 
     const buildMetric = (input: {
       occupiedSpaces: number;
-      periodLabel: string | null;
-      periodStart?: Date;
-      periodEnd?: Date;
+      periodLabel: string;
+      periodStart: Date;
+      periodEnd: Date;
     }): PlanningOccupancyMetric => ({
       rate: occupancyRatePercent(input.occupiedSpaces, totalActiveSpaces),
       occupiedSpaces: input.occupiedSpaces,
       totalActiveSpaces,
       periodLabel: input.periodLabel,
-      periodStart: input.periodStart ? toIso(input.periodStart) : undefined,
-      periodEnd: input.periodEnd ? toIso(input.periodEnd) : undefined,
+      periodStart: toIso(input.periodStart),
+      periodEnd: toIso(input.periodEnd),
     });
 
     const payload: PlanningOccupancyResponse = {
       computedAt: toIso(now),
       totalActiveSpaces,
-      current: buildMetric({
-        occupiedSpaces: countOccupied((startAt, endAt) => coversInstant(startAt, endAt, now)),
-        periodLabel: null,
-      }),
       day: buildMetric({
         occupiedSpaces: countOccupied((startAt, endAt) =>
           rangesOverlap(startAt, endAt, dayStart, dayEnd),

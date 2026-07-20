@@ -180,10 +180,6 @@ export function rangesOverlap(
   return startAt.getTime() < periodEnd.getTime() && endAt.getTime() > periodStart.getTime();
 }
 
-export function coversInstant(startAt: Date, endAt: Date, at: Date): boolean {
-  return startAt.getTime() <= at.getTime() && endAt.getTime() > at.getTime();
-}
-
 const MONTH_LONG = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" });
 const DAY_LONG = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",

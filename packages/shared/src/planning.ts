@@ -188,8 +188,7 @@ export const PlanningOccupancyMetricSchema = z.object({
   rate: z.number().int().min(0).max(100),
   occupiedSpaces: z.number().int().nonnegative(),
   totalActiveSpaces: z.number().int().nonnegative(),
-  /** Null for instantaneous "actuelle". */
-  periodLabel: z.string().nullable(),
+  periodLabel: z.string().min(1),
   periodStart: z.string().datetime().optional(),
   periodEnd: z.string().datetime().optional(),
 });
@@ -198,7 +197,6 @@ export type PlanningOccupancyMetric = z.infer<typeof PlanningOccupancyMetricSche
 export const PlanningOccupancyResponseSchema = z.object({
   computedAt: z.string().datetime(),
   totalActiveSpaces: z.number().int().nonnegative(),
-  current: PlanningOccupancyMetricSchema,
   day: PlanningOccupancyMetricSchema,
   week: PlanningOccupancyMetricSchema,
   month: PlanningOccupancyMetricSchema,

@@ -1,39 +1,16 @@
-.toolbar {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) auto minmax(220px, 1.2fr);
-  grid-template-areas:
-    "left center right"
-    "legend legend legend";
-  gap: 0.75rem 1rem;
-  padding: 0.85rem 1rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 0 0.35rem;
   flex-shrink: 0;
 }
 
-.left {
-  grid-area: left;
-  min-width: 0;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.subtitle {
-  margin: 0.15rem 0 0;
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-}
-
-.center {
-  grid-area: center;
+.manageRow {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.75rem 1rem;
 }
 
 .navGroup {
@@ -68,45 +45,20 @@
 
 .rangeLabel {
   margin: 0;
-  font-size: 0.92rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.95rem;
   font-weight: 600;
   text-transform: capitalize;
 }
 
-.right {
-  grid-area: right;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.buildingFilter {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-}
-
-.buildingLabel {
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.buildingFilter select {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  padding: 0.35rem 0.55rem;
-}
-
 .modeSwitch {
   display: inline-flex;
+  margin-left: auto;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   overflow: hidden;
+  background: var(--color-surface);
 }
 
 .modeBtn,
@@ -124,7 +76,6 @@
 }
 
 .legend {
-  grid-area: legend;
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem 1rem;
@@ -153,17 +104,40 @@
   color: var(--color-danger);
 }
 
-@media (max-width: 960px) {
-  .toolbar {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "left"
-      "center"
-      "right"
-      "legend";
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.buildingFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.buildingLabel {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.buildingFilter select {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 0.35rem 0.55rem;
+}
+
+@media (max-width: 720px) {
+  .modeSwitch {
+    margin-left: 0;
   }
 
-  .right {
-    justify-content: flex-start;
+  .rangeLabel {
+    flex: 1 1 100%;
+    order: 3;
   }
 }

@@ -1,10 +1,5 @@
 import type { PlanningOccupancyResponse } from "@coworkprysme/shared";
-import {
-  IconCalendar,
-  IconCalendarMonth,
-  IconCalendarWeek,
-  IconClockHour4,
-} from "@tabler/icons-react";
+import { IconCalendar, IconCalendarMonth, IconCalendarWeek } from "@tabler/icons-react";
 
 import styles from "./PlanningOccupancyStats.module.css";
 
@@ -14,12 +9,6 @@ interface PlanningOccupancyStatsProps {
 }
 
 const CARDS = [
-  {
-    key: "current" as const,
-    label: "Occupation actuelle",
-    accent: "var(--planning-slate, #3b6fa8)",
-    Icon: IconClockHour4,
-  },
   {
     key: "day" as const,
     label: "Occupation du jour",

@@ -188,12 +188,12 @@
   display: flex;
   align-items: center;
   padding: 0.45rem 0.75rem;
-  background: color-mix(in srgb, var(--color-secondary-soft) 70%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-primary-soft) 70%, var(--color-surface));
   border-bottom: 1px solid var(--color-border);
   border-right: 1px solid var(--color-border);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--color-secondary);
+  color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -201,7 +201,7 @@
 .groupTrackSpacer {
   width: 100%;
   min-width: var(--track-min-width);
-  background: color-mix(in srgb, var(--color-secondary-soft) 40%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-primary-soft) 40%, var(--color-surface));
   border-bottom: 1px solid var(--color-border);
 }
 
