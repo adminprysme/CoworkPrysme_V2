@@ -359,6 +359,7 @@ export function PlanningPage() {
               reservationId={selectedReservationId}
               initialTab={selectedReservationTab}
               onClose={closeDetailPanel}
+              onOpenReservation={(id) => openReservation(id, "summary")}
             />
           </div>
         ) : selectedSpaceId ? (

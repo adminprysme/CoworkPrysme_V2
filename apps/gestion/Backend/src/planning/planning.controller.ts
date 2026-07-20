@@ -12,6 +12,7 @@ import {
 import type { Request } from "express";
 import {
   PlanningCancelRequestSchema,
+  PlanningRestoreRequestSchema,
   PlanningSpaceChangeRequestSchema,
 } from "@coworkprysme/shared";
 
@@ -108,6 +109,26 @@ export class PlanningController {
       throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
     }
     return this.planningManage.confirmCancel(profile, id, parsed.data);
+  }
+
+  @Get("reservations/:id/manage/restore/preview")
+  async manageRestorePreview(@Req() request: Request, @Param("id") id: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planningManage.previewRestore(profile, id);
+  }
+
+  @Post("reservations/:id/manage/restore")
+  async manageRestoreConfirm(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningRestoreRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
+    }
+    return this.planningManage.confirmRestore(profile, id, parsed.data);
   }
 
   @Get("reservations/:id")

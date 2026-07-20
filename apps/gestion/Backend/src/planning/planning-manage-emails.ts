@@ -1,6 +1,6 @@
 /**
  * Plain HTML transactional emails for Planning Wave 2 "Gérer" actions
- * (space change / cancellation). No secrets, no attachments here.
+ * (space change / cancellation / restore). No secrets, no attachments here.
  *
  * Amounts are only shown when the staff action actually applies them to the
  * client (billed space-change delta / confirmed refund > 0).
@@ -133,5 +133,37 @@ export function renderCancellationEmail(input: CancellationEmailInput): {
   return {
     subject: `Annulation de votre réservation ${input.reservationReference} — Cowork Prysme`,
     html: renderCoworkEmailLayout("Réservation annulée", body, siteUrl),
+  };
+}
+
+export interface RestoreEmailInput {
+  reservationReference: string;
+  spaceName: string;
+  startAt: string;
+  endAt: string;
+}
+
+export function renderRestoreEmail(input: RestoreEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl();
+  const body = `
+    <p style="margin-top:0;">Votre réservation a été <strong>restaurée</strong> par notre équipe. Elle est à nouveau confirmée sur le créneau ci-dessous.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+      ${emailDetailRow("Référence", `<strong>${escapeEmailHtml(input.reservationReference)}</strong>`)}
+      ${emailDetailRow("Espace", escapeEmailHtml(input.spaceName))}
+      ${emailDetailRow(
+        "Créneau",
+        `Du ${escapeEmailHtml(input.startAt)} au ${escapeEmailHtml(input.endAt)}`,
+        { last: true },
+      )}
+    </table>
+    <p style="margin:24px 0 0;">Pour toute question, notre équipe reste à votre disposition.</p>
+  `;
+
+  return {
+    subject: `Restauration de votre réservation ${input.reservationReference} — Cowork Prysme`,
+    html: renderCoworkEmailLayout("Réservation restaurée", body, siteUrl),
   };
 }

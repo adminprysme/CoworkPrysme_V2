@@ -159,6 +159,7 @@ export const PlanningHistoryEventTypeSchema = z.enum([
   "reservation",
   "cancellation",
   "space_change",
+  "restoration",
   "closure",
 ]);
 export type PlanningHistoryEventType = z.infer<typeof PlanningHistoryEventTypeSchema>;
@@ -294,12 +295,44 @@ export const PlanningCancelPreviewSchema = z.object({
 });
 export type PlanningCancelPreview = z.infer<typeof PlanningCancelPreviewSchema>;
 
-export const PlanningCancelRequestSchema = z.object({
-  reason: z.string().trim().min(3).max(2000),
-  confirmSuggestedRefund: z.boolean(),
-  /** Echo of the suggested amount the staff confirmed (must match server recalc). */
-  acceptedRefundCents: z.number().int().nonnegative(),
-});
+export const PlanningCancelRefundModeSchema = z.enum(["suggested", "custom", "none"]);
+export type PlanningCancelRefundMode = z.infer<typeof PlanningCancelRefundModeSchema>;
+
+export const PlanningCancelRequestSchema = z
+  .object({
+    reason: z.string().trim().min(3).max(2000),
+    /** Staff acknowledgment of the chosen refund amount (suggested / custom / none). */
+    confirmRefund: z.boolean(),
+    refundMode: PlanningCancelRefundModeSchema,
+    /**
+     * Amount the staff accepts to refund, in integer cents.
+     * - suggested: must equal server-recalculated suggestion
+     * - custom: 0 ≤ amount ≤ paidTotal (validated server-side)
+     * - none: must be 0
+     */
+    acceptedRefundCents: z.number().int().nonnegative(),
+    /**
+     * Mandatory when refundMode !== "suggested": justifies departing from the
+     * automatic suggestion. Traced in audit alongside the cancel reason.
+     */
+    refundDeviationReason: z.string().trim().min(3).max(2000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.refundMode !== "suggested" && !value.refundDeviationReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["refundDeviationReason"],
+        message: "Une justification est obligatoire lorsque le montant diffère du suggéré",
+      });
+    }
+    if (value.refundMode === "none" && value.acceptedRefundCents !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["acceptedRefundCents"],
+        message: "Le mode « Ne pas rembourser » impose un montant à 0",
+      });
+    }
+  });
 export type PlanningCancelRequest = z.infer<typeof PlanningCancelRequestSchema>;
 
 export const PlanningCancelResultSchema = z.object({
@@ -309,3 +342,46 @@ export const PlanningCancelResultSchema = z.object({
   basis: z.enum(["not_started", "in_progress", "ended", "unpaid"]),
 });
 export type PlanningCancelResult = z.infer<typeof PlanningCancelResultSchema>;
+
+export const PlanningRestoreConflictSchema = z.object({
+  id: z.string(),
+  reference: z.string(),
+  clientLabel: z.string(),
+  startAt: z.string().datetime(),
+  endAt: z.string().datetime(),
+});
+export type PlanningRestoreConflict = z.infer<typeof PlanningRestoreConflictSchema>;
+
+/**
+ * Eligibility for restoring a cancelled reservation.
+ * Restore is only offered when refundEligible && slotAvailable (canRestore).
+ * If refundEligible is false, the Manage UI must hide the restore action entirely.
+ */
+export const PlanningRestorePreviewSchema = z.object({
+  reservationId: z.string(),
+  reference: z.string(),
+  status: PlanningReservationStatusSchema,
+  /** Both gates true — restore button may be shown and submitted. */
+  canRestore: z.boolean(),
+  /**
+   * Cancel audit recorded acceptedRefundCents === 0.
+   * False when a refund was applied or no cancel audit exists.
+   */
+  refundEligible: z.boolean(),
+  /** Refund amount recorded on the last cancel audit (null if missing). */
+  acceptedRefundCentsAtCancel: z.number().int().nonnegative().nullable(),
+  slotAvailable: z.boolean(),
+  conflictingReservation: PlanningRestoreConflictSchema.nullable(),
+});
+export type PlanningRestorePreview = z.infer<typeof PlanningRestorePreviewSchema>;
+
+export const PlanningRestoreRequestSchema = z.object({
+  /** Explicit staff confirmation — restore must not be a one-click action. */
+  confirm: z.literal(true),
+});
+export type PlanningRestoreRequest = z.infer<typeof PlanningRestoreRequestSchema>;
+
+export const PlanningRestoreResultSchema = z.object({
+  reservation: PlanningReservationDetailSchema,
+});
+export type PlanningRestoreResult = z.infer<typeof PlanningRestoreResultSchema>;

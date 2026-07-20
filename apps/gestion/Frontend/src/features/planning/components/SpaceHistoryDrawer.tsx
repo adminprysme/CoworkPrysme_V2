@@ -14,7 +14,12 @@ import styles from "./SpaceHistoryDrawer.module.css";
 type RangePreset = "7d" | "30d" | "year" | "custom";
 
 function isReservationLinkedEvent(type: PlanningHistoryEventType): boolean {
-  return type === "reservation" || type === "cancellation" || type === "space_change";
+  return (
+    type === "reservation" ||
+    type === "cancellation" ||
+    type === "space_change" ||
+    type === "restoration"
+  );
 }
 
 function eventPrimaryLabel(event: PlanningHistoryEvent): string {
@@ -48,11 +53,12 @@ const RANGE_PRESETS: Array<{ id: RangePreset; label: string }> = [
 const TYPE_OPTIONS: Array<{
   id: PlanningHistoryEventType;
   label: string;
-  tone: "reservation" | "cancellation" | "spaceChange" | "closure";
+  tone: "reservation" | "cancellation" | "spaceChange" | "restoration" | "closure";
 }> = [
   { id: "reservation", label: "Réservations", tone: "reservation" },
   { id: "cancellation", label: "Annulations", tone: "cancellation" },
   { id: "space_change", label: "Changements de salle", tone: "spaceChange" },
+  { id: "restoration", label: "Restaurations", tone: "restoration" },
   { id: "closure", label: "Fermetures", tone: "closure" },
 ];
 
@@ -64,6 +70,8 @@ function toneClassName(tone: (typeof TYPE_OPTIONS)[number]["tone"]): string {
       return styles.toneCancellation ?? "";
     case "spaceChange":
       return styles.toneSpaceChange ?? "";
+    case "restoration":
+      return styles.toneRestoration ?? "";
     case "closure":
       return styles.toneClosure ?? "";
   }

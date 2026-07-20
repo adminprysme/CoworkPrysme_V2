@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { renderCancellationEmail, renderSpaceChangeEmail } from "./planning-manage-emails.js";
+import {
+  renderCancellationEmail,
+  renderRestoreEmail,
+  renderSpaceChangeEmail,
+} from "./planning-manage-emails.js";
 
 describe("planning-manage-emails amount visibility", () => {
   it("omits all price mentions when space-change difference is not billed", () => {
@@ -69,5 +73,20 @@ describe("planning-manage-emails amount visibility", () => {
     expect(email.html).toMatch(/remboursement/i);
     expect(email.html).toMatch(/120,00\s*€/);
     expect(email.html).toMatch(/239,99\s*€/);
+  });
+});
+
+describe("renderRestoreEmail", () => {
+  it("confirms restoration without monetary figures", () => {
+    const email = renderRestoreEmail({
+      reservationReference: "RES-2026-00020",
+      spaceName: "FOCUS 2",
+      startAt: "24/07/2026 08:00",
+      endAt: "25/07/2026 19:00",
+    });
+    expect(email.subject).toContain("Restauration");
+    expect(email.html).toContain("restaurée");
+    expect(email.html).toContain("RES-2026-00020");
+    expect(email.html).not.toMatch(/€|EUR|remboursement|montant/i);
   });
 });

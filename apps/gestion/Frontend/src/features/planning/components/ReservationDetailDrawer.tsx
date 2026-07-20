@@ -38,6 +38,7 @@ interface ReservationDetailDrawerProps {
   onClose: () => void;
   /** Open directly on a given tab (e.g. from context menu). */
   initialTab?: PlanningDrawerTab;
+  onOpenReservation?: (reservationId: string) => void;
 }
 
 function contactDisplayName(contact: PlanningContact): string {
@@ -56,6 +57,7 @@ export function ReservationDetailDrawer({
   reservationId,
   onClose,
   initialTab = "summary",
+  onOpenReservation,
 }: ReservationDetailDrawerProps) {
   const titleId = useId();
   const [tab, setTab] = useState<TabId>(initialTab);
@@ -395,6 +397,7 @@ export function ReservationDetailDrawer({
             reservationId={reservationId}
             detail={detail}
             onChanged={() => loadDetail({ silent: true })}
+            onOpenReservation={onOpenReservation}
           />
         ) : null}
 

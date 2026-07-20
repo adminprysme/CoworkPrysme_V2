@@ -4,6 +4,9 @@ import type {
   PlanningCancelRequest,
   PlanningCancelResult,
   PlanningManageSpaceOption,
+  PlanningRestorePreview,
+  PlanningRestoreRequest,
+  PlanningRestoreResult,
   PlanningOccupancyResponse,
   PlanningReservationDetail,
   PlanningSearchResponse,
@@ -128,6 +131,22 @@ export function confirmCancelReservation(
 ): Promise<PlanningCancelResult> {
   return planningFetch(
     `/planning/reservations/${encodeURIComponent(reservationId)}/manage/cancel`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function fetchRestorePreview(reservationId: string): Promise<PlanningRestorePreview> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/restore/preview`,
+  );
+}
+
+export function confirmRestoreReservation(
+  reservationId: string,
+  request: PlanningRestoreRequest,
+): Promise<PlanningRestoreResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/restore`,
     { method: "POST", body: JSON.stringify(request) },
   );
 }

@@ -809,7 +809,15 @@ export class PlanningService {
     }
 
     const typeFilter = new Set<PlanningHistoryEventType>(
-      (query.types?.split(",") ?? ["reservation", "cancellation", "space_change", "closure"])
+      (
+        query.types?.split(",") ?? [
+          "reservation",
+          "cancellation",
+          "space_change",
+          "restoration",
+          "closure",
+        ]
+      )
         .map((t) => t.trim())
         .filter(Boolean) as PlanningHistoryEventType[],
     );
@@ -1034,8 +1042,34 @@ export class PlanningService {
         : [];
       const cardexById = new Map(cardexDocs.map((doc) => [String(doc._id), doc]));
 
+      const beforeSpaceIds = [
+        ...new Set(
+          logs
+            .map((log) => {
+              const before = log.diff?.spaceId?.before;
+              return typeof before === "string" && OBJECT_ID_PATTERN.test(before) ? before : null;
+            })
+            .filter((sid): sid is string => Boolean(sid)),
+        ),
+      ];
+      const beforeSpaceDocs = beforeSpaceIds.length
+        ? await Space.find({ _id: { $in: beforeSpaceIds } })
+            .select({ name: 1 })
+            .lean()
+            .exec()
+        : [];
+      const beforeSpaceNameById = new Map(
+        beforeSpaceDocs.map((doc) => [String(doc._id), doc.name]),
+      );
+
       for (const log of logs) {
-        const before = log.diff?.spaceId?.before;
+        const beforeId = log.diff?.spaceId?.before;
+        const beforeNameFromAudit =
+          typeof log.diff?.spaceName?.before === "string" ? log.diff.spaceName.before : undefined;
+        const beforeSpaceName =
+          beforeNameFromAudit ??
+          (typeof beforeId === "string" ? beforeSpaceNameById.get(beforeId) : undefined) ??
+          (typeof beforeId === "string" ? beforeId : undefined);
         const reservationId = log.entity?.id ? String(log.entity.id) : undefined;
         const reservation = reservationId ? reservationById.get(reservationId) : undefined;
         const cardex = reservation?.cardexId
@@ -1068,7 +1102,121 @@ export class PlanningService {
           endAt: reservation ? toIso(reservation.endAt) : undefined,
           title: clientLabel ?? "Changement de salle",
           detail:
-            typeof before === "string" ? `Depuis l’espace ${before}` : (log.reason ?? log.action),
+            typeof beforeSpaceName === "string"
+              ? `Depuis l’espace ${beforeSpaceName}`
+              : (log.reason ?? log.action),
+          clientLabel,
+          reservationId,
+          reservationReference: reservation?.reference,
+          reservationStatus: status,
+          paymentStatus,
+        });
+      }
+    }
+
+    if (typeFilter.has("restoration")) {
+      const AuditLog = await getAuditLogModel();
+      const Reservation = await getReservationModel();
+      const Invoice = await getInvoiceModel();
+      const Cardex = await getCardexModel();
+      const logs = await AuditLog.find({
+        action: "reservation.restore",
+        "entity.type": "reservation",
+        at: { $gte: from, $lt: to },
+        "diff.spaceId.after": String(id),
+      })
+        .sort({ at: -1 })
+        .lean()
+        .exec();
+
+      const linkedReservationIds = [
+        ...new Set(
+          logs
+            .map((log) => (log.entity?.id != null ? String(log.entity.id) : null))
+            .filter((entityId): entityId is string => Boolean(entityId))
+            .filter((entityId) => OBJECT_ID_PATTERN.test(entityId)),
+        ),
+      ];
+
+      const linkedReservations = linkedReservationIds.length
+        ? await Reservation.find({ _id: { $in: linkedReservationIds } })
+            .select({
+              reference: 1,
+              status: 1,
+              startAt: 1,
+              endAt: 1,
+              cardexId: 1,
+            })
+            .lean()
+            .exec()
+        : [];
+      const reservationById = new Map(
+        linkedReservations.map((reservation) => [String(reservation._id), reservation]),
+      );
+
+      const linkedInvoices = linkedReservations.length
+        ? await Invoice.find({
+            reservationId: { $in: linkedReservations.map((reservation) => reservation._id) },
+          })
+            .select({ reservationId: 1, status: 1, totals: 1 })
+            .lean()
+            .exec()
+        : [];
+      const invoiceByRes = new Map(
+        linkedInvoices
+          .filter((invoice) => invoice.reservationId)
+          .map((invoice) => [String(invoice.reservationId), invoice]),
+      );
+
+      const cardexIds = [
+        ...new Set(
+          linkedReservations
+            .map((reservation) => reservation.cardexId)
+            .filter((cid): cid is Types.ObjectId => Boolean(cid))
+            .map((cid) => String(cid)),
+        ),
+      ];
+      const cardexDocs = cardexIds.length
+        ? await Cardex.find({ _id: { $in: cardexIds } })
+            .select({ identity: 1, company: 1 })
+            .lean()
+            .exec()
+        : [];
+      const cardexById = new Map(cardexDocs.map((doc) => [String(doc._id), doc]));
+
+      for (const log of logs) {
+        const reservationId = log.entity?.id ? String(log.entity.id) : undefined;
+        const reservation = reservationId ? reservationById.get(reservationId) : undefined;
+        const cardex = reservation?.cardexId
+          ? cardexById.get(String(reservation.cardexId))
+          : undefined;
+        const clientLabel = reservation
+          ? formatClientLabel({
+              firstName: cardex?.identity?.firstName,
+              lastName: cardex?.identity?.lastName,
+              companyName: cardex?.company?.legalName,
+            })
+          : undefined;
+        const status = reservation ? asReservationStatus(reservation.status) : undefined;
+        const invoice = reservationId ? invoiceByRes.get(reservationId) : undefined;
+        const paymentStatus =
+          reservation && status
+            ? mapInvoicePaymentStatus({
+                invoiceStatus: invoice?.status,
+                paidTotal: invoice?.totals?.paidTotal,
+                balanceDue: invoice?.totals?.balanceDue,
+                reservationStatus: status,
+              })
+            : undefined;
+
+        events.push({
+          id: `restore-${String(log._id)}`,
+          type: "restoration",
+          at: toIso(log.at),
+          startAt: reservation ? toIso(reservation.startAt) : undefined,
+          endAt: reservation ? toIso(reservation.endAt) : undefined,
+          title: clientLabel ?? "Réservation restaurée",
+          detail: log.reason ?? "Réservation restaurée",
           clientLabel,
           reservationId,
           reservationReference: reservation?.reference,

@@ -1,3 +1,4 @@
+import type { Types } from "mongoose";
 import {
   BadRequestException,
   ConflictException,
@@ -12,6 +13,8 @@ import {
   PlanningCancelPreviewSchema,
   PlanningCancelResultSchema,
   PlanningManageSpaceOptionSchema,
+  PlanningRestorePreviewSchema,
+  PlanningRestoreResultSchema,
   PlanningSpaceChangePreviewSchema,
   PlanningSpaceChangeResultSchema,
   type BookingPriceLineInput,
@@ -19,13 +22,18 @@ import {
   type PlanningCancelRequest,
   type PlanningCancelResult,
   type PlanningManageSpaceOption,
+  type PlanningRestorePreview,
+  type PlanningRestoreRequest,
+  type PlanningRestoreResult,
   type PlanningSpaceChangePreview,
   type PlanningSpaceChangeRequest,
   type PlanningSpaceChangeResult,
 } from "@coworkprysme/shared";
 import {
   connectMongo,
+  getAuditLogModel,
   getBuildingModel,
+  getCardexModel,
   getClientAccountModel,
   getInvoiceModel,
   getReservationModel,
@@ -38,9 +46,18 @@ import {
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { MailService } from "../mail/mail.service.js";
 import { writePlanningManageAudit } from "./planning-manage-audit.js";
-import { renderCancellationEmail, renderSpaceChangeEmail } from "./planning-manage-emails.js";
+import {
+  renderCancellationEmail,
+  renderRestoreEmail,
+  renderSpaceChangeEmail,
+} from "./planning-manage-emails.js";
 import { PlanningService } from "./planning.service.js";
-import { asSpaceType, isBuildingIdInScope, isReservationReadOnly } from "./planning.mapper.js";
+import {
+  asSpaceType,
+  formatClientLabel,
+  isBuildingIdInScope,
+  isReservationReadOnly,
+} from "./planning.mapper.js";
 
 const OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 
@@ -346,6 +363,7 @@ export class PlanningManageService {
       reservationId: reservation._id,
       diff: {
         spaceId: { before: previousSpaceId, after: String(nextSpace._id) },
+        spaceName: { before: previousSpaceName, after: nextSpace.name },
         totalTTC: { before: previousTotalTTC, after: priced.totalTTC },
       },
     });
@@ -462,18 +480,44 @@ export class PlanningManageService {
       paidTotalCents,
     });
 
-    if (!request.confirmSuggestedRefund) {
+    if (!request.confirmRefund) {
       throw new BadRequestException({
         code: "REFUND_NOT_CONFIRMED",
-        message: "Veuillez confirmer le remboursement suggéré",
+        message: "Veuillez confirmer le montant de remboursement choisi",
       });
     }
-    if (request.acceptedRefundCents !== suggestion.suggestedRefundCents) {
+
+    const accepted = request.acceptedRefundCents;
+    if (request.refundMode === "suggested") {
+      if (accepted !== suggestion.suggestedRefundCents) {
+        throw new BadRequestException({
+          code: "REFUND_MISMATCH",
+          message:
+            "Le montant du remboursement suggéré a changé, veuillez rafraîchir la prévisualisation",
+        });
+      }
+    } else if (request.refundMode === "none") {
+      if (accepted !== 0) {
+        throw new BadRequestException({
+          code: "REFUND_INVALID",
+          message: "Le mode « Ne pas rembourser » impose un montant à 0",
+        });
+      }
+    } else if (accepted > paidTotalCents) {
       throw new BadRequestException({
-        code: "REFUND_MISMATCH",
-        message:
-          "Le montant du remboursement suggéré a changé, veuillez rafraîchir la prévisualisation",
+        code: "REFUND_EXCEEDS_PAID",
+        message: "Le remboursement ne peut pas dépasser le montant réglé",
       });
+    }
+
+    if (request.refundMode !== "suggested") {
+      const deviation = request.refundDeviationReason?.trim() ?? "";
+      if (deviation.length < 3) {
+        throw new BadRequestException({
+          code: "REFUND_DEVIATION_REQUIRED",
+          message: "Une justification est obligatoire lorsque le montant diffère du suggéré",
+        });
+      }
     }
 
     const previousStatus = reservation.status;
@@ -488,14 +532,27 @@ export class PlanningManageService {
     } as unknown as StatusHistoryEntry);
     await reservation.save();
 
+    const auditDiff: Record<string, { before: unknown; after: unknown }> = {
+      status: { before: previousStatus, after: "cancelled" },
+      acceptedRefundCents: { before: 0, after: accepted },
+      suggestedRefundCents: {
+        before: suggestion.suggestedRefundCents,
+        after: suggestion.suggestedRefundCents,
+      },
+      refundMode: { before: "suggested", after: request.refundMode },
+    };
+    if (request.refundMode !== "suggested" && request.refundDeviationReason) {
+      auditDiff.refundDeviationReason = {
+        before: null,
+        after: request.refundDeviationReason.trim(),
+      };
+    }
+
     await writePlanningManageAudit({
       profile,
       action: "reservation.cancel",
       reservationId: reservation._id,
-      diff: {
-        status: { before: previousStatus, after: "cancelled" },
-        acceptedRefundCents: { before: 0, after: request.acceptedRefundCents },
-      },
+      diff: auditDiff,
       reason: request.reason,
       at: now,
     });
@@ -508,7 +565,7 @@ export class PlanningManageService {
         startAt: formatFrDateTime(reservation.startAt),
         endAt: formatFrDateTime(reservation.endAt),
         paidTotalCents,
-        refundCents: request.acceptedRefundCents,
+        refundCents: accepted,
       });
       await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
     }
@@ -521,6 +578,245 @@ export class PlanningManageService {
       basis: suggestion.basis,
     };
     return PlanningCancelResultSchema.parse(result);
+  }
+
+  /**
+   * Preview restore eligibility for a cancelled reservation.
+   * Gates (both required for canRestore):
+   * 1. Last cancel audit acceptedRefundCents === 0
+   * 2. Slot free via findOverlappingReservation (self excluded)
+   */
+  async previewRestore(
+    profile: StaffProfileDocument,
+    reservationId: string,
+  ): Promise<PlanningRestorePreview> {
+    await connectMongo();
+    const id = assertObjectId(reservationId, "reservationId");
+
+    const Reservation = await getReservationModel();
+    const reservation = await Reservation.findById(id).lean().exec();
+    if (!reservation) {
+      throw new NotFoundException({
+        code: "RESERVATION_NOT_FOUND",
+        message: "Réservation introuvable",
+      });
+    }
+    if (!isBuildingIdInScope(reservation.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+
+    const eligibility = await this.computeRestoreEligibility(reservation);
+    const preview: PlanningRestorePreview = {
+      reservationId: String(reservation._id),
+      reference: reservation.reference,
+      status: reservation.status as PlanningRestorePreview["status"],
+      ...eligibility,
+    };
+    return PlanningRestorePreviewSchema.parse(preview);
+  }
+
+  /**
+   * Restore a cancelled reservation to `confirmed`.
+   *
+   * Exception to the transverse "cancelled ⇒ lecture pure" Manage rule:
+   * this is the only staff mutation still allowed on a cancelled reservation,
+   * and only when refund-at-cancel was 0 and the slot is free (re-checked here).
+   */
+  async confirmRestore(
+    profile: StaffProfileDocument,
+    reservationId: string,
+    request: PlanningRestoreRequest,
+  ): Promise<PlanningRestoreResult> {
+    await connectMongo();
+    const id = assertObjectId(reservationId, "reservationId");
+
+    if (request.confirm !== true) {
+      throw new BadRequestException({
+        code: "RESTORE_NOT_CONFIRMED",
+        message: "Veuillez confirmer explicitement la restauration",
+      });
+    }
+
+    const Reservation = await getReservationModel();
+    const reservation = await Reservation.findById(id).exec();
+    if (!reservation) {
+      throw new NotFoundException({
+        code: "RESERVATION_NOT_FOUND",
+        message: "Réservation introuvable",
+      });
+    }
+    if (!isBuildingIdInScope(reservation.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+    if (reservation.status !== "cancelled") {
+      throw new ConflictException({
+        code: "RESTORE_NOT_CANCELLED",
+        message: "Seule une réservation annulée peut être restaurée",
+      });
+    }
+
+    const eligibility = await this.computeRestoreEligibility(reservation);
+    if (!eligibility.refundEligible) {
+      throw new ConflictException({
+        code: "RESTORE_REFUND_APPLIED",
+        message:
+          "Cette réservation ne peut pas être restaurée : un remboursement a été enregistré à l'annulation",
+      });
+    }
+    if (!eligibility.slotAvailable || eligibility.conflictingReservation) {
+      const conflict = eligibility.conflictingReservation;
+      const conflictRef = conflict?.reference ?? "une autre réservation";
+      throw new ConflictException({
+        code: "RESTORE_SLOT_OCCUPIED",
+        message: `Le créneau est occupé par ${conflictRef}. Déplacez ou annulez cette réservation avant de restaurer.`,
+        conflictingReservationId: conflict?.id,
+      });
+    }
+
+    // Re-check overlap under write path (never trust preview alone).
+    const overlap = await findOverlappingReservation(
+      reservation.spaceId,
+      reservation.startAt,
+      reservation.endAt,
+      undefined,
+      reservation._id,
+    );
+    if (overlap) {
+      throw new ConflictException({
+        code: "RESTORE_SLOT_OCCUPIED",
+        message: `Le créneau est occupé par ${overlap.reference}. Déplacez ou annulez cette réservation avant de restaurer.`,
+        conflictingReservationId: String(overlap._id),
+      });
+    }
+
+    const now = new Date();
+    const previousStatus = reservation.status;
+    reservation.status = "confirmed";
+    reservation.statusHistory.push({
+      from: previousStatus,
+      to: "confirmed",
+      at: now,
+      by: profile._id,
+      reason: "Réservation restaurée",
+    } as unknown as StatusHistoryEntry);
+    await reservation.save();
+
+    // Cardex / audit trail: dedicated restore entry (author + date + label).
+    await writePlanningManageAudit({
+      profile,
+      action: "reservation.restore",
+      reservationId: reservation._id,
+      diff: {
+        status: { before: "cancelled", after: "confirmed" },
+        spaceId: {
+          before: String(reservation.spaceId),
+          after: String(reservation.spaceId),
+        },
+      },
+      reason: "Réservation restaurée",
+      at: now,
+    });
+
+    const clientEmail = await this.resolveClientEmail(reservation.clientAccountId?.toString());
+    if (clientEmail) {
+      const email = renderRestoreEmail({
+        reservationReference: reservation.reference,
+        spaceName: reservation.spaceSnapshot?.name ?? "Espace",
+        startAt: formatFrDateTime(reservation.startAt),
+        endAt: formatFrDateTime(reservation.endAt),
+      });
+      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+    }
+
+    const detail = await this.planning.getReservationDetail(profile, reservationId);
+    const result: PlanningRestoreResult = { reservation: detail };
+    return PlanningRestoreResultSchema.parse(result);
+  }
+
+  private async computeRestoreEligibility(reservation: {
+    _id: Types.ObjectId;
+    reference: string;
+    status: string;
+    spaceId: Types.ObjectId;
+    startAt: Date;
+    endAt: Date;
+    cardexId?: Types.ObjectId | null;
+  }): Promise<{
+    canRestore: boolean;
+    refundEligible: boolean;
+    acceptedRefundCentsAtCancel: number | null;
+    slotAvailable: boolean;
+    conflictingReservation: PlanningRestorePreview["conflictingReservation"];
+  }> {
+    if (reservation.status !== "cancelled") {
+      return {
+        canRestore: false,
+        refundEligible: false,
+        acceptedRefundCentsAtCancel: null,
+        slotAvailable: false,
+        conflictingReservation: null,
+      };
+    }
+
+    const AuditLog = await getAuditLogModel();
+    const cancelAudit = await AuditLog.findOne({
+      action: "reservation.cancel",
+      "entity.type": "reservation",
+      "entity.id": reservation._id,
+    })
+      .sort({ at: -1 })
+      .lean()
+      .exec();
+
+    const acceptedRaw = cancelAudit?.diff?.acceptedRefundCents?.after;
+    const acceptedRefundCentsAtCancel =
+      typeof acceptedRaw === "number" && Number.isInteger(acceptedRaw) && acceptedRaw >= 0
+        ? acceptedRaw
+        : null;
+    const refundEligible = acceptedRefundCentsAtCancel === 0;
+
+    const overlap = await findOverlappingReservation(
+      reservation.spaceId,
+      reservation.startAt,
+      reservation.endAt,
+      undefined,
+      reservation._id,
+    );
+
+    let conflictingReservation: PlanningRestorePreview["conflictingReservation"] = null;
+    if (overlap) {
+      let clientLabel = overlap.reference;
+      if (overlap.cardexId) {
+        const Cardex = await getCardexModel();
+        const cardex = await Cardex.findById(overlap.cardexId)
+          .select({ identity: 1, company: 1 })
+          .lean()
+          .exec();
+        if (cardex) {
+          clientLabel = formatClientLabel({
+            firstName: cardex.identity?.firstName,
+            lastName: cardex.identity?.lastName,
+            companyName: cardex.company?.legalName,
+          });
+        }
+      }
+      conflictingReservation = {
+        id: String(overlap._id),
+        reference: overlap.reference,
+        clientLabel,
+        startAt: toIso(overlap.startAt),
+        endAt: toIso(overlap.endAt),
+      };
+    }
+
+    const slotAvailable = !overlap;
+    return {
+      canRestore: refundEligible && slotAvailable,
+      refundEligible,
+      acceptedRefundCentsAtCancel,
+      slotAvailable,
+      conflictingReservation,
+    };
   }
 
   private async loadReservationAndNextSpace(

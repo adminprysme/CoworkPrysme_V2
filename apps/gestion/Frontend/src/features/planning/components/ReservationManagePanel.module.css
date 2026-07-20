@@ -35,7 +35,20 @@
   color: var(--color-text-muted);
 }
 
-.select,
+.fieldHint,
+.fieldHintError {
+  font-size: 0.75rem;
+}
+
+.fieldHint {
+  color: var(--color-text-muted);
+}
+
+.fieldHintError {
+  color: var(--color-danger, #c0392b);
+}
+
+.input,
 .textarea {
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -49,6 +62,130 @@
 .textarea {
   resize: vertical;
   min-height: 4.5rem;
+}
+
+.spaceSelect {
+  position: relative;
+}
+
+.spaceSelectTrigger,
+.spaceSelectOption {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spaceSelectTrigger {
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+}
+
+.spaceSelectTrigger:hover:not(:disabled),
+.spaceSelectTrigger:focus-visible {
+  border-color: color-mix(in srgb, var(--planning-slate, #3b6fa8) 45%, var(--color-border));
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--planning-slate, #3b6fa8) 18%, transparent);
+}
+
+.spaceSelectTrigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.spaceSelectIcon {
+  flex-shrink: 0;
+  color: var(--planning-slate, #3b6fa8);
+}
+
+.spaceSelectText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.spaceSelectText strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.spaceSelectText span {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.25;
+}
+
+.spaceSelectPlaceholder {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.spaceSelectChevron,
+.spaceSelectChevronOpen {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.spaceSelectChevronOpen {
+  transform: rotate(180deg);
+}
+
+.spaceSelectList {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.3rem;
+  list-style: none;
+  max-height: min(280px, 45vh);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md, 0 10px 28px rgba(15, 23, 42, 0.14));
+}
+
+.spaceSelectOption {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.55rem 0.55rem;
+}
+
+.spaceSelectOption:hover:not(:disabled),
+.spaceSelectOption:focus-visible {
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 10%, var(--color-surface));
+  outline: none;
+}
+
+.spaceSelectOptionSelected {
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 16%, var(--color-surface));
+}
+
+.spaceSelectOptionDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spaceSelectCheck {
+  flex-shrink: 0;
+  color: var(--planning-slate, #3b6fa8);
+}
+
+.spaceSelectCheckSpacer {
+  width: 16px;
+  flex-shrink: 0;
 }
 
 .previewBlock {
@@ -111,6 +248,37 @@
   color: var(--color-text-muted);
 }
 
+.modeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.modePill,
+.modePillActive {
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-family: inherit;
+}
+
+.modePill:hover {
+  border-color: color-mix(in srgb, var(--planning-slate, #3b6fa8) 40%, var(--color-border));
+  color: var(--color-text);
+}
+
+.modePillActive {
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 16%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--planning-slate, #3b6fa8) 45%, var(--color-border));
+  color: var(--planning-slate, #3b6fa8);
+}
+
 .checkboxRow {
   display: flex;
   align-items: flex-start;
@@ -171,4 +339,31 @@
   border: 1px solid var(--color-border);
   font-size: 0.86rem;
   color: var(--color-text-muted);
+}
+
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--planning-slate, #3b6fa8);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.linkBtn:hover {
+  color: color-mix(in srgb, var(--planning-slate, #3b6fa8) 80%, var(--color-text));
+}
+
+.restoreConflict {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
 }
