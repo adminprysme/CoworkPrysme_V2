@@ -6,6 +6,7 @@ import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
 import { CentraleClient } from "./centrale.client.js";
 import { BillingPermissionGuard } from "./billing-permission.guard.js";
+import { PlanningPermissionGuard } from "./planning-permission.guard.js";
 import { PromoPermissionGuard } from "./promo-permission.guard.js";
 import { PrysmaUserReadService } from "./prysma-user.read.service.js";
 import { ServicesPermissionGuard } from "./services-permission.guard.js";
@@ -31,6 +32,7 @@ import { StaffContextService } from "./staff-context.service.js";
     ServicesPermissionGuard,
     PromoPermissionGuard,
     BillingPermissionGuard,
+    PlanningPermissionGuard,
   ],
   exports: [
     AuthConfigService,
@@ -43,6 +45,7 @@ import { StaffContextService } from "./staff-context.service.js";
     ServicesPermissionGuard,
     PromoPermissionGuard,
     BillingPermissionGuard,
+    PlanningPermissionGuard,
   ],
 })
 export class AuthModule {}
