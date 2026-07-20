@@ -10,11 +10,20 @@ import type {
 
 import { fetchPlanningCalendar, fetchPlanningOccupancy } from "../../../lib/planning-api.js";
 import { PlanningCalendar } from "../components/PlanningCalendar.js";
+import { PlanningFiltersBar } from "../components/PlanningFiltersBar.js";
 import { PlanningOccupancyStats } from "../components/PlanningOccupancyStats.js";
 import { PlanningToolbar } from "../components/PlanningToolbar.js";
 import { ReservationDetailDrawer } from "../components/ReservationDetailDrawer.js";
 import { ReservationTooltip } from "../components/ReservationTooltip.js";
 import { SpaceHistoryDrawer } from "../components/SpaceHistoryDrawer.js";
+import {
+  emptyPaymentStatusFilter,
+  filterPlanningSpaces,
+  isPaymentStatusFilterActive,
+  type PlanningPaymentStatusFilter,
+  type PlanningSpaceFilter,
+  type PlanningTypeFilter,
+} from "../planning-filters.js";
 import {
   addDays,
   formatRangeLabel,
@@ -41,6 +50,11 @@ export function PlanningPage() {
   );
   const [hoverAnchor, setHoverAnchor] = useState<DOMRect | null>(null);
   const [hoverMeta, setHoverMeta] = useState<{ spaceType?: PlanningSpaceType } | null>(null);
+
+  const [typeFilter, setTypeFilter] = useState<PlanningTypeFilter>("all");
+  const [paymentStatuses, setPaymentStatuses] =
+    useState<PlanningPaymentStatusFilter>(emptyPaymentStatusFilter);
+  const [spaceFilter, setSpaceFilter] = useState<PlanningSpaceFilter>("all");
 
   const { from: displayFrom, to: displayTo } = useMemo(
     () => rangeForView(anchor, mode),
@@ -117,8 +131,66 @@ export function PlanningPage() {
       });
   }, [buildingsCatalog.length, apiFrom, apiTo]);
 
+  useEffect(() => {
+    setSpaceFilter("all");
+  }, [buildingId]);
+
+  useEffect(() => {
+    if (spaceFilter === "all" || !data) return;
+    const selected = data.spaces.find((space) => space.id === spaceFilter);
+    if (!selected || (typeFilter !== "all" && selected.type !== typeFilter)) {
+      setSpaceFilter("all");
+    }
+  }, [typeFilter, spaceFilter, data]);
+
   const buildingsForFilter =
     buildingsCatalog.length > 0 ? buildingsCatalog : (data?.buildings ?? []);
+
+  const spacesForEspacePills = useMemo(() => {
+    const spaces = data?.spaces ?? [];
+    if (typeFilter === "all") return spaces;
+    return spaces.filter((space) => space.type === typeFilter);
+  }, [data?.spaces, typeFilter]);
+
+  const filteredSpaces = useMemo(() => {
+    const spaces = filterPlanningSpaces(data?.spaces ?? [], typeFilter, spaceFilter);
+    if (!isPaymentStatusFilterActive(paymentStatuses)) {
+      return spaces;
+    }
+    const matchingSpaceIds = new Set(
+      (data?.reservations ?? [])
+        .filter((reservation) => paymentStatuses.has(reservation.paymentStatus))
+        .map((reservation) => reservation.spaceId),
+    );
+    return spaces.filter((space) => matchingSpaceIds.has(space.id));
+  }, [data?.spaces, data?.reservations, typeFilter, spaceFilter, paymentStatuses]);
+
+  const filteredReservations = useMemo(() => {
+    const spaceIds = new Set(filteredSpaces.map((space) => space.id));
+    return (data?.reservations ?? []).filter((reservation) => {
+      if (!spaceIds.has(reservation.spaceId)) return false;
+      if (
+        isPaymentStatusFilterActive(paymentStatuses) &&
+        !paymentStatuses.has(reservation.paymentStatus)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [data?.reservations, filteredSpaces, paymentStatuses]);
+
+  const filteredClosures = useMemo(() => {
+    const spaceIds = new Set(filteredSpaces.map((space) => space.id));
+    return (data?.closures ?? []).filter((closure) => {
+      if (closure.spaceId) {
+        return spaceIds.has(closure.spaceId);
+      }
+      if (typeFilter !== "all" && closure.spaceType && closure.spaceType !== typeFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [data?.closures, filteredSpaces, typeFilter]);
 
   const splitOpen = Boolean(selectedReservationId);
 
@@ -134,6 +206,12 @@ export function PlanningPage() {
     },
     [],
   );
+
+  function resetFilters() {
+    setTypeFilter("all");
+    setPaymentStatuses(emptyPaymentStatusFilter());
+    setSpaceFilter("all");
+  }
 
   return (
     <div className={styles.page} data-split={splitOpen ? "true" : undefined}>
@@ -166,6 +244,17 @@ export function PlanningPage() {
           onToday={() => setAnchor(new Date())}
           onBuildingChange={setBuildingId}
         />
+
+        <PlanningFiltersBar
+          spaces={spacesForEspacePills}
+          typeFilter={typeFilter}
+          paymentStatuses={paymentStatuses}
+          spaceFilter={spaceFilter}
+          onTypeChange={setTypeFilter}
+          onPaymentStatusesChange={setPaymentStatuses}
+          onSpaceChange={setSpaceFilter}
+          onReset={resetFilters}
+        />
       </div>
 
       <div className={styles.workspace}>
@@ -174,9 +263,9 @@ export function PlanningPage() {
             mode={mode}
             from={displayFrom}
             to={displayTo}
-            spaces={data?.spaces ?? []}
-            reservations={data?.reservations ?? []}
-            closures={data?.closures ?? []}
+            spaces={filteredSpaces}
+            reservations={filteredReservations}
+            closures={filteredClosures}
             selectedReservationId={selectedReservationId}
             onReservationClick={setSelectedReservationId}
             onSpaceNameClick={setSelectedSpaceId}
