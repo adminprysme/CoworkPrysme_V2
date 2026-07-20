@@ -1,4 +1,11 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type UIEvent,
+} from "react";
 import type {
   PlanningCalendarReservation,
   PlanningClosureBlock,
@@ -156,11 +163,69 @@ export function PlanningCalendar({
   const colMin = COL_MIN_WIDTH[mode];
   const trackMinWidth = columns.length * colMin;
 
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const syncLockRef = useRef<"top" | "main" | null>(null);
+  const [hScrollWidth, setHScrollWidth] = useState(0);
+  const [needsHScroll, setNeedsHScroll] = useState(false);
+
   const grouped = SPACE_TYPE_ORDER.map((type) => ({
     type,
     label: SPACE_TYPE_LABELS[type],
     spaces: spaces.filter((space) => space.type === type),
   })).filter((group) => group.spaces.length > 0);
+
+  useLayoutEffect(() => {
+    const main = mainScrollRef.current;
+    const grid = gridRef.current;
+    if (!main || !grid) return;
+
+    const measure = () => {
+      const width = grid.scrollWidth;
+      setHScrollWidth(width);
+      setNeedsHScroll(width > main.clientWidth + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(main);
+    observer.observe(grid);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [mode, spaces.length, columns.length, trackMinWidth, selectedReservationId]);
+
+  function syncScroll(source: "top" | "main", left: number) {
+    if (syncLockRef.current && syncLockRef.current !== source) return;
+    syncLockRef.current = source;
+    if (source === "top" && mainScrollRef.current) {
+      mainScrollRef.current.scrollLeft = left;
+    }
+    if (source === "main" && topScrollRef.current) {
+      topScrollRef.current.scrollLeft = left;
+    }
+    requestAnimationFrame(() => {
+      syncLockRef.current = null;
+    });
+  }
+
+  function onTopScroll(event: UIEvent<HTMLDivElement>) {
+    syncScroll("top", event.currentTarget.scrollLeft);
+  }
+
+  function onMainScroll(event: UIEvent<HTMLDivElement>) {
+    syncScroll("main", event.currentTarget.scrollLeft);
+  }
+
+  useEffect(() => {
+    const main = mainScrollRef.current;
+    const top = topScrollRef.current;
+    if (!main || !top) return;
+    top.scrollLeft = main.scrollLeft;
+  }, [needsHScroll, hScrollWidth]);
 
   if (spaces.length === 0) {
     return <div className={styles.empty}>Aucun espace actif dans le périmètre sélectionné.</div>;
@@ -172,95 +237,108 @@ export function PlanningCalendar({
   } as CSSProperties;
 
   return (
-    <div className={styles.scroll} style={cssVars}>
-      <div className={styles.grid}>
-        <div className={styles.corner}>Espace</div>
-        <div className={styles.headerTrack}>
-          {columns.map((column) => (
-            <div key={column.key} className={styles.headerCell}>
-              {column.label}
-            </div>
-          ))}
-        </div>
-
-        {grouped.map((group) => (
-          <div key={group.type} className={styles.group}>
-            <div className={styles.groupLabel}>{group.label}</div>
-            <div className={styles.groupTrackSpacer} />
-            {group.spaces.map((space) => {
-              const spaceReservations = reservationsForSpace(space.id, reservations);
-              const spaceClosures = closuresForSpace(space, closures);
-              return (
-                <div key={space.id} className={styles.row}>
-                  <button
-                    type="button"
-                    className={styles.spaceCell}
-                    onClick={() => onSpaceNameClick(space.id)}
-                    title={`Historique · ${space.name}`}
-                  >
-                    <span className={styles.spaceName}>{space.name}</span>
-                    {space.floor ? (
-                      <span className={styles.spaceMeta}>Étage {space.floor}</span>
-                    ) : null}
-                  </button>
-                  <div className={styles.track}>
-                    <div className={styles.trackBg}>
-                      {columns.map((column) => (
-                        <div key={column.key} className={styles.trackCell} />
-                      ))}
-                    </div>
-                    <div className={styles.events}>
-                      {spaceClosures
-                        .filter((closure) => closure.kind === "closed")
-                        .map((closure) => {
-                          const geo = blockGeometry(
-                            closure.startAt,
-                            closure.endAt,
-                            rangeStartMs,
-                            rangeEndMs,
-                          );
-                          if (!geo) return null;
-                          return (
-                            <div
-                              key={closure.id}
-                              className={styles.closureBlock}
-                              style={{ left: `${geo.leftPct}%`, width: `${geo.widthPct}%` }}
-                              title={
-                                closure.reason
-                                  ? `Fermeture · ${closure.reason}`
-                                  : "Fermeture exceptionnelle"
-                              }
-                            />
-                          );
-                        })}
-                      {spaceReservations.map((reservation) => {
-                        const geo = blockGeometry(
-                          reservation.startAt,
-                          reservation.endAt,
-                          rangeStartMs,
-                          rangeEndMs,
-                        );
-                        if (!geo) return null;
-                        return (
-                          <ReservationEventBlock
-                            key={reservation.id}
-                            reservation={reservation}
-                            leftPct={geo.leftPct}
-                            widthPct={geo.widthPct}
-                            selected={selectedReservationId === reservation.id}
-                            spaceType={space.type}
-                            onReservationClick={onReservationClick}
-                            onReservationHover={onReservationHover}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
+    <div className={styles.shell} style={cssVars}>
+      <div
+        ref={topScrollRef}
+        className={styles.topScroll}
+        data-visible={needsHScroll ? "true" : "false"}
+        onScroll={onTopScroll}
+        aria-hidden={!needsHScroll}
+      >
+        <div className={styles.topScrollSpacer} style={{ width: hScrollWidth }} />
+      </div>
+      <div className={styles.scrollClip}>
+        <div ref={mainScrollRef} className={styles.scroll} onScroll={onMainScroll}>
+          <div ref={gridRef} className={styles.grid}>
+            <div className={styles.corner}>Espace</div>
+            <div className={styles.headerTrack}>
+              {columns.map((column) => (
+                <div key={column.key} className={styles.headerCell}>
+                  {column.label}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {grouped.map((group) => (
+              <div key={group.type} className={styles.group}>
+                <div className={styles.groupLabel}>{group.label}</div>
+                <div className={styles.groupTrackSpacer} />
+                {group.spaces.map((space) => {
+                  const spaceReservations = reservationsForSpace(space.id, reservations);
+                  const spaceClosures = closuresForSpace(space, closures);
+                  return (
+                    <div key={space.id} className={styles.row}>
+                      <button
+                        type="button"
+                        className={styles.spaceCell}
+                        onClick={() => onSpaceNameClick(space.id)}
+                        title={`Historique · ${space.name}`}
+                      >
+                        <span className={styles.spaceName}>{space.name}</span>
+                        {space.floor ? (
+                          <span className={styles.spaceMeta}>Étage {space.floor}</span>
+                        ) : null}
+                      </button>
+                      <div className={styles.track}>
+                        <div className={styles.trackBg}>
+                          {columns.map((column) => (
+                            <div key={column.key} className={styles.trackCell} />
+                          ))}
+                        </div>
+                        <div className={styles.events}>
+                          {spaceClosures
+                            .filter((closure) => closure.kind === "closed")
+                            .map((closure) => {
+                              const geo = blockGeometry(
+                                closure.startAt,
+                                closure.endAt,
+                                rangeStartMs,
+                                rangeEndMs,
+                              );
+                              if (!geo) return null;
+                              return (
+                                <div
+                                  key={closure.id}
+                                  className={styles.closureBlock}
+                                  style={{ left: `${geo.leftPct}%`, width: `${geo.widthPct}%` }}
+                                  title={
+                                    closure.reason
+                                      ? `Fermeture · ${closure.reason}`
+                                      : "Fermeture exceptionnelle"
+                                  }
+                                />
+                              );
+                            })}
+                          {spaceReservations.map((reservation) => {
+                            const geo = blockGeometry(
+                              reservation.startAt,
+                              reservation.endAt,
+                              rangeStartMs,
+                              rangeEndMs,
+                            );
+                            if (!geo) return null;
+                            return (
+                              <ReservationEventBlock
+                                key={reservation.id}
+                                reservation={reservation}
+                                leftPct={geo.leftPct}
+                                widthPct={geo.widthPct}
+                                selected={selectedReservationId === reservation.id}
+                                spaceType={space.type}
+                                onReservationClick={onReservationClick}
+                                onReservationHover={onReservationHover}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );

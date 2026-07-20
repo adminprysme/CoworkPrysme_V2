@@ -1,8 +1,92 @@
-.scroll {
+.shell {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
   min-width: 0;
   width: 100%;
+}
+
+.topScroll {
+  flex-shrink: 0;
+  z-index: 6;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  border-bottom: 0;
+  padding: 0;
+  background: var(--color-surface);
+  scrollbar-width: auto;
+  scrollbar-color: var(--planning-slate, #3b6fa8)
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 16%, var(--color-surface-muted));
+  transition:
+    height 0.15s ease,
+    opacity 0.15s ease,
+    padding 0.15s ease;
+}
+
+.topScroll[data-visible="true"] {
+  height: 18px;
+  padding: 3px 0 2px;
+  opacity: 1;
+  pointer-events: auto;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--planning-slate, #3b6fa8) 8%, transparent);
+}
+
+.topScroll::-webkit-scrollbar {
+  height: 12px;
+}
+
+.topScroll::-webkit-scrollbar-track {
+  margin: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 14%, var(--color-surface-muted));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--planning-slate, #3b6fa8) 18%, transparent);
+}
+
+.topScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 78%, #1e3a5f),
+    var(--planning-slate, #3b6fa8),
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 85%, var(--color-secondary))
+  );
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--planning-slate, #3b6fa8) 35%, transparent);
+}
+
+.topScroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 75%, var(--color-secondary));
+}
+
+.topScroll::-webkit-scrollbar-thumb:active {
+  background: var(--color-secondary);
+}
+
+.topScrollSpacer {
+  height: 1px;
+  pointer-events: none;
+}
+
+.scrollClip {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  /* Clip the native horizontal bar; top custom bar owns H-scroll UX */
+  overflow: hidden;
+}
+
+.scroll {
+  box-sizing: border-box;
+  width: 100%;
+  height: calc(100% + 18px);
+  padding-bottom: 18px;
   overflow: auto;
   background:
     linear-gradient(
@@ -11,15 +95,37 @@
       transparent 120px
     ),
     var(--color-bg);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--planning-slate, #3b6fa8) 55%, var(--color-border))
+    transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 0;
+}
+
+.scroll::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 45%, var(--color-border));
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .grid {
   --label-width: clamp(120px, 16vw, 180px);
   --row-height: 44px;
-  --col-min-width: 48px;
   display: grid;
-  grid-template-columns: var(--label-width) minmax(0, 1fr);
-  width: 100%;
+  /* Never shrink the day track below its column budget (avoids bare --color-bg tails) */
+  grid-template-columns: var(--label-width) minmax(var(--track-min-width), 1fr);
+  width: max(100%, calc(var(--label-width) + var(--track-min-width, 0px)));
   min-width: calc(var(--label-width) + var(--track-min-width, 0px));
   align-content: start;
 }
@@ -49,15 +155,16 @@
   z-index: 4;
   display: flex;
   width: 100%;
-  min-width: var(--track-min-width, 100%);
+  min-width: var(--track-min-width);
   height: 40px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .headerCell {
-  flex: 1 1 0;
-  min-width: var(--col-min-width);
+  flex: 1 0 var(--col-min-width, 48px);
+  width: var(--col-min-width, 48px);
+  min-width: var(--col-min-width, 48px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -67,6 +174,7 @@
   color: var(--color-text-muted);
   white-space: nowrap;
   padding: 0 0.25rem;
+  background: var(--color-surface);
 }
 
 .group {
@@ -92,7 +200,7 @@
 
 .groupTrackSpacer {
   width: 100%;
-  min-width: var(--track-min-width, 100%);
+  min-width: var(--track-min-width);
   background: color-mix(in srgb, var(--color-secondary-soft) 40%, var(--color-surface));
   border-bottom: 1px solid var(--color-border);
 }
@@ -142,7 +250,7 @@
   position: relative;
   height: var(--row-height);
   width: 100%;
-  min-width: var(--track-min-width, 100%);
+  min-width: var(--track-min-width);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -150,14 +258,17 @@
 .trackBg {
   display: flex;
   width: 100%;
+  min-width: var(--track-min-width);
   height: 100%;
 }
 
 .trackCell {
-  flex: 1 1 0;
-  min-width: var(--col-min-width);
+  flex: 1 0 var(--col-min-width, 48px);
+  width: var(--col-min-width, 48px);
+  min-width: var(--col-min-width, 48px);
   height: 100%;
   border-right: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  background: var(--color-surface);
 }
 
 .events {
