@@ -92,7 +92,7 @@ export interface CancellationEmailInput {
   /**
    * Confirmed refund amount in integer cents.
    * When 0 (e.g. staff chose « Ne pas rembourser »), the email must not
-   * mention any refund figure — including an explicit « 0 € ».
+   * contain any monetary figure — neither « Montant réglé » nor a refund line.
    */
   refundCents: number;
 }
@@ -102,20 +102,29 @@ export function renderCancellationEmail(input: CancellationEmailInput): {
   html: string;
 } {
   const siteUrl = resolvePublicSiteUrl();
-  const refundHtml =
-    input.refundCents > 0
-      ? `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
+  const showRefund = input.refundCents > 0;
+
+  const paidRow = showRefund
+    ? emailDetailRow("Montant réglé", formatEmailEuro(input.paidTotalCents), { last: true })
+    : "";
+
+  const refundHtml = showRefund
+    ? `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
           Un remboursement de <strong>${formatEmailEuro(input.refundCents)}</strong> vous sera proposé par notre équipe.
         </p>`
-      : "";
+    : "";
 
   const body = `
     <p style="margin-top:0;">Votre réservation a été <strong>annulée</strong> par notre équipe.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
       ${emailDetailRow("Référence", `<strong>${escapeEmailHtml(input.reservationReference)}</strong>`)}
       ${emailDetailRow("Espace", escapeEmailHtml(input.spaceName))}
-      ${emailDetailRow("Créneau", `Du ${escapeEmailHtml(input.startAt)} au ${escapeEmailHtml(input.endAt)}`)}
-      ${emailDetailRow("Montant réglé", formatEmailEuro(input.paidTotalCents), { last: true })}
+      ${emailDetailRow(
+        "Créneau",
+        `Du ${escapeEmailHtml(input.startAt)} au ${escapeEmailHtml(input.endAt)}`,
+        { last: !showRefund },
+      )}
+      ${paidRow}
     </table>
     ${refundHtml}
     <p style="margin:24px 0 0;">Pour toute question, notre équipe reste à votre disposition.</p>

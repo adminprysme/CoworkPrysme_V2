@@ -39,7 +39,7 @@ describe("planning-manage-emails amount visibility", () => {
     expect(email.html).not.toMatch(/ne sera pas facturée/);
   });
 
-  it("omits refund block when refundCents is 0 (ne pas rembourser)", () => {
+  it("omits all monetary figures when refundCents is 0 (ne pas rembourser)", () => {
     const email = renderCancellationEmail({
       reservationReference: "RES-TEST",
       spaceName: "FOCUS",
@@ -50,11 +50,12 @@ describe("planning-manage-emails amount visibility", () => {
     });
 
     expect(email.html).toContain("annulée");
-    expect(email.html).not.toMatch(/remboursement/i);
-    expect(email.html).not.toMatch(/0,00\s*€/);
+    expect(email.html).toContain("FOCUS");
+    expect(email.html).toContain("Pour toute question");
+    expect(email.html).not.toMatch(/remboursement|Montant réglé|€|EUR/i);
   });
 
-  it("shows refund amount when a positive refund is confirmed", () => {
+  it("shows paid total and refund amount when a positive refund is confirmed", () => {
     const email = renderCancellationEmail({
       reservationReference: "RES-TEST",
       spaceName: "FOCUS",
@@ -64,7 +65,9 @@ describe("planning-manage-emails amount visibility", () => {
       refundCents: 12000,
     });
 
+    expect(email.html).toMatch(/Montant réglé/);
     expect(email.html).toMatch(/remboursement/i);
     expect(email.html).toMatch(/120,00\s*€/);
+    expect(email.html).toMatch(/239,99\s*€/);
   });
 });
