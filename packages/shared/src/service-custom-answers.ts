@@ -74,3 +74,72 @@ export function assertServiceCustomAnswers(
 
   return validated;
 }
+
+/** Human-readable display of a custom answer value (staff / summary UI). */
+export function formatServiceCustomAnswerValue(
+  type: ServiceCustomQuestion["type"],
+  value: unknown,
+): string {
+  if (value == null) {
+    return "";
+  }
+
+  if (type === "date_range" && isRange(value)) {
+    return `${formatDateOnly(value.start)} → ${formatDateOnly(value.end)}`;
+  }
+
+  if (type === "datetime_range" && isRange(value)) {
+    return `${formatDateTime(value.start)} → ${formatDateTime(value.end)}`;
+  }
+
+  if (type === "datetime" && typeof value === "string") {
+    return formatDateTime(value);
+  }
+
+  if (type === "number" && typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : String(value);
+  }
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function isRange(value: unknown): value is { start: string; end: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "start" in value &&
+    "end" in value &&
+    typeof (value as { start: unknown }).start === "string" &&
+    typeof (value as { end: unknown }).end === "string"
+  );
+}
+
+function formatDateOnly(isoOrDate: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoOrDate)) {
+    const [year, month, day] = isoOrDate.split("-");
+    return `${day}/${month}/${year}`;
+  }
+  return formatDateTime(isoOrDate).split(" ")[0] ?? isoOrDate;
+}
+
+function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return iso;
+  }
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

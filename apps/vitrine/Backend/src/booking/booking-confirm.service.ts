@@ -24,10 +24,14 @@ import {
   computeBankTransferExpiresAt,
   isBankTransferFullyEligible,
   PRIVACY_POLICY_VERSION,
+  ServiceCustomAnswerValidationError,
+  assertServiceCustomAnswers,
+  mapServiceCustomQuestionsToResponse,
   type BankTransferInstructions,
   type BookingConfirmRequest,
   type BookingPaymentMethod,
   type BookingPriceServiceInput,
+  type ServiceCustomAnswer,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
 
@@ -105,12 +109,32 @@ export class BookingConfirmService {
         });
       }
 
+      let customAnswers: ServiceCustomAnswer[] | undefined;
+      try {
+        const validated = assertServiceCustomAnswers(
+          mapServiceCustomQuestionsToResponse(service.customQuestions ?? []),
+          entry.customAnswers,
+        );
+        if (validated.length > 0) {
+          customAnswers = validated;
+        }
+      } catch (error) {
+        if (error instanceof ServiceCustomAnswerValidationError) {
+          throw new BadRequestException({
+            code: BOOKING_CONFIRM_ERROR_CODES.VALIDATION_ERROR,
+            message: error.message,
+          });
+        }
+        throw error;
+      }
+
       return {
         serviceId: service._id,
         label: service.label,
         qty: entry.qty,
         unitPriceHT: service.priceHT,
         vatRate: service.vatRate,
+        ...(customAnswers ? { customAnswers } : {}),
       };
     });
   }
@@ -363,4 +387,5 @@ type ReservationServiceSnapshot = {
   qty: number;
   unitPriceHT: number;
   vatRate: number;
+  customAnswers?: ServiceCustomAnswer[];
 };

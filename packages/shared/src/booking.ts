@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { durationClassLabel } from "./catalog-content.js";
-import { ServiceCustomQuestionsSchema } from "./service-custom-questions.js";
+import {
+  ServiceCustomAnswerSchema,
+  ServiceCustomQuestionsSchema,
+} from "./service-custom-questions.js";
 import { SpaceTypeSchema } from "./spaces.js";
 
 export const BOOKING_ERROR_CODES = {
@@ -265,16 +268,7 @@ export const BookingPriceServiceInputSchema = z.object({
     .trim()
     .regex(/^[a-f0-9]{24}$/i, "Identifiant de service invalide"),
   qty: z.number().int().min(1),
-  customAnswers: z
-    .array(
-      z.object({
-        questionId: z.string().uuid(),
-        type: z.string(),
-        label: z.string().trim().min(1),
-        value: z.unknown(),
-      }),
-    )
-    .optional(),
+  customAnswers: z.array(ServiceCustomAnswerSchema).optional(),
 });
 
 export const BookingPriceRequestSchema = z

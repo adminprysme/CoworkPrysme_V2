@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertServiceCustomAnswers,
+  formatServiceCustomAnswerValue,
   ServiceCustomAnswerValidationError,
 } from "./service-custom-answers.js";
 import type { ServiceCustomQuestion } from "./service-custom-questions.js";
@@ -64,5 +65,18 @@ describe("assertServiceCustomAnswers", () => {
         },
       ]),
     ).toThrow("Réponse fournie pour une question inconnue");
+  });
+});
+
+describe("formatServiceCustomAnswerValue", () => {
+  it("formats scalars and ranges", () => {
+    expect(formatServiceCustomAnswerValue("short_text", "Corsé")).toBe("Corsé");
+    expect(formatServiceCustomAnswerValue("number", 4)).toBe("4");
+    expect(
+      formatServiceCustomAnswerValue("date_range", {
+        start: "2026-08-01",
+        end: "2026-08-03",
+      }),
+    ).toBe("01/08/2026 → 03/08/2026");
   });
 });

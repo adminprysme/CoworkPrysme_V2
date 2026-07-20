@@ -1,6 +1,11 @@
 import { useEffect, useId, useState } from "react";
-import { IconCalendar, IconDoor, IconMail, IconPhone } from "@tabler/icons-react";
-import type { PlanningContact, PlanningReservationDetail } from "@coworkprysme/shared";
+import { IconCalendar, IconChevronDown, IconDoor, IconMail, IconPhone } from "@tabler/icons-react";
+import {
+  formatServiceCustomAnswerValue,
+  type PlanningContact,
+  type PlanningReservationDetail,
+  type PlanningServiceLine,
+} from "@coworkprysme/shared";
 
 import { fetchPlanningReservation } from "../../../lib/planning-api.js";
 import {
@@ -25,6 +30,10 @@ function contactDisplayName(contact: PlanningContact): string {
     .filter(Boolean)
     .join(" ");
   return fullName || contact.email;
+}
+
+function serviceAnswerCount(service: PlanningServiceLine): number {
+  return service.customAnswers?.length ?? 0;
 }
 
 export function ReservationDetailDrawer({ reservationId, onClose }: ReservationDetailDrawerProps) {
@@ -190,17 +199,51 @@ export function ReservationDetailDrawer({ reservationId, onClose }: ReservationD
                 <p className={styles.muted}>Aucun service associé.</p>
               ) : (
                 <ul className={styles.serviceList}>
-                  {detail.services.map((service) => (
-                    <li key={`${service.serviceId}-${service.label}`} className={styles.serviceRow}>
-                      <span>
-                        {service.label}
-                        {service.qty > 1 ? ` × ${service.qty}` : null}
-                      </span>
-                      <span className={styles.servicePrice}>
-                        {formatCentsEur(service.unitPriceHT * service.qty)}
-                      </span>
-                    </li>
-                  ))}
+                  {detail.services.map((service) => {
+                    const answerCount = serviceAnswerCount(service);
+                    return (
+                      <li
+                        key={`${service.serviceId}-${service.label}`}
+                        className={styles.serviceItem}
+                      >
+                        <div className={styles.serviceRow}>
+                          <span>
+                            {service.label}
+                            {service.qty > 1 ? ` × ${service.qty}` : null}
+                          </span>
+                          <span className={styles.servicePrice}>
+                            {formatCentsEur(service.unitPriceHT * service.qty)}
+                          </span>
+                        </div>
+                        {answerCount > 0 ? (
+                          <details className={styles.serviceAnswers}>
+                            <summary className={styles.serviceAnswersSummary}>
+                              <IconChevronDown
+                                size={14}
+                                stroke={1.6}
+                                className={styles.serviceAnswersChevron}
+                                aria-hidden
+                              />
+                              {answerCount} réponse{answerCount > 1 ? "s" : ""}
+                            </summary>
+                            <dl className={styles.serviceAnswersList}>
+                              {(service.customAnswers ?? []).map((answer) => (
+                                <div
+                                  key={`${answer.questionId}-${answer.label}`}
+                                  className={styles.serviceAnswerRow}
+                                >
+                                  <dt>{answer.label}</dt>
+                                  <dd>
+                                    {formatServiceCustomAnswerValue(answer.type, answer.value)}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </details>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

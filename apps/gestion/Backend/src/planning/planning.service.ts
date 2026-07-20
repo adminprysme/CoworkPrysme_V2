@@ -8,12 +8,14 @@ import {
   PlanningCalendarResponseSchema,
   PlanningReservationDetailSchema,
   PlanningSpaceHistoryResponseSchema,
+  ServiceCustomAnswerSchema,
   type PlanningCalendarResponse,
   type PlanningHistoryEvent,
   type PlanningHistoryEventType,
   type PlanningPaymentStatus,
   type PlanningReservationDetail,
   type PlanningSpaceHistoryResponse,
+  type ServiceCustomAnswer,
 } from "@coworkprysme/shared";
 import {
   connectMongo,
@@ -432,13 +434,24 @@ export class PlanningService {
         companyName: cardex?.company?.legalName,
         email: primaryEmail,
       },
-      services: (reservation.services ?? []).map((s) => ({
-        serviceId: String(s.serviceId),
-        label: s.label,
-        qty: Math.trunc(s.qty),
-        unitPriceHT: Math.trunc(s.unitPriceHT),
-        vatRate: s.vatRate,
-      })),
+      services: (reservation.services ?? []).map((s) => {
+        const customAnswers: ServiceCustomAnswer[] = [];
+        for (const answer of s.customAnswers ?? []) {
+          const parsed = ServiceCustomAnswerSchema.safeParse(answer);
+          if (parsed.success) {
+            customAnswers.push(parsed.data);
+          }
+        }
+
+        return {
+          serviceId: String(s.serviceId),
+          label: s.label,
+          qty: Math.trunc(s.qty),
+          unitPriceHT: Math.trunc(s.unitPriceHT),
+          vatRate: s.vatRate,
+          ...(customAnswers.length > 0 ? { customAnswers } : {}),
+        } satisfies PlanningReservationDetail["services"][number];
+      }),
       pricing: {
         subtotalHT: Math.trunc(reservation.pricing?.subtotalHT ?? 0),
         totalVAT: Math.trunc(reservation.pricing?.totalVAT ?? 0),

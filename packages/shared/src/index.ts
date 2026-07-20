@@ -514,6 +514,7 @@ export {
 export {
   ServiceCustomAnswerValidationError,
   assertServiceCustomAnswers,
+  formatServiceCustomAnswerValue,
 } from "./service-custom-answers.js";
 
 export {

@@ -283,13 +283,32 @@ export const spaceSnapshotSchema = new Schema<SpaceSnapshot>(
   { _id: false },
 );
 
+export interface ReservationServiceCustomAnswer {
+  questionId: string;
+  type: string;
+  label: string;
+  value: unknown;
+}
+
 export interface ReservationServiceSnapshot {
   serviceId: Types.ObjectId;
   label: string;
   qty: number;
   unitPriceHT: number;
   vatRate: number;
+  /** Snapshot of answers collected at booking time (optional). */
+  customAnswers?: ReservationServiceCustomAnswer[];
 }
+
+const reservationServiceCustomAnswerSchema = new Schema<ReservationServiceCustomAnswer>(
+  {
+    questionId: { type: String, required: true },
+    type: { type: String, required: true },
+    label: { type: String, required: true },
+    value: { type: Schema.Types.Mixed, required: true },
+  },
+  { _id: false },
+);
 
 export const reservationServiceSnapshotSchema = new Schema<ReservationServiceSnapshot>(
   {
@@ -298,6 +317,7 @@ export const reservationServiceSnapshotSchema = new Schema<ReservationServiceSna
     qty: { type: Number, required: true, min: 1 },
     unitPriceHT: centsField({ min: 0 }),
     vatRate: { type: Number, required: true },
+    customAnswers: { type: [reservationServiceCustomAnswerSchema], default: undefined },
   },
   { _id: false },
 );

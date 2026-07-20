@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ServiceCustomAnswerSchema } from "./service-custom-questions.js";
+
 export const PlanningViewModeSchema = z.enum(["month", "week", "day"]);
 export type PlanningViewMode = z.infer<typeof PlanningViewModeSchema>;
 
@@ -87,6 +89,7 @@ export const PlanningServiceLineSchema = z.object({
   qty: z.number().int().positive(),
   unitPriceHT: z.number().int().nonnegative(),
   vatRate: z.number().nonnegative(),
+  customAnswers: z.array(ServiceCustomAnswerSchema).optional(),
 });
 export type PlanningServiceLine = z.infer<typeof PlanningServiceLineSchema>;
 
