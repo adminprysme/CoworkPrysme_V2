@@ -127,6 +127,9 @@ importers:
       '@coworkprysme/shared':
         specifier: workspace:*
         version: link:../../../packages/shared
+      '@tabler/icons-react':
+        specifier: ^3.45.0
+        version: 3.45.0(react@19.2.7)
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -1581,6 +1584,14 @@ packages:
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
+
+  '@tabler/icons-react@3.45.0':
+    resolution: {integrity: sha512-t/AuKs7ALMDDTY+B9IvfZnlO0mbLlP/lJxP/HnGC49QkM8mCsTN38kYyxjXxgrb1+TeK53ioVBJqIV7n/eysXQ==}
+    peerDependencies:
+      react: '>= 16'
+
+  '@tabler/icons@3.45.0':
+    resolution: {integrity: sha512-jiATwV8+zGYLTZ7gMLGivCic+KtsMZXcDmufIG8umlLxoHhI6902hGYIEt0Oa9Y9SXblNzUlrisHm5jOFMxOQA==}
 
   '@tokenizer/inflate@0.4.1':
     resolution: {integrity: sha512-2mAv+8pkG6GIZiF1kNg1jAjh27IDxEPKwdGul3snfztFerfPGI1LjDezZp3i7BElXompqEtPmoPx6c2wgtWsOA==}
@@ -5441,6 +5452,13 @@ snapshots:
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
+
+  '@tabler/icons-react@3.45.0(react@19.2.7)':
+    dependencies:
+      '@tabler/icons': 3.45.0
+      react: 19.2.7
+
+  '@tabler/icons@3.45.0': {}
 
   '@tokenizer/inflate@0.4.1':
     dependencies:

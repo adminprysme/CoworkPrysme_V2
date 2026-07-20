@@ -40,6 +40,7 @@ interface PlanningCalendarProps {
   onReservationHover?: (
     reservation: PlanningCalendarReservation | null,
     anchor: DOMRect | null,
+    spaceType?: PlanningSpaceType,
   ) => void;
 }
 
@@ -73,6 +74,7 @@ function ReservationEventBlock({
   leftPct,
   widthPct,
   selected,
+  spaceType,
   onReservationClick,
   onReservationHover,
 }: {
@@ -80,10 +82,12 @@ function ReservationEventBlock({
   leftPct: number;
   widthPct: number;
   selected: boolean;
+  spaceType: PlanningSpaceType;
   onReservationClick: (reservationId: string) => void;
   onReservationHover?: (
     reservation: PlanningCalendarReservation | null,
     anchor: DOMRect | null,
+    spaceType?: PlanningSpaceType,
   ) => void;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
@@ -116,11 +120,11 @@ function ReservationEventBlock({
       aria-label={`${reservation.reference} · ${reservation.clientLabel}`}
       onClick={() => onReservationClick(reservation.id)}
       onMouseEnter={(event) => {
-        onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect());
+        onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect(), spaceType);
       }}
       onMouseLeave={() => onReservationHover?.(null, null)}
       onFocus={(event) => {
-        onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect());
+        onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect(), spaceType);
       }}
       onBlur={() => onReservationHover?.(null, null)}
     >
@@ -244,6 +248,7 @@ export function PlanningCalendar({
                             leftPct={geo.leftPct}
                             widthPct={geo.widthPct}
                             selected={selectedReservationId === reservation.id}
+                            spaceType={space.type}
                             onReservationClick={onReservationClick}
                             onReservationHover={onReservationHover}
                           />

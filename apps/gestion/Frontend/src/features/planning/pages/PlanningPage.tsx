@@ -3,6 +3,7 @@ import type {
   PlanningBuildingOption,
   PlanningCalendarReservation,
   PlanningCalendarResponse,
+  PlanningSpaceType,
   PlanningViewMode,
 } from "@coworkprysme/shared";
 
@@ -35,6 +36,7 @@ export function PlanningPage() {
     null,
   );
   const [hoverAnchor, setHoverAnchor] = useState<DOMRect | null>(null);
+  const [hoverMeta, setHoverMeta] = useState<{ spaceType?: PlanningSpaceType } | null>(null);
 
   const { from: displayFrom, to: displayTo } = useMemo(
     () => rangeForView(anchor, mode),
@@ -93,9 +95,14 @@ export function PlanningPage() {
   const splitOpen = Boolean(selectedReservationId);
 
   const handleReservationHover = useCallback(
-    (reservation: PlanningCalendarReservation | null, anchorRect: DOMRect | null) => {
+    (
+      reservation: PlanningCalendarReservation | null,
+      anchorRect: DOMRect | null,
+      spaceType?: PlanningSpaceType,
+    ) => {
       setHoveredReservation(reservation);
       setHoverAnchor(anchorRect);
+      setHoverMeta(reservation ? { spaceType } : null);
     },
     [],
   );
@@ -142,7 +149,7 @@ export function PlanningPage() {
         ) : null}
       </div>
 
-      <ReservationTooltip reservation={hoveredReservation} anchor={hoverAnchor} />
+      <ReservationTooltip reservation={hoveredReservation} anchor={hoverAnchor} meta={hoverMeta} />
 
       {selectedSpaceId ? (
         <SpaceHistoryDrawer

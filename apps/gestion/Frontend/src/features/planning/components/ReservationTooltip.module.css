@@ -1,37 +1,90 @@
 .tooltip {
+  --planning-slate: #3b6fa8;
   position: fixed;
   z-index: 80;
-  max-width: min(280px, calc(100vw - 16px));
-  padding: 0.65rem 0.8rem;
-  border-radius: 10px;
-  background: #3b6fa8;
-  color: #f8fafc;
+  width: min(320px, calc(100vw - 16px));
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface) 92%, #ffffff 8%);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   box-shadow:
-    0 12px 28px color-mix(in srgb, #1e3a5f 35%, transparent),
-    0 2px 8px color-mix(in srgb, #1e3a5f 20%, transparent);
+    0 10px 28px color-mix(in srgb, var(--color-text) 12%, transparent),
+    0 2px 8px color-mix(in srgb, var(--color-text) 6%, transparent);
   pointer-events: none;
   font-size: 0.8rem;
   line-height: 1.35;
 }
 
-.ref {
-  margin: 0;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
 }
 
-.client {
-  margin: 0.2rem 0 0;
-  font-weight: 600;
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
-.line {
-  margin: 0.25rem 0 0;
-  opacity: 0.92;
+.clientName {
+  font-weight: 650;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.amount {
-  margin: 0.4rem 0 0;
-  font-weight: 700;
+.reference {
+  margin: 0.45rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+}
+
+.divider {
+  height: 1px;
+  margin: 0.65rem 0;
+  background: var(--color-border);
+}
+
+.rows {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  color: var(--color-text);
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--planning-slate);
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.totalLabel {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.totalValue {
+  font-size: 1rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  color: var(--color-text);
 }
