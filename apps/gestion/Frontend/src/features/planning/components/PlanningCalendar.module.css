@@ -1,18 +1,26 @@
 .scroll {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
   overflow: auto;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-surface-muted) 65%, transparent), transparent 120px),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface-muted) 65%, transparent),
+      transparent 120px
+    ),
     var(--color-bg);
 }
 
 .grid {
-  --label-width: 180px;
+  --label-width: clamp(120px, 16vw, 180px);
   --row-height: 44px;
+  --col-min-width: 48px;
   display: grid;
-  grid-template-columns: var(--label-width) max-content;
-  min-width: max-content;
+  grid-template-columns: var(--label-width) minmax(0, 1fr);
+  width: 100%;
+  min-width: calc(var(--label-width) + var(--track-min-width, 0px));
   align-content: start;
 }
 
@@ -40,13 +48,16 @@
   top: 0;
   z-index: 4;
   display: flex;
+  width: 100%;
+  min-width: var(--track-min-width, 100%);
   height: 40px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .headerCell {
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: var(--col-min-width);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,6 +91,8 @@
 }
 
 .groupTrackSpacer {
+  width: 100%;
+  min-width: var(--track-min-width, 100%);
   background: color-mix(in srgb, var(--color-secondary-soft) 40%, var(--color-surface));
   border-bottom: 1px solid var(--color-border);
 }
@@ -105,6 +118,7 @@
   text-align: left;
   cursor: pointer;
   color: inherit;
+  min-width: 0;
 }
 
 .spaceCell:hover {
@@ -127,17 +141,21 @@
 .track {
   position: relative;
   height: var(--row-height);
+  width: 100%;
+  min-width: var(--track-min-width, 100%);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 .trackBg {
   display: flex;
+  width: 100%;
   height: 100%;
 }
 
 .trackCell {
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: var(--col-min-width);
   height: 100%;
   border-right: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
 }
@@ -145,6 +163,7 @@
 .events {
   position: absolute;
   inset: 0;
+  width: 100%;
   pointer-events: none;
 }
 
@@ -159,12 +178,58 @@
   cursor: pointer;
   min-width: 6px;
   padding: 0;
+  overflow: hidden;
+}
+
+.eventBlock[data-has-label="true"] {
+  display: flex;
+  align-items: center;
+  padding: 0 0.4rem;
+}
+
+.eventBlock[data-selected="true"] {
+  outline: 2px solid #3b6fa8;
+  outline-offset: 1px;
+  z-index: 1;
 }
 
 .eventBlock:hover {
   filter: brightness(0.92);
   outline: 2px solid color-mix(in srgb, var(--color-text) 25%, transparent);
   outline-offset: 1px;
+}
+
+.eventBlock[data-selected="true"]:hover {
+  outline-color: #3b6fa8;
+}
+
+.eventLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+  color: #fff;
+  line-height: 1.15;
+  pointer-events: none;
+}
+
+.eventClient {
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventRef {
+  font-size: 0.62rem;
+  font-weight: 500;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .closureBlock {

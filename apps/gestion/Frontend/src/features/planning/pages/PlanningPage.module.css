@@ -3,10 +3,59 @@
   --planning-partial: #d97706;
   --planning-awaiting: #c58369;
   --planning-none: #94a3b8;
+  --planning-slate: #3b6fa8;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  height: 100%;
+  min-width: 0;
+  /* Bleed out of AppShell content padding for full available width */
+  margin: calc(-1 * var(--app-content-padding, 1.5rem));
+  width: calc(100% + 2 * var(--app-content-padding, 1.5rem));
+  height: calc(100% + 2 * var(--app-content-padding, 1.5rem));
+  max-height: calc(100% + 2 * var(--app-content-padding, 1.5rem));
   overflow: hidden;
+  background: var(--color-bg);
+}
+
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.calendarPane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.detailPane {
+  flex: 0 0 50%;
+  max-width: 50%;
+  min-width: min(320px, 50%);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    flex-direction: column;
+  }
+
+  .detailPane {
+    flex: 0 0 48%;
+    max-width: none;
+    min-width: 0;
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+  }
 }
