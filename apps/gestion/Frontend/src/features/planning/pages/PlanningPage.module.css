@@ -1,0 +1,12 @@
+.page {
+  --planning-paid: #2f9e6b;
+  --planning-partial: #d97706;
+  --planning-awaiting: #c58369;
+  --planning-none: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}

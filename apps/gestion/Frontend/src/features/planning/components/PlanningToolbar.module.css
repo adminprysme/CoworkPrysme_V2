@@ -1,0 +1,169 @@
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto minmax(220px, 1.2fr);
+  grid-template-areas:
+    "left center right"
+    "legend legend legend";
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.left {
+  grid-area: left;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.navGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.navBtn,
+.todayBtn,
+.modeBtn,
+.modeActive {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.navBtn {
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.todayBtn {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.rangeLabel {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.right {
+  grid-area: right;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.buildingFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.buildingLabel {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.buildingFilter select {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 0.35rem 0.55rem;
+}
+
+.modeSwitch {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.modeBtn,
+.modeActive {
+  border: 0;
+  border-radius: 0;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.modeActive {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+.legend {
+  grid-area: legend;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legendSwatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+}
+
+.statusNote {
+  color: var(--color-text-muted);
+}
+
+.errorNote {
+  color: var(--color-danger);
+}
+
+@media (max-width: 960px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "left"
+      "center"
+      "right"
+      "legend";
+  }
+
+  .right {
+    justify-content: flex-start;
+  }
+}

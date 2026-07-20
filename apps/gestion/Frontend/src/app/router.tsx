@@ -15,6 +15,8 @@ import { PromoLayout } from "../features/promo/PromoLayout.js";
 import { PromoCodesPage } from "../features/promo/pages/PromoCodesPage.js";
 import { BillingLayout } from "../features/billing/BillingLayout.js";
 import { MarkTransferReceivedPage } from "../features/billing/pages/MarkTransferReceivedPage.js";
+import { PlanningLayout } from "../features/planning/PlanningLayout.js";
+import { PlanningPage } from "../features/planning/pages/PlanningPage.js";
 import { DashboardPage } from "../pages/DashboardPage.js";
 import { ModuleStubPage } from "../pages/ModuleStubPage.js";
 import { PermissionsPage } from "../pages/PermissionsPage.js";
@@ -29,7 +31,8 @@ const STUB_PATHS = [
       item.id !== "spaces" &&
       item.id !== "services" &&
       item.id !== "promo" &&
-      item.id !== "billing",
+      item.id !== "billing" &&
+      item.id !== "planning",
   ).map((item) => item.path),
   "/settings",
 ];
@@ -60,6 +63,9 @@ export function AppRouter() {
                 </Route>
                 <Route path="/billing" element={<BillingLayout />}>
                   <Route index element={<MarkTransferReceivedPage />} />
+                </Route>
+                <Route path="/planning" element={<PlanningLayout />}>
+                  <Route index element={<PlanningPage />} />
                 </Route>
                 {STUB_PATHS.map((path) => (
                   <Route key={path} path={path} element={<ModuleStubPage />} />

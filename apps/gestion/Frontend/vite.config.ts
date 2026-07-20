@@ -37,6 +37,7 @@ export default defineConfig({
       "/services": proxyApiOnly("/services"),
       "/discount-codes": apiTarget,
       "/billing": apiTarget,
+      "/planning": proxyApiOnly("/planning"),
       "/integrations": apiTarget,
       "/media": apiTarget,
       "/health": apiTarget,
