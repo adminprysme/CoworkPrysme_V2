@@ -78,16 +78,16 @@
   min-height: 0;
   min-width: 0;
   width: 100%;
-  /* Clip the native horizontal bar; top custom bar owns H-scroll UX */
   overflow: hidden;
 }
 
 .scroll {
   box-sizing: border-box;
   width: 100%;
-  height: calc(100% + 18px);
-  padding-bottom: 18px;
-  overflow: auto;
+  height: 100%;
+  /* Vertical native bar only — horizontal UX is the top scroller */
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     linear-gradient(
       180deg,

@@ -227,6 +227,35 @@ export function PlanningCalendar({
     top.scrollLeft = main.scrollLeft;
   }, [needsHScroll, hScrollWidth]);
 
+  useEffect(() => {
+    const main = mainScrollRef.current;
+    const top = topScrollRef.current;
+    if (!main) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      const maxLeft = Math.max(0, main.scrollWidth - main.clientWidth);
+      const nextLeft = Math.max(0, Math.min(maxLeft, main.scrollLeft + event.deltaX));
+      if (nextLeft === main.scrollLeft) {
+        return;
+      }
+      syncLockRef.current = "main";
+      main.scrollLeft = nextLeft;
+      if (top) {
+        top.scrollLeft = nextLeft;
+      }
+      requestAnimationFrame(() => {
+        syncLockRef.current = null;
+      });
+    };
+
+    main.addEventListener("wheel", onWheel, { passive: false });
+    return () => main.removeEventListener("wheel", onWheel);
+  }, [needsHScroll, columns.length, spaces.length]);
+
   if (spaces.length === 0) {
     return <div className={styles.empty}>Aucun espace actif dans le périmètre sélectionné.</div>;
   }
