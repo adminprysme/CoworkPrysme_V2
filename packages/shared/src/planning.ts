@@ -203,3 +203,21 @@ export const PlanningOccupancyResponseSchema = z.object({
   month: PlanningOccupancyMetricSchema,
 });
 export type PlanningOccupancyResponse = z.infer<typeof PlanningOccupancyResponseSchema>;
+
+export const PlanningSearchHitSchema = z.object({
+  reservationId: z.string(),
+  reference: z.string(),
+  clientLabel: z.string(),
+  spaceName: z.string(),
+  startAt: z.string().datetime(),
+  endAt: z.string().datetime(),
+  paymentStatus: PlanningPaymentStatusSchema,
+  invoiceReference: z.string().optional(),
+});
+export type PlanningSearchHit = z.infer<typeof PlanningSearchHitSchema>;
+
+export const PlanningSearchResponseSchema = z.object({
+  query: z.string(),
+  results: z.array(PlanningSearchHitSchema),
+});
+export type PlanningSearchResponse = z.infer<typeof PlanningSearchResponseSchema>;

@@ -2,6 +2,7 @@ import type {
   PlanningCalendarResponse,
   PlanningOccupancyResponse,
   PlanningReservationDetail,
+  PlanningSearchResponse,
   PlanningSpaceHistoryResponse,
 } from "@coworkprysme/shared";
 
@@ -50,6 +51,11 @@ export function fetchPlanningCalendar(params: {
 
 export function fetchPlanningOccupancy(): Promise<PlanningOccupancyResponse> {
   return planningFetch("/planning/occupancy");
+}
+
+export function fetchPlanningSearch(q: string): Promise<PlanningSearchResponse> {
+  const search = new URLSearchParams({ q });
+  return planningFetch(`/planning/search?${search.toString()}`);
 }
 
 export function fetchPlanningReservation(id: string): Promise<PlanningReservationDetail> {

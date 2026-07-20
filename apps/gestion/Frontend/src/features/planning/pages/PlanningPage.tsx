@@ -4,6 +4,7 @@ import type {
   PlanningCalendarReservation,
   PlanningCalendarResponse,
   PlanningOccupancyResponse,
+  PlanningSearchHit,
   PlanningSpaceType,
   PlanningViewMode,
 } from "@coworkprysme/shared";
@@ -12,6 +13,7 @@ import { fetchPlanningCalendar, fetchPlanningOccupancy } from "../../../lib/plan
 import { PlanningCalendar } from "../components/PlanningCalendar.js";
 import { PlanningFiltersBar } from "../components/PlanningFiltersBar.js";
 import { PlanningOccupancyStats } from "../components/PlanningOccupancyStats.js";
+import { PlanningSearch } from "../components/PlanningSearch.js";
 import { PlanningToolbar } from "../components/PlanningToolbar.js";
 import { ReservationDetailDrawer } from "../components/ReservationDetailDrawer.js";
 import { ReservationTooltip } from "../components/ReservationTooltip.js";
@@ -230,6 +232,19 @@ export function PlanningPage() {
     setSpaceFilter("all");
   }
 
+  function handleSearchSelect(hit: PlanningSearchHit) {
+    const start = new Date(hit.startAt);
+    const end = new Date(hit.endAt);
+    const inRange = start.getTime() < displayTo.getTime() && end.getTime() > displayFrom.getTime();
+    if (!inRange) {
+      const durationMs = end.getTime() - start.getTime();
+      const dayMs = 24 * 60 * 60 * 1000;
+      setMode(durationMs <= dayMs ? "day" : "week");
+      setAnchor(start);
+    }
+    setSelectedReservationId(hit.reservationId);
+  }
+
   return (
     <div className={styles.page} data-split={splitOpen ? "true" : undefined}>
       <div className={styles.topStack}>
@@ -261,6 +276,8 @@ export function PlanningPage() {
           onToday={() => setAnchor(new Date())}
           onBuildingChange={setBuildingId}
         />
+
+        <PlanningSearch onSelect={handleSearchSelect} />
 
         <PlanningFiltersBar
           spaces={spacesForEspacePills}

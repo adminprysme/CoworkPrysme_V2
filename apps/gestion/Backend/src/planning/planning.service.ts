@@ -8,6 +8,7 @@ import {
   PlanningCalendarResponseSchema,
   PlanningOccupancyResponseSchema,
   PlanningReservationDetailSchema,
+  PlanningSearchResponseSchema,
   PlanningSpaceHistoryResponseSchema,
   ServiceCustomAnswerSchema,
   type PlanningCalendarResponse,
@@ -17,6 +18,7 @@ import {
   type PlanningOccupancyResponse,
   type PlanningPaymentStatus,
   type PlanningReservationDetail,
+  type PlanningSearchResponse,
   type PlanningSpaceHistoryResponse,
   type ServiceCustomAnswer,
 } from "@coworkprysme/shared";
@@ -88,6 +90,10 @@ function parseIsoDate(value: string | undefined, label: string): Date {
 
 function toIso(date: Date): string {
   return date.toISOString();
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 @Injectable()
@@ -203,6 +209,159 @@ export class PlanningService {
     };
 
     return PlanningOccupancyResponseSchema.parse(payload);
+  }
+
+  async search(
+    profile: StaffProfileDocument,
+    query: { q?: string },
+  ): Promise<PlanningSearchResponse> {
+    await connectMongo();
+
+    const raw = (query.q ?? "").trim();
+    if (raw.length < 2) {
+      return PlanningSearchResponseSchema.parse({ query: raw, results: [] });
+    }
+
+    const Building = await getBuildingModel();
+    const Space = await getSpaceModel();
+    const Reservation = await getReservationModel();
+    const Cardex = await getCardexModel();
+    const Invoice = await getInvoiceModel();
+
+    const activeBuildingsQuery: Record<string, unknown> = { status: "active" };
+    if (profile.scope.buildingIds.length > 0) {
+      activeBuildingsQuery._id = { $in: profile.scope.buildingIds };
+    }
+    const buildings = await Building.find(activeBuildingsQuery).select({ _id: 1 }).lean().exec();
+    const buildingIds = buildings.map((b) => b._id);
+    const spaces = buildingIds.length
+      ? await Space.find({
+          status: "active",
+          buildingId: { $in: buildingIds },
+        })
+          .select({ _id: 1 })
+          .lean()
+          .exec()
+      : [];
+    const spaceIds = spaces.map((s) => s._id);
+    if (spaceIds.length === 0) {
+      return PlanningSearchResponseSchema.parse({ query: raw, results: [] });
+    }
+
+    const pattern = escapeRegex(raw);
+    const regex = new RegExp(pattern, "i");
+
+    const [cardexMatches, invoiceMatches] = await Promise.all([
+      Cardex.find({
+        $or: [
+          { "identity.firstName": regex },
+          { "identity.lastName": regex },
+          { "company.legalName": regex },
+        ],
+      })
+        .select({ _id: 1 })
+        .limit(50)
+        .lean()
+        .exec(),
+      Invoice.find({ reference: regex })
+        .select({ reservationId: 1, reference: 1, status: 1, totals: 1 })
+        .limit(50)
+        .lean()
+        .exec(),
+    ]);
+
+    const cardexIds = cardexMatches.map((doc) => doc._id);
+    const invoiceReservationIds = invoiceMatches
+      .map((doc) => doc.reservationId)
+      .filter((id): id is Types.ObjectId => Boolean(id));
+
+    const orClauses: Record<string, unknown>[] = [
+      { reference: regex },
+      { "spaceSnapshot.name": regex },
+    ];
+    if (cardexIds.length > 0) {
+      orClauses.push({ cardexId: { $in: cardexIds } });
+    }
+    if (invoiceReservationIds.length > 0) {
+      orClauses.push({ _id: { $in: invoiceReservationIds } });
+    }
+
+    const reservations = await Reservation.find({
+      spaceId: { $in: spaceIds },
+      status: { $ne: "cancelled" },
+      $or: orClauses,
+    })
+      .select({
+        reference: 1,
+        spaceId: 1,
+        startAt: 1,
+        endAt: 1,
+        status: 1,
+        spaceSnapshot: 1,
+        cardexId: 1,
+      })
+      .sort({ startAt: -1 })
+      .limit(25)
+      .lean()
+      .exec();
+
+    const reservationIds = reservations.map((r) => r._id);
+    const reservationCardexIds = [
+      ...new Set(
+        reservations
+          .map((r) => r.cardexId)
+          .filter((id): id is Types.ObjectId => Boolean(id))
+          .map((id) => String(id)),
+      ),
+    ];
+
+    const [invoices, cardexDocs] = await Promise.all([
+      reservationIds.length
+        ? Invoice.find({ reservationId: { $in: reservationIds } })
+            .select({ reservationId: 1, reference: 1, status: 1, totals: 1 })
+            .lean()
+            .exec()
+        : Promise.resolve([]),
+      reservationCardexIds.length
+        ? Cardex.find({ _id: { $in: reservationCardexIds } })
+            .select({ identity: 1, company: 1 })
+            .lean()
+            .exec()
+        : Promise.resolve([]),
+    ]);
+
+    const invoiceByReservationId = new Map(
+      invoices.filter((inv) => inv.reservationId).map((inv) => [String(inv.reservationId), inv]),
+    );
+    const cardexById = new Map(cardexDocs.map((c) => [String(c._id), c]));
+
+    const results = reservations.map((r) => {
+      const status = asReservationStatus(r.status);
+      const invoice = invoiceByReservationId.get(String(r._id));
+      const cardex = r.cardexId ? cardexById.get(String(r.cardexId)) : undefined;
+      const paymentStatus = mapInvoicePaymentStatus({
+        invoiceStatus: invoice?.status,
+        paidTotal: invoice?.totals?.paidTotal,
+        balanceDue: invoice?.totals?.balanceDue,
+        reservationStatus: status,
+      });
+      return {
+        reservationId: String(r._id),
+        reference: r.reference,
+        clientLabel: formatClientLabel({
+          firstName: cardex?.identity?.firstName,
+          lastName: cardex?.identity?.lastName,
+          companyName: cardex?.company?.legalName,
+        }),
+        spaceName: r.spaceSnapshot?.name ?? "Espace",
+        startAt: toIso(r.startAt),
+        endAt: toIso(r.endAt),
+        paymentStatus,
+        invoiceReference: invoice?.reference,
+      };
+    });
+
+    return PlanningSearchResponseSchema.parse({ query: raw, results });
   }
 
   async getCalendar(

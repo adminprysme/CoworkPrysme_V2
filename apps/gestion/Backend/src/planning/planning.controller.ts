@@ -21,6 +21,12 @@ export class PlanningController {
     return this.planning.getOccupancy(profile);
   }
 
+  @Get("search")
+  async search(@Req() request: Request, @Query("q") q?: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planning.search(profile, { q });
+  }
+
   @Get("calendar")
   async calendar(
     @Req() request: Request,
