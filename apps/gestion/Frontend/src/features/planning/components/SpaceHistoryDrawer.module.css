@@ -361,6 +361,14 @@
   line-height: 1.4;
 }
 
+.eventReference {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem !important;
+  font-weight: 600;
+  color: var(--color-text) !important;
+  letter-spacing: 0.01em;
+}
+
 .linkBtn {
   align-self: flex-start;
   margin-top: 0.4rem;

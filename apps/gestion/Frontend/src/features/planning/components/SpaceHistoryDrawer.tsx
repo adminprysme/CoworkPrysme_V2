@@ -1,13 +1,43 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { IconCalendarOff } from "@tabler/icons-react";
-import type { PlanningHistoryEventType, PlanningSpaceHistoryResponse } from "@coworkprysme/shared";
+import type {
+  PlanningHistoryEvent,
+  PlanningHistoryEventType,
+  PlanningSpaceHistoryResponse,
+} from "@coworkprysme/shared";
 
 import { fetchSpaceHistory } from "../../../lib/planning-api.js";
-import { PAYMENT_STATUS_LABELS, formatDateTime } from "../planning-utils.js";
+import { RESERVATION_STATUS_LABELS } from "../planning-ui.js";
+import { formatDateTime } from "../planning-utils.js";
 import styles from "./SpaceHistoryDrawer.module.css";
 
 type RangePreset = "7d" | "30d" | "year" | "custom";
 
+function isReservationLinkedEvent(type: PlanningHistoryEventType): boolean {
+  return type === "reservation" || type === "cancellation" || type === "space_change";
+}
+
+function eventPrimaryLabel(event: PlanningHistoryEvent): string {
+  const client = event.clientLabel?.trim();
+  if (client) return client;
+  if (event.reservationReference && event.title === event.reservationReference) {
+    return event.title;
+  }
+  return event.title;
+}
+
+function eventContextualDetail(event: PlanningHistoryEvent): string | null {
+  if (!event.detail?.trim()) return null;
+  if (event.type === "reservation") return null;
+  if (/^statut\s/i.test(event.detail.trim())) return null;
+  return event.detail;
+}
+
+function eventStartIso(event: PlanningHistoryEvent): string | null {
+  if (event.startAt) return event.startAt;
+  if (event.type === "reservation") return event.at;
+  return null;
+}
 const RANGE_PRESETS: Array<{ id: RangePreset; label: string }> = [
   { id: "7d", label: "7 jours" },
   { id: "30d", label: "30 jours" },
@@ -262,21 +292,45 @@ export function SpaceHistoryDrawer({
             {data.events.map((event) => {
               const option = TYPE_OPTIONS.find((item) => item.id === event.type);
               const toneClass = toneClassName(option?.tone ?? "reservation");
+              const primaryLabel = eventPrimaryLabel(event);
+              const showReference =
+                Boolean(event.reservationReference) && event.reservationReference !== primaryLabel;
+              const contextualDetail = eventContextualDetail(event);
+              const startIso = eventStartIso(event);
+
               return (
                 <li key={event.id} className={[styles.event, toneClass].join(" ")}>
                   <span className={styles.eventDot} aria-hidden="true" />
                   <div className={styles.eventContent}>
-                    <time className={styles.eventTime} dateTime={event.at}>
-                      {formatDateTime(event.at)}
-                    </time>
-                    <strong className={styles.eventTitle}>{event.title}</strong>
+                    {event.type === "closure" ? (
+                      <time className={styles.eventTime} dateTime={event.at}>
+                        {formatDateTime(event.at)}
+                      </time>
+                    ) : null}
+                    <strong className={styles.eventTitle}>{primaryLabel}</strong>
                     <div className={styles.eventDetails}>
-                      {event.reservationReference ? <p>Réf. {event.reservationReference}</p> : null}
-                      {event.detail ? <p>{event.detail}</p> : null}
-                      {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
-                      {event.paymentStatus ? (
-                        <p>Paiement : {PAYMENT_STATUS_LABELS[event.paymentStatus]}</p>
-                      ) : null}
+                      {isReservationLinkedEvent(event.type) ? (
+                        <>
+                          {showReference ? (
+                            <p className={styles.eventReference}>{event.reservationReference}</p>
+                          ) : null}
+                          {event.reservationStatus ? (
+                            <p>
+                              Statut :{" "}
+                              {RESERVATION_STATUS_LABELS[event.reservationStatus] ??
+                                event.reservationStatus}
+                            </p>
+                          ) : null}
+                          {startIso ? <p>Début : {formatDateTime(startIso)}</p> : null}
+                          {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
+                          {contextualDetail ? <p>{contextualDetail}</p> : null}
+                        </>
+                      ) : (
+                        <>
+                          {event.detail ? <p>{event.detail}</p> : null}
+                          {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
+                        </>
+                      )}
                     </div>
                     {event.reservationId && onOpenReservation ? (
                       <button

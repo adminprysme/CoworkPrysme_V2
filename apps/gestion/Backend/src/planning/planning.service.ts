@@ -834,6 +834,7 @@ export class PlanningService {
     if (typeFilter.has("reservation") || typeFilter.has("cancellation")) {
       const Reservation = await getReservationModel();
       const Invoice = await getInvoiceModel();
+      const Cardex = await getCardexModel();
       const reservations = await Reservation.find({
         spaceId: id,
         startAt: { $lt: to },
@@ -846,6 +847,7 @@ export class PlanningService {
           endAt: 1,
           pricing: 1,
           statusHistory: 1,
+          cardexId: 1,
         })
         .lean()
         .exec();
@@ -860,6 +862,22 @@ export class PlanningService {
         invoices.filter((i) => i.reservationId).map((i) => [String(i.reservationId), i]),
       );
 
+      const cardexIds = [
+        ...new Set(
+          reservations
+            .map((r) => r.cardexId)
+            .filter((cid): cid is Types.ObjectId => Boolean(cid))
+            .map((cid) => String(cid)),
+        ),
+      ];
+      const cardexDocs = cardexIds.length
+        ? await Cardex.find({ _id: { $in: cardexIds } })
+            .select({ identity: 1, company: 1 })
+            .lean()
+            .exec()
+        : [];
+      const cardexById = new Map(cardexDocs.map((doc) => [String(doc._id), doc]));
+
       for (const reservation of reservations) {
         const status = asReservationStatus(reservation.status);
         const invoice = invoiceByRes.get(String(reservation._id));
@@ -868,6 +886,14 @@ export class PlanningService {
           paidTotal: invoice?.totals?.paidTotal,
           balanceDue: invoice?.totals?.balanceDue,
           reservationStatus: status,
+        });
+        const cardex = reservation.cardexId
+          ? cardexById.get(String(reservation.cardexId))
+          : undefined;
+        const clientLabel = formatClientLabel({
+          firstName: cardex?.identity?.firstName,
+          lastName: cardex?.identity?.lastName,
+          companyName: cardex?.company?.legalName,
         });
 
         if (status === "cancelled" && typeFilter.has("cancellation")) {
@@ -878,9 +904,11 @@ export class PlanningService {
             id: `cancel-${String(reservation._id)}`,
             type: "cancellation",
             at: toIso(cancelEntry?.at ?? reservation.endAt),
+            startAt: toIso(reservation.startAt),
             endAt: toIso(reservation.endAt),
-            title: `Annulation ${reservation.reference}`,
+            title: clientLabel,
             detail: cancelEntry?.reason,
+            clientLabel,
             reservationId: String(reservation._id),
             reservationReference: reservation.reference,
             reservationStatus: status,
@@ -891,9 +919,10 @@ export class PlanningService {
             id: `res-${String(reservation._id)}`,
             type: "reservation",
             at: toIso(reservation.startAt),
+            startAt: toIso(reservation.startAt),
             endAt: toIso(reservation.endAt),
-            title: reservation.reference,
-            detail: `Statut ${status}`,
+            title: clientLabel,
+            clientLabel,
             reservationId: String(reservation._id),
             reservationReference: reservation.reference,
             reservationStatus: status,
@@ -938,6 +967,9 @@ export class PlanningService {
 
     if (typeFilter.has("space_change")) {
       const AuditLog = await getAuditLogModel();
+      const Reservation = await getReservationModel();
+      const Invoice = await getInvoiceModel();
+      const Cardex = await getCardexModel();
       const logs = await AuditLog.find({
         "entity.type": "reservation",
         at: { $gte: from, $lt: to },
@@ -947,16 +979,101 @@ export class PlanningService {
         .lean()
         .exec();
 
+      const linkedReservationIds = [
+        ...new Set(
+          logs
+            .map((log) => (log.entity?.id != null ? String(log.entity.id) : null))
+            .filter((entityId): entityId is string => Boolean(entityId))
+            .filter((entityId) => OBJECT_ID_PATTERN.test(entityId)),
+        ),
+      ];
+
+      const linkedReservations = linkedReservationIds.length
+        ? await Reservation.find({ _id: { $in: linkedReservationIds } })
+            .select({
+              reference: 1,
+              status: 1,
+              startAt: 1,
+              endAt: 1,
+              cardexId: 1,
+            })
+            .lean()
+            .exec()
+        : [];
+      const reservationById = new Map(
+        linkedReservations.map((reservation) => [String(reservation._id), reservation]),
+      );
+
+      const linkedInvoices = linkedReservations.length
+        ? await Invoice.find({
+            reservationId: { $in: linkedReservations.map((reservation) => reservation._id) },
+          })
+            .select({ reservationId: 1, status: 1, totals: 1 })
+            .lean()
+            .exec()
+        : [];
+      const invoiceByRes = new Map(
+        linkedInvoices
+          .filter((invoice) => invoice.reservationId)
+          .map((invoice) => [String(invoice.reservationId), invoice]),
+      );
+
+      const cardexIds = [
+        ...new Set(
+          linkedReservations
+            .map((reservation) => reservation.cardexId)
+            .filter((cid): cid is Types.ObjectId => Boolean(cid))
+            .map((cid) => String(cid)),
+        ),
+      ];
+      const cardexDocs = cardexIds.length
+        ? await Cardex.find({ _id: { $in: cardexIds } })
+            .select({ identity: 1, company: 1 })
+            .lean()
+            .exec()
+        : [];
+      const cardexById = new Map(cardexDocs.map((doc) => [String(doc._id), doc]));
+
       for (const log of logs) {
         const before = log.diff?.spaceId?.before;
+        const reservationId = log.entity?.id ? String(log.entity.id) : undefined;
+        const reservation = reservationId ? reservationById.get(reservationId) : undefined;
+        const cardex = reservation?.cardexId
+          ? cardexById.get(String(reservation.cardexId))
+          : undefined;
+        const clientLabel = reservation
+          ? formatClientLabel({
+              firstName: cardex?.identity?.firstName,
+              lastName: cardex?.identity?.lastName,
+              companyName: cardex?.company?.legalName,
+            })
+          : undefined;
+        const status = reservation ? asReservationStatus(reservation.status) : undefined;
+        const invoice = reservationId ? invoiceByRes.get(reservationId) : undefined;
+        const paymentStatus =
+          reservation && status
+            ? mapInvoicePaymentStatus({
+                invoiceStatus: invoice?.status,
+                paidTotal: invoice?.totals?.paidTotal,
+                balanceDue: invoice?.totals?.balanceDue,
+                reservationStatus: status,
+              })
+            : undefined;
+
         events.push({
           id: `audit-${String(log._id)}`,
           type: "space_change",
           at: toIso(log.at),
-          title: "Changement de salle",
+          startAt: reservation ? toIso(reservation.startAt) : undefined,
+          endAt: reservation ? toIso(reservation.endAt) : undefined,
+          title: clientLabel ?? "Changement de salle",
           detail:
             typeof before === "string" ? `Depuis l’espace ${before}` : (log.reason ?? log.action),
-          reservationId: log.entity?.id ? String(log.entity.id) : undefined,
+          clientLabel,
+          reservationId,
+          reservationReference: reservation?.reference,
+          reservationStatus: status,
+          paymentStatus,
         });
       }
     }
