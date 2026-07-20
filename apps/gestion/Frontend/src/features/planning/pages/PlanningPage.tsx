@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   PlanningBuildingOption,
+  PlanningCalendarReservation,
   PlanningCalendarResponse,
   PlanningViewMode,
 } from "@coworkprysme/shared";
@@ -9,6 +10,7 @@ import { fetchPlanningCalendar } from "../../../lib/planning-api.js";
 import { PlanningCalendar } from "../components/PlanningCalendar.js";
 import { PlanningToolbar } from "../components/PlanningToolbar.js";
 import { ReservationDetailDrawer } from "../components/ReservationDetailDrawer.js";
+import { ReservationTooltip } from "../components/ReservationTooltip.js";
 import { SpaceHistoryDrawer } from "../components/SpaceHistoryDrawer.js";
 import {
   addDays,
@@ -29,6 +31,10 @@ export function PlanningPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [hoveredReservation, setHoveredReservation] = useState<PlanningCalendarReservation | null>(
+    null,
+  );
+  const [hoverAnchor, setHoverAnchor] = useState<DOMRect | null>(null);
 
   const { from: displayFrom, to: displayTo } = useMemo(
     () => rangeForView(anchor, mode),
@@ -69,7 +75,6 @@ export function PlanningPage() {
     void load();
   }, [load]);
 
-  // Keep catalog of all buildings when filter is applied (fetch once without filter if needed)
   useEffect(() => {
     if (buildingsCatalog.length > 0) return;
     void fetchPlanningCalendar({
@@ -78,15 +83,25 @@ export function PlanningPage() {
     })
       .then((payload) => setBuildingsCatalog(payload.buildings))
       .catch(() => {
-        /* ignore — toolbar still works with current payload buildings */
+        /* ignore */
       });
   }, [buildingsCatalog.length, apiFrom, apiTo]);
 
   const buildingsForFilter =
     buildingsCatalog.length > 0 ? buildingsCatalog : (data?.buildings ?? []);
 
+  const splitOpen = Boolean(selectedReservationId);
+
+  const handleReservationHover = useCallback(
+    (reservation: PlanningCalendarReservation | null, anchorRect: DOMRect | null) => {
+      setHoveredReservation(reservation);
+      setHoverAnchor(anchorRect);
+    },
+    [],
+  );
+
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-split={splitOpen ? "true" : undefined}>
       <PlanningToolbar
         mode={mode}
         rangeLabel={rangeLabel}
@@ -101,23 +116,33 @@ export function PlanningPage() {
         onBuildingChange={setBuildingId}
       />
 
-      <PlanningCalendar
-        mode={mode}
-        from={displayFrom}
-        to={displayTo}
-        spaces={data?.spaces ?? []}
-        reservations={data?.reservations ?? []}
-        closures={data?.closures ?? []}
-        onReservationClick={setSelectedReservationId}
-        onSpaceNameClick={setSelectedSpaceId}
-      />
+      <div className={styles.workspace}>
+        <div className={styles.calendarPane}>
+          <PlanningCalendar
+            mode={mode}
+            from={displayFrom}
+            to={displayTo}
+            spaces={data?.spaces ?? []}
+            reservations={data?.reservations ?? []}
+            closures={data?.closures ?? []}
+            selectedReservationId={selectedReservationId}
+            onReservationClick={setSelectedReservationId}
+            onSpaceNameClick={setSelectedSpaceId}
+            onReservationHover={handleReservationHover}
+          />
+        </div>
 
-      {selectedReservationId ? (
-        <ReservationDetailDrawer
-          reservationId={selectedReservationId}
-          onClose={() => setSelectedReservationId(null)}
-        />
-      ) : null}
+        {selectedReservationId ? (
+          <div className={styles.detailPane}>
+            <ReservationDetailDrawer
+              reservationId={selectedReservationId}
+              onClose={() => setSelectedReservationId(null)}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <ReservationTooltip reservation={hoveredReservation} anchor={hoverAnchor} />
 
       {selectedSpaceId ? (
         <SpaceHistoryDrawer
