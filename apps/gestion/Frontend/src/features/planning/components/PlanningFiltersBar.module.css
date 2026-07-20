@@ -6,6 +6,12 @@
   flex-shrink: 0;
 }
 
+.searchSlot {
+  flex: 0 1 18rem;
+  min-width: min(100%, 14rem);
+  max-width: 22rem;
+}
+
 .filtersBar {
   display: flex;
   flex-wrap: wrap;
@@ -15,7 +21,7 @@
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background: var(--color-surface-muted);
-  flex: 1 1 auto;
+  flex: 1 1 28rem;
   min-width: 0;
 }
 

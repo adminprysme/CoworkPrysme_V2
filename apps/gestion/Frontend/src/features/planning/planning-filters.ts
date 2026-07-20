@@ -1,11 +1,11 @@
 import type {
+  PlanningCalendarReservation,
   PlanningPaymentStatus,
   PlanningSpaceRow,
   PlanningSpaceType,
 } from "@coworkprysme/shared";
 
 export type PlanningTypeFilter = "all" | PlanningSpaceType;
-export type PlanningSpaceFilter = "all" | string;
 
 /** Empty set = "Tous" (no payment-status restriction). */
 export type PlanningPaymentStatusFilter = Set<PlanningPaymentStatus>;
@@ -31,27 +31,44 @@ export function isPaymentStatusFilterActive(filter: PlanningPaymentStatusFilter)
 export function hasActivePlanningFilters(input: {
   typeFilter: PlanningTypeFilter;
   paymentStatuses: PlanningPaymentStatusFilter;
-  spaceFilter: PlanningSpaceFilter;
+  withReservationsOnly: boolean;
 }): boolean {
   return (
     input.typeFilter !== "all" ||
     isPaymentStatusFilterActive(input.paymentStatuses) ||
-    input.spaceFilter !== "all"
+    input.withReservationsOnly
   );
 }
 
-export function filterPlanningSpaces(
+export function filterPlanningSpacesByType(
   spaces: PlanningSpaceRow[],
   typeFilter: PlanningTypeFilter,
-  spaceFilter: PlanningSpaceFilter,
 ): PlanningSpaceRow[] {
-  return spaces.filter((space) => {
-    if (typeFilter !== "all" && space.type !== typeFilter) {
-      return false;
-    }
-    if (spaceFilter !== "all" && space.id !== spaceFilter) {
-      return false;
-    }
-    return true;
-  });
+  if (typeFilter === "all") return spaces;
+  return spaces.filter((space) => space.type === typeFilter);
+}
+
+export function reservationOverlapsRange(
+  reservation: Pick<PlanningCalendarReservation, "startAt" | "endAt">,
+  fromMs: number,
+  toMs: number,
+): boolean {
+  return (
+    new Date(reservation.startAt).getTime() < toMs && new Date(reservation.endAt).getTime() > fromMs
+  );
+}
+
+/** Keep spaces that have at least one reservation overlapping the visible period. */
+export function filterSpacesWithReservationsInRange(
+  spaces: PlanningSpaceRow[],
+  reservations: PlanningCalendarReservation[],
+  fromMs: number,
+  toMs: number,
+): PlanningSpaceRow[] {
+  const occupiedIds = new Set(
+    reservations
+      .filter((reservation) => reservationOverlapsRange(reservation, fromMs, toMs))
+      .map((reservation) => reservation.spaceId),
+  );
+  return spaces.filter((space) => occupiedIds.has(space.id));
 }

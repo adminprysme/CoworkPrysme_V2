@@ -1,11 +1,11 @@
-import type { PlanningPaymentStatus, PlanningSpaceRow } from "@coworkprysme/shared";
+import type { ReactNode } from "react";
+import type { PlanningPaymentStatus } from "@coworkprysme/shared";
 
 import {
   emptyPaymentStatusFilter,
   hasActivePlanningFilters,
   PLANNING_PAYMENT_FILTER_OPTIONS,
   type PlanningPaymentStatusFilter,
-  type PlanningSpaceFilter,
   type PlanningTypeFilter,
 } from "../planning-filters.js";
 import { PLANNING_SPACE_SORT_OPTIONS, type PlanningSpaceSort } from "../planning-sort.js";
@@ -33,31 +33,35 @@ function FilterPill({ active, label, onClick }: FilterPillProps) {
 }
 
 export interface PlanningFiltersBarProps {
-  spaces: PlanningSpaceRow[];
   typeFilter: PlanningTypeFilter;
   paymentStatuses: PlanningPaymentStatusFilter;
-  spaceFilter: PlanningSpaceFilter;
+  withReservationsOnly: boolean;
   sort: PlanningSpaceSort;
   onTypeChange: (value: PlanningTypeFilter) => void;
   onPaymentStatusesChange: (value: PlanningPaymentStatusFilter) => void;
-  onSpaceChange: (value: PlanningSpaceFilter) => void;
+  onWithReservationsOnlyChange: (value: boolean) => void;
   onSortChange: (value: PlanningSpaceSort) => void;
   onReset: () => void;
+  searchSlot?: ReactNode;
 }
 
 export function PlanningFiltersBar({
-  spaces,
   typeFilter,
   paymentStatuses,
-  spaceFilter,
+  withReservationsOnly,
   sort,
   onTypeChange,
   onPaymentStatusesChange,
-  onSpaceChange,
+  onWithReservationsOnlyChange,
   onSortChange,
   onReset,
+  searchSlot,
 }: PlanningFiltersBarProps) {
-  const showReset = hasActivePlanningFilters({ typeFilter, paymentStatuses, spaceFilter });
+  const showReset = hasActivePlanningFilters({
+    typeFilter,
+    paymentStatuses,
+    withReservationsOnly,
+  });
   const paymentAll = paymentStatuses.size === 0;
 
   function togglePaymentStatus(status: PlanningPaymentStatus) {
@@ -72,6 +76,8 @@ export function PlanningFiltersBar({
 
   return (
     <div className={styles.barWrap}>
+      {searchSlot ? <div className={styles.searchSlot}>{searchSlot}</div> : null}
+
       <div className={styles.filtersBar} role="group" aria-label="Filtres du planning">
         <div className={styles.filterGroup}>
           <span className={styles.filterGroupLabel} id="planning-filter-type-label">
@@ -134,27 +140,24 @@ export function PlanningFiltersBar({
         </span>
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterGroupLabel} id="planning-filter-space-label">
-            Espace
+          <span className={styles.filterGroupLabel} id="planning-filter-occupancy-label">
+            Affichage
           </span>
           <div
             className={styles.filterPills}
             role="group"
-            aria-labelledby="planning-filter-space-label"
+            aria-labelledby="planning-filter-occupancy-label"
           >
             <FilterPill
-              active={spaceFilter === "all"}
+              active={!withReservationsOnly}
               label="Tous"
-              onClick={() => onSpaceChange("all")}
+              onClick={() => onWithReservationsOnlyChange(false)}
             />
-            {spaces.map((space) => (
-              <FilterPill
-                key={space.id}
-                active={spaceFilter === space.id}
-                label={space.name}
-                onClick={() => onSpaceChange(space.id)}
-              />
-            ))}
+            <FilterPill
+              active={withReservationsOnly}
+              label="Avec réservation uniquement"
+              onClick={() => onWithReservationsOnlyChange(true)}
+            />
           </div>
         </div>
       </div>

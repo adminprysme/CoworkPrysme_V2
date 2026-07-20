@@ -20,10 +20,10 @@ import { ReservationTooltip } from "../components/ReservationTooltip.js";
 import { SpaceHistoryDrawer } from "../components/SpaceHistoryDrawer.js";
 import {
   emptyPaymentStatusFilter,
-  filterPlanningSpaces,
+  filterPlanningSpacesByType,
+  filterSpacesWithReservationsInRange,
   isPaymentStatusFilterActive,
   type PlanningPaymentStatusFilter,
-  type PlanningSpaceFilter,
   type PlanningTypeFilter,
 } from "../planning-filters.js";
 import { sortPlanningSpaces, type PlanningSpaceSort } from "../planning-sort.js";
@@ -57,7 +57,7 @@ export function PlanningPage() {
   const [typeFilter, setTypeFilter] = useState<PlanningTypeFilter>("all");
   const [paymentStatuses, setPaymentStatuses] =
     useState<PlanningPaymentStatusFilter>(emptyPaymentStatusFilter);
-  const [spaceFilter, setSpaceFilter] = useState<PlanningSpaceFilter>("all");
+  const [withReservationsOnly, setWithReservationsOnly] = useState(false);
   const [spaceSort, setSpaceSort] = useState<PlanningSpaceSort>("name_asc");
 
   const { from: displayFrom, to: displayTo } = useMemo(
@@ -135,50 +135,35 @@ export function PlanningPage() {
       });
   }, [buildingsCatalog.length, apiFrom, apiTo]);
 
-  useEffect(() => {
-    setSpaceFilter("all");
-  }, [buildingId]);
-
-  useEffect(() => {
-    if (spaceFilter === "all" || !data) return;
-    const selected = data.spaces.find((space) => space.id === spaceFilter);
-    if (!selected || (typeFilter !== "all" && selected.type !== typeFilter)) {
-      setSpaceFilter("all");
-    }
-  }, [typeFilter, spaceFilter, data]);
-
   const buildingsForFilter =
     buildingsCatalog.length > 0 ? buildingsCatalog : (data?.buildings ?? []);
 
-  const spacesForEspacePills = useMemo(() => {
-    const spaces = data?.spaces ?? [];
-    if (typeFilter === "all") return spaces;
-    return spaces.filter((space) => space.type === typeFilter);
-  }, [data?.spaces, typeFilter]);
-
   const filteredSpaces = useMemo(() => {
-    const spaces = filterPlanningSpaces(data?.spaces ?? [], typeFilter, spaceFilter);
-    const paymentScoped = !isPaymentStatusFilterActive(paymentStatuses)
-      ? spaces
-      : spaces.filter((space) =>
-          (data?.reservations ?? []).some(
-            (reservation) =>
-              reservation.spaceId === space.id && paymentStatuses.has(reservation.paymentStatus),
-          ),
-        );
-    return sortPlanningSpaces(
-      paymentScoped,
-      data?.reservations ?? [],
-      spaceSort,
-      displayFrom.getTime(),
-      displayTo.getTime(),
-    );
+    const fromMs = displayFrom.getTime();
+    const toMs = displayTo.getTime();
+    const reservations = data?.reservations ?? [];
+    let spaces = filterPlanningSpacesByType(data?.spaces ?? [], typeFilter);
+
+    const paymentScopedReservations = !isPaymentStatusFilterActive(paymentStatuses)
+      ? reservations
+      : reservations.filter((reservation) => paymentStatuses.has(reservation.paymentStatus));
+
+    if (isPaymentStatusFilterActive(paymentStatuses)) {
+      const spaceIdsWithMatch = new Set(paymentScopedReservations.map((r) => r.spaceId));
+      spaces = spaces.filter((space) => spaceIdsWithMatch.has(space.id));
+    }
+
+    if (withReservationsOnly) {
+      spaces = filterSpacesWithReservationsInRange(spaces, paymentScopedReservations, fromMs, toMs);
+    }
+
+    return sortPlanningSpaces(spaces, reservations, spaceSort, fromMs, toMs);
   }, [
     data?.spaces,
     data?.reservations,
     typeFilter,
-    spaceFilter,
     paymentStatuses,
+    withReservationsOnly,
     spaceSort,
     displayFrom,
     displayTo,
@@ -229,7 +214,7 @@ export function PlanningPage() {
   function resetFilters() {
     setTypeFilter("all");
     setPaymentStatuses(emptyPaymentStatusFilter());
-    setSpaceFilter("all");
+    setWithReservationsOnly(false);
   }
 
   function handleSearchSelect(hit: PlanningSearchHit) {
@@ -277,19 +262,17 @@ export function PlanningPage() {
           onBuildingChange={setBuildingId}
         />
 
-        <PlanningSearch onSelect={handleSearchSelect} />
-
         <PlanningFiltersBar
-          spaces={spacesForEspacePills}
           typeFilter={typeFilter}
           paymentStatuses={paymentStatuses}
-          spaceFilter={spaceFilter}
+          withReservationsOnly={withReservationsOnly}
           sort={spaceSort}
           onTypeChange={setTypeFilter}
           onPaymentStatusesChange={setPaymentStatuses}
-          onSpaceChange={setSpaceFilter}
+          onWithReservationsOnlyChange={setWithReservationsOnly}
           onSortChange={setSpaceSort}
           onReset={resetFilters}
+          searchSlot={<PlanningSearch onSelect={handleSearchSelect} />}
         />
       </div>
 
