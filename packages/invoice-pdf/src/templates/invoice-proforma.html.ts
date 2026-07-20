@@ -271,7 +271,7 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       padding: 12px 14px;
       background: #f6f3ef;
       border-radius: 8px;
-      border-left: 4px solid #B87333;
+      border: none;
       /* Isolate from neighbouring table borders in Chromium print. */
       isolation: isolate;
       overflow: hidden;
