@@ -50,7 +50,9 @@
   --planning-awaiting: #c58369;
   --planning-none: #94a3b8;
   --planning-slate: #3b6fa8;
-  --planning-overlay-z: 50;
+  /* Below AppShell sidebar (z-index 40) so nav stays clickable if anything overlaps. */
+  --planning-overlay-z: 30;
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -158,17 +160,20 @@
     outline: none;
   }
 
-  /* Manual fullscreen overlay (same chrome as tablet, user-triggered). */
+  /*
+   * Manual fullscreen: fill the planning content area only (not the viewport).
+   * Absolute within .page keeps the AppShell sidebar visible and clickable.
+   */
   .detailPane[data-fullscreen="true"] {
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: var(--planning-overlay-z);
     flex: none;
-    width: 100%;
+    width: auto;
     max-width: none;
     min-width: 0;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: auto;
+    max-height: none;
     border-left: 0;
     border-top: 0;
     box-shadow: var(--shadow-sm);
@@ -186,18 +191,18 @@
   }
 }
 
-/* —— Tablet & mobile: detail becomes a full-screen overlay —— */
+/* —— Tablet & mobile: detail overlays the planning content area (not the nav) —— */
 @media (max-width: 1024px) {
   .detailPane {
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: var(--planning-overlay-z);
     flex: none;
-    width: 100%;
+    width: auto;
     max-width: none;
     min-width: 0;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: auto;
+    max-height: none;
     border-left: 0;
     border-top: 0;
     box-shadow: var(--shadow-sm);
