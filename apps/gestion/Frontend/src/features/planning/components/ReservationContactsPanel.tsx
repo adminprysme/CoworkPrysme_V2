@@ -94,7 +94,6 @@ export function ReservationContactsPanel({
   const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
   const [deliveryById, setDeliveryById] = useState<Record<string, EmailDeliveryHint>>({});
   const [invitesExpanded, setInvitesExpanded] = useState(false);
-  const [invitesDefaultApplied, setInvitesDefaultApplied] = useState(false);
 
   const loadInvitations = useCallback(async () => {
     setLoadingInvites(true);
@@ -111,17 +110,9 @@ export function ReservationContactsPanel({
 
   useEffect(() => {
     setInvitesExpanded(false);
-    setInvitesDefaultApplied(false);
     setInviteOpen(false);
     void loadInvitations();
   }, [loadInvitations]);
-
-  useEffect(() => {
-    if (loadingInvites || invitesDefaultApplied) return;
-    const hasPending = invitations.some((invite) => invite.status === "pending");
-    setInvitesExpanded(hasPending);
-    setInvitesDefaultApplied(true);
-  }, [loadingInvites, invitations, invitesDefaultApplied]);
 
   const pendingCount = useMemo(
     () => invitations.filter((invite) => invite.status === "pending").length,
