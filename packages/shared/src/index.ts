@@ -711,16 +711,24 @@ export {
 } from "./planning-manage.js";
 
 export {
+  CLIENT_INVITATION_ERROR_CODES,
   PlanningCreateInvitationRequestSchema,
   PlanningInvitationEffectiveStatusSchema,
   PlanningInvitationListResponseSchema,
   PlanningInvitationMutationResultSchema,
   PlanningInvitationSchema,
   PlanningInvitationStoredStatusSchema,
+  PublicInvitationAcceptRequestSchema,
+  PublicInvitationAcceptResponseSchema,
+  PublicInvitationPreviewSchema,
+  type ClientInvitationErrorCode,
   type PlanningCreateInvitationRequest,
   type PlanningInvitation,
   type PlanningInvitationEffectiveStatus,
   type PlanningInvitationListResponse,
   type PlanningInvitationMutationResult,
   type PlanningInvitationStoredStatus,
+  type PublicInvitationAcceptRequest,
+  type PublicInvitationAcceptResponse,
+  type PublicInvitationPreview,
 } from "./client-invitation.js";

@@ -116,6 +116,8 @@ export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
     UPLOADS_DIR: uploadsDirSchema(env),
     /** HMAC secret for booking paymentAccessToken (≥32 chars). */
     BOOKING_PAYMENT_TOKEN_SECRET: z.string().min(32),
+    /** Same pepper as gestion-api — hashes client collaborator invite tokens (≥32). */
+    CLIENT_INVITE_TOKEN_SECRET: z.string().min(32),
   });
 
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
@@ -273,6 +275,7 @@ export function parseVitrineApiEnv(env: NodeJS.ProcessEnv = process.env): Vitrin
     GESTION_API_URL: env.GESTION_API_URL,
     UPLOADS_DIR: env.UPLOADS_DIR,
     BOOKING_PAYMENT_TOKEN_SECRET: env.BOOKING_PAYMENT_TOKEN_SECRET,
+    CLIENT_INVITE_TOKEN_SECRET: env.CLIENT_INVITE_TOKEN_SECRET,
   });
 
   if (!result.success) {
