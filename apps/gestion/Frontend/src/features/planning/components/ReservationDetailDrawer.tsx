@@ -153,6 +153,17 @@ export function ReservationDetailDrawer({
                 {RESERVATION_STATUS_LABELS[detail.status] ?? detail.status}
               </span>
               <PaymentStatusBadge status={detail.paymentStatus} />
+              {detail.refundStatus && detail.refundStatus !== "none" ? (
+                <span className={styles.statusChip}>
+                  {detail.refundStatus === "pending"
+                    ? "Remboursement en cours"
+                    : detail.refundStatus === "failed"
+                      ? "Remboursement en échec"
+                      : detail.refundStatus === "manual_succeeded"
+                        ? "Remboursé (virement)"
+                        : "Remboursé"}
+                </span>
+              ) : null}
               {readOnly ? <span className={styles.readOnlyChip}>Lecture seule</span> : null}
             </div>
           ) : null}

@@ -110,6 +110,11 @@ export const PlanningReservationDetailSchema = z.object({
   reference: z.string(),
   status: PlanningReservationStatusSchema,
   paymentStatus: PlanningPaymentStatusSchema,
+  /**
+   * Latest refund lifecycle for staff UI (pending until Stripe webhook confirms).
+   */
+  refundStatus: z.enum(["none", "pending", "succeeded", "failed", "manual_succeeded"]).optional(),
+  stripeRefundId: z.string().optional(),
   readOnly: z.boolean(),
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
@@ -170,6 +175,7 @@ export const PlanningHistoryEventTypeSchema = z.enum([
   "date_change",
   "party_size_change",
   "contact_transfer",
+  "refund",
 ]);
 export type PlanningHistoryEventType = z.infer<typeof PlanningHistoryEventTypeSchema>;
 

@@ -29,6 +29,7 @@ import {
   getCardexModel,
   getClientAccountModel,
   getInvoiceModel,
+  getPaymentModel,
   getReservationModel,
   getSlotClosureModel,
   getSpaceModel,
@@ -593,12 +594,13 @@ export class PlanningService {
       throw new ForbiddenException();
     }
 
-    const [Building, Space, Invoice, Cardex, ClientAccount] = await Promise.all([
+    const [Building, Space, Invoice, Cardex, ClientAccount, Payment] = await Promise.all([
       getBuildingModel(),
       getSpaceModel(),
       getInvoiceModel(),
       getCardexModel(),
       getClientAccountModel(),
+      getPaymentModel(),
     ]);
 
     const [building, space, invoice, cardex] = await Promise.all([
@@ -620,6 +622,30 @@ export class PlanningService {
       balanceDue: invoice?.totals?.balanceDue,
       reservationStatus: status,
     });
+
+    let refundStatus: PlanningReservationDetail["refundStatus"] = "none";
+    let stripeRefundId: string | undefined;
+    if (invoice?._id) {
+      const latestRefund = await Payment.findOne({
+        invoiceId: invoice._id,
+        kind: "refund",
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec();
+      if (latestRefund) {
+        stripeRefundId = latestRefund.reconciliation?.stripeRefundId;
+        if (latestRefund.reconciliation?.status === "pending") {
+          refundStatus = "pending";
+        } else if (latestRefund.reconciliation?.status === "failed") {
+          refundStatus = "failed";
+        } else if (latestRefund.method === "transfer") {
+          refundStatus = "manual_succeeded";
+        } else {
+          refundStatus = "succeeded";
+        }
+      }
+    }
 
     const contactSeeds: Array<{ id: string; via: PlanningContactLinkVia }> = [];
     if (reservation.clientAccountId) {
@@ -717,6 +743,8 @@ export class PlanningService {
       reference: reservation.reference,
       status,
       paymentStatus,
+      refundStatus,
+      stripeRefundId,
       readOnly: isReservationReadOnly(status),
       startAt: toIso(reservation.startAt),
       endAt: toIso(reservation.endAt),
@@ -1332,6 +1360,43 @@ export class PlanningService {
               return `Contact transféré : ${before} → ${after}`;
             }
             return "Contact transféré à un autre interlocuteur";
+          },
+        })),
+      );
+    }
+
+    if (typeFilter.has("refund")) {
+      events.push(
+        ...(await this.buildManageActionEvents(String(id), from, to, {
+          action: "reservation.refund",
+          type: "refund",
+          titleFallback: "Remboursement",
+          detail: (log) => {
+            const amount = log.diff?.amountCents?.after;
+            const status = log.diff?.refundStatus?.after;
+            const stripeId = log.diff?.stripeRefundId?.after;
+            const method = log.diff?.method?.after;
+            const parts: string[] = [];
+            if (typeof amount === "number") {
+              parts.push(`${(amount / 100).toFixed(2).replace(".", ",")} €`);
+            }
+            if (typeof status === "string") {
+              parts.push(
+                status === "pending"
+                  ? "en cours"
+                  : status === "succeeded" || status === "manual_succeeded"
+                    ? "confirmé"
+                    : status === "failed"
+                      ? "échec"
+                      : status,
+              );
+            }
+            if (method === "card" && typeof stripeId === "string") {
+              parts.push(stripeId);
+            } else if (method === "transfer") {
+              parts.push("virement manuel");
+            }
+            return parts.length > 0 ? parts.join(" · ") : "Remboursement";
           },
         })),
       );

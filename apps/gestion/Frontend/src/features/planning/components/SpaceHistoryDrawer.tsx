@@ -21,7 +21,8 @@ function isReservationLinkedEvent(type: PlanningHistoryEventType): boolean {
     type === "restoration" ||
     type === "date_change" ||
     type === "party_size_change" ||
-    type === "contact_transfer"
+    type === "contact_transfer" ||
+    type === "refund"
   );
 }
 
@@ -64,6 +65,7 @@ const TYPE_OPTIONS: Array<{
     | "dateChange"
     | "partySize"
     | "contactTransfer"
+    | "refund"
     | "closure";
 }> = [
   { id: "reservation", label: "Réservations", tone: "reservation" },
@@ -73,6 +75,7 @@ const TYPE_OPTIONS: Array<{
   { id: "date_change", label: "Dates", tone: "dateChange" },
   { id: "party_size_change", label: "Effectif", tone: "partySize" },
   { id: "contact_transfer", label: "Transferts", tone: "contactTransfer" },
+  { id: "refund", label: "Remboursements", tone: "refund" },
   { id: "closure", label: "Fermetures", tone: "closure" },
 ];
 
@@ -92,6 +95,8 @@ function toneClassName(tone: (typeof TYPE_OPTIONS)[number]["tone"]): string {
       return styles.tonePartySize ?? "";
     case "contactTransfer":
       return styles.toneContactTransfer ?? "";
+    case "refund":
+      return styles.toneCancellation ?? "";
     case "closure":
       return styles.toneClosure ?? "";
   }
