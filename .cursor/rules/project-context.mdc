@@ -75,7 +75,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 12. `c58e2e3` fix(gestion): select tariff tier on Planning date-change reprice
 13. `17253d1` fix(vitrine): select tariff tier on booking price via resolveSpaceStayPricing
 14. `2971a33` fix(gestion): keep cancel history and drop stale calendar loads after restore
-15. `PENDING` feat(gestion): attach regenerated proforma PDF on billed manage emails
+15. `1bbb327` feat(gestion): attach regenerated proforma PDF on billed manage emails
 
 Preuves utiles (tmp, non forcément toutes commitées) :  
 `apps/gestion/Backend/tmp/manage-tariff-tier-proof/`, `manage-dates-calc-proof/`, `manage-preview-http-proof/`,  
