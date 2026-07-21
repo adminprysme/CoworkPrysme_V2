@@ -47,6 +47,11 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - Ne pas changer la branche Git checkoutée sur le VPS (pas de checkout / merge / rebase / pull sur la branche de prod) sauf demande explicite.
 - Tarif **weekly @ 90000 HT** sur FOCUS : activé pour les preuves Planning / booking — **décision produit** de le garder ou le désactiver (ne pas retirer sans validation).
 
+### Points de vigilance permanents (déploiement)
+
+- **Volume `UPLOADS_DIR` partagé** : gestion-api et vitrine-api doivent monter le **même** volume (ex. Coolify `/data/uploads`) — sinon médias uploadés côté gestion invisibles côté vitrine (et l’inverse). Voir `ARCHITECTURE.md` (tableau services / mounts).
+- **`CLIENT_INVITE_TOKEN_SECRET` identique** : gestion-api (émission invite / hash) et vitrine-api (GET preview + POST accept) doivent partager **strictement la même** valeur (≥32 chars). Un écart fait échouer la vérif de token (souvent en `INVITE_NOT_FOUND`) sans message explicite « secret désaligné ». Ne pas réutiliser `SESSION_SECRET` / `BOOKING_PAYMENT_TOKEN_SECRET` en prod.
+
 ## Règles métier non négociables (déjà actées)
 
 - Montants en **centimes entiers** ; recalcul **toujours côté serveur** (jamais confiance au frontend).
