@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type {
   PlanningBuildingOption,
   PlanningCalendarReservation,
@@ -41,7 +49,15 @@ import {
   shiftAnchor,
   startOfDay,
 } from "../planning-utils.js";
+import {
+  clampDetailRatio,
+  persistDetailRatio,
+  PLANNING_SPLIT_DEFAULT_DETAIL_RATIO,
+  readStoredDetailRatio,
+} from "../planning-split.js";
 import styles from "./PlanningPage.module.css";
+
+const SPLIT_DESKTOP_MQ = "(min-width: 1025px)";
 
 export function PlanningPage() {
   const [mode, setMode] = useState<PlanningViewMode>("week");
@@ -70,8 +86,16 @@ export function PlanningPage() {
   const [withReservationsOnly, setWithReservationsOnly] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [spaceSort, setSpaceSort] = useState<PlanningSpaceSort>("name_asc");
+  const [detailRatio, setDetailRatio] = useState(readStoredDetailRatio);
+  const [desktopSplit, setDesktopSplit] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(SPLIT_DESKTOP_MQ).matches,
+  );
+  const [splitDragging, setSplitDragging] = useState(false);
   /** Monotonic id so overlapping calendar fetches cannot apply stale payloads. */
   const calendarLoadSeq = useRef(0);
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const detailRatioRef = useRef(detailRatio);
+  detailRatioRef.current = detailRatio;
 
   const { from: displayFrom, to: displayTo } = useMemo(
     () => rangeForView(anchor, mode),
@@ -173,6 +197,28 @@ export function PlanningPage() {
       });
   }, [buildingsCatalog.length, apiFrom, apiTo]);
 
+  useEffect(() => {
+    const media = window.matchMedia(SPLIT_DESKTOP_MQ);
+    function sync() {
+      setDesktopSplit(media.matches);
+    }
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!splitDragging) return;
+    const previous = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.cursor = previous;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [splitDragging]);
+
   const buildingsForFilter =
     buildingsCatalog.length > 0 ? buildingsCatalog : (data?.buildings ?? []);
 
@@ -249,6 +295,16 @@ export function PlanningPage() {
 
   const splitOpen = Boolean(selectedReservationId || selectedSpaceId);
 
+  useEffect(() => {
+    if (!splitOpen || !desktopSplit) return;
+    function onResize() {
+      const width = workspaceRef.current?.getBoundingClientRect().width;
+      setDetailRatio((current) => clampDetailRatio(current, width));
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [splitOpen, desktopSplit]);
+
   const handleReservationHover = useCallback(
     (
       reservation: PlanningCalendarReservation | null,
@@ -321,6 +377,55 @@ export function PlanningPage() {
     openReservation(hit.reservationId);
   }
 
+  function applyDetailRatio(next: number, workspaceWidth?: number) {
+    const width = workspaceWidth ?? workspaceRef.current?.getBoundingClientRect().width;
+    const clamped = clampDetailRatio(next, width);
+    setDetailRatio(clamped);
+    return clamped;
+  }
+
+  function resetSplitRatio() {
+    const next = applyDetailRatio(PLANNING_SPLIT_DEFAULT_DETAIL_RATIO);
+    persistDetailRatio(next);
+  }
+
+  function onSplitPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!desktopSplit || event.button !== 0) return;
+    event.preventDefault();
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    setSplitDragging(true);
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const workspace = workspaceRef.current;
+      if (!workspace) return;
+      const rect = workspace.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const detailPx = rect.right - moveEvent.clientX;
+      applyDetailRatio(detailPx / rect.width, rect.width);
+    };
+
+    const onUp = (upEvent: PointerEvent) => {
+      handle.releasePointerCapture(upEvent.pointerId);
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      setSplitDragging(false);
+      persistDetailRatio(detailRatioRef.current);
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  }
+
+  const showSplitHandle = splitOpen && desktopSplit;
+  const workspaceStyle = showSplitHandle
+    ? ({
+        ["--planning-detail-ratio" as string]: `${(detailRatio * 100).toFixed(3)}%`,
+      } as CSSProperties)
+    : undefined;
+
   return (
     <div className={styles.page} data-split={splitOpen ? "true" : undefined}>
       <div className={styles.topStack}>
@@ -369,7 +474,13 @@ export function PlanningPage() {
         />
       </div>
 
-      <div className={styles.workspace}>
+      <div
+        ref={workspaceRef}
+        className={styles.workspace}
+        data-resizable={showSplitHandle ? "true" : undefined}
+        data-dragging={splitDragging ? "true" : undefined}
+        style={workspaceStyle}
+      >
         <div className={styles.calendarPane}>
           <PlanningCalendar
             mode={mode}
@@ -385,6 +496,21 @@ export function PlanningPage() {
             onReservationContextMenu={handleReservationContextMenu}
           />
         </div>
+
+        {showSplitHandle ? (
+          <div
+            className={styles.splitHandle}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Redimensionner le panneau détail"
+            aria-valuenow={Math.round(detailRatio * 100)}
+            aria-valuemin={18}
+            aria-valuemax={82}
+            tabIndex={0}
+            onPointerDown={onSplitPointerDown}
+            onDoubleClick={resetSplitRatio}
+          />
+        ) : null}
 
         {selectedReservationId ? (
           <div className={styles.detailPane}>

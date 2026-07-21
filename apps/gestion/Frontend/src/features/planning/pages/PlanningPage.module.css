@@ -85,15 +85,74 @@
 }
 
 .detailPane {
-  flex: 0 0 50%;
-  max-width: 50%;
-  min-width: min(320px, 50%);
+  flex: 0 0 40%;
+  max-width: 40%;
+  min-width: min(320px, 40%);
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-left: 1px solid var(--color-border);
   background: var(--color-surface);
+}
+
+.splitHandle {
+  display: none;
+}
+
+/* Desktop / laptop split: ratio-driven panes + drag handle */
+@media (min-width: 1025px) {
+  .workspace[data-resizable="true"] .calendarPane {
+    flex: 1 1 0;
+    min-width: 300px;
+  }
+
+  .workspace[data-resizable="true"] .detailPane {
+    flex: 0 0 var(--planning-detail-ratio, 40%);
+    width: var(--planning-detail-ratio, 40%);
+    max-width: none;
+    min-width: 320px;
+    border-left: 0;
+  }
+
+  .workspace[data-resizable="true"] .splitHandle {
+    display: block;
+    flex: 0 0 6px;
+    width: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    align-self: stretch;
+    cursor: col-resize;
+    touch-action: none;
+    position: relative;
+    z-index: 3;
+    background: transparent;
+  }
+
+  .workspace[data-resizable="true"] .splitHandle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2px;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--color-border);
+    transition: background-color 0.15s ease, width 0.15s ease, left 0.15s ease;
+  }
+
+  .workspace[data-resizable="true"] .splitHandle:hover::before,
+  .workspace[data-resizable="true"] .splitHandle:focus-visible::before,
+  .workspace[data-dragging="true"] .splitHandle::before {
+    left: 1.5px;
+    width: 3px;
+    background: color-mix(in srgb, var(--color-secondary) 70%, var(--color-border));
+  }
+
+  .workspace[data-resizable="true"] .splitHandle:focus-visible {
+    outline: none;
+  }
 }
 
 /* —— Tablet & mobile: detail becomes a full-screen overlay —— */
@@ -160,7 +219,7 @@
   }
 }
 
-/* —— Laptop (split-view + denser header): more room for detail readability —— */
+/* —— Laptop (split-view + denser header) —— */
 @media (min-width: 1025px) and (max-width: 1600px) {
   .topStack {
     gap: 0.55rem;
@@ -169,19 +228,5 @@
 
   .subtitle {
     display: none;
-  }
-
-  .calendarPane {
-    flex: 1 1 42%;
-    min-width: 0;
-  }
-
-  .detailPane {
-    /* ~42/58 in favor of the dossier — same type scale as wide desktop. */
-    flex: 0 0 58%;
-    max-width: 58%;
-    min-width: min(380px, 50%);
-    min-height: 0;
-    overflow: hidden;
   }
 }
