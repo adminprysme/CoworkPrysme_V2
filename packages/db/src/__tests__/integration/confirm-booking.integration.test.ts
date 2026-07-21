@@ -373,6 +373,7 @@ describe("integration: confirm booking checkout (replica set)", () => {
       passwordHash: await hash("CorrectPass1!", 12),
       consent: { privacyPolicyVersion: "2026-07-09", acceptedAt: new Date() },
       status: "active",
+      role: "owner",
     });
 
     const lock = await acquireLock({ spaceId, startAt, endAt, sessionId });
@@ -431,6 +432,7 @@ describe("integration: confirm booking checkout (replica set)", () => {
       passwordHash: await hash("VerifyPass1!", 12),
       consent: { privacyPolicyVersion: "2026-07-09", acceptedAt: new Date() },
       status: "active",
+      role: "owner",
     });
 
     await expect(clientAccountEmailExists("verify@example.com")).resolves.toBe(true);
@@ -456,6 +458,7 @@ describe("integration: confirm booking checkout (replica set)", () => {
       passwordHash: await hash("ExistingPass1!", 12),
       consent: { privacyPolicyVersion: "2026-07-09", acceptedAt: new Date() },
       status: "active",
+      role: "owner",
     });
 
     const lock = await acquireLock({ spaceId, startAt, endAt, sessionId });

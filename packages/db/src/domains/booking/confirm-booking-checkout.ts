@@ -193,6 +193,7 @@ async function resolveClientAccount(
             ...(input.marketingCommunicationsAccepted === true ? { acceptedAt: now } : {}),
           },
           status: "active",
+          role: "owner",
         },
       ],
       { session },

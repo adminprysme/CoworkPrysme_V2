@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { registerPaymentModel } from "../domains/billing/payment.schema.js";
+import { registerClientAccountInvitationModel } from "../domains/client/client-account-invitation.schema.js";
+import { registerClientAccountModel } from "../domains/client/client-account.schema.js";
 import { registerSlotLockGateModel } from "../domains/reservation/slot-lock-gate.schema.js";
 import { registerSlotLockModel } from "../domains/reservation/slot-lock.schema.js";
 import { CENTS_VALIDATOR } from "../lib/schema-helpers.js";
@@ -68,5 +70,45 @@ describe("monetary fields use integer cent validators", () => {
     expect(isIntegerCents(10.5)).toBe(false);
     expect(CENTS_VALIDATOR.validator(1000)).toBe(true);
     expect(CENTS_VALIDATOR.validator(10.5)).toBe(false);
+  });
+});
+
+describe("clientAccountInvitations schema indexes", () => {
+  it("declares unique tokenHash and partial unique pending (cardexId, email)", () => {
+    const connection = mongoose.createConnection();
+    registerClientAccountInvitationModel(connection);
+    const schema = connection.models.ClientAccountInvitation!.schema;
+    const indexes = schema.indexes();
+
+    expect(indexes).toEqual(
+      expect.arrayContaining([
+        [{ tokenHash: 1 }, { unique: true }],
+        [
+          { cardexId: 1, email: 1 },
+          expect.objectContaining({
+            unique: true,
+            partialFilterExpression: { status: "pending" },
+          }),
+        ],
+      ]),
+    );
+    void connection.close();
+  });
+});
+
+describe("clientAccounts role index", () => {
+  it("declares compound index on cardexId + role", () => {
+    const connection = mongoose.createConnection();
+    registerClientAccountModel(connection);
+    const schema = connection.models.ClientAccount!.schema;
+    const indexes = schema.indexes();
+
+    expect(indexes).toEqual(
+      expect.arrayContaining([
+        [{ email: 1 }, { unique: true }],
+        [{ cardexId: 1, role: 1 }, expect.any(Object)],
+      ]),
+    );
+    void connection.close();
   });
 });

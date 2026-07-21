@@ -67,6 +67,22 @@ export type CreatedChannel = (typeof CREATED_CHANNELS)[number];
 export const CLIENT_ACCOUNT_STATUSES = ["active", "locked", "anonymized"] as const;
 export type ClientAccountStatus = (typeof CLIENT_ACCOUNT_STATUSES)[number];
 
+/** Cardex attachment role — owner = Cardex.clientAccountId; member = invited collaborator. */
+export const CLIENT_ACCOUNT_ROLES = ["owner", "member"] as const;
+export type ClientAccountRole = (typeof CLIENT_ACCOUNT_ROLES)[number];
+
+/** Staff-issued invite for a collaborator to join an existing cardex. */
+export const CLIENT_ACCOUNT_INVITATION_STATUSES = [
+  "pending",
+  "accepted",
+  "expired",
+  "revoked",
+] as const;
+export type ClientAccountInvitationStatus = (typeof CLIENT_ACCOUNT_INVITATION_STATUSES)[number];
+
+/** Default invite lifetime (7 days). Enforced at read/accept — no periodic sweep in v1. */
+export const CLIENT_ACCOUNT_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 export const RETENTION_STATUSES = ["active", "pending_anonymization", "anonymized"] as const;
 export type RetentionStatus = (typeof RETENTION_STATUSES)[number];
 
