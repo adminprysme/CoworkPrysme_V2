@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { Container } from "@/components/ui/Container";
-import { CLIENT_PORTAL_URL } from "@/config/site";
+import { VITRINE_LOGIN_PATH } from "@/config/site";
 import { acceptInvitation, fetchInvitationPreview, InvitationApiError } from "@/lib/invitation-api";
 import type { PublicInvitationPreview } from "@coworkprysme/shared";
 
@@ -87,7 +87,7 @@ export function InvitationPageContent() {
   useEffect(() => {
     if (status !== "success") return;
     const timer = window.setTimeout(() => {
-      window.location.assign(CLIENT_PORTAL_URL);
+      window.location.assign(VITRINE_LOGIN_PATH);
     }, 2800);
     return () => window.clearTimeout(timer);
   }, [status]);
@@ -182,9 +182,9 @@ export function InvitationPageContent() {
               title="Invitation déjà utilisée"
               body="Cette invitation a déjà été utilisée. Si vous avez déjà un compte, connectez-vous."
               action={
-                <a className={styles.primaryButton} href={CLIENT_PORTAL_URL}>
+                <Link className={styles.primaryButton} href={VITRINE_LOGIN_PATH}>
                   Se connecter
-                </a>
+                </Link>
               }
             />
           ) : null}
@@ -197,9 +197,9 @@ export function InvitationPageContent() {
               }. Vous allez être redirigé vers la page de connexion.`}
               tone="success"
               action={
-                <a className={styles.primaryButton} href={CLIENT_PORTAL_URL}>
+                <Link className={styles.primaryButton} href={VITRINE_LOGIN_PATH}>
                   Aller à la connexion
-                </a>
+                </Link>
               }
             />
           ) : null}
@@ -234,11 +234,14 @@ export function InvitationPageContent() {
                 <label className={styles.field}>
                   <span className={styles.fieldLabel}>Email</span>
                   <input
-                    className={styles.input}
+                    className={`${styles.input} ${styles.inputLocked}`}
                     type="text"
                     value={preview.emailMasked}
                     readOnly
+                    disabled
+                    tabIndex={-1}
                     aria-readonly="true"
+                    autoComplete="off"
                   />
                 </label>
 

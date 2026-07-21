@@ -22,6 +22,7 @@ const SRC_DIR = fileURLToPath(new URL(".", import.meta.url));
 const BOOKING_CONTROLLER = "booking/booking.controller.ts";
 const BOOKING_PAYMENT_CONTROLLER = "stripe/booking-payment.controller.ts";
 const STRIPE_WEBHOOK_CONTROLLER = "stripe/stripe-webhook.controller.ts";
+const INVITATIONS_CONTROLLER = "invitations/invitations.controller.ts";
 
 function walkControllers(dir: string): string[] {
   const entries = readdirSync(dir);
@@ -47,7 +48,7 @@ function relativeControllerPath(filePath: string): string {
 }
 
 describe("vitrine-api read-only controllers", () => {
-  it("declares no write HTTP decorators except booking/slotLocks and Stripe payment endpoints", () => {
+  it("declares no write HTTP decorators except booking/slotLocks, Stripe, and invitation accept", () => {
     const controllerFiles = walkControllers(SRC_DIR);
     expect(controllerFiles.length).toBeGreaterThan(0);
 
@@ -76,6 +77,13 @@ describe("vitrine-api read-only controllers", () => {
 
       if (relative.endsWith(STRIPE_WEBHOOK_CONTROLLER)) {
         expect(source).toMatch(/@Post\("webhook"\)/);
+        expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
+        continue;
+      }
+
+      if (relative.endsWith(INVITATIONS_CONTROLLER)) {
+        expect(source).toMatch(/@Get\(":token"\)/);
+        expect(source).toMatch(/@Post\(":token\/accept"\)/);
         expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
         continue;
       }

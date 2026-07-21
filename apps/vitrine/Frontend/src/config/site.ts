@@ -1,11 +1,18 @@
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://coworkprysme.eu";
 
-/** Base URL of the internal gestion-web app (client login). */
+/** Base URL of the internal gestion-web app (staff). */
 export const GESTION_WEB_URL =
   process.env.NEXT_PUBLIC_GESTION_WEB_URL?.replace(/\/$/, "") ?? "http://localhost:3002";
 
-export const CLIENT_PORTAL_URL = `${GESTION_WEB_URL}/login`;
+/** Staff login — not for ClientAccount. */
+export const STAFF_LOGIN_URL = `${GESTION_WEB_URL}/login`;
+
+/** Connexion espace client (vitrine) — pas l’interface staff. */
+export const VITRINE_LOGIN_PATH = "/connexion";
+
+/** Used by existing vitrine header CTAs (still points at gestion until client portal lands). */
+export const CLIENT_PORTAL_URL = STAFF_LOGIN_URL;
 
 export const SITE = {
   name: "Cowork Prysme",

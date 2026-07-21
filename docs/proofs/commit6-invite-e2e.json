@@ -1,0 +1,160 @@
+{
+  "startedAt": "2026-07-21T13:48:13.781Z",
+  "isolation": {
+    "mongodbHost": "127.0.0.1:27017",
+    "isLocalhost": true,
+    "coworkDb": "cowork_bdd",
+    "prysmaDb": "prysma_bdd",
+    "note": "cowork_bdd + prysma_bdd on local Mongo only — not a shared group DB"
+  },
+  "steps": {
+    "email": "e2e.commit6.1784641693880@prysme.eu",
+    "step1_staffCreate": {
+      "invitationId": "6a5f789d561ce879a91d1b8d",
+      "status": "pending",
+      "cardexId": "6a5f3efeebd0da8b88b67bc4",
+      "emailSent": true,
+      "emailError": null,
+      "expiresAt": "2026-07-28T13:48:13.941Z"
+    },
+    "step2_email": {
+      "to": "e2e.commit6.1784641693880@prysme.eu",
+      "subject": "Invitation — rejoindre MA CONCIERGERIE sur Cowork Prysme",
+      "smtp": {
+        "dryRun": false,
+        "messageId": "<c1c4adb8-56d1-aa66-0c2d-f05b49c9e0ff@prysme.eu>",
+        "response": "250 2.0.0 OK <c1c4adb8-56d1-aa66-0c2d-f05b49c9e0ff@prysme.eu> [Hostname=PAZP264MB3302.FRAP264.PROD.OUTLOOK.COM]"
+      },
+      "inviteUrl": "http://localhost:3001/invitation?token=<redacted>",
+      "pointsToVitrineInvitation": true,
+      "usesLocalhostVitrine": true,
+      "htmlSavedAs": "invite-email.html"
+    },
+    "step3_vitrinePreview": {
+      "apiStatus": 200,
+      "preview": {
+        "emailMasked": "e2***@prysme.eu",
+        "companyLabel": "MA CONCIERGERIE",
+        "expiresAt": "2026-07-28T13:48:13.941Z"
+      },
+      "pageHttp": 200,
+      "pageHasFormMarkers": {
+        "company": false,
+        "emailReadonly": true
+      }
+    },
+    "step3_vitrineAccept": {
+      "http": 201,
+      "body": {
+        "clientAccount": {
+          "id": "6a5f789fafb015cfe5765b4b",
+          "email": "e2e.commit6.1784641693880@prysme.eu",
+          "role": "member",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4",
+          "status": "active"
+        },
+        "invitation": {
+          "id": "6a5f789d561ce879a91d1b8d",
+          "status": "accepted",
+          "acceptedAt": "2026-07-21T13:48:14.911Z",
+          "acceptedClientAccountId": "6a5f789fafb015cfe5765b4b",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4"
+        },
+        "companyLabel": "MA CONCIERGERIE",
+        "emailSent": true
+      }
+    },
+    "step4_db": {
+      "account": {
+        "id": "6a5f789fafb015cfe5765b4b",
+        "email": "e2e.commit6.1784641693880@prysme.eu",
+        "role": "member",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "status": "active"
+      },
+      "invitation": {
+        "id": "6a5f789d561ce879a91d1b8d",
+        "status": "accepted",
+        "acceptedClientAccountId": "6a5f789fafb015cfe5765b4b",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4"
+      }
+    },
+    "step5_staffList": {
+      "http": 200,
+      "listedStatus": "accepted",
+      "listedAcceptedClientAccountId": "6a5f789fafb015cfe5765b4b",
+      "contactsTabRefreshNote": "ReservationContactsPanel remounts on tab switch → reloads list (comportement normal, pas de WS)"
+    },
+    "step6_secondAccept": {
+      "http": 409,
+      "code": "INVITE_ALREADY_USED",
+      "message": "Cette invitation a déjà été utilisée."
+    },
+    "step6_staffReinvite": {
+      "http": 409,
+      "code": "INVITE_EMAIL_ALREADY_ON_CARDEX",
+      "message": "Cet email est déjà rattaché à ce dossier."
+    }
+  },
+  "nonRegression": {
+    "planningDetail": {
+      "http": 200,
+      "reference": "RES-2026-00024",
+      "hasPricing": true,
+      "hasContacts": true,
+      "readOnly": false
+    }
+  },
+  "ok": true,
+  "finishedAt": "2026-07-21T13:48:15.992Z",
+  "regressionFixes": {
+    "postAcceptRedirect": "CLIENT_PORTAL_URL (gestion /login) → VITRINE_LOGIN_PATH (/connexion)",
+    "emailField": "readOnly+disabled on invitation form (already in working tree)",
+    "vitrineApiReadOnlyTest": "whitelist invitations POST :token/accept"
+  },
+  "tests": {
+    "confirmBookingIntegration": {
+      "package": "@coworkprysme/db",
+      "file": "confirm-booking.integration.test.ts",
+      "note": "ran via full packages/db vitest (11 tests in file; 92 total package)",
+      "exitCode": 0
+    },
+    "suites": {
+      "@coworkprysme/shared": {
+        "exitCode": 0,
+        "tests": "153 passed"
+      },
+      "@coworkprysme/db": {
+        "exitCode": 0,
+        "tests": "92 passed"
+      },
+      "@coworkprysme/invoice-pdf": {
+        "exitCode": 0,
+        "tests": "5 passed"
+      },
+      "@coworkprysme/gestion-api": {
+        "exitCode": 0,
+        "tests": "78 passed"
+      },
+      "@coworkprysme/vitrine-api": {
+        "exitCode": 0,
+        "tests": "fixed read-only whitelist then re-run",
+        "note": "initially failed on invitations POST; fixed in commit 6"
+      },
+      "@coworkprysme/vitrine-web": {
+        "exitCode": 0,
+        "tests": "37 passed"
+      },
+      "@coworkprysme/gestion-web": {
+        "exitCode": null,
+        "note": "no test script"
+      }
+    }
+  },
+  "build": {
+    "command": "pnpm build",
+    "exitCode": 0,
+    "tasks": "7 successful / 7 total",
+    "routesInclude": ["/invitation", "/connexion"]
+  }
+}
