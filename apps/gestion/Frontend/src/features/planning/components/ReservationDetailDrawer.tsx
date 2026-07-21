@@ -5,13 +5,10 @@ import {
   IconCalendar,
   IconChevronDown,
   IconDoor,
-  IconMail,
-  IconPhone,
 } from "@tabler/icons-react";
 import {
   formatAvailabilityWindow,
   formatServiceCustomAnswerValue,
-  type PlanningContact,
   type PlanningReservationDetail,
   type PlanningServiceLine,
 } from "@coworkprysme/shared";
@@ -22,7 +19,8 @@ import {
   RESERVATION_STATUS_LABELS,
   SPACE_TYPE_LABELS,
 } from "../planning-ui.js";
-import { formatCentsEur, formatDateShort, formatDateTime } from "../planning-utils.js";
+import { formatCentsEur, formatDateTime } from "../planning-utils.js";
+import { ReservationContactsPanel } from "./ReservationContactsPanel.js";
 import { ReservationManagePanel } from "./ReservationManagePanel.js";
 import styles from "./ReservationDetailDrawer.module.css";
 
@@ -53,14 +51,6 @@ interface ReservationDetailDrawerProps {
   fullscreen?: boolean;
   showFullscreenToggle?: boolean;
   onToggleFullscreen?: () => void;
-}
-
-function contactDisplayName(contact: PlanningContact): string {
-  const fullName = [contact.firstName, contact.lastName]
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(" ");
-  return fullName || contact.email;
 }
 
 function serviceAnswerCount(service: PlanningServiceLine): number {
@@ -418,53 +408,11 @@ export function ReservationDetailDrawer({
         ) : null}
 
         {!loading && detail && tab === "contacts" ? (
-          <div className={styles.cards}>
-            {readOnly ? (
-              <p className={styles.banner}>Réservation terminée ou annulée — lecture pure.</p>
-            ) : null}
-            {detail.contacts.length === 0 ? (
-              <p className={styles.muted}>Aucun compte client lié.</p>
-            ) : (
-              <ul className={styles.contactList}>
-                {detail.contacts.map((contact) => {
-                  const displayName = contactDisplayName(contact);
-                  const phone = contact.phone?.trim();
-                  return (
-                    <li key={contact.id} className={styles.contactCard}>
-                      <div className={styles.contactInfo}>
-                        <strong className={styles.contactName}>{displayName}</strong>
-                        <div className={styles.contactMeta}>
-                          <span className={styles.contactMetaRow}>
-                            <IconMail size={14} stroke={1.6} aria-hidden />
-                            {contact.email}
-                          </span>
-                          {phone ? (
-                            <span className={styles.contactMetaRow}>
-                              <IconPhone size={14} stroke={1.6} aria-hidden />
-                              {phone}
-                            </span>
-                          ) : null}
-                          <span className={styles.contactMetaRow}>
-                            <IconCalendar size={14} stroke={1.6} aria-hidden />
-                            Créé le {formatDateShort(contact.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                      <a
-                        className={styles.contactMailBtn}
-                        href={`mailto:${contact.email}`}
-                        title="Contacter par email"
-                        aria-label={`Contacter ${contact.email} par email`}
-                      >
-                        <IconMail size={16} stroke={1.6} aria-hidden />
-                        Contacter
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <ReservationContactsPanel
+            reservationId={reservationId}
+            detail={detail}
+            readOnly={readOnly}
+          />
         ) : null}
 
         {!loading && detail && tab === "manage" ? (

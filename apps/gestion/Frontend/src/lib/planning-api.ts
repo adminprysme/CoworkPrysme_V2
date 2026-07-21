@@ -6,9 +6,13 @@ import type {
   PlanningContactTransferPreview,
   PlanningContactTransferRequest,
   PlanningContactTransferResult,
+  PlanningCreateInvitationRequest,
   PlanningDateChangePreview,
   PlanningDateChangeRequest,
   PlanningDateChangeResult,
+  PlanningInvitation,
+  PlanningInvitationListResponse,
+  PlanningInvitationMutationResult,
   PlanningManageSpaceOption,
   PlanningManualRefundRequest,
   PlanningManualRefundResult,
@@ -29,6 +33,42 @@ import type {
 
 import { API_URL } from "./api.js";
 
+export class PlanningApiError extends Error {
+  readonly code: string | null;
+  readonly status: number;
+
+  constructor(status: number, message: string, code: string | null = null) {
+    super(message);
+    this.name = "PlanningApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+function extractErrorPayload(json: unknown): { code: string | null; message: string | null } {
+  if (typeof json !== "object" || json === null) {
+    return { code: null, message: null };
+  }
+  const root = json as Record<string, unknown>;
+  if (typeof root.code === "string" && typeof root.message === "string") {
+    return { code: root.code, message: root.message };
+  }
+  if (typeof root.message === "object" && root.message !== null) {
+    const nested = root.message as Record<string, unknown>;
+    return {
+      code: typeof nested.code === "string" ? nested.code : null,
+      message: typeof nested.message === "string" ? nested.message : null,
+    };
+  }
+  if (typeof root.message === "string") {
+    return { code: null, message: root.message };
+  }
+  if (Array.isArray(root.message) && typeof root.message[0] === "string") {
+    return { code: null, message: root.message[0] };
+  }
+  return { code: null, message: null };
+}
+
 async function planningFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -42,17 +82,16 @@ async function planningFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let message = `API ${response.status}`;
+    let code: string | null = null;
     try {
-      const body = (await response.json()) as { message?: string | string[] };
-      if (typeof body.message === "string") {
-        message = body.message;
-      } else if (Array.isArray(body.message) && typeof body.message[0] === "string") {
-        message = body.message[0];
-      }
+      const body: unknown = await response.json();
+      const payload = extractErrorPayload(body);
+      if (payload.message) message = payload.message;
+      code = payload.code;
     } catch {
       // keep default
     }
-    throw new Error(message);
+    throw new PlanningApiError(response.status, message, code);
   }
 
   return response.json() as Promise<T>;
@@ -231,4 +270,36 @@ export function confirmContactTransfer(
     `/planning/reservations/${encodeURIComponent(reservationId)}/manage/contact-transfer`,
     { method: "POST", body: JSON.stringify(request) },
   );
+}
+
+export function fetchPlanningInvitations(
+  reservationId: string,
+): Promise<PlanningInvitationListResponse> {
+  return planningFetch(`/planning/reservations/${encodeURIComponent(reservationId)}/invitations`);
+}
+
+export function createPlanningInvitation(
+  reservationId: string,
+  request: PlanningCreateInvitationRequest,
+): Promise<PlanningInvitationMutationResult> {
+  return planningFetch(`/planning/reservations/${encodeURIComponent(reservationId)}/invitations`, {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+export function resendPlanningInvitation(
+  invitationId: string,
+): Promise<PlanningInvitationMutationResult> {
+  return planningFetch(`/planning/invitations/${encodeURIComponent(invitationId)}/resend`, {
+    method: "POST",
+    body: "{}",
+  });
+}
+
+export function revokePlanningInvitation(invitationId: string): Promise<PlanningInvitation> {
+  return planningFetch(`/planning/invitations/${encodeURIComponent(invitationId)}/revoke`, {
+    method: "POST",
+    body: "{}",
+  });
 }

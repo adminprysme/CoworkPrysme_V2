@@ -1,0 +1,339 @@
+.root {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.banner {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #5b8fc4 40%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 14%, var(--color-surface));
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.section {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
+}
+
+.cardMain {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.inviteTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.meta {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaRow svg {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--color-text-muted) 85%, #3b6fa8);
+}
+
+.cardActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.statusChip[data-status="pending"] {
+  border-color: color-mix(in srgb, #5b8fc4 50%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 18%, var(--color-surface));
+  color: color-mix(in srgb, #5b8fc4 42%, var(--color-text));
+}
+
+.statusChip[data-status="accepted"] {
+  border-color: color-mix(in srgb, #34d399 50%, var(--color-border));
+  background: color-mix(in srgb, #34d399 18%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.statusChip[data-status="expired"] {
+  border-color: color-mix(in srgb, #94a3b8 50%, var(--color-border));
+  background: color-mix(in srgb, #94a3b8 14%, var(--color-surface));
+  color: color-mix(in srgb, #94a3b8 55%, var(--color-text));
+}
+
+.statusChip[data-status="revoked"] {
+  border-color: color-mix(in srgb, #f87171 45%, var(--color-border));
+  background: color-mix(in srgb, #f87171 14%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 45%, var(--color-text));
+}
+
+.emailOkChip,
+.emailFailChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.emailOkChip {
+  border: 1px solid color-mix(in srgb, #34d399 45%, var(--color-border));
+  background: color-mix(in srgb, #34d399 14%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.emailFailChip {
+  border: 1px solid color-mix(in srgb, #f59e0b 50%, var(--color-border));
+  background: color-mix(in srgb, #f59e0b 18%, var(--color-surface));
+  color: color-mix(in srgb, #f59e0b 35%, var(--color-text));
+}
+
+.inviteForm {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-primary, #3b6fa8) 45%, transparent);
+  outline-offset: 1px;
+  border-color: var(--color-primary, #3b6fa8);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.ghostBtn,
+.dangerBtn,
+.dangerOutlineBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.primaryBtn {
+  border: 0;
+  padding: 0.45rem 0.8rem;
+  background: var(--color-primary, #3b6fa8);
+  color: #fff;
+}
+
+.secondaryBtn {
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.7rem;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.ghostBtn {
+  border: 0;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.dangerBtn {
+  border: 0;
+  padding: 0.45rem 0.8rem;
+  background: var(--color-danger, #c0392b);
+  color: #fff;
+}
+
+.dangerOutlineBtn {
+  border: 1px solid color-mix(in srgb, #f87171 45%, var(--color-border));
+  padding: 0.4rem 0.7rem;
+  background: color-mix(in srgb, #f87171 10%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 50%, var(--color-text));
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.ghostBtn:disabled,
+.dangerBtn:disabled,
+.dangerOutlineBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmBox {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.25rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #f87171 40%, var(--color-border));
+  background: color-mix(in srgb, #f87171 10%, var(--color-surface));
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.hintWarn {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, #f59e0b 45%, var(--color-text));
+}
+
+.error {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #f87171 40%, var(--color-border));
+  background: color-mix(in srgb, #f87171 12%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 55%, var(--color-text));
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+@media (max-width: 767px) {
+  .card {
+    flex-direction: column;
+  }
+
+  .cardActions {
+    flex-direction: row;
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .cardActions > * {
+    flex: 1;
+  }
+
+  .sectionHead {
+    align-items: stretch;
+  }
+
+  .sectionHead .primaryBtn {
+    width: 100%;
+  }
+}
