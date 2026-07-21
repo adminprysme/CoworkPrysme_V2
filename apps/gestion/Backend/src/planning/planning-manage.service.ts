@@ -868,6 +868,22 @@ export class PlanningManageService {
         subject: refundMail.subject,
         html: refundMail.html,
       });
+      await writePlanningManageAudit({
+        profile,
+        action: "reservation.refund",
+        reservationId: reservation._id,
+        diff: {
+          spaceId: {
+            before: String(reservation.spaceId),
+            after: String(reservation.spaceId),
+          },
+          stripeRefundId: { before: null, after: stripeRefundId },
+          emailSent: { before: false, after: true },
+          refundStatus: { before: "pending", after: "succeeded" },
+          amountCents: { before: 0, after: accepted },
+        },
+        at: now,
+      });
     }
 
     const detail = await this.planning.getReservationDetail(profile, reservationId);

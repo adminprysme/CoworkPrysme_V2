@@ -9,7 +9,8 @@ import { configureCors, getListenHost, getPort } from "./bootstrap.js";
 
 async function bootstrap(): Promise<void> {
   const env = initGestionApiEnv();
-  const app = await NestFactory.create(AppModule);
+  // rawBody required for Stripe webhook signature verification (POST /stripe/webhook).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(cookieParser());
   configureCors(app, env.ALLOWED_ORIGIN);
   const port = getPort();

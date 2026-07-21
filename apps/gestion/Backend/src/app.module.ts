@@ -13,6 +13,7 @@ import { PlanningModule } from "./planning/planning.module.js";
 import { QontoModule } from "./qonto/qonto.module.js";
 import { ServicesModule } from "./services/services.module.js";
 import { SpacesModule } from "./spaces/spaces.module.js";
+import { StripeModule } from "./stripe/stripe.module.js";
 import { UploadsModule } from "./uploads/uploads.module.js";
 import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.js";
 
@@ -32,6 +33,7 @@ import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.j
     PlanningModule,
     QontoModule,
     VitrineContentModule,
+    StripeModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
