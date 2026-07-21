@@ -198,10 +198,12 @@
 }
 
 /*
- * Compact chrome: mobile + small laptop (≤1366).
- * Large desktop (>1366) keeps the always-visible filter strip.
+ * Compact chrome: mobile + laptop (≤1600).
+ * Covers common logical widths (1280, 1366, 1440, 1512) where the inline
+ * filter strip stacks and steals vertical room from split-view.
+ * Wide desktop (>1600) keeps the always-visible filter strip.
  */
-@media (max-width: 1366px) {
+@media (max-width: 1600px) {
   .barWrap {
     align-items: center;
   }
@@ -302,8 +304,8 @@
   }
 }
 
-/* Small laptop / tablet landscape: anchored popover under the Filtres button. */
-@media (min-width: 768px) and (max-width: 1366px) {
+/* Laptop / tablet landscape: anchored popover under the Filtres button. */
+@media (min-width: 768px) and (max-width: 1600px) {
   .searchSlot {
     flex: 1 1 auto;
     min-width: min(100%, 12rem);

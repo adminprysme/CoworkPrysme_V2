@@ -160,8 +160,8 @@
   }
 }
 
-/* —— Small laptop (split-view + shorter header): free vertical room —— */
-@media (min-width: 1025px) and (max-width: 1366px) {
+/* —— Laptop (split-view + shorter header): free vertical room —— */
+@media (min-width: 1025px) and (max-width: 1600px) {
   .topStack {
     gap: 0.65rem;
     padding: 0.85rem 1rem 0;
