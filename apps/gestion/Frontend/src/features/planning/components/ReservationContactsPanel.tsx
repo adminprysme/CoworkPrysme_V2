@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { IconCalendar, IconMail, IconPhone, IconSend, IconUserPlus } from "@tabler/icons-react";
+import {
+  IconCalendar,
+  IconChevronDown,
+  IconMail,
+  IconPhone,
+  IconSend,
+  IconUserPlus,
+} from "@tabler/icons-react";
 import type {
   PlanningContact,
   PlanningInvitation,
@@ -86,6 +93,8 @@ export function ReservationContactsPanel({
   const [actionId, setActionId] = useState<string | null>(null);
   const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
   const [deliveryById, setDeliveryById] = useState<Record<string, EmailDeliveryHint>>({});
+  const [invitesExpanded, setInvitesExpanded] = useState(false);
+  const [invitesDefaultApplied, setInvitesDefaultApplied] = useState(false);
 
   const loadInvitations = useCallback(async () => {
     setLoadingInvites(true);
@@ -101,8 +110,23 @@ export function ReservationContactsPanel({
   }, [reservationId]);
 
   useEffect(() => {
+    setInvitesExpanded(false);
+    setInvitesDefaultApplied(false);
+    setInviteOpen(false);
     void loadInvitations();
   }, [loadInvitations]);
+
+  useEffect(() => {
+    if (loadingInvites || invitesDefaultApplied) return;
+    const hasPending = invitations.some((invite) => invite.status === "pending");
+    setInvitesExpanded(hasPending);
+    setInvitesDefaultApplied(true);
+  }, [loadingInvites, invitations, invitesDefaultApplied]);
+
+  const pendingCount = useMemo(
+    () => invitations.filter((invite) => invite.status === "pending").length,
+    [invitations],
+  );
 
   const pendingEmails = useMemo(() => {
     const set = new Set<string>();
@@ -159,6 +183,7 @@ export function ReservationContactsPanel({
       }));
       setEmail("");
       setInviteOpen(false);
+      setInvitesExpanded(true);
       await loadInvitations();
     } catch (error: unknown) {
       setFormError(inviteErrorMessage(error));
@@ -267,9 +292,29 @@ export function ReservationContactsPanel({
 
       <section className={styles.section} aria-labelledby="contacts-invites-title">
         <div className={styles.sectionHead}>
-          <h3 id="contacts-invites-title" className={styles.sectionTitle}>
-            Invitations collaborateur
-          </h3>
+          <button
+            type="button"
+            className={styles.inviteDisclosure}
+            aria-expanded={invitesExpanded}
+            aria-controls="contacts-invites-panel"
+            onClick={() => setInvitesExpanded((open) => !open)}
+          >
+            <span id="contacts-invites-title" className={styles.sectionTitle}>
+              Invitations collaborateur
+              {!loadingInvites ? (
+                <span className={styles.inviteCount}> ({invitations.length})</span>
+              ) : null}
+              {pendingCount > 0 ? (
+                <span className={styles.pendingHint}> · {pendingCount} en attente</span>
+              ) : null}
+            </span>
+            <IconChevronDown
+              size={18}
+              stroke={1.7}
+              aria-hidden
+              className={invitesExpanded ? styles.inviteChevronOpen : styles.inviteChevron}
+            />
+          </button>
           {!readOnly ? (
             <button
               type="button"
@@ -342,130 +387,135 @@ export function ReservationContactsPanel({
         ) : null}
 
         {formError ? <p className={styles.error}>{formError}</p> : null}
-        {listError ? <p className={styles.error}>{listError}</p> : null}
 
-        {loadingInvites ? <p className={styles.muted}>Chargement des invitations…</p> : null}
+        {invitesExpanded ? (
+          <div id="contacts-invites-panel" className={styles.invitePanel}>
+            {listError ? <p className={styles.error}>{listError}</p> : null}
 
-        {!loadingInvites && invitations.length === 0 ? (
-          <p className={styles.muted}>Aucune invitation pour ce dossier.</p>
-        ) : null}
+            {loadingInvites ? <p className={styles.muted}>Chargement des invitations…</p> : null}
 
-        {!loadingInvites && invitations.length > 0 ? (
-          <ul className={styles.list}>
-            {invitations.map((invite) => {
-              const delivery = deliveryById[invite.id];
-              const busy = actionId === invite.id;
-              const canAct = !readOnly && invite.status === "pending";
-              const confirmingRevoke = revokeConfirmId === invite.id;
+            {!loadingInvites && invitations.length === 0 ? (
+              <p className={styles.muted}>Aucune invitation pour ce dossier.</p>
+            ) : null}
 
-              return (
-                <li key={invite.id} className={styles.card}>
-                  <div className={styles.cardMain}>
-                    <div className={styles.inviteTitleRow}>
-                      <strong className={styles.cardTitle}>{invite.email}</strong>
-                      <span className={styles.statusChip} data-status={invite.status}>
-                        {STATUS_LABELS[invite.status]}
-                      </span>
-                      {delivery ? (
-                        delivery.emailSent ? (
-                          <span className={styles.emailOkChip}>Email envoyé</span>
-                        ) : (
-                          <span
-                            className={styles.emailFailChip}
-                            title={
-                              delivery.emailError
-                                ? `Email non envoyé — ${delivery.emailError}`
-                                : "Email non envoyé"
-                            }
-                          >
-                            ⚠ Email non envoyé
+            {!loadingInvites && invitations.length > 0 ? (
+              <ul className={styles.list}>
+                {invitations.map((invite) => {
+                  const delivery = deliveryById[invite.id];
+                  const busy = actionId === invite.id;
+                  const canAct = !readOnly && invite.status === "pending";
+                  const confirmingRevoke = revokeConfirmId === invite.id;
+
+                  return (
+                    <li key={invite.id} className={styles.card}>
+                      <div className={styles.cardMain}>
+                        <div className={styles.inviteTitleRow}>
+                          <strong className={styles.cardTitle}>{invite.email}</strong>
+                          <span className={styles.statusChip} data-status={invite.status}>
+                            {STATUS_LABELS[invite.status]}
                           </span>
-                        )
-                      ) : null}
-                    </div>
-                    <div className={styles.meta}>
-                      {invite.status === "pending" ? (
-                        <span className={styles.metaRow}>
-                          <IconCalendar size={14} stroke={1.6} aria-hidden />
-                          {formatExpiresLabel(invite.expiresAt)}
-                        </span>
-                      ) : null}
-                      {invite.status === "accepted" && invite.acceptedAt ? (
-                        <span className={styles.metaRow}>
-                          Acceptée le {formatDateShort(invite.acceptedAt)}
-                        </span>
-                      ) : null}
-                      {invite.status === "revoked" && invite.revokedAt ? (
-                        <span className={styles.metaRow}>
-                          Révoquée le {formatDateShort(invite.revokedAt)}
-                        </span>
-                      ) : null}
-                      {invite.status === "expired" ? (
-                        <span className={styles.metaRow}>
-                          Expirée le {formatDateShort(invite.expiresAt)}
-                        </span>
-                      ) : null}
-                      <span className={styles.metaRow}>
-                        Dernier envoi le {formatDateShort(invite.lastSentAt)}
-                      </span>
-                    </div>
+                          {delivery ? (
+                            delivery.emailSent ? (
+                              <span className={styles.emailOkChip}>Email envoyé</span>
+                            ) : (
+                              <span
+                                className={styles.emailFailChip}
+                                title={
+                                  delivery.emailError
+                                    ? `Email non envoyé — ${delivery.emailError}`
+                                    : "Email non envoyé"
+                                }
+                              >
+                                ⚠ Email non envoyé
+                              </span>
+                            )
+                          ) : null}
+                        </div>
+                        <div className={styles.meta}>
+                          {invite.status === "pending" ? (
+                            <span className={styles.metaRow}>
+                              <IconCalendar size={14} stroke={1.6} aria-hidden />
+                              {formatExpiresLabel(invite.expiresAt)}
+                            </span>
+                          ) : null}
+                          {invite.status === "accepted" && invite.acceptedAt ? (
+                            <span className={styles.metaRow}>
+                              Acceptée le {formatDateShort(invite.acceptedAt)}
+                            </span>
+                          ) : null}
+                          {invite.status === "revoked" && invite.revokedAt ? (
+                            <span className={styles.metaRow}>
+                              Révoquée le {formatDateShort(invite.revokedAt)}
+                            </span>
+                          ) : null}
+                          {invite.status === "expired" ? (
+                            <span className={styles.metaRow}>
+                              Expirée le {formatDateShort(invite.expiresAt)}
+                            </span>
+                          ) : null}
+                          <span className={styles.metaRow}>
+                            Dernier envoi le {formatDateShort(invite.lastSentAt)}
+                          </span>
+                        </div>
 
-                    {canAct && confirmingRevoke ? (
-                      <div
-                        className={styles.confirmBox}
-                        role="group"
-                        aria-label="Confirmer la révocation"
-                      >
-                        <p className={styles.confirmText}>
-                          Révoquer l&apos;invitation pour <strong>{invite.email}</strong> ? Le lien
-                          ne pourra plus être utilisé.
-                        </p>
-                        <div className={styles.formActions}>
+                        {canAct && confirmingRevoke ? (
+                          <div
+                            className={styles.confirmBox}
+                            role="group"
+                            aria-label="Confirmer la révocation"
+                          >
+                            <p className={styles.confirmText}>
+                              Révoquer l&apos;invitation pour <strong>{invite.email}</strong> ? Le
+                              lien ne pourra plus être utilisé.
+                            </p>
+                            <div className={styles.formActions}>
+                              <button
+                                type="button"
+                                className={styles.dangerBtn}
+                                disabled={busy}
+                                onClick={() => void handleRevoke(invite.id)}
+                              >
+                                {busy ? "Révocation…" : "Confirmer la révocation"}
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.ghostBtn}
+                                disabled={busy}
+                                onClick={() => setRevokeConfirmId(null)}
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {canAct && !confirmingRevoke ? (
+                        <div className={styles.cardActions}>
                           <button
                             type="button"
-                            className={styles.dangerBtn}
+                            className={styles.secondaryBtn}
                             disabled={busy}
-                            onClick={() => void handleRevoke(invite.id)}
+                            onClick={() => void handleResend(invite.id)}
                           >
-                            {busy ? "Révocation…" : "Confirmer la révocation"}
+                            {busy ? "…" : "Renvoyer"}
                           </button>
                           <button
                             type="button"
-                            className={styles.ghostBtn}
+                            className={styles.dangerOutlineBtn}
                             disabled={busy}
-                            onClick={() => setRevokeConfirmId(null)}
+                            onClick={() => setRevokeConfirmId(invite.id)}
                           >
-                            Annuler
+                            Révoquer
                           </button>
                         </div>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {canAct && !confirmingRevoke ? (
-                    <div className={styles.cardActions}>
-                      <button
-                        type="button"
-                        className={styles.secondaryBtn}
-                        disabled={busy}
-                        onClick={() => void handleResend(invite.id)}
-                      >
-                        {busy ? "…" : "Renvoyer"}
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.dangerOutlineBtn}
-                        disabled={busy}
-                        onClick={() => setRevokeConfirmId(invite.id)}
-                      >
-                        Révoquer
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
       </section>
     </div>

@@ -35,6 +35,58 @@
   color: var(--color-text-muted);
 }
 
+.inviteDisclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.2rem 0.15rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inviteDisclosure:hover {
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 8%, transparent);
+}
+
+.inviteDisclosure .sectionTitle {
+  display: inline;
+}
+
+.inviteCount,
+.pendingHint {
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.pendingHint {
+  color: color-mix(in srgb, #5b8fc4 55%, var(--color-text-muted));
+}
+
+.inviteChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.inviteChevronOpen {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transform: rotate(180deg);
+  transition: transform 0.15s ease;
+}
+
+.invitePanel {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .list {
   list-style: none;
   margin: 0;
@@ -331,6 +383,11 @@
 
   .sectionHead {
     align-items: stretch;
+  }
+
+  .inviteDisclosure {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .sectionHead .primaryBtn {
