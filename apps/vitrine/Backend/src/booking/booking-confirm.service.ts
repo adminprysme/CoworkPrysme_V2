@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,6 +9,7 @@ import {
 } from "@nestjs/common";
 import type { Service, Space } from "@coworkprysme/db";
 import {
+  AccountLockedError,
   confirmBookingCheckout,
   connectMongo,
   EmailAlreadyRegisteredError,
@@ -21,6 +23,7 @@ import {
 import {
   BOOKING_CONFIRM_ERROR_CODES,
   BookingConfirmResponseSchema,
+  CLIENT_ACCOUNT_LOCKED_USER_MESSAGE,
   computeBankTransferExpiresAt,
   isBankTransferFullyEligible,
   PRIVACY_POLICY_VERSION,
@@ -162,6 +165,12 @@ export class BookingConfirmService {
       throw new UnauthorizedException({
         code: BOOKING_CONFIRM_ERROR_CODES.INVALID_CREDENTIALS,
         message: "Email ou mot de passe incorrect",
+      });
+    }
+    if (error instanceof AccountLockedError) {
+      throw new ForbiddenException({
+        code: BOOKING_CONFIRM_ERROR_CODES.ACCOUNT_LOCKED,
+        message: CLIENT_ACCOUNT_LOCKED_USER_MESSAGE,
       });
     }
     if (error instanceof EmailAlreadyRegisteredError) {

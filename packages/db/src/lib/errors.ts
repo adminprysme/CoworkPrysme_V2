@@ -57,6 +57,14 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+/** Thrown when a client account exists but was staff-deactivated (status locked). */
+export class AccountLockedError extends Error {
+  constructor(message = "Client account is locked") {
+    super(message);
+    this.name = "AccountLockedError";
+  }
+}
+
 /** Thrown when a new account email is already registered. */
 export class EmailAlreadyRegisteredError extends Error {
   constructor(message = "An account with this email already exists") {

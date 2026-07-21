@@ -10,6 +10,7 @@ import {
 } from "../client/index.js";
 import { getInvoiceModel } from "../billing/invoice.schema.js";
 import {
+  AccountLockedError,
   InvalidCredentialsError,
   LockMismatchError,
   LockNotAvailableError,
@@ -141,14 +142,20 @@ async function resolveClientAccount(
   const normalizedEmail = normalizeClientEmail(input.email);
 
   if (input.accountMode === "existing") {
-    const existing = await ClientAccount.findOne({
-      email: normalizedEmail,
-      status: "active",
-    })
+    // Lookup by email only — locked accounts must surface ACCOUNT_LOCKED, not the
+    // generic invalid-credentials message used when status was filtered to active.
+    const existing = await ClientAccount.findOne({ email: normalizedEmail })
       .session(session)
       .exec();
 
     if (!existing) {
+      throw new InvalidCredentialsError();
+    }
+    if (existing.status === "locked") {
+      throw new AccountLockedError();
+    }
+    if (existing.status !== "active") {
+      // anonymized (and any future non-active status): no crash, no email enumeration
       throw new InvalidCredentialsError();
     }
 
@@ -396,7 +403,10 @@ export async function confirmBookingCheckout(
   }
 }
 
-/** Verifies client credentials without creating a session. */
+/**
+ * Verifies client credentials without creating a session.
+ * @throws {AccountLockedError} when the account exists and status is locked
+ */
 export async function verifyClientAccountCredentials(
   email: string,
   password: string,
@@ -404,11 +414,16 @@ export async function verifyClientAccountCredentials(
   await connectMongo();
   const ClientAccount = await getClientAccountModel();
   const normalizedEmail = normalizeClientEmail(email);
-  const account = await ClientAccount.findOne({ email: normalizedEmail, status: "active" })
-    .lean()
-    .exec();
+  const account = await ClientAccount.findOne({ email: normalizedEmail }).lean().exec();
 
   if (!account) {
+    return false;
+  }
+  if (account.status === "locked") {
+    throw new AccountLockedError();
+  }
+  if (account.status !== "active") {
+    // anonymized (and any future non-active status): treat as unknown credentials
     return false;
   }
 

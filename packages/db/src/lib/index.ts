@@ -18,6 +18,7 @@ export {
 } from "./replica-set.js";
 export {
   isDuplicateKeyError,
+  AccountLockedError,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   InvoiceNotFoundError,

@@ -20,6 +20,7 @@ vi.mock("@coworkprysme/db", () => ({
   getServiceModel: getServiceModelMock,
   EmailAlreadyRegisteredError: class EmailAlreadyRegisteredError extends Error {},
   InvalidCredentialsError: class InvalidCredentialsError extends Error {},
+  AccountLockedError: class AccountLockedError extends Error {},
   LockMismatchError: class LockMismatchError extends Error {},
   LockNotAvailableError: class LockNotAvailableError extends Error {},
   ReservationOverlapError: class ReservationOverlapError extends Error {},
