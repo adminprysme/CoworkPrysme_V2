@@ -68,6 +68,8 @@ import {
   findOverlappingReservation,
   applyManualTransferRefund,
   computePaymentRefundCaps,
+  createPendingStripeCardRefund,
+  applyStripeCardRefund,
   type ReservationDocument,
   type StaffProfileDocument,
   type StatusHistoryEntry,
@@ -76,6 +78,7 @@ import {
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
 import { MailService } from "../mail/mail.service.js";
+import { StripeRefundService } from "../stripe/stripe-refund.service.js";
 import { writePlanningManageAudit } from "./planning-manage-audit.js";
 import {
   renderCancellationEmail,
@@ -125,6 +128,7 @@ export class PlanningManageService {
     private readonly mail: MailService,
     private readonly planning: PlanningService,
     private readonly invoicePdf: InvoicePdfService,
+    private readonly stripeRefunds: StripeRefundService,
   ) {}
 
   async listCandidateSpaces(
@@ -675,6 +679,121 @@ export class PlanningManageService {
 
     if (
       accepted > 0 &&
+      caps.refundExecution === "stripe_card" &&
+      invoice &&
+      !request.markManualRefundNow
+    ) {
+      const paymentIntentId = await this.resolveCardPaymentIntentId(
+        invoice._id,
+        reservation.stripePaymentIntentId,
+      );
+      if (!paymentIntentId) {
+        throw new BadRequestException({
+          code: "STRIPE_PAYMENT_INTENT_MISSING",
+          message: "Aucun PaymentIntent Stripe trouvé pour cette réservation carte",
+        });
+      }
+
+      const idempotencyKey = `gestion-refund:${reservationId}:${auditId}`;
+      await createPendingStripeCardRefund({
+        invoiceId: invoice._id,
+        amountCents: accepted,
+        stripePaymentIntentId: paymentIntentId,
+        idempotencyKey,
+        receivedAt: now,
+      });
+
+      try {
+        const stripeResult = await this.stripeRefunds.createCardRefund({
+          paymentIntentId,
+          amountCents: accepted,
+          idempotencyKey,
+          metadata: {
+            reservationId: String(reservation._id),
+            auditId,
+          },
+        });
+        stripeRefundId = stripeResult.stripeRefundId;
+
+        const Payment = await getPaymentModel();
+        const pending = await Payment.findOne({
+          "reconciliation.idempotencyKey": idempotencyKey,
+        }).exec();
+        if (pending && !pending.reconciliation.stripeRefundId) {
+          pending.reconciliation.stripeRefundId = stripeRefundId;
+          await pending.save();
+        }
+
+        if (stripeResult.status === "succeeded") {
+          await applyStripeCardRefund({
+            invoiceId: invoice._id,
+            stripeRefundId,
+            stripePaymentIntentId: paymentIntentId,
+            amountCents: accepted,
+            idempotencyKey,
+            receivedAt: now,
+          });
+          refundStatus = "succeeded";
+        } else {
+          refundStatus = "pending";
+        }
+
+        await writePlanningManageAudit({
+          profile,
+          action: "reservation.refund",
+          reservationId: reservation._id,
+          diff: {
+            spaceId: {
+              before: String(reservation.spaceId),
+              after: String(reservation.spaceId),
+            },
+            amountCents: { before: 0, after: accepted },
+            refundStatus: { before: null, after: refundStatus },
+            stripeRefundId: { before: null, after: stripeRefundId },
+            method: { before: null, after: "card" },
+          },
+          reason: request.reason,
+          at: now,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Stripe refund failed reservation=${reservationId} key=${idempotencyKey}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        const Payment = await getPaymentModel();
+        const pending = await Payment.findOne({
+          "reconciliation.idempotencyKey": idempotencyKey,
+        }).exec();
+        if (pending) {
+          pending.reconciliation.status = "failed";
+          await pending.save();
+        }
+        await writePlanningManageAudit({
+          profile,
+          action: "reservation.refund",
+          reservationId: reservation._id,
+          diff: {
+            spaceId: {
+              before: String(reservation.spaceId),
+              after: String(reservation.spaceId),
+            },
+            amountCents: { before: 0, after: accepted },
+            refundStatus: { before: null, after: "failed" },
+            method: { before: null, after: "card" },
+            error: {
+              before: null,
+              after: error instanceof Error ? error.message : String(error),
+            },
+          },
+          reason: request.reason,
+          at: now,
+        });
+        // Reservation is already cancelled — surface refund failure without rolling back cancel.
+        refundStatus = "failed";
+      }
+    } else if (
+      accepted > 0 &&
       request.markManualRefundNow &&
       caps.refundExecution === "manual_transfer" &&
       invoice
@@ -728,6 +847,21 @@ export class PlanningManageService {
         reservationReference: reservation.reference,
         amountCents: accepted,
         channel: "manual_transfer",
+      });
+      await this.mail.sendMail({
+        to: clientEmail,
+        subject: refundMail.subject,
+        html: refundMail.html,
+      });
+    }
+
+    // Stripe refund already succeeded synchronously — confirm now (else wait for webhook).
+    if (refundStatus === "succeeded" && clientEmail && accepted > 0 && stripeRefundId) {
+      const refundMail = renderRefundConfirmedEmail({
+        reservationReference: reservation.reference,
+        amountCents: accepted,
+        channel: "stripe_card",
+        stripeRefundId,
       });
       await this.mail.sendMail({
         to: clientEmail,
@@ -851,6 +985,26 @@ export class PlanningManageService {
     const Payment = await getPaymentModel();
     const payments = await Payment.find({ invoiceId }).lean().exec();
     return computePaymentRefundCaps(payments);
+  }
+
+  private async resolveCardPaymentIntentId(
+    invoiceId: Types.ObjectId,
+    reservationPi: string | null | undefined,
+  ): Promise<string | null> {
+    const Payment = await getPaymentModel();
+    const cardPayment = await Payment.findOne({
+      invoiceId,
+      method: "card",
+      kind: { $ne: "refund" },
+      "reconciliation.stripePaymentIntentId": { $type: "string" },
+    })
+      .sort({ receivedAt: -1 })
+      .lean()
+      .exec();
+    const fromPayment = cardPayment?.reconciliation?.stripePaymentIntentId?.trim();
+    if (fromPayment) return fromPayment;
+    const fromReservation = reservationPi?.trim();
+    return fromReservation || null;
   }
 
   /**

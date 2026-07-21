@@ -84,6 +84,9 @@ importers:
       sharp:
         specifier: ^0.35.3
         version: 0.35.3(@types/node@22.20.0)
+      stripe:
+        specifier: ^22.3.2
+        version: 22.3.2(@types/node@22.20.0)
     devDependencies:
       '@coworkprysme/config':
         specifier: workspace:*
