@@ -766,27 +766,11 @@ export class PlanningService {
       return String(a.email).localeCompare(String(b.email), "fr");
     });
 
-    const contactCardexes =
-      accounts.length > 0
-        ? await Cardex.find({
-            clientAccountId: { $in: accounts.map((account) => account._id) },
-          })
-            .select({ clientAccountId: 1, identity: 1 })
-            .lean()
-            .exec()
-        : [];
-
-    const cardexByAccountId = new Map<
-      string,
-      { firstName?: string; lastName?: string; phone?: string }
-    >();
-    for (const doc of contactCardexes) {
-      cardexByAccountId.set(String(doc.clientAccountId), {
-        firstName: doc.identity?.firstName?.trim() || undefined,
-        lastName: doc.identity?.lastName?.trim() || undefined,
-        phone: doc.identity?.phone?.trim() || undefined,
-      });
-    }
+    // Intentionally do NOT attach Cardex.identity (firstName/lastName/phone) onto
+    // individual ClientAccount contacts via Cardex.clientAccountId. That identity
+    // belongs to the dossier (Cardex), not to the current owner account — mapping
+    // it by clientAccountId made names/phones "move" after ownership transfer.
+    // Dossier identity remains on detail.client (from reservation.cardexId).
 
     const primaryEmail =
       accounts.find((a) => contactIds.get(String(a._id)) === "reservation")?.email ??
@@ -904,13 +888,9 @@ export class PlanningService {
         ? toIso(reservation.awaitingPaymentExpiresAt)
         : undefined,
       contacts: accounts.map((account) => {
-        const identity = cardexByAccountId.get(String(account._id));
         return {
           id: String(account._id),
           email: account.email,
-          firstName: identity?.firstName,
-          lastName: identity?.lastName,
-          phone: identity?.phone,
           role: account.role ?? "member",
           status: account.status ?? "active",
           ...(account.cardexId ? { cardexId: String(account.cardexId) } : {}),

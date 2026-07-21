@@ -623,6 +623,34 @@ export function ReservationContactsPanel({
           </h3>
         </div>
 
+        {detail.client.firstName ||
+        detail.client.lastName ||
+        detail.client.phone ||
+        detail.client.companyName ? (
+          <div className={styles.dossierIdentity} aria-label="Identité du dossier (cardex)">
+            <p className={styles.dossierIdentityLabel}>Identité du dossier</p>
+            <p className={styles.dossierIdentityName}>
+              {[detail.client.firstName, detail.client.lastName].filter(Boolean).join(" ") ||
+                detail.client.companyName ||
+                "—"}
+            </p>
+            <div className={styles.meta}>
+              {detail.client.companyName && (detail.client.firstName || detail.client.lastName) ? (
+                <span className={styles.metaRow}>{detail.client.companyName}</span>
+              ) : null}
+              {detail.client.phone ? (
+                <span className={styles.metaRow}>
+                  <IconPhone size={14} stroke={1.6} aria-hidden />
+                  {detail.client.phone}
+                </span>
+              ) : null}
+              <span className={styles.metaRowMuted}>
+                Ces informations appartiennent au cardex, pas à un compte collaborateur.
+              </span>
+            </div>
+          </div>
+        ) : null}
+
         {accountError ? <p className={styles.error}>{accountError}</p> : null}
 
         {!cardexId && detail.contacts.some((c) => c.role === "owner") ? (
