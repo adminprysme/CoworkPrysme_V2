@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import type { PlanningPaymentStatus } from "@coworkprysme/shared";
 
 import {
@@ -61,6 +61,8 @@ export function PlanningFiltersBar({
   onReset,
   searchSlot,
 }: PlanningFiltersBarProps) {
+  const panelTitleId = useId();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const showReset = hasActivePlanningFilters({
     typeFilter,
     paymentStatuses,
@@ -68,6 +70,22 @@ export function PlanningFiltersBar({
     showCancelled,
   });
   const paymentAll = paymentStatuses.size === 0;
+  const activeFilterCount =
+    (typeFilter !== "all" ? 1 : 0) +
+    paymentStatuses.size +
+    (withReservationsOnly ? 1 : 0) +
+    (showCancelled ? 1 : 0);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFiltersOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [filtersOpen]);
 
   function togglePaymentStatus(status: PlanningPaymentStatus) {
     const next = new Set(paymentStatuses);
@@ -79,10 +97,8 @@ export function PlanningFiltersBar({
     onPaymentStatusesChange(next);
   }
 
-  return (
-    <div className={styles.barWrap}>
-      {searchSlot ? <div className={styles.searchSlot}>{searchSlot}</div> : null}
-
+  const filtersBody = (
+    <>
       <div className={styles.filtersBar} role="group" aria-label="Filtres du planning">
         <div className={styles.filterGroup}>
           <span className={styles.filterGroupLabel} id="planning-filter-type-label">
@@ -190,6 +206,60 @@ export function PlanningFiltersBar({
         <button type="button" className={styles.resetBtn} onClick={onReset}>
           Réinitialiser
         </button>
+      ) : null}
+    </>
+  );
+
+  return (
+    <div className={styles.barWrap}>
+      {searchSlot ? <div className={styles.searchSlot}>{searchSlot}</div> : null}
+
+      <div className={styles.mobileActions}>
+        <button
+          type="button"
+          className={styles.filtersToggle}
+          aria-expanded={filtersOpen}
+          aria-controls={panelTitleId}
+          onClick={() => setFiltersOpen(true)}
+        >
+          Filtres
+          {activeFilterCount > 0 ? (
+            <span className={styles.filtersBadge}>{activeFilterCount}</span>
+          ) : null}
+        </button>
+      </div>
+
+      <div className={styles.desktopFilters}>{filtersBody}</div>
+
+      {filtersOpen ? (
+        <>
+          <button
+            type="button"
+            className={styles.filtersBackdrop}
+            aria-label="Fermer les filtres"
+            onClick={() => setFiltersOpen(false)}
+          />
+          <div
+            className={styles.filtersSheet}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={panelTitleId}
+          >
+            <div className={styles.filtersSheetHeader}>
+              <h3 id={panelTitleId} className={styles.filtersSheetTitle}>
+                Filtres
+              </h3>
+              <button
+                type="button"
+                className={styles.filtersSheetClose}
+                onClick={() => setFiltersOpen(false)}
+              >
+                Fermer
+              </button>
+            </div>
+            <div className={styles.filtersSheetBody}>{filtersBody}</div>
+          </div>
+        </>
       ) : null}
     </div>
   );

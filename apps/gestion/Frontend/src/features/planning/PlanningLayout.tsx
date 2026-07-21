@@ -11,7 +11,7 @@ export function PlanningLayout() {
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-planning-lock="">
       <Outlet />
     </div>
   );

@@ -4,6 +4,7 @@
   --planning-awaiting: #c58369;
   --planning-none: #94a3b8;
   --planning-slate: #3b6fa8;
+  --planning-overlay-z: 50;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -55,6 +56,7 @@
 
 .kpiStrip {
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .separator {
@@ -94,16 +96,66 @@
   background: var(--color-surface);
 }
 
-@media (max-width: 900px) {
-  .workspace {
-    flex-direction: column;
-  }
-
+/* —— Tablet & mobile: detail becomes a full-screen overlay —— */
+@media (max-width: 1024px) {
   .detailPane {
-    flex: 0 0 48%;
+    position: fixed;
+    inset: 0;
+    z-index: var(--planning-overlay-z);
+    flex: none;
+    width: 100%;
     max-width: none;
     min-width: 0;
+    height: 100dvh;
+    max-height: 100dvh;
     border-left: 0;
-    border-top: 1px solid var(--color-border);
+    border-top: 0;
+    box-shadow: var(--shadow-sm);
+    animation: planningDetailSlideIn 0.22s ease;
+  }
+
+  /* Freeze background planning while overlay is open (no scroll bleed). */
+  .page[data-split="true"] .topStack,
+  .page[data-split="true"] .calendarPane {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .page[data-split="true"] .calendarPane {
+    overflow: hidden;
+  }
+}
+
+@keyframes planningDetailSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* —— Mobile: compact header so the calendar stays reachable —— */
+@media (max-width: 767px) {
+  .topStack {
+    gap: 0.65rem;
+    padding: 0.75rem 0.75rem 0;
+  }
+
+  .header {
+    gap: 0.35rem;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .separator {
+    display: none;
   }
 }

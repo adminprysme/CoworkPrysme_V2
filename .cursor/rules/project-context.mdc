@@ -38,6 +38,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - **Recalcul date-change / paliers tarifaires** : bug confirmé puis corrigé (`c58e2e3`) — plus d’extrapolation linéaire du `durationClass` d’origine ; `resolveSpaceStayPricing` choisit le tarif applicable le moins cher (weekly si ≥ 7 jours Paris, monthly si ≥ 28).
 - **Booking vitrine paliers** : `POST /booking/price` + confirm atomique alignés sur `resolveSpaceStayPricing` (`17253d1`).
 - **Restauration vs filtre/style annulé** : calendrier se base bien sur `reservation.status` live (pas de `wasCancelled` dénormalisé). Bugs corrigés : (1) historique espace n’émettait les annulations que si le statut courant était encore `cancelled` — une restauration effaçait l’entrée d’annulation ; (2) `PlanningPage.load` sans séquençage pouvait réappliquer un payload `cancelled` périmé après restore.
+- **Scroll Planning (desktop / tablette / mobile)** : viewport verrouillé en `100dvh` + `overflow: hidden` ; shell `.content:has([data-planning-lock])` ne scrolle plus. Desktop = split 2 colonnes inchangé. ≤1024px = détail en overlay plein écran (scroll interne). ≤767px = KPI en carrousel horizontal + filtres dans un sheet « Filtres ».
 - **Preuves `proof.json` de calcul** (helpers shared) ≠ preuve d’intégration HTTP des routes preview.
 
 ### Points encore ouverts (explicitement notés, ne pas inventer le reste du backlog)

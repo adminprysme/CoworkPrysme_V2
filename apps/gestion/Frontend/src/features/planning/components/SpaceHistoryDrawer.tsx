@@ -223,8 +223,11 @@ export function SpaceHistoryDrawer({
           </h2>
           <p className={styles.meta}>Lecture seule · chronologique</p>
         </div>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Fermer">
-          ×
+        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Retour">
+          <span className={styles.closeGlyph} aria-hidden="true">
+            ×
+          </span>
+          <span className={styles.closeLabel}>Retour</span>
         </button>
       </header>
 

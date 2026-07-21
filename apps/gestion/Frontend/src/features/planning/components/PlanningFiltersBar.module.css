@@ -12,6 +12,61 @@
   max-width: 22rem;
 }
 
+.desktopFilters {
+  display: contents;
+}
+
+.mobileActions {
+  display: none;
+}
+
+.filtersToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filtersToggle:hover {
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.filtersToggle:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.filtersBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.filtersBackdrop {
+  display: none;
+}
+
+.filtersSheet {
+  display: none;
+}
+
 .filtersBar {
   display: flex;
   flex-wrap: wrap;
@@ -141,8 +196,101 @@
   font-size: 0.82rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  .barWrap {
+    align-items: center;
+  }
+
+  .searchSlot {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .mobileActions {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .desktopFilters {
+    display: none;
+  }
+
+  .filtersBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 54;
+    border: 0;
+    background: color-mix(in srgb, var(--color-text) 35%, transparent);
+    cursor: pointer;
+  }
+
+  .filtersSheet {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 55;
+    max-height: min(85dvh, 40rem);
+    padding: 0.85rem 1rem 1.25rem;
+    border-radius: 16px 16px 0 0;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    animation: planningFiltersSheetIn 0.22s ease;
+  }
+
+  @keyframes planningFiltersSheetIn {
+    from {
+      transform: translateY(110%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .filtersSheetHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .filtersSheetTitle {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+
+  .filtersSheetClose {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface-muted);
+    color: var(--color-text);
+    padding: 0.35rem 0.7rem;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .filtersSheetBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    overflow: auto;
+    min-height: 0;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .filtersBar {
+    flex: none;
     flex-direction: column;
     align-items: stretch;
   }
@@ -154,5 +302,21 @@
   .filterGroup {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .sortControl {
+    margin-top: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sortControl select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .resetBtn {
+    margin-top: 0;
+    align-self: flex-start;
   }
 }

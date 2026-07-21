@@ -145,8 +145,11 @@ export function ReservationDetailDrawer({
             {detail?.reference ?? "…"}
           </h2>
         </div>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Fermer">
-          ×
+        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Retour">
+          <span className={styles.closeGlyph} aria-hidden="true">
+            ×
+          </span>
+          <span className={styles.closeLabel}>Retour</span>
         </button>
       </header>
 
