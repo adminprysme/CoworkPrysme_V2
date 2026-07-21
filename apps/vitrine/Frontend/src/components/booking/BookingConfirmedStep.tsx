@@ -8,7 +8,11 @@ import type {
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { createBookingPaymentIntent, fetchBookingPaymentStatus } from "@/lib/booking-payment-api";
+import {
+  createBookingPaymentIntent,
+  fetchBookingPaymentStatus,
+  reconcileBookingPayment,
+} from "@/lib/booking-payment-api";
 import {
   buildBookingPaymentReturnUrl,
   clearBookingPaymentResumeSnapshot,
@@ -196,6 +200,29 @@ export function BookingConfirmedStep({
       }
 
       if (Date.now() - startedAt >= POLL_MAX_MS) {
+        // Safety net: webhook may have been lost — ask Stripe directly via API.
+        try {
+          const reconciled = await reconcileBookingPayment({
+            reservationReference: result.reservationReference,
+            invoiceReference: result.invoiceReference,
+            paymentAccessToken: result.paymentAccessToken,
+          });
+          if (cancelled) {
+            return;
+          }
+          applyStatus(reconciled);
+          if (
+            reconciled.reservationStatus === "confirmed" &&
+            (reconciled.paymentState === "paid" || reconciled.paymentState === "partially_paid")
+          ) {
+            return;
+          }
+        } catch {
+          // Fall through to the timeout message.
+        }
+        if (cancelled) {
+          return;
+        }
         setPaymentState("failed");
         setPaymentError(
           "La confirmation du paiement prend plus de temps que prévu. Votre réservation est enregistrée — vérifiez votre email ou réessayez.",

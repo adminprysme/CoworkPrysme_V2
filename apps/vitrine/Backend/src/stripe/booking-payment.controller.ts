@@ -4,6 +4,7 @@ import {
   BookingPaymentStatusResponseSchema,
   CreateBookingPaymentIntentRequestSchema,
   CreateBookingPaymentIntentResponseSchema,
+  ReconcileBookingPaymentRequestSchema,
 } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
@@ -29,6 +30,14 @@ export class BookingPaymentController {
   async getStatus(@Query() query: Record<string, unknown>) {
     const parsed = BookingPaymentStatusQuerySchema.parse(query);
     const payload = await this.bookingPayment.getPaymentStatus(parsed);
+    return BookingPaymentStatusResponseSchema.parse(payload);
+  }
+
+  /** Safety net after frontend poll timeout — retrieve PI from Stripe and apply if succeeded. */
+  @Post("reconcile")
+  async reconcile(@Body() body: Record<string, unknown>) {
+    const parsed = ReconcileBookingPaymentRequestSchema.parse(body);
+    const payload = await this.bookingPayment.reconcileFromStripe(parsed);
     return BookingPaymentStatusResponseSchema.parse(payload);
   }
 }

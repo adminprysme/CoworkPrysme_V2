@@ -411,12 +411,14 @@ export {
   BookingPaymentStatusResponseSchema,
   CreateBookingPaymentIntentRequestSchema,
   CreateBookingPaymentIntentResponseSchema,
+  ReconcileBookingPaymentRequestSchema,
   type BookingPaymentErrorCode,
   type BookingPaymentState,
   type BookingPaymentStatusQuery,
   type BookingPaymentStatusResponse,
   type CreateBookingPaymentIntentRequest,
   type CreateBookingPaymentIntentResponse,
+  type ReconcileBookingPaymentRequest,
 } from "./booking-payment.js";
 
 export {

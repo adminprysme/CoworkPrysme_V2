@@ -80,6 +80,7 @@ function mockInvoicePair(
     status?: string;
     awaitingPaymentMethod?: string | undefined;
     awaitingPaymentExpiresAt?: Date;
+    stripePaymentIntentId?: string;
   } = {},
 ) {
   reservationUpdateOneMock.mockReturnValue({
@@ -96,6 +97,7 @@ function mockInvoicePair(
           awaitingPaymentMethod: reservationOverrides.awaitingPaymentMethod ?? "card",
           awaitingPaymentExpiresAt:
             reservationOverrides.awaitingPaymentExpiresAt ?? new Date(Date.now() + 60_000),
+          stripePaymentIntentId: reservationOverrides.stripePaymentIntentId ?? "pi_test_reconcile",
         }),
       }),
     }),
@@ -405,5 +407,157 @@ describe("Stripe booking payment", () => {
 
     expect(confirmReservationAfterCardPaymentMock).not.toHaveBeenCalled();
     expect(sendEmailsAfterCardPaymentMock).not.toHaveBeenCalled();
+  });
+
+  it("reconcileFromStripe applies when Stripe PI is succeeded and local is still awaiting", async () => {
+    paymentIntentsRetrieveMock.mockResolvedValue({
+      id: "pi_test_reconcile",
+      status: "succeeded",
+      amount: 4800,
+      amount_received: 4800,
+      metadata: {
+        invoiceId: INVOICE_ID,
+        invoiceReference: "PF-2026-00042",
+        reservationId: RESERVATION_ID,
+      },
+    });
+    applyStripeCardPaymentMock.mockResolvedValue({
+      applied: true,
+      invoice: {
+        type: "proforma",
+        status: "paid",
+        reference: "PF-2026-00042",
+        totals: { paidTotal: 4800, balanceDue: 0 },
+        reservationId: { toString: () => RESERVATION_ID },
+      },
+      payment: { method: "card" },
+    });
+    confirmReservationAfterCardPaymentMock.mockResolvedValue({
+      transitioned: true,
+      reservation: { status: "confirmed", reference: "RES-2026-00042" },
+    });
+
+    // After apply, status re-read sees paid + confirmed.
+    let reservationReads = 0;
+    let invoiceReads = 0;
+    getReservationModelMock.mockResolvedValue({
+      findOne: vi.fn().mockReturnValue({
+        lean: vi.fn().mockReturnValue({
+          exec: vi.fn().mockImplementation(async () => {
+            reservationReads += 1;
+            return {
+              _id: RESERVATION_ID,
+              reference: "RES-2026-00042",
+              status: reservationReads >= 2 ? "confirmed" : "awaiting_payment",
+              awaitingPaymentMethod: "card",
+              awaitingPaymentExpiresAt: new Date(Date.now() + 60_000),
+              stripePaymentIntentId: "pi_test_reconcile",
+            };
+          }),
+        }),
+      }),
+      updateOne: reservationUpdateOneMock,
+    });
+    getInvoiceModelMock.mockResolvedValue({
+      findOne: vi.fn().mockReturnValue({
+        exec: vi.fn().mockImplementation(async () => {
+          invoiceReads += 1;
+          const paid = invoiceReads >= 2;
+          return {
+            _id: { toString: () => INVOICE_ID },
+            reference: "PF-2026-00042",
+            type: "proforma",
+            status: paid ? "paid" : "proforma",
+            currency: "EUR",
+            reservationId: { toString: () => RESERVATION_ID },
+            totals: {
+              paidTotal: paid ? 4800 : 0,
+              balanceDue: paid ? 0 : 4800,
+              ttc: 4800,
+              ht: 4000,
+              vat: 800,
+              discountTotal: 0,
+            },
+            issuedAt: new Date(),
+            createdAt: new Date(),
+          };
+        }),
+      }),
+    });
+
+    const result = await service.reconcileFromStripe({
+      reservationReference: "RES-2026-00042",
+      invoiceReference: "PF-2026-00042",
+      paymentAccessToken: validToken,
+    });
+
+    expect(paymentIntentsRetrieveMock).toHaveBeenCalledWith("pi_test_reconcile");
+    expect(applyStripeCardPaymentMock).toHaveBeenCalledWith({
+      stripePaymentIntentId: "pi_test_reconcile",
+      invoiceId: INVOICE_ID,
+      amountReceived: 4800,
+    });
+    expect(confirmReservationAfterCardPaymentMock).toHaveBeenCalledWith({
+      reservationId: RESERVATION_ID,
+    });
+    expect(result.reservationStatus).toBe("confirmed");
+    expect(result.paymentState).toBe("paid");
+  });
+
+  it("reconcileFromStripe does not apply when Stripe PI is still processing", async () => {
+    paymentIntentsRetrieveMock.mockResolvedValue({
+      id: "pi_test_reconcile",
+      status: "processing",
+      amount: 4800,
+      amount_received: 0,
+      metadata: { invoiceId: INVOICE_ID, reservationId: RESERVATION_ID },
+    });
+
+    const result = await service.reconcileFromStripe({
+      reservationReference: "RES-2026-00042",
+      invoiceReference: "PF-2026-00042",
+      paymentAccessToken: validToken,
+    });
+
+    expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
+    expect(result.reservationStatus).toBe("awaiting_payment");
+    expect(result.paymentState).toBe("awaiting_payment");
+  });
+
+  it("reconcileFromStripe is a no-op when already confirmed and paid", async () => {
+    mockInvoicePair(0, { status: "confirmed" });
+    getInvoiceModelMock.mockResolvedValue({
+      findOne: vi.fn().mockReturnValue({
+        exec: vi.fn().mockResolvedValue({
+          _id: { toString: () => INVOICE_ID },
+          reference: "PF-2026-00042",
+          type: "proforma",
+          status: "paid",
+          currency: "EUR",
+          reservationId: { toString: () => RESERVATION_ID },
+          totals: {
+            paidTotal: 4800,
+            balanceDue: 0,
+            ttc: 4800,
+            ht: 4000,
+            vat: 800,
+            discountTotal: 0,
+          },
+          issuedAt: new Date(),
+          createdAt: new Date(),
+        }),
+      }),
+    });
+
+    const result = await service.reconcileFromStripe({
+      reservationReference: "RES-2026-00042",
+      invoiceReference: "PF-2026-00042",
+      paymentAccessToken: validToken,
+    });
+
+    expect(paymentIntentsRetrieveMock).not.toHaveBeenCalled();
+    expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
+    expect(result.reservationStatus).toBe("confirmed");
+    expect(result.paymentState).toBe("paid");
   });
 });

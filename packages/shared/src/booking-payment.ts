@@ -52,6 +52,15 @@ export const BookingPaymentStatusQuerySchema = z.object({
 
 export type BookingPaymentStatusQuery = z.infer<typeof BookingPaymentStatusQuerySchema>;
 
+/** Same auth as status/intent — used by the Stripe reconcile safety net after poll timeout. */
+export const ReconcileBookingPaymentRequestSchema = z.object({
+  reservationReference: z.string().trim().min(1),
+  invoiceReference: z.string().trim().min(1),
+  paymentAccessToken: z.string().trim().min(1),
+});
+
+export type ReconcileBookingPaymentRequest = z.infer<typeof ReconcileBookingPaymentRequestSchema>;
+
 export const BookingPaymentStateSchema = z.enum([
   "awaiting_payment",
   "confirming",

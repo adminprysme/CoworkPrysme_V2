@@ -2,9 +2,11 @@ import {
   BookingPaymentStatusResponseSchema,
   CreateBookingPaymentIntentRequestSchema,
   CreateBookingPaymentIntentResponseSchema,
+  ReconcileBookingPaymentRequestSchema,
   type BookingPaymentStatusResponse,
   type CreateBookingPaymentIntentRequest,
   type CreateBookingPaymentIntentResponse,
+  type ReconcileBookingPaymentRequest,
 } from "@coworkprysme/shared";
 
 import { bookingFetch } from "./booking-api-client";
@@ -30,4 +32,15 @@ export async function fetchBookingPaymentStatus(input: {
     paymentAccessToken: input.paymentAccessToken,
   });
   return bookingFetch(`/booking/payments/status?${params}`, BookingPaymentStatusResponseSchema);
+}
+
+/** Ask the API to retrieve the PaymentIntent from Stripe and apply if succeeded. */
+export async function reconcileBookingPayment(
+  input: ReconcileBookingPaymentRequest,
+): Promise<BookingPaymentStatusResponse> {
+  ReconcileBookingPaymentRequestSchema.parse(input);
+  return bookingFetch("/booking/payments/reconcile", BookingPaymentStatusResponseSchema, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

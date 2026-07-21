@@ -22,6 +22,7 @@ import {
   type BookingPaymentStatusResponse,
   type CreateBookingPaymentIntentRequest,
   type CreateBookingPaymentIntentResponse,
+  type ReconcileBookingPaymentRequest,
 } from "@coworkprysme/shared";
 import type Stripe from "stripe";
 
@@ -198,6 +199,67 @@ export class BookingPaymentService {
     };
   }
 
+  /**
+   * Safety net when the webhook never arrived: ask Stripe for the live PI status
+   * and apply the same idempotent path as payment_intent.succeeded.
+   */
+  async reconcileFromStripe(
+    input: ReconcileBookingPaymentRequest,
+  ): Promise<BookingPaymentStatusResponse> {
+    assertBookingPaymentAccessToken({
+      token: input.paymentAccessToken,
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
+    });
+
+    const stripe = this.ensureStripe();
+    // Skip invoice TTL: payment may already have succeeded on Stripe; we only heal local state.
+    const { reservation, invoice } = await this.loadInvoicePair(input, {
+      requirePayable: false,
+    });
+
+    const paymentState = this.mapPaymentState(invoice);
+    const current: BookingPaymentStatusResponse = {
+      reservationReference: input.reservationReference,
+      invoiceReference: invoice.reference,
+      invoiceStatus: invoice.status as BookingPaymentStatusResponse["invoiceStatus"],
+      invoiceType: "proforma",
+      paidTotal: invoice.totals.paidTotal,
+      balanceDue: invoice.totals.balanceDue,
+      paymentState,
+      reservationStatus: reservation.status as BookingPaymentStatusResponse["reservationStatus"],
+    };
+    if (
+      current.reservationStatus === "confirmed" &&
+      (current.paymentState === "paid" || current.paymentState === "partially_paid")
+    ) {
+      return current;
+    }
+
+    const piId =
+      typeof reservation.stripePaymentIntentId === "string"
+        ? reservation.stripePaymentIntentId.trim()
+        : "";
+    if (!piId) {
+      this.logger.warn(
+        `reconcileFromStripe ${input.reservationReference}: no stripePaymentIntentId on reservation`,
+      );
+      return current;
+    }
+
+    const pi = await stripe.paymentIntents.retrieve(piId);
+    this.logger.log(
+      `reconcileFromStripe ${input.reservationReference} pi=${pi.id} stripeStatus=${pi.status}`,
+    );
+
+    if (pi.status === "succeeded") {
+      await this.onPaymentIntentSucceeded(pi);
+      return this.getPaymentStatus(input);
+    }
+
+    return current;
+  }
+
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
     this.logger.log(`Stripe webhook received type=${event.type} id=${event.id}`);
 
@@ -326,13 +388,17 @@ export class BookingPaymentService {
       });
     }
 
-    const issuedAt = invoice.issuedAt ?? invoice.createdAt;
-    const ageMs = Date.now() - new Date(issuedAt).getTime();
-    if (ageMs > BOOKING_PAYMENT_INTENT_TTL_MS) {
-      throw new BadRequestException({
-        code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_EXPIRED,
-        message: "Le délai de paiement en ligne pour cette facture est dépassé",
-      });
+    // TTL only blocks creating a new PaymentIntent — status/reconcile must still work
+    // after Stripe already captured funds (incl. late safety-net heal).
+    if (options.requirePayable) {
+      const issuedAt = invoice.issuedAt ?? invoice.createdAt;
+      const ageMs = Date.now() - new Date(issuedAt).getTime();
+      if (ageMs > BOOKING_PAYMENT_INTENT_TTL_MS) {
+        throw new BadRequestException({
+          code: BOOKING_PAYMENT_ERROR_CODES.INVOICE_EXPIRED,
+          message: "Le délai de paiement en ligne pour cette facture est dépassé",
+        });
+      }
     }
 
     if (options.requirePayable && invoice.totals.balanceDue <= 0) {
