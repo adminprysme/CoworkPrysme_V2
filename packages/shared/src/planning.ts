@@ -104,6 +104,10 @@ export const PlanningContactSchema = z.object({
   phone: z.string().optional(),
   role: ClientAccountRoleSchema,
   status: ClientAccountStatusSchema,
+  /** Present when the account is attached to a cardex (needed for ownership transfer). */
+  cardexId: z.string().optional(),
+  lockedAt: z.string().datetime().optional(),
+  lockReason: z.string().optional(),
   createdAt: z.string().datetime(),
 });
 export type PlanningContact = z.infer<typeof PlanningContactSchema>;

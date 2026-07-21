@@ -412,6 +412,9 @@ export function ReservationDetailDrawer({
             reservationId={reservationId}
             detail={detail}
             readOnly={readOnly}
+            onAccountsChanged={() => {
+              loadDetail({ silent: true });
+            }}
           />
         ) : null}
 

@@ -741,7 +741,15 @@ export class PlanningService {
         ? await ClientAccount.find({
             _id: { $in: [...contactIds.keys()] },
           })
-            .select({ email: 1, role: 1, status: 1, createdAt: 1 })
+            .select({
+              email: 1,
+              role: 1,
+              status: 1,
+              cardexId: 1,
+              lockedAt: 1,
+              lockReason: 1,
+              createdAt: 1,
+            })
             .lean()
             .exec()
         : [];
@@ -905,6 +913,9 @@ export class PlanningService {
           phone: identity?.phone,
           role: account.role ?? "member",
           status: account.status ?? "active",
+          ...(account.cardexId ? { cardexId: String(account.cardexId) } : {}),
+          ...(account.lockedAt ? { lockedAt: toIso(account.lockedAt) } : {}),
+          ...(account.lockReason ? { lockReason: account.lockReason } : {}),
           createdAt: toIso(account.createdAt),
         };
       }),

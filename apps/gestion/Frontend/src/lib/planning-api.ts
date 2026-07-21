@@ -29,6 +29,10 @@ import type {
   PlanningSpaceChangeRequest,
   PlanningSpaceChangeResult,
   PlanningSpaceHistoryResponse,
+  StaffClientAccount,
+  StaffDeactivateClientAccountRequest,
+  StaffTransferCardexOwnershipRequest,
+  StaffTransferCardexOwnershipResult,
 } from "@coworkprysme/shared";
 
 import { API_URL } from "./api.js";
@@ -301,5 +305,38 @@ export function revokePlanningInvitation(invitationId: string): Promise<Planning
   return planningFetch(`/planning/invitations/${encodeURIComponent(invitationId)}/revoke`, {
     method: "POST",
     body: "{}",
+  });
+}
+
+export function deactivateClientAccount(
+  clientAccountId: string,
+  request: StaffDeactivateClientAccountRequest = {},
+): Promise<StaffClientAccount> {
+  return planningFetch(
+    `/planning/client-accounts/${encodeURIComponent(clientAccountId)}/deactivate`,
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function reactivateClientAccount(clientAccountId: string): Promise<StaffClientAccount> {
+  return planningFetch(
+    `/planning/client-accounts/${encodeURIComponent(clientAccountId)}/reactivate`,
+    {
+      method: "POST",
+      body: "{}",
+    },
+  );
+}
+
+export function transferCardexOwnership(
+  cardexId: string,
+  request: StaffTransferCardexOwnershipRequest,
+): Promise<StaffTransferCardexOwnershipResult> {
+  return planningFetch(`/planning/cardexes/${encodeURIComponent(cardexId)}/transfer-ownership`, {
+    method: "POST",
+    body: JSON.stringify(request),
   });
 }

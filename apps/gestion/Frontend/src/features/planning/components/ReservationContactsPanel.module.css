@@ -35,6 +35,11 @@
   color: var(--color-text-muted);
 }
 
+.sectionTitle .inviteCount,
+.sectionTitle .lockedHint {
+  font-weight: 650;
+}
+
 .inviteDisclosure {
   display: inline-flex;
   align-items: center;
@@ -67,6 +72,13 @@
 
 .pendingHint {
   color: color-mix(in srgb, #5b8fc4 55%, var(--color-text-muted));
+}
+
+.lockedHint {
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: color-mix(in srgb, #f87171 50%, var(--color-text-muted));
 }
 
 .inviteChevron {
@@ -199,6 +211,51 @@
   color: color-mix(in srgb, #f87171 45%, var(--color-text));
 }
 
+.roleChip,
+.statusChip[data-account-status] {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.roleChip[data-role="owner"] {
+  border-color: color-mix(in srgb, #3b6fa8 50%, var(--color-border));
+  background: color-mix(in srgb, #3b6fa8 16%, var(--color-surface));
+  color: color-mix(in srgb, #3b6fa8 45%, var(--color-text));
+}
+
+.roleChip[data-role="member"] {
+  border-color: color-mix(in srgb, #64748b 45%, var(--color-border));
+  background: color-mix(in srgb, #64748b 12%, var(--color-surface));
+  color: color-mix(in srgb, #64748b 50%, var(--color-text));
+}
+
+.statusChip[data-account-status="active"] {
+  border-color: color-mix(in srgb, #34d399 50%, var(--color-border));
+  background: color-mix(in srgb, #34d399 16%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.statusChip[data-account-status="locked"] {
+  border-color: color-mix(in srgb, #f87171 45%, var(--color-border));
+  background: color-mix(in srgb, #f87171 14%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 45%, var(--color-text));
+}
+
+.statusChip[data-account-status="anonymized"] {
+  border-color: color-mix(in srgb, #94a3b8 50%, var(--color-border));
+  background: color-mix(in srgb, #94a3b8 14%, var(--color-surface));
+  color: color-mix(in srgb, #94a3b8 55%, var(--color-text));
+}
+
 .emailOkChip,
 .emailFailChip {
   display: inline-flex;
@@ -257,6 +314,10 @@
   outline: 2px solid color-mix(in srgb, var(--color-primary, #3b6fa8) 45%, transparent);
   outline-offset: 1px;
   border-color: var(--color-primary, #3b6fa8);
+}
+
+select.input {
+  cursor: pointer;
 }
 
 .formActions {
