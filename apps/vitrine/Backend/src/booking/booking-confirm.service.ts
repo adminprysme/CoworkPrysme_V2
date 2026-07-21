@@ -226,11 +226,11 @@ export class BookingConfirmService {
       });
     }
 
+    // Server re-prices from dates (resolveSpaceStayPricing) — never trust client durationClass.
     const pricing = await this.bookingPrice.computePrice({
       spaceId: input.spaceId,
       startAt: input.startAt,
       endAt: input.endAt,
-      durationClass: input.durationClass,
       services: input.services,
       discountCode: input.discountCode,
     });
@@ -258,7 +258,7 @@ export class BookingConfirmService {
         buildingId: (space as SpaceLean).buildingId,
         startAt,
         endAt: new Date(input.endAt),
-        durationClass: input.durationClass,
+        durationClass: pricing.durationClass,
         partySize: input.partySize,
         reservationType: (space as SpaceLean).type,
         spaceSnapshot: {

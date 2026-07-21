@@ -1,0 +1,84 @@
+---
+description: État d'avancement Planning / Prysm'App et règles métier actées (reprise de conversation)
+alwaysApply: true
+---
+
+# Cowork Prysme / Prysm'App — contexte projet
+
+Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gestion-api **8003**. Base métier : **cowork_bdd** uniquement (aucune écriture sur prysma_bdd).
+
+## État d'avancement (tel que livré dans le repo / conversations récentes)
+
+### Vague 1 Planning — close
+
+Calendrier, occupancy, recherche, drawer détail (résumé / contacts / montants), filtres, historique par espace (base), UX planning — considérés livrés avant la Vague 2 Manage.
+
+### Vague 2 Planning « Gérer » — largement livrée localement (non poussée)
+
+Onglet **Gérer** du drawer réservation, réorganisé en 2 sections (accordéons, un seul formulaire ouvert) :
+
+1. **Modifier la réservation**
+   - Changer de salle (écart prix, case facturer / acknowledgement)
+   - Modifier les dates (extend / shorten / shift) — preview + confirm
+   - Modifier le nombre de personnes (si capacité dépassée → raccourci vers « Changer de salle » filtré)
+   - Transférer à un autre contact du même cardex (emails ancien + nouveau, sans impact facture)
+2. **Annuler ou restaurer**
+   - Annuler avec remboursement suggéré (modes suggéré / libre / ne pas rembourser)
+   - Restaurer si annulation avec `acceptedRefundCents === 0` et créneau libre
+
+Emails manage : ne pas afficher de montants non réellement appliqués. Historique espace : types `space_change`, `cancellation`, `restoration`, `date_change`, `party_size_change`, `contact_transfer`.
+
+### Booking vitrine — sélection automatique du palier tarifaire
+
+`POST /booking/price` et la confirmation atomique utilisent `resolveSpaceStayPricing` (même helper que le date-change Planning) : le serveur choisit le meilleur tarif applicable selon `startAt`/`endAt` ; le `durationClass` client n’est plus source de vérité. Réponse prix : `durationClass` + `units` résolus serveur.
+
+### Correctifs / points techniques déjà vus
+
+- **404 sur previews date/party/transfer** : cause = process gestion-api orphelin (dist recompilé, process pas redémarré) — pas une route manquante. Vigilance connue : vérifier PID vs mtime du `dist` avant de conclure « route absente ».
+- **Recalcul date-change / paliers tarifaires** : bug confirmé puis corrigé (`c58e2e3`) — plus d’extrapolation linéaire du `durationClass` d’origine ; `resolveSpaceStayPricing` choisit le tarif applicable le moins cher (weekly si ≥ 7 jours Paris, monthly si ≥ 28).
+- **Preuves `proof.json` de calcul** (helpers shared) ≠ preuve d’intégration HTTP des routes preview.
+
+### Points encore ouverts (explicitement notés, ne pas inventer le reste du backlog)
+
+- Branche locale `master` **ahead de `origin/master`** : ne **pas** `git push` sauf demande explicite (règle utilisateur VPS / GitHub).
+- Ne pas changer la branche Git checkoutée sur le VPS (pas de checkout / merge / rebase / pull sur la branche de prod) sauf demande explicite.
+- Tarif **weekly @ 90000 HT** sur FOCUS : activé pour les preuves Planning / booking — **décision produit** de le garder ou le désactiver (ne pas retirer sans validation).
+
+## Règles métier non négociables (déjà actées)
+
+- Montants en **centimes entiers** ; recalcul **toujours côté serveur** (jamais confiance au frontend).
+- **Snapshots figés** : une modification ne réécrit pas silencieusement le prix déjà facturé ; complément / ajustement tracé (append post-master / proforma) ou remboursement **suggéré** séparé (jamais auto-appliqué).
+- Facture reste `type: "proforma"` tant que le séjour n’est pas terminé (contrainte rappelée pour le Planning manage).
+- **Aucune écriture sur prysma_bdd**.
+- Côté gestion / Planning : **ne pas** filtrer ou se baser sur `featuredOnVitrine` (flags vitrine ignorés pour l’exploitation).
+- Annulation / raccourcissement : barème CGV (CDC) si non démarré ; prorata si en cours ; 3 modes remboursement avec justification si écart au suggéré.
+- Date-change à moins de 48h avant le début **initial** : avertissement contournable staff + justification obligatoire (cardex / audit).
+- Transfert de contact : pas de création de compte, pas de nouvelle transaction atomique métier — seul changement du contact principal ; pas d’impact prix / facture / documents déjà générés.
+
+## Commits locaux non poussés (au 2026-07-21)
+
+`master` est **ahead** de `origin/master` (du plus ancien au plus récent) :
+
+1. `4578a17` feat(shared/db): add Planning manage calc helpers and overlap exclude
+2. `4df4065` feat(gestion): add Planning manage notification email templates
+3. `7eda4e7` feat(gestion): add Planning manage audit helper and SMTP messageIds
+4. `0b7857e` feat(gestion): add Planning Manage space-change flow
+5. `07b028a` feat(gestion): add Planning Manage cancel and suggested refund
+6. `68b1e11` fix(gestion): hide unapplied amounts in Planning manage emails
+7. `0b2b2bc` fix(gestion): omit all amounts from no-refund cancellation emails
+8. `1267c7b` fix(gestion): use shift+right-click for native planning context menu
+9. `d885b18` feat(gestion): restore cancelled planning reservations with zero refund
+10. `fadf140` refactor(gestion): reorganize Planning Manage tab into accordion sections
+11. `38809c0` feat(gestion): add Planning Manage date, party-size and contact-transfer flows
+12. `c58e2e3` fix(gestion): select tariff tier on Planning date-change reprice
+13. (à jour après commit booking) fix(vitrine): select tariff tier on booking price via resolveSpaceStayPricing
+
+Preuves utiles (tmp, non forcément toutes commitées) :  
+`apps/gestion/Backend/tmp/manage-tariff-tier-proof/`, `manage-dates-calc-proof/`, `manage-preview-http-proof/`,  
+`apps/vitrine/Backend/tmp/booking-tariff-tier-proof/`.
+
+## Fichiers clés Vague 2 Manage
+
+- Shared : `packages/shared/src/planning-manage.ts`, `packages/shared/src/planning.ts`
+- API : `apps/gestion/Backend/src/planning/planning-manage.service.ts`, `planning.controller.ts`, `planning-manage-emails.ts`, `planning-manage-invoice.ts`
+- UI : `apps/gestion/Frontend/src/features/planning/components/ReservationManagePanel.tsx`, `SpaceHistoryDrawer.tsx`, `lib/planning-api.ts`

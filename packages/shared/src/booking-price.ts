@@ -173,7 +173,9 @@ function computeVatBreakdown(lines: readonly BookingPriceLine[]): BookingVatBrea
     }));
 }
 
-export function computeBookingPrice(input: ComputeBookingPriceInput): BookingPriceResponse {
+export function computeBookingPrice(
+  input: ComputeBookingPriceInput,
+): Omit<BookingPriceResponse, "durationClass" | "units"> {
   const mutableLines: MutableBookingLine[] = input.lines.map((line) => ({
     ...line,
     lineHT: lineGrossHT(line),

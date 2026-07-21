@@ -33,7 +33,6 @@ const BASE_REQUEST = {
   spaceId: SPACE_ID,
   startAt: "2026-07-15T09:00:00.000+02:00",
   endAt: "2026-07-15T18:00:00.000+02:00",
-  durationClass: "daily" as const,
   services: [],
 };
 
@@ -48,7 +47,11 @@ describe("BookingPriceService", () => {
         _id: { toString: () => SPACE_ID },
         name: "Salle Alpha",
         buildingId: { toString: () => BUILDING_ID },
-        tariffs: [{ durationClass: "daily", priceHT: 10_000, vatRate: 20, enabled: true }],
+        tariffs: [
+          { durationClass: "hourly", priceHT: 2_000, vatRate: 20, enabled: true },
+          { durationClass: "daily", priceHT: 10_000, vatRate: 20, enabled: true },
+          { durationClass: "weekly", priceHT: 50_000, vatRate: 20, enabled: true },
+        ],
       }),
     } as unknown as AvailabilityService;
 
@@ -132,6 +135,24 @@ describe("BookingPriceService", () => {
 
     expect(spaceLine?.discount).toBe(2_000);
     expect(result.discountTotal).toBe(2_000);
+  });
+
+  it("selects weekly tariff for a 7-day stay instead of 7× daily", async () => {
+    const result = await service.computePrice({
+      spaceId: SPACE_ID,
+      startAt: "2026-09-07T07:00:00.000Z",
+      endAt: "2026-09-13T16:00:00.000Z",
+      services: [],
+    });
+    const spaceLine = result.lines.find((line) => line.kind === "space");
+
+    expect(result.durationClass).toBe("weekly");
+    expect(result.units).toBe(1);
+    expect(spaceLine?.qty).toBe(1);
+    expect(spaceLine?.unitPriceHT).toBe(50_000);
+    expect(spaceLine?.totalHT).toBe(50_000);
+    // Not 7 × 10_000 daily
+    expect(spaceLine?.totalHT).not.toBe(70_000);
   });
 
   it("rejects missing required custom answers", async () => {

@@ -111,9 +111,24 @@ describe("BookingConfirmService — email recipients", () => {
 
     bookingPrice = {
       computePrice: vi.fn().mockResolvedValue({
+        durationClass: "hourly",
+        units: 2,
         totalTTC: 4800,
-        totalHT: 4000,
-        lines: [{ label: "FOCUS", qty: 1, totalTTC: 4800, totalHT: 4000, vatRate: 20 }],
+        subtotalHT: 4000,
+        discountTotal: 0,
+        lines: [
+          {
+            label: "FOCUS",
+            kind: "space",
+            qty: 2,
+            unitPriceHT: 2000,
+            vatRate: 20,
+            discount: 0,
+            totalHT: 4000,
+            totalVAT: 800,
+            totalTTC: 4800,
+          },
+        ],
         vatBreakdown: [{ rate: 20, baseHT: 4000, vat: 800 }],
       }),
     } as unknown as BookingPriceService;
@@ -141,6 +156,17 @@ describe("BookingConfirmService — email recipients", () => {
     delete process.env.BANK_TRANSFER_MIN_LEAD_DAYS;
     delete process.env.BANK_TRANSFER_PAYMENT_WINDOW_DAYS;
     delete process.env.BANK_TRANSFER_SAFETY_MARGIN_DAYS;
+  });
+
+  it("stores server-resolved durationClass on checkout (ignores client hint)", async () => {
+    await service.confirm({ ...confirmPayload, paymentMethod: "card", durationClass: "daily" });
+
+    expect(bookingPrice.computePrice).toHaveBeenCalledWith(
+      expect.not.objectContaining({ durationClass: expect.anything() }),
+    );
+    expect(confirmBookingCheckoutMock).toHaveBeenCalledWith(
+      expect.objectContaining({ durationClass: "hourly" }),
+    );
   });
 
   it("sends bank-transfer instruction emails at confirm time", async () => {

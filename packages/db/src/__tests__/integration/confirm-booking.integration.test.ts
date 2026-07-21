@@ -38,6 +38,8 @@ import {
 } from "./setup.js";
 
 const BASE_PRICING = {
+  durationClass: "hourly" as const,
+  units: 1,
   subtotalHT: 5000,
   discountTotal: 0,
   vatBreakdown: [{ rate: 20, baseHT: 5000, vat: 1000 }],

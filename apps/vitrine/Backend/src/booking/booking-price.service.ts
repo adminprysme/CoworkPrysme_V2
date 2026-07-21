@@ -10,6 +10,7 @@ import {
   assertServiceCustomAnswers,
   computeBookingPrice,
   mapServiceCustomQuestionsToResponse,
+  resolveSpaceStayPricing,
   type BookingPriceLineInput,
   type BookingPriceRequest,
   type BookingPriceServiceInput,
@@ -38,23 +39,6 @@ export class BookingPriceService {
     }
 
     return service.buildingIds.some((id) => id.toString() === buildingId);
-  }
-
-  private resolveSpaceTariff(
-    space: SpaceLean,
-    durationClass: BookingPriceRequest["durationClass"],
-  ) {
-    const tariff = space.tariffs.find(
-      (entry) => entry.enabled !== false && entry.durationClass === durationClass,
-    );
-    if (!tariff) {
-      throw new BadRequestException({
-        code: BOOKING_ERROR_CODES.VALIDATION_ERROR,
-        message: "Tarif indisponible pour cet espace",
-      });
-    }
-
-    return tariff;
   }
 
   private async loadActiveServices(
@@ -179,7 +163,22 @@ export class BookingPriceService {
       });
     }
 
-    const tariff = this.resolveSpaceTariff(space as SpaceLean, input.durationClass);
+    const startAt = new Date(input.startAt);
+    const endAt = new Date(input.endAt);
+    let stayPricing;
+    try {
+      stayPricing = resolveSpaceStayPricing({
+        startAt,
+        endAt,
+        tariffs: (space as SpaceLean).tariffs,
+      });
+    } catch (error) {
+      throw new BadRequestException({
+        code: BOOKING_ERROR_CODES.VALIDATION_ERROR,
+        message: error instanceof Error ? error.message : "Tarif indisponible pour cet espace",
+      });
+    }
+
     const servicesById = await this.loadActiveServices(input.services);
     const buildingId = (space as SpaceLean).buildingId.toString();
 
@@ -188,9 +187,9 @@ export class BookingPriceService {
         label: space.name,
         kind: "space",
         refId: space._id.toString(),
-        qty: 1,
-        unitPriceHT: tariff.priceHT,
-        vatRate: tariff.vatRate,
+        qty: stayPricing.units,
+        unitPriceHT: stayPricing.unitPriceHT,
+        vatRate: stayPricing.vatRate,
       },
       ...this.buildServiceLines(input.services, servicesById, buildingId),
     ];
@@ -199,18 +198,22 @@ export class BookingPriceService {
       ? await this.resolveDiscount(input.discountCode)
       : undefined;
 
-    return BookingPriceResponseSchema.parse(
-      computeBookingPrice({
-        lines,
-        discount: discount
-          ? {
-              code: discount.code,
-              discountType: discount.discountType,
-              value: discount.value,
-              perimeter: discount.perimeter,
-            }
-          : undefined,
-      }),
-    );
+    const priced = computeBookingPrice({
+      lines,
+      discount: discount
+        ? {
+            code: discount.code,
+            discountType: discount.discountType,
+            value: discount.value,
+            perimeter: discount.perimeter,
+          }
+        : undefined,
+    });
+
+    return BookingPriceResponseSchema.parse({
+      durationClass: stayPricing.durationClass,
+      units: stayPricing.units,
+      ...priced,
+    });
   }
 }

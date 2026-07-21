@@ -272,7 +272,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
   );
 
   const priceRequest = useMemo<BookingPriceRequest | null>(() => {
-    if (!lock || !selectedSpace || !durationClass) {
+    if (!lock || !selectedSpace) {
       return null;
     }
 
@@ -280,7 +280,6 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       spaceId: selectedSpace.spaceId,
       startAt: lock.startAt,
       endAt: lock.endAt,
-      durationClass,
       services: cart.map((item) => ({
         serviceId: item.serviceId,
         qty: item.qty,
@@ -288,7 +287,7 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
       })),
       discountCode: discountCode.trim() || undefined,
     };
-  }, [cart, discountCode, durationClass, lock, selectedSpace]);
+  }, [cart, discountCode, lock, selectedSpace]);
 
   const { price, loading: priceLoading, error: priceError } = useBookingPrice(priceRequest);
 
@@ -847,7 +846,6 @@ export function BookingPageContent({ contactEmail }: BookingPageContentProps) {
         spaceId: selectedSpace.spaceId,
         startAt: lock.startAt,
         endAt: lock.endAt,
-        durationClass,
         partySize,
         services: cart.map((item) => ({
           serviceId: item.serviceId,

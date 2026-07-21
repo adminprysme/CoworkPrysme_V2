@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import {
-  BookingPhase1DurationClassSchema,
   BookingPriceServiceInputSchema,
   bookingPartySizeSchema,
   isoDateTimeSchema,
@@ -127,7 +126,11 @@ export const BookingConfirmRequestSchema = z
     spaceId: objectIdSchema,
     startAt: isoDateTimeSchema,
     endAt: isoDateTimeSchema,
-    durationClass: BookingPhase1DurationClassSchema,
+    /**
+     * Ignored if present (legacy clients). Server resolves the tariff tier from
+     * startAt/endAt via BookingPriceService → resolveSpaceStayPricing.
+     */
+    durationClass: z.string().optional(),
     partySize: bookingPartySizeSchema,
     services: z.array(BookingPriceServiceInputSchema).default([]),
     discountCode: z.string().trim().min(1).optional(),

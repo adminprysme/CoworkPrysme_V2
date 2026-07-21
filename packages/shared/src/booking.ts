@@ -5,7 +5,7 @@ import {
   ServiceCustomAnswerSchema,
   ServiceCustomQuestionsSchema,
 } from "./service-custom-questions.js";
-import { SpaceTypeSchema } from "./spaces.js";
+import { SpaceDurationClassSchema, SpaceTypeSchema } from "./spaces.js";
 
 export const BOOKING_ERROR_CODES = {
   SLOT_UNAVAILABLE: "SLOT_UNAVAILABLE",
@@ -271,6 +271,12 @@ export const BookingPriceServiceInputSchema = z.object({
   customAnswers: z.array(ServiceCustomAnswerSchema).optional(),
 });
 
+/**
+ * Price quote for the booking tunnel.
+ * `durationClass` is intentionally absent: the server selects the cheapest applicable
+ * tariff tier from `startAt`/`endAt` via `resolveSpaceStayPricing` (never trust the client).
+ * Legacy clients may still send `durationClass`; Zod strips unknown keys by default.
+ */
 export const BookingPriceRequestSchema = z
   .object({
     spaceId: z
@@ -279,7 +285,6 @@ export const BookingPriceRequestSchema = z
       .regex(/^[a-f0-9]{24}$/i, "Identifiant d'espace invalide"),
     startAt: isoDateTimeSchema,
     endAt: isoDateTimeSchema,
-    durationClass: BookingPhase1DurationClassSchema,
     services: z.array(BookingPriceServiceInputSchema).default([]),
     discountCode: z.string().trim().min(1).optional(),
   })
@@ -321,6 +326,10 @@ export const BookingPriceDiscountSchema = z.object({
 });
 
 export const BookingPriceResponseSchema = z.object({
+  /** Server-resolved tariff tier for the stay (not client-supplied). */
+  durationClass: SpaceDurationClassSchema,
+  /** Billable units for that tier (e.g. 1 week, 7 days). */
+  units: z.number().int().positive(),
   subtotalHT: z.number().int().min(0),
   discountTotal: z.number().int().min(0),
   vatBreakdown: z.array(BookingVatBreakdownLineSchema),
