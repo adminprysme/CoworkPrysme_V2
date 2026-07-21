@@ -202,19 +202,19 @@ Historique complet des lock/unlock/transfert de propriété : `auditLogs` (pas d
 
 ### `cardex` — fiche client, source de vérité (§4.5)
 
-| Champ                    | Type                       | Note                                                                                          |
-| ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------- |
-| `_id`                    | ObjectId                   |                                                                                               |
-| `clientAccountId`        | ObjectId → clientAccounts  | lien 1:1                                                                                      |
-| `identity`               | Object                     | nom, prénom, téléphone                                                                        |
-| `company`                | Object                     | raison sociale, SIRET, TVA intracom, adresse facturation                                      |
-| `documents`              | [Object]                   | métadonnées `{ kind: rib/id/insurance, storageKey, uploadedAt }` — fichiers en object storage |
-| `preferentialCodeIds`    | [ObjectId] → discountCodes | codes tarifaires négociés (§3.8)                                                              |
-| `billingSummary`         | Object                     | `{ depositsTotal, balanceDue }` (dénormalisé, recalculé)                                      |
-| `lastReservationAt`      | Date                       | **base du calcul de rétention 3 ans**                                                         |
-| `retentionStatus`        | Enum                       | `active` / `pending_anonymization` / `anonymized`                                             |
-| `anonymizedAt`           | Date                       | droit à l'oubli                                                                               |
-| `createdAt`, `updatedAt` | Date                       |                                                                                               |
+| Champ                    | Type                       | Note                                                                                                                                                                                                                                |
+| ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`                    | ObjectId                   |                                                                                                                                                                                                                                     |
+| `clientAccountId`        | ObjectId → clientAccounts  | lien 1:1                                                                                                                                                                                                                            |
+| `identity`               | Object                     | nom, prénom, téléphone                                                                                                                                                                                                              |
+| `company`                | Object                     | raison sociale, SIRET, TVA intracom, adresse facturation                                                                                                                                                                            |
+| `documents`              | [Object]                   | uploads staff Contrats/Autres : `{ _id, category: contract\|other, clientVisible, label?, originalFilename, contentType, sizeBytes, storageKey, uploadedAt, uploadedByStaffProfileId }` — factures = collection `invoices`, pas ici |
+| `preferentialCodeIds`    | [ObjectId] → discountCodes | codes tarifaires négociés (§3.8)                                                                                                                                                                                                    |
+| `billingSummary`         | Object                     | `{ depositsTotal, balanceDue }` (dénormalisé, recalculé)                                                                                                                                                                            |
+| `lastReservationAt`      | Date                       | **base du calcul de rétention 3 ans**                                                                                                                                                                                               |
+| `retentionStatus`        | Enum                       | `active` / `pending_anonymization` / `anonymized`                                                                                                                                                                                   |
+| `anonymizedAt`           | Date                       | droit à l'oubli                                                                                                                                                                                                                     |
+| `createdAt`, `updatedAt` | Date                       |                                                                                                                                                                                                                                     |
 
 **Index** : `{ clientAccountId: 1 }` unique, `{ lastReservationAt: 1 }` (balayage rétention), `{ "company.siret": 1 }`.
 

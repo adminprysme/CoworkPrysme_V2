@@ -86,8 +86,9 @@ export const CLIENT_ACCOUNT_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const RETENTION_STATUSES = ["active", "pending_anonymization", "anonymized"] as const;
 export type RetentionStatus = (typeof RETENTION_STATUSES)[number];
 
-export const CARDEX_DOCUMENT_KINDS = ["rib", "id", "insurance"] as const;
-export type CardexDocumentKind = (typeof CARDEX_DOCUMENT_KINDS)[number];
+/** Staff-uploaded cardex files (contracts / other). Invoices are NOT stored here. */
+export const CARDEX_DOCUMENT_CATEGORIES = ["contract", "other"] as const;
+export type CardexDocumentCategory = (typeof CARDEX_DOCUMENT_CATEGORIES)[number];
 
 export const STAFF_ROLES = ["none", "manager", "admin"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];

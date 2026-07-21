@@ -1,7 +1,14 @@
 import { Schema, type Types } from "mongoose";
 
-import { DURATION_CLASSES, WEEK_DAYS, type DurationClass, type WeekDay } from "./enums.js";
-import { centsField } from "./schema-helpers.js";
+import {
+  CARDEX_DOCUMENT_CATEGORIES,
+  DURATION_CLASSES,
+  WEEK_DAYS,
+  type CardexDocumentCategory,
+  type DurationClass,
+  type WeekDay,
+} from "./enums.js";
+import { centsField, objectIdRef } from "./schema-helpers.js";
 
 export const DEFAULT_SPACE_TARIFF_VAT_RATE = 20;
 export const MAX_SPACE_TARIFFS = 5;
@@ -452,19 +459,41 @@ export const cardexCompanySchema = new Schema<CardexCompany>(
   { _id: false },
 );
 
+/** Max length for optional staff label (e.g. "RIB", "Pièce d'identité"). */
+export const CARDEX_DOCUMENT_LABEL_MAX_LENGTH = 120;
+
+/**
+ * Metadata for a staff-uploaded file on a cardex (Contrats / Autres).
+ * Facturation PDFs live on `Invoice`, not in this array.
+ * `_id` is enabled so download/delete can target a document within a specific cardex.
+ */
 export interface CardexDocumentMeta {
-  kind: string;
+  category: CardexDocumentCategory;
+  /** Future client space: true for contracts, false for "other". */
+  clientVisible: boolean;
+  /** Optional short staff note (e.g. "RIB") — independent of originalFilename. */
+  label?: string;
+  originalFilename: string;
+  contentType: string;
+  sizeBytes: number;
   storageKey: string;
   uploadedAt: Date;
+  uploadedByStaffProfileId: Types.ObjectId;
 }
 
 export const cardexDocumentMetaSchema = new Schema<CardexDocumentMeta>(
   {
-    kind: { type: String, required: true },
+    category: { type: String, enum: CARDEX_DOCUMENT_CATEGORIES, required: true },
+    clientVisible: { type: Boolean, required: true },
+    label: { type: String, maxlength: CARDEX_DOCUMENT_LABEL_MAX_LENGTH },
+    originalFilename: { type: String, required: true },
+    contentType: { type: String, required: true },
+    sizeBytes: { type: Number, required: true, min: 0 },
     storageKey: { type: String, required: true },
     uploadedAt: { type: Date, required: true },
+    uploadedByStaffProfileId: objectIdRef("StaffProfile"),
   },
-  { _id: false },
+  // Keep Mongo `_id` on each entry so staff APIs can scope download/delete to cardexId + documentId.
 );
 
 export interface BillingSummary {
