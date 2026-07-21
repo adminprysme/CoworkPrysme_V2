@@ -32,4 +32,10 @@ describe("client-account-staff schemas", () => {
     expect(CLIENT_ACCOUNT_STAFF_ERROR_CODES.ACCOUNT_IS_OWNER).toBe("ACCOUNT_IS_OWNER");
     expect(CLIENT_ACCOUNT_STAFF_ERROR_CODES.ACCOUNT_LAST_ACTIVE).toBe("ACCOUNT_LAST_ACTIVE");
   });
+
+  it("exposes canonical staff error messages", async () => {
+    const { CLIENT_ACCOUNT_STAFF_ERROR_MESSAGES } = await import("./client-account-staff.js");
+    expect(CLIENT_ACCOUNT_STAFF_ERROR_MESSAGES.ACCOUNT_IS_OWNER).toContain("Transférez");
+    expect(CLIENT_ACCOUNT_STAFF_ERROR_MESSAGES.ACCOUNT_LAST_ACTIVE).toContain("dernier compte");
+  });
 });

@@ -741,7 +741,7 @@ export class PlanningService {
         ? await ClientAccount.find({
             _id: { $in: [...contactIds.keys()] },
           })
-            .select({ email: 1, createdAt: 1 })
+            .select({ email: 1, role: 1, status: 1, createdAt: 1 })
             .lean()
             .exec()
         : [];
@@ -903,6 +903,8 @@ export class PlanningService {
           firstName: identity?.firstName,
           lastName: identity?.lastName,
           phone: identity?.phone,
+          role: account.role ?? "member",
+          status: account.status ?? "active",
           createdAt: toIso(account.createdAt),
         };
       }),

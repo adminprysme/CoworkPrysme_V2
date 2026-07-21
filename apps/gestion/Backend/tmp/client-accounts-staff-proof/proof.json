@@ -1,0 +1,283 @@
+{
+  "startedAt": "2026-07-21T14:43:34.703Z",
+  "isolation": {
+    "mongodbHost": "127.0.0.1:27017",
+    "isLocalhost": true,
+    "coworkDb": "cowork_bdd",
+    "prysmaDb": "prysma_bdd"
+  },
+  "cases": {
+    "refuseOwner": {
+      "status": 409,
+      "code": "ACCOUNT_IS_OWNER",
+      "message": "Impossible de désactiver le propriétaire du cardex. Transférez d'abord la propriété à un autre compte actif."
+    },
+    "deactivateSuccess": {
+      "status": 201,
+      "before": {
+        "id": "6a5f85966300a5b1fd95a698",
+        "email": "proof.deactivate.a.1784645014984@prysme.eu",
+        "role": "member",
+        "status": "active",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "lockedAt": null,
+        "lockedByStaffProfileId": null,
+        "lockReason": null,
+        "unlockedAt": null,
+        "unlockedByStaffProfileId": null
+      },
+      "after": {
+        "id": "6a5f85966300a5b1fd95a698",
+        "email": "proof.deactivate.a.1784645014984@prysme.eu",
+        "role": "member",
+        "status": "locked",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "lockedAt": "2026-07-21T14:43:35.138Z",
+        "lockedByStaffProfileId": "6a44dddfdf091509d945aab8",
+        "lockReason": "départ collaborateur (proof)",
+        "unlockedAt": null,
+        "unlockedByStaffProfileId": null
+      },
+      "response": {
+        "id": "6a5f85966300a5b1fd95a698",
+        "email": "proof.deactivate.a.1784645014984@prysme.eu",
+        "role": "member",
+        "status": "locked",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "lockedAt": "2026-07-21T14:43:35.138Z",
+        "lockedByStaffProfileId": "6a44dddfdf091509d945aab8",
+        "lockReason": "départ collaborateur (proof)"
+      }
+    },
+    "refuseDoubleDeactivate": {
+      "status": 409,
+      "code": "ACCOUNT_ALREADY_LOCKED",
+      "message": "Ce compte est déjà désactivé."
+    },
+    "reactivateSuccess": {
+      "status": 201,
+      "before": {
+        "id": "6a5f85966300a5b1fd95a698",
+        "email": "proof.deactivate.a.1784645014984@prysme.eu",
+        "role": "member",
+        "status": "locked",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "lockedAt": "2026-07-21T14:43:35.138Z",
+        "lockedByStaffProfileId": "6a44dddfdf091509d945aab8",
+        "lockReason": "départ collaborateur (proof)",
+        "unlockedAt": null,
+        "unlockedByStaffProfileId": null
+      },
+      "after": {
+        "id": "6a5f85966300a5b1fd95a698",
+        "email": "proof.deactivate.a.1784645014984@prysme.eu",
+        "role": "member",
+        "status": "active",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "lockedAt": null,
+        "lockedByStaffProfileId": null,
+        "lockReason": null,
+        "unlockedAt": "2026-07-21T14:43:35.236Z",
+        "unlockedByStaffProfileId": "6a44dddfdf091509d945aab8"
+      },
+      "response": {
+        "id": "6a5f85966300a5b1fd95a698",
+        "email": "proof.deactivate.a.1784645014984@prysme.eu",
+        "role": "member",
+        "status": "active",
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "unlockedAt": "2026-07-21T14:43:35.236Z",
+        "unlockedByStaffProfileId": "6a44dddfdf091509d945aab8"
+      }
+    },
+    "refuseReactivateActive": {
+      "status": 409,
+      "code": "ACCOUNT_NOT_LOCKED",
+      "message": "Ce compte n'est pas désactivé — réactivation impossible."
+    },
+    "refuseLastActive": {
+      "status": 409,
+      "code": "ACCOUNT_LAST_ACTIVE",
+      "message": "Impossible de désactiver le dernier compte actif de ce cardex.",
+      "activeLeftBeforeCall": 1
+    },
+    "transferSuccess": {
+      "status": 201,
+      "before": {
+        "previousOwner": {
+          "id": "6a5f3efeebd0da8b88b67bc3",
+          "email": "pthomas@prysme.eu",
+          "role": "owner",
+          "status": "active",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4",
+          "lockedAt": null,
+          "lockedByStaffProfileId": null,
+          "lockReason": null,
+          "unlockedAt": null,
+          "unlockedByStaffProfileId": null
+        },
+        "nextOwner": {
+          "id": "6a5f85966300a5b1fd95a698",
+          "email": "proof.deactivate.a.1784645014984@prysme.eu",
+          "role": "member",
+          "status": "active",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4",
+          "lockedAt": null,
+          "lockedByStaffProfileId": null,
+          "lockReason": null,
+          "unlockedAt": "2026-07-21T14:43:35.236Z",
+          "unlockedByStaffProfileId": "6a44dddfdf091509d945aab8"
+        },
+        "cardexClientAccountId": "6a5f3efeebd0da8b88b67bc3"
+      },
+      "after": {
+        "previousOwner": {
+          "id": "6a5f3efeebd0da8b88b67bc3",
+          "email": "pthomas@prysme.eu",
+          "role": "member",
+          "status": "active",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4",
+          "lockedAt": null,
+          "lockedByStaffProfileId": null,
+          "lockReason": null,
+          "unlockedAt": null,
+          "unlockedByStaffProfileId": null
+        },
+        "nextOwner": {
+          "id": "6a5f85966300a5b1fd95a698",
+          "email": "proof.deactivate.a.1784645014984@prysme.eu",
+          "role": "owner",
+          "status": "active",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4",
+          "lockedAt": null,
+          "lockedByStaffProfileId": null,
+          "lockReason": null,
+          "unlockedAt": "2026-07-21T14:43:35.236Z",
+          "unlockedByStaffProfileId": "6a44dddfdf091509d945aab8"
+        },
+        "cardexClientAccountId": "6a5f85966300a5b1fd95a698"
+      },
+      "response": {
+        "cardexId": "6a5f3efeebd0da8b88b67bc4",
+        "previousOwner": {
+          "id": "6a5f3efeebd0da8b88b67bc3",
+          "email": "pthomas@prysme.eu",
+          "role": "member",
+          "status": "active",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4"
+        },
+        "nextOwner": {
+          "id": "6a5f85966300a5b1fd95a698",
+          "email": "proof.deactivate.a.1784645014984@prysme.eu",
+          "role": "owner",
+          "status": "active",
+          "cardexId": "6a5f3efeebd0da8b88b67bc4",
+          "unlockedAt": "2026-07-21T14:43:35.236Z",
+          "unlockedByStaffProfileId": "6a44dddfdf091509d945aab8"
+        }
+      }
+    },
+    "transferRestore": {
+      "status": 201,
+      "cardexClientAccountId": "6a5f3efeebd0da8b88b67bc3"
+    },
+    "refuseTransferOtherCardex": {
+      "status": 400,
+      "code": "TRANSFER_TARGET_INVALID",
+      "message": "Le compte cible n'appartient pas à ce cardex.",
+      "otherAccountId": "6a588d91a0bda4fc8d434688",
+      "otherCardexId": "6a588d91a0bda4fc8d434689"
+    },
+    "refuseTransferLocked": {
+      "status": 400,
+      "code": "TRANSFER_TARGET_INVALID",
+      "message": "Le compte cible doit être actif."
+    },
+    "contactsEnrichment": {
+      "status": 200,
+      "contacts": [
+        {
+          "id": "6a5f3efeebd0da8b88b67bc3",
+          "email": "pthomas@prysme.eu",
+          "role": "owner",
+          "status": "active"
+        },
+        {
+          "id": "6a5f66bcafb015cfe5765b47",
+          "email": "accept.ok.1784637115805@prysme.eu",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "id": "6a5f6c96afb015cfe5765b4a",
+          "email": "browser2.acceptproof@prysme.eu",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "id": "6a5f789fafb015cfe5765b4b",
+          "email": "e2e.commit6.1784641693880@prysme.eu",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "id": "6a5f85966300a5b1fd95a698",
+          "email": "proof.deactivate.a.1784645014984@prysme.eu",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "id": "6a5f85966300a5b1fd95a699",
+          "email": "proof.deactivate.b.1784645014984@prysme.eu",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "id": "6a5f69e5afb015cfe5765b48",
+          "email": "ui.pending.1784637920072@prysme.eu",
+          "role": "member",
+          "status": "active"
+        },
+        {
+          "id": "6a5f6a1eafb015cfe5765b49",
+          "email": "ui.pending.1784637976894@prysme.eu",
+          "role": "member",
+          "status": "active"
+        }
+      ]
+    },
+    "guardPlanningOnly": {
+      "deactivate": {
+        "status": 403
+      },
+      "reactivate": {
+        "status": 403
+      },
+      "transfer": {
+        "status": 403
+      },
+      "note": "Staff has permissions.planning=true, permissions.clients=false"
+    },
+    "reservationContactUnchanged": {
+      "reservationClientAccountId": "6a5f3efeebd0da8b88b67bc3",
+      "note": "Ownership transfer must not mutate reservation.clientAccountId (Vague 2)"
+    }
+  },
+  "assert": {
+    "refuseOwner": true,
+    "deactivateSuccess": true,
+    "refuseDoubleDeactivate": true,
+    "reactivateSuccess": true,
+    "refuseReactivateActive": true,
+    "refuseLastActive": true,
+    "transferSuccess": true,
+    "refuseTransferOtherCardex": true,
+    "refuseTransferLocked": true,
+    "contactsEnrichment": true,
+    "guardPlanningOnly": true,
+    "reservationContactUnchanged": true,
+    "all": true
+  },
+  "ok": true,
+  "finishedAt": "2026-07-21T14:43:35.875Z"
+}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ClientAccountRoleSchema, ClientAccountStatusSchema } from "./client-account-staff.js";
 import { ServiceCustomAnswerSchema } from "./service-custom-questions.js";
 import { SpaceDurationClassSchema } from "./spaces.js";
 
@@ -101,6 +102,8 @@ export const PlanningContactSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   phone: z.string().optional(),
+  role: ClientAccountRoleSchema,
+  status: ClientAccountStatusSchema,
   createdAt: z.string().datetime(),
 });
 export type PlanningContact = z.infer<typeof PlanningContactSchema>;
