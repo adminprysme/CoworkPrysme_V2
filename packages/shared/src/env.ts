@@ -146,6 +146,8 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
       AUTH_MODE: authModeSchema.default("local"),
       SESSION_SECRET: z.string().min(32),
       SESSION_TTL_HOURS: z.coerce.number().int().positive().default(4),
+      /** Pepper for hashing client collaborator invite tokens (≥32 chars). */
+      CLIENT_INVITE_TOKEN_SECRET: z.string().min(32),
       COOKIE_SECURE: z
         .enum(["true", "false"])
         .default(isProduction(env) ? "true" : "false")
@@ -294,6 +296,7 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     AUTH_MODE: env.AUTH_MODE,
     SESSION_SECRET: env.SESSION_SECRET,
     SESSION_TTL_HOURS: env.SESSION_TTL_HOURS,
+    CLIENT_INVITE_TOKEN_SECRET: env.CLIENT_INVITE_TOKEN_SECRET,
     COOKIE_SECURE: env.COOKIE_SECURE,
     COOKIE_SAME_SITE: env.COOKIE_SAME_SITE,
     CENTRALE_API_URL: env.CENTRALE_API_URL,

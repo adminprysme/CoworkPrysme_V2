@@ -78,6 +78,7 @@ describe("parseServerEnv", () => {
       MONGODB_URI: "mongodb://localhost:27017",
       ALLOWED_ORIGIN: "http://localhost:3002,http://localhost:8002",
       SESSION_SECRET: "x".repeat(32),
+      CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
     });
 
     expect(env.ALLOWED_ORIGIN).toEqual(["http://localhost:3002", "http://localhost:8002"]);
@@ -90,6 +91,7 @@ describe("parseServerEnv", () => {
         MONGODB_URI: "mongodb://localhost:27017",
         ALLOWED_ORIGIN: "*",
         SESSION_SECRET: "x".repeat(32),
+        CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
       }),
     ).toThrow(GENERIC_ENV_ERROR);
   });
@@ -101,6 +103,7 @@ describe("parseServerEnv", () => {
       ALLOWED_ORIGIN: "http://localhost:3002",
       AUTH_MODE: "local",
       SESSION_SECRET: "x".repeat(32),
+      CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
     });
 
     expect(env.AUTH_MODE).toBe("local");
@@ -113,6 +116,7 @@ describe("parseServerEnv", () => {
         MONGODB_URI: "mongodb://localhost:27017",
         ALLOWED_ORIGIN: "http://localhost:3002",
         SESSION_SECRET: "x".repeat(32),
+        CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
         QONTO_CLIENT_ID: "client-id",
       }),
     ).toThrow(GENERIC_ENV_ERROR);
@@ -124,6 +128,7 @@ describe("parseServerEnv", () => {
       MONGODB_URI: "mongodb://localhost:27017",
       ALLOWED_ORIGIN: "http://localhost:3002",
       SESSION_SECRET: "x".repeat(32),
+      CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
       QONTO_CLIENT_ID: "client-id",
       QONTO_CLIENT_SECRET: "client-secret",
       QONTO_STAGING_TOKEN: "staging-token",

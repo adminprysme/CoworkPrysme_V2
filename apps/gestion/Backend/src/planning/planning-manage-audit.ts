@@ -18,7 +18,10 @@ export async function writePlanningManageAudit(input: {
     | "reservation.date_change"
     | "reservation.party_size_change"
     | "reservation.contact_transfer"
-    | "reservation.refund";
+    | "reservation.refund"
+    | "client.invitation.create"
+    | "client.invitation.resend"
+    | "client.invitation.revoke";
   reservationId: Types.ObjectId | string;
   diff?: PlanningAuditDiff;
   reason?: string;

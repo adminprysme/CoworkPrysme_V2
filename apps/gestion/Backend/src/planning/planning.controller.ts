@@ -13,6 +13,7 @@ import type { Request } from "express";
 import {
   PlanningCancelRequestSchema,
   PlanningContactTransferRequestSchema,
+  PlanningCreateInvitationRequestSchema,
   PlanningDateChangeRequestSchema,
   PlanningManualRefundRequestSchema,
   PlanningPartySizeRequestSchema,
@@ -24,6 +25,7 @@ import {
 import { PlanningPermissionGuard } from "../auth/planning-permission.guard.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { StaffContextService } from "../auth/staff-context.service.js";
+import { PlanningInvitationsService } from "./planning-invitations.service.js";
 import { PlanningManageService } from "./planning-manage.service.js";
 import { PlanningService } from "./planning.service.js";
 
@@ -33,6 +35,7 @@ export class PlanningController {
   constructor(
     private readonly planning: PlanningService,
     private readonly planningManage: PlanningManageService,
+    private readonly planningInvitations: PlanningInvitationsService,
     private readonly staffContext: StaffContextService,
   ) {}
 
@@ -239,6 +242,37 @@ export class PlanningController {
       throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
     }
     return this.planningManage.confirmContactTransfer(profile, id, parsed.data);
+  }
+
+  @Get("reservations/:id/invitations")
+  async listInvitations(@Req() request: Request, @Param("id") id: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planningInvitations.listForReservation(profile, id);
+  }
+
+  @Post("reservations/:id/invitations")
+  async createInvitation(@Req() request: Request, @Param("id") id: string, @Body() body: unknown) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningCreateInvitationRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.planningInvitations.createForReservation(profile, id, parsed.data);
+  }
+
+  @Post("invitations/:id/resend")
+  async resendInvitation(@Req() request: Request, @Param("id") id: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planningInvitations.resend(profile, id);
+  }
+
+  @Post("invitations/:id/revoke")
+  async revokeInvitation(@Req() request: Request, @Param("id") id: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.planningInvitations.revoke(profile, id);
   }
 
   @Get("reservations/:id")
