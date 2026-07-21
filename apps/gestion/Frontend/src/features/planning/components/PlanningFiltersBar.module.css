@@ -491,3 +491,43 @@
     align-self: flex-start;
   }
 }
+
+/*
+ * Nested in Planning chrome band — strip the filters' own card so search /
+ * dropdowns / sort sit in the same muted frame as date nav + legend.
+ * Keep surface triggers for contrast (esp. blue "Type : Tous" labels).
+ */
+:global([data-planning-chrome]) .barWrap {
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+  padding: 0.35rem 0 0.1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+:global([data-planning-chrome]) .filtersBar {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+:global([data-planning-chrome]) .dropdownTrigger {
+  background: var(--color-surface);
+}
+
+:global([data-planning-chrome]) .sortControl select {
+  background: var(--color-surface);
+}
+
+:global([data-planning-chrome]) .filtersToggle {
+  background: var(--color-surface);
+}
+
+@media (min-width: 768px) and (max-width: 1920px) {
+  :global([data-planning-chrome]) .barWrap {
+    flex-wrap: nowrap;
+    padding: 0.3rem 0 0.05rem;
+  }
+}

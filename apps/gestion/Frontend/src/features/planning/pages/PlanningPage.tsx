@@ -455,34 +455,36 @@ export function PlanningPage() {
           </div>
         </header>
 
-        <PlanningToolbar
-          mode={mode}
-          rangeLabel={rangeLabel}
-          buildings={buildingsForFilter}
-          buildingId={buildingId}
-          loading={loading}
-          error={error}
-          onModeChange={setMode}
-          onPrev={() => setAnchor((current) => shiftAnchor(current, mode, -1))}
-          onNext={() => setAnchor((current) => shiftAnchor(current, mode, 1))}
-          onToday={() => setAnchor(new Date())}
-          onBuildingChange={setBuildingId}
-        />
+        <div className={styles.chromeBand} data-planning-chrome="">
+          <PlanningToolbar
+            mode={mode}
+            rangeLabel={rangeLabel}
+            buildings={buildingsForFilter}
+            buildingId={buildingId}
+            loading={loading}
+            error={error}
+            onModeChange={setMode}
+            onPrev={() => setAnchor((current) => shiftAnchor(current, mode, -1))}
+            onNext={() => setAnchor((current) => shiftAnchor(current, mode, 1))}
+            onToday={() => setAnchor(new Date())}
+            onBuildingChange={setBuildingId}
+          />
 
-        <PlanningFiltersBar
-          typeFilter={typeFilter}
-          paymentStatuses={paymentStatuses}
-          withReservationsOnly={withReservationsOnly}
-          showCancelled={showCancelled}
-          sort={spaceSort}
-          onTypeChange={setTypeFilter}
-          onPaymentStatusesChange={setPaymentStatuses}
-          onWithReservationsOnlyChange={setWithReservationsOnly}
-          onShowCancelledChange={setShowCancelled}
-          onSortChange={setSpaceSort}
-          onReset={resetFilters}
-          searchSlot={<PlanningSearch onSelect={handleSearchSelect} />}
-        />
+          <PlanningFiltersBar
+            typeFilter={typeFilter}
+            paymentStatuses={paymentStatuses}
+            withReservationsOnly={withReservationsOnly}
+            showCancelled={showCancelled}
+            sort={spaceSort}
+            onTypeChange={setTypeFilter}
+            onPaymentStatusesChange={setPaymentStatuses}
+            onWithReservationsOnlyChange={setWithReservationsOnly}
+            onShowCancelledChange={setShowCancelled}
+            onSortChange={setSpaceSort}
+            onReset={resetFilters}
+            searchSlot={<PlanningSearch onSelect={handleSearchSelect} />}
+          />
+        </div>
       </div>
       <div
         ref={workspaceRef}

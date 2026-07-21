@@ -203,3 +203,27 @@
     font-size: 0.76rem;
   }
 }
+
+/* Nested in Planning chrome band — drop duplicate hairlines / outer padding. */
+:global([data-planning-chrome]) .controls {
+  gap: 0;
+  padding: 0;
+}
+
+:global([data-planning-chrome]) .manageRow {
+  gap: 0.45rem 0.75rem;
+  padding: 0.35rem 0 0.4rem;
+  border-top: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+:global([data-planning-chrome]) .legend {
+  gap: 0.4rem 0.75rem;
+  padding: 0.35rem 0 0.15rem;
+  font-size: 0.72rem;
+}
+
+:global([data-planning-chrome]) .filtersRow {
+  padding-top: 0.2rem;
+  padding-bottom: 0.15rem;
+}

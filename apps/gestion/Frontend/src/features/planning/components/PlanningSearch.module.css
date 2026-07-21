@@ -132,3 +132,9 @@
     height: 15px;
   }
 }
+
+/* Inside Planning chrome — keep opaque surface for input contrast on muted band. */
+:global([data-planning-chrome]) .field {
+  background: var(--color-surface);
+  box-shadow: none;
+}
