@@ -5,7 +5,21 @@ alwaysApply: true
 
 # Cowork Prysme / Prysm'App — contexte projet
 
-Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gestion-api **8003**. Base métier : **cowork_bdd** uniquement (aucune écriture sur prysma_bdd).
+Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gestion-api **8003**, vitrine-web **3001**, vitrine-api **8002**. Base métier : **cowork_bdd** uniquement (aucune écriture sur prysma_bdd).
+
+## Modules TERMINÉS et audités
+
+### Planning / Contacts
+
+- **Invitation collaborateur** (clos) : schéma `clientAccountInvitations` + `ClientAccount.role` owner/member ; API staff create/list/resend/revoke ; acceptation publique vitrine ; UI Contacts (liste invitations, section repliable) ; E2E + redirect `/connexion`. Fixture de référence : **RES-2026-00024** / cardex MA CONCIERGERIE / owner `pthomas@prysme.eu`.
+- **Désactivation de compte ClientAccount** (clos, poussé `origin/master`) :
+  - status `locked` = désactivé staff (pas de suppression RGPD) ; métadonnées `lockedAt` / `lockedByStaffProfileId` / `lockReason?` / `unlockedAt` / `unlockedByStaffProfileId`
+  - API : `POST /planning/client-accounts/:id/deactivate|reactivate`, `POST /planning/cardexes/:id/transfer-ownership` (transaction : `Cardex.clientAccountId` + roles owner→member / member→owner ; **pas** de changement `reservation.clientAccountId`)
+  - **`ClientsPermissionGuard`** → `permissions.clients` uniquement (miroir billing) — **indépendant** de `PlanningPermissionGuard` et du scope bâtiment
+  - Auth client : code **`ACCOUNT_LOCKED`** (HTTP 403) + message exact « Ce compte a été désactivé. Contactez votre espace de coworking. » sur **les deux** entrées : `POST /booking/account/verify` et confirm booking `accountMode: "existing"`
+  - UI Contacts : badges role/status, désactiver / réactiver (motif optionnel), transfert avec sélecteur (email seul), owner toujours en tête de liste
+  - **Bug préexistant détecté et corrigé** pendant ce chantier : `Cardex.identity` (nom, téléphone) était collé à tort sur le compte dont `_id === Cardex.clientAccountId` (donc « suivait » le owner après transfert). L’identité appartient au **dossier** ; corrigé — plus d’attribution aux lignes de comptes + bloc UI **« Identité du dossier »** séparé (`detail.client` / cardex).
+- **Aucun chantier en cours** sur l’onglet Contacts du Planning à ce stade (invitations + désactivation / transfert clos).
 
 ## État d'avancement (tel que livré dans le repo / conversations récentes)
 
@@ -13,7 +27,7 @@ Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gesti
 
 Calendrier, occupancy, recherche, drawer détail (résumé / contacts / montants), filtres, historique par espace (base), UX planning — considérés livrés avant la Vague 2 Manage.
 
-### Vague 2 Planning « Gérer » — largement livrée localement (non poussée)
+### Vague 2 Planning « Gérer » — livrée (poussée)
 
 Onglet **Gérer** du drawer réservation, réorganisé en 2 sections (accordéons, un seul formulaire ouvert) :
 
@@ -21,7 +35,7 @@ Onglet **Gérer** du drawer réservation, réorganisé en 2 sections (accordéon
    - Changer de salle (écart prix, case facturer / acknowledgement)
    - Modifier les dates (extend / shorten / shift) — preview + confirm
    - Modifier le nombre de personnes (si capacité dépassée → raccourci vers « Changer de salle » filtré)
-   - Transférer à un autre contact du même cardex (emails ancien + nouveau, sans impact facture)
+   - Transférer à un autre contact du même cardex (emails ancien + nouveau, sans impact facture) — **distinct** du transfert de **propriété** cardex (Contacts)
 2. **Annuler ou restaurer**
    - Annuler avec remboursement suggéré (modes suggéré / libre / ne pas rembourser)
    - Restaurer si annulation avec `acceptedRefundCents === 0` et créneau libre
@@ -40,11 +54,11 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - **Restauration vs filtre/style annulé** : calendrier se base bien sur `reservation.status` live (pas de `wasCancelled` dénormalisé). Bugs corrigés : (1) historique espace n’émettait les annulations que si le statut courant était encore `cancelled` — une restauration effaçait l’entrée d’annulation ; (2) `PlanningPage.load` sans séquençage pouvait réappliquer un payload `cancelled` périmé après restore.
 - **Scroll Planning (desktop / tablette / mobile)** : viewport verrouillé en `100dvh` + `overflow: hidden` ; shell `.content:has([data-planning-lock])` ne scrolle plus. Desktop = split 2 colonnes inchangé. ≤1024px = détail en overlay plein écran (scroll interne). ≤767px = KPI en carrousel horizontal + filtres dans un sheet « Filtres ».
 - **Preuves `proof.json` de calcul** (helpers shared) ≠ preuve d’intégration HTTP des routes preview.
+- **Identité cardex vs owner** (Contacts) : voir Modules TERMINÉS — bug d’affichage préexistant corrigé (`2f80edb`).
 
 ### Points encore ouverts (explicitement notés, ne pas inventer le reste du backlog)
 
-- Branche locale `master` **ahead de `origin/master`** : ne **pas** `git push` sauf demande explicite (règle utilisateur VPS / GitHub).
-- Ne pas changer la branche Git checkoutée sur le VPS (pas de checkout / merge / rebase / pull sur la branche de prod) sauf demande explicite.
+- Ne **pas** `git push` / ne pas changer la branche Git checkoutée sur le VPS sauf demande explicite (règle utilisateur).
 - Tarif **weekly @ 90000 HT** sur FOCUS : activé pour les preuves Planning / booking — **décision produit** de le garder ou le désactiver (ne pas retirer sans validation).
 
 ### Points de vigilance permanents (déploiement)
@@ -61,32 +75,16 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - Côté gestion / Planning : **ne pas** filtrer ou se baser sur `featuredOnVitrine` (flags vitrine ignorés pour l’exploitation).
 - Annulation / raccourcissement : barème CGV (CDC) si non démarré ; prorata si en cours ; 3 modes remboursement avec justification si écart au suggéré.
 - Date-change à moins de 48h avant le début **initial** : avertissement contournable staff + justification obligatoire (cardex / audit).
-- Transfert de contact : pas de création de compte, pas de nouvelle transaction atomique métier — seul changement du contact principal ; pas d’impact prix / facture / documents déjà générés.
+- Transfert de contact (Vague 2 Manage) : pas de création de compte, pas de nouvelle transaction atomique métier — seul changement du contact principal réservation ; pas d’impact prix / facture / documents déjà générés.
+- Transfert de **propriété** cardex (Contacts) : change `Cardex.clientAccountId` + roles ; **ne change pas** `reservation.clientAccountId`.
 
-## Commits locaux non poussés (au 2026-07-21)
+## Fichiers clés — Contacts (invitation + désactivation)
 
-`master` est **ahead** de `origin/master` (du plus ancien au plus récent) :
-
-1. `4578a17` feat(shared/db): add Planning manage calc helpers and overlap exclude
-2. `4df4065` feat(gestion): add Planning manage notification email templates
-3. `7eda4e7` feat(gestion): add Planning manage audit helper and SMTP messageIds
-4. `0b7857e` feat(gestion): add Planning Manage space-change flow
-5. `07b028a` feat(gestion): add Planning Manage cancel and suggested refund
-6. `68b1e11` fix(gestion): hide unapplied amounts in Planning manage emails
-7. `0b2b2bc` fix(gestion): omit all amounts from no-refund cancellation emails
-8. `1267c7b` fix(gestion): use shift+right-click for native planning context menu
-9. `d885b18` feat(gestion): restore cancelled planning reservations with zero refund
-10. `fadf140` refactor(gestion): reorganize Planning Manage tab into accordion sections
-11. `38809c0` feat(gestion): add Planning Manage date, party-size and contact-transfer flows
-12. `c58e2e3` fix(gestion): select tariff tier on Planning date-change reprice
-13. `17253d1` fix(vitrine): select tariff tier on booking price via resolveSpaceStayPricing
-14. `2971a33` fix(gestion): keep cancel history and drop stale calendar loads after restore
-15. `1bbb327` feat(gestion): attach regenerated proforma PDF on billed manage emails
-
-Preuves utiles (tmp, non forcément toutes commitées) :  
-`apps/gestion/Backend/tmp/manage-tariff-tier-proof/`, `manage-dates-calc-proof/`, `manage-preview-http-proof/`,  
-`apps/gestion/Backend/tmp/wave2-invoice-pdf-email-proof/` (SMTP + `%PDF` agrandir + space-change facturé),  
-`apps/vitrine/Backend/tmp/booking-tariff-tier-proof/`.
+- Shared : `packages/shared/src/client-invitation.ts`, `client-account-staff.ts`, `planning.ts` (contacts `role`/`status`)
+- DB : `packages/db/src/domains/client/client-account.schema.ts`, `client-account-invitation.schema.ts`, `confirm-booking-checkout.ts` (`AccountLockedError` / verify)
+- API gestion : `clients-permission.guard.ts`, `client-accounts-staff.service.ts` / `.controller.ts`, `planning-invitations.service.ts`
+- API vitrine : `booking-account.service.ts`, `booking-confirm.service.ts` (map `ACCOUNT_LOCKED`)
+- UI : `ReservationContactsPanel.tsx`
 
 ## Fichiers clés Vague 2 Manage
 
