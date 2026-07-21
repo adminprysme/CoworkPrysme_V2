@@ -198,14 +198,77 @@
 }
 
 /*
- * Compact chrome: mobile + laptop (≤1600).
- * Covers common logical widths (1280, 1366, 1440, 1512) where the inline
- * filter strip stacks and steals vertical room from split-view.
- * Wide desktop (>1600) keeps the always-visible filter strip.
+ * Laptop / tablet landscape (≤1600): keep filters INLINE but denser.
+ * Natural wrap of pill groups is OK — no popover / no extra click.
  */
-@media (max-width: 1600px) {
+@media (min-width: 768px) and (max-width: 1600px) {
   .barWrap {
     align-items: center;
+    gap: 0.45rem 0.65rem;
+  }
+
+  .searchSlot {
+    flex: 0 1 16rem;
+    min-width: min(100%, 12rem);
+    max-width: 18rem;
+  }
+
+  .filtersBar {
+    gap: 0.4rem 0.65rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 10px;
+  }
+
+  .filterGroup {
+    gap: 0.3rem 0.4rem;
+  }
+
+  .filterGroupLabel {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+
+  .filterPills {
+    gap: 0.22rem;
+  }
+
+  .filterPill {
+    padding: 0.18rem 0.5rem;
+    font-size: 0.74rem;
+  }
+
+  .filterDivider {
+    font-size: 0.8rem;
+  }
+
+  .sortControl {
+    margin-top: 0;
+    font-size: 0.74rem;
+  }
+
+  .sortControl select {
+    padding: 0.22rem 0.4rem;
+    font-size: 0.74rem;
+    border-radius: 6px;
+  }
+
+  .resetBtn {
+    margin-top: 0;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.72rem;
+  }
+}
+
+/* Phone: collapsible bottom sheet (unchanged interaction). */
+@media (max-width: 767px) {
+  .barWrap {
+    align-items: center;
+  }
+
+  .searchSlot {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
   }
 
   .filtersToggleWrap {
@@ -230,9 +293,28 @@
   .filtersSheet {
     display: flex;
     flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
     z-index: 55;
+    max-height: min(85dvh, 40rem);
+    padding: 0.85rem 1rem 1.25rem;
+    border-radius: 16px 16px 0 0;
     background: var(--color-surface);
     box-shadow: var(--shadow-sm);
+    animation: planningFiltersSheetIn 0.22s ease;
+  }
+
+  @keyframes planningFiltersSheetIn {
+    from {
+      transform: translateY(110%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
   }
 
   .filtersSheetHeader {
@@ -301,71 +383,5 @@
   .resetBtn {
     margin-top: 0;
     align-self: flex-start;
-  }
-}
-
-/* Laptop / tablet landscape: anchored popover under the Filtres button. */
-@media (min-width: 768px) and (max-width: 1600px) {
-  .searchSlot {
-    flex: 1 1 auto;
-    min-width: min(100%, 12rem);
-    max-width: 20rem;
-  }
-
-  .filtersSheet {
-    position: absolute;
-    top: calc(100% + 0.45rem);
-    right: 0;
-    left: auto;
-    bottom: auto;
-    width: min(34rem, calc(100vw - 2rem));
-    max-height: min(70vh, 28rem);
-    padding: 0.85rem 1rem 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    animation: planningFiltersPopoverIn 0.16s ease;
-  }
-
-  @keyframes planningFiltersPopoverIn {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-/* Phone: bottom sheet (unchanged interaction). */
-@media (max-width: 767px) {
-  .searchSlot {
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .filtersSheet {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    top: auto;
-    max-height: min(85dvh, 40rem);
-    padding: 0.85rem 1rem 1.25rem;
-    border-radius: 16px 16px 0 0;
-    animation: planningFiltersSheetIn 0.22s ease;
-  }
-
-  @keyframes planningFiltersSheetIn {
-    from {
-      transform: translateY(110%);
-    }
-
-    to {
-      transform: translateY(0);
-    }
   }
 }

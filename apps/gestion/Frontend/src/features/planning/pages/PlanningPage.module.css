@@ -160,19 +160,27 @@
   }
 }
 
-/* —— Laptop (split-view + shorter header): free vertical room —— */
+/* —— Laptop (split-view + denser header): more room for detail readability —— */
 @media (min-width: 1025px) and (max-width: 1600px) {
   .topStack {
-    gap: 0.65rem;
-    padding: 0.85rem 1rem 0;
+    gap: 0.55rem;
+    padding: 0.75rem 1rem 0;
   }
 
   .subtitle {
     display: none;
   }
 
+  .calendarPane {
+    flex: 1 1 42%;
+    min-width: 0;
+  }
+
   .detailPane {
-    /* Keep an independent scroll column once split is open. */
+    /* ~42/58 in favor of the dossier — same type scale as wide desktop. */
+    flex: 0 0 58%;
+    max-width: 58%;
+    min-width: min(380px, 50%);
     min-height: 0;
     overflow: hidden;
   }
