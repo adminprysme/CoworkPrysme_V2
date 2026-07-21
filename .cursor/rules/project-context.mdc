@@ -26,7 +26,7 @@ Onglet **Gérer** du drawer réservation, réorganisé en 2 sections (accordéon
    - Annuler avec remboursement suggéré (modes suggéré / libre / ne pas rembourser)
    - Restaurer si annulation avec `acceptedRefundCents === 0` et créneau libre
 
-Emails manage : ne pas afficher de montants non réellement appliqués. Historique espace : types `space_change`, `cancellation`, `restoration`, `date_change`, `party_size_change`, `contact_transfer`.
+Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF proforma** jointe uniquement quand l’action a **persisté une mutation facture** (changement de salle avec `billDifference`, complément dates facturé) — régénération via `@coworkprysme/invoice-pdf` après `invoice.save`. Annulation / raccourcissement : remboursement **suggéré** seulement (pas d’écriture facture) → **pas de PJ**. Effectif / transfert / restore → pas de PJ. Historique espace : types `space_change`, `cancellation`, `restoration`, `date_change`, `party_size_change`, `contact_transfer`.
 
 ### Booking vitrine — sélection automatique du palier tarifaire
 
@@ -74,13 +74,16 @@ Emails manage : ne pas afficher de montants non réellement appliqués. Historiq
 11. `38809c0` feat(gestion): add Planning Manage date, party-size and contact-transfer flows
 12. `c58e2e3` fix(gestion): select tariff tier on Planning date-change reprice
 13. `17253d1` fix(vitrine): select tariff tier on booking price via resolveSpaceStayPricing
+14. `2971a33` fix(gestion): keep cancel history and drop stale calendar loads after restore
+15. `PENDING` feat(gestion): attach regenerated proforma PDF on billed manage emails
 
 Preuves utiles (tmp, non forcément toutes commitées) :  
 `apps/gestion/Backend/tmp/manage-tariff-tier-proof/`, `manage-dates-calc-proof/`, `manage-preview-http-proof/`,  
+`apps/gestion/Backend/tmp/wave2-invoice-pdf-email-proof/` (SMTP + `%PDF` agrandir + space-change facturé),  
 `apps/vitrine/Backend/tmp/booking-tariff-tier-proof/`.
 
 ## Fichiers clés Vague 2 Manage
 
 - Shared : `packages/shared/src/planning-manage.ts`, `packages/shared/src/planning.ts`
-- API : `apps/gestion/Backend/src/planning/planning-manage.service.ts`, `planning.controller.ts`, `planning-manage-emails.ts`, `planning-manage-invoice.ts`
+- API : `apps/gestion/Backend/src/planning/planning-manage.service.ts`, `planning.controller.ts`, `planning-manage-emails.ts`, `planning-manage-invoice.ts`, `planning-manage-mail-attachments.ts`
 - UI : `apps/gestion/Frontend/src/features/planning/components/ReservationManagePanel.tsx`, `SpaceHistoryDrawer.tsx`, `lib/planning-api.ts`

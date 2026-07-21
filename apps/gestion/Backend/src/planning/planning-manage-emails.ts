@@ -1,6 +1,9 @@
 /**
  * Plain HTML transactional emails for Planning Wave 2 "Gérer" actions
- * (space change / cancellation / restore). No secrets, no attachments here.
+ * (space change / cancellation / restore / dates / party / transfer).
+ * No secrets here — PDF attachments (when any) are attached by the service
+ * only after a real proforma invoice mutation (billed space change or dated
+ * complement), never for suggested refunds or contact-only updates.
  *
  * Amounts are only shown when the staff action actually applies them to the
  * client (billed space-change delta / confirmed refund > 0).

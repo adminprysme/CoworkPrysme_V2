@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import {
@@ -67,6 +68,7 @@ import {
 } from "@coworkprysme/db";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
 import { MailService } from "../mail/mail.service.js";
 import { writePlanningManageAudit } from "./planning-manage-audit.js";
 import {
@@ -78,7 +80,9 @@ import {
   renderSpaceChangeEmail,
 } from "./planning-manage-emails.js";
 import { appendInvoiceAdjustment } from "./planning-manage-invoice.js";
+import { buildProformaPdfAttachments } from "./planning-manage-mail-attachments.js";
 import { PlanningService } from "./planning.service.js";
+/* eslint-enable @typescript-eslint/consistent-type-imports */
 import {
   asSpaceType,
   formatClientLabel,
@@ -108,9 +112,12 @@ function formatFrDateTime(date: Date): string {
 
 @Injectable()
 export class PlanningManageService {
+  private readonly logger = new Logger(PlanningManageService.name);
+
   constructor(
     private readonly mail: MailService,
     private readonly planning: PlanningService,
+    private readonly invoicePdf: InvoicePdfService,
   ) {}
 
   async listCandidateSpaces(
@@ -408,7 +415,20 @@ export class PlanningManageService {
         deltaTTC,
         billedDifference,
       });
-      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+      // PDF only when proforma was rewritten in this request (billDifference).
+      const attachments = billedDifference
+        ? await buildProformaPdfAttachments(this.invoicePdf, invoice?.reference, (error) =>
+            this.logger.error(
+              `Invoice PDF attachment failed for space-change ${invoice?.reference}: ${String(error)}`,
+            ),
+          )
+        : undefined;
+      await this.mail.sendMail({
+        to: clientEmail,
+        subject: email.subject,
+        html: email.html,
+        attachments,
+      });
     }
 
     const detail = await this.planning.getReservationDetail(profile, reservationId);
@@ -1057,7 +1077,20 @@ export class PlanningManageService {
         complementTTC: pricing.complementTTC,
         billedDifference,
       });
-      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+      // PDF only when a complement line was appended to the proforma.
+      const attachments = billedDifference
+        ? await buildProformaPdfAttachments(this.invoicePdf, invoice?.reference, (error) =>
+            this.logger.error(
+              `Invoice PDF attachment failed for date-change ${invoice?.reference}: ${String(error)}`,
+            ),
+          )
+        : undefined;
+      await this.mail.sendMail({
+        to: clientEmail,
+        subject: email.subject,
+        html: email.html,
+        attachments,
+      });
     }
 
     const detail = await this.planning.getReservationDetail(profile, reservationId);
