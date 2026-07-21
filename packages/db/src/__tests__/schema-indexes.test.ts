@@ -107,8 +107,22 @@ describe("clientAccounts role index", () => {
       expect.arrayContaining([
         [{ email: 1 }, { unique: true }],
         [{ cardexId: 1, role: 1 }, expect.any(Object)],
+        [{ cardexId: 1, status: 1 }, expect.any(Object)],
       ]),
     );
+    void connection.close();
+  });
+
+  it("declares staff lock metadata paths", () => {
+    const connection = mongoose.createConnection();
+    registerClientAccountModel(connection);
+    const schema = connection.models.ClientAccount!.schema;
+
+    expect(schema.path("lockedAt")).toBeDefined();
+    expect(schema.path("lockedByStaffProfileId")).toBeDefined();
+    expect(schema.path("lockReason")).toBeDefined();
+    expect(schema.path("unlockedAt")).toBeDefined();
+    expect(schema.path("unlockedByStaffProfileId")).toBeDefined();
     void connection.close();
   });
 });

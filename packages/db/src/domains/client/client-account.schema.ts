@@ -28,7 +28,15 @@ export interface ClientAccount {
   emailVerifiedAt?: Date;
   consent: ConsentRecord;
   marketingConsent?: MarketingConsentRecord;
+  /** active | locked (staff-deactivated) | anonymized (future RGPD). */
   status: (typeof CLIENT_ACCOUNT_STATUSES)[number];
+  /** Set when status becomes locked (staff deactivate). Cleared on reactivate. */
+  lockedAt?: Date;
+  lockedByStaffProfileId?: Types.ObjectId;
+  /** Optional staff motive — not required. */
+  lockReason?: string;
+  unlockedAt?: Date;
+  unlockedByStaffProfileId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,12 +53,18 @@ const clientAccountSchema = new Schema<ClientAccount>(
     consent: { type: consentRecordSchema, required: true },
     marketingConsent: { type: marketingConsentRecordSchema, required: false },
     status: { type: String, enum: CLIENT_ACCOUNT_STATUSES, default: "active", required: true },
+    lockedAt: { type: Date },
+    lockedByStaffProfileId: optionalObjectIdRef("StaffProfile"),
+    lockReason: { type: String, trim: true, maxlength: 500 },
+    unlockedAt: { type: Date },
+    unlockedByStaffProfileId: optionalObjectIdRef("StaffProfile"),
   },
   { ...TIMESTAMP_OPTIONS, collection: "clientAccounts" },
 );
 
 clientAccountSchema.index({ email: 1 }, { unique: true });
 clientAccountSchema.index({ cardexId: 1, role: 1 });
+clientAccountSchema.index({ cardexId: 1, status: 1 });
 
 export type ClientAccountModel = Model<ClientAccount>;
 

@@ -180,17 +180,25 @@ Document technique (1 par `spaceId`) touché dans la **transaction** `acquireLoc
 
 ### `clientAccounts` — authentification client
 
-| Champ              | Type              | Note                                               |
-| ------------------ | ----------------- | -------------------------------------------------- |
-| `email`            | String            | unique                                             |
-| `passwordHash`     | String            | bcrypt/argon2 — jamais en clair                    |
-| `cardexId`         | ObjectId → cardex | nul jusqu'à la 1ʳᵉ réservation                     |
-| `emailVerifiedAt`  | Date              |                                                    |
-| `consent`          | Object            | `{ privacyPolicyVersion, acceptedAt }` (§4.5 RGPD) |
-| `marketingConsent` | Object            | opt-in marketing (tunnel)                          |
-| `status`           | Enum              | `active` / `locked` / `anonymized`                 |
+| Champ                      | Type                     | Note                                                              |
+| -------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| `email`                    | String                   | unique                                                            |
+| `passwordHash`             | String                   | bcrypt/argon2 — jamais en clair                                   |
+| `cardexId`                 | ObjectId → cardex        | nul jusqu'à la 1ʳᵉ réservation                                    |
+| `role`                     | Enum                     | `owner` / `member` — owner = `Cardex.clientAccountId`             |
+| `emailVerifiedAt`          | Date                     |                                                                   |
+| `consent`                  | Object                   | `{ privacyPolicyVersion, acceptedAt }` (§4.5 RGPD)                |
+| `marketingConsent`         | Object                   | opt-in marketing (tunnel)                                         |
+| `status`                   | Enum                     | `active` / `locked` (désactivé staff) / `anonymized` (RGPD futur) |
+| `lockedAt`                 | Date                     | renseigné à la désactivation staff                                |
+| `lockedByStaffProfileId`   | ObjectId → staffProfiles | auteur de la désactivation                                        |
+| `lockReason`               | String                   | motif optionnel (max 500)                                         |
+| `unlockedAt`               | Date                     | dernière réactivation                                             |
+| `unlockedByStaffProfileId` | ObjectId → staffProfiles | auteur de la réactivation                                         |
 
-**Index** : `{ email: 1 }` unique.
+**Index** : `{ email: 1 }` unique, `{ cardexId: 1, role: 1 }`, `{ cardexId: 1, status: 1 }`.
+
+Historique complet des lock/unlock/transfert de propriété : `auditLogs` (pas de sous-collection).
 
 ### `cardex` — fiche client, source de vérité (§4.5)
 

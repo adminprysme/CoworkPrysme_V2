@@ -732,3 +732,21 @@ export {
   type PublicInvitationAcceptResponse,
   type PublicInvitationPreview,
 } from "./client-invitation.js";
+
+export {
+  CLIENT_ACCOUNT_AUTH_ERROR_CODES,
+  CLIENT_ACCOUNT_LOCKED_USER_MESSAGE,
+  CLIENT_ACCOUNT_STAFF_ERROR_CODES,
+  ClientAccountRoleSchema,
+  ClientAccountStatusSchema,
+  StaffDeactivateClientAccountRequestSchema,
+  StaffReactivateClientAccountRequestSchema,
+  StaffTransferCardexOwnershipRequestSchema,
+  type ClientAccountAuthErrorCode,
+  type ClientAccountRole,
+  type ClientAccountStaffErrorCode,
+  type ClientAccountStatus,
+  type StaffDeactivateClientAccountRequest,
+  type StaffReactivateClientAccountRequest,
+  type StaffTransferCardexOwnershipRequest,
+} from "./client-account-staff.js";
