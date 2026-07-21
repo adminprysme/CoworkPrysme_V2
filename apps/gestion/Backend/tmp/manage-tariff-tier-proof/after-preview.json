@@ -1,0 +1,23 @@
+{
+  "reservationId": "6a59f2e51b96b99ee1174c39",
+  "kind": "extend",
+  "previousStartAt": "2026-08-12T06:00:00.000Z",
+  "previousEndAt": "2026-08-14T17:00:00.000Z",
+  "nextStartAt": "2026-08-12T06:00:00.000Z",
+  "nextEndAt": "2026-08-18T17:00:00.000Z",
+  "available": true,
+  "conflictingReservation": null,
+  "within48h": false,
+  "previousDurationClass": "daily",
+  "nextDurationClass": "weekly",
+  "previousUnits": 3,
+  "nextUnits": 1,
+  "unitPriceHT": 90000,
+  "vatRate": 20,
+  "previousSpaceTTC": 64800,
+  "nextSpaceTTC": 108000,
+  "complementTTC": 43200,
+  "suggestedRefundCents": 0,
+  "paidTotalCents": 21600,
+  "billable": true
+}

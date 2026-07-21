@@ -7,6 +7,7 @@ import {
   computeShortenRefundSuggestion,
   computeSuggestedRefundCents,
   countBillableUnits,
+  resolveSpaceStayPricing,
 } from "./planning-manage.js";
 
 describe("computeSuggestedRefundCents", () => {
@@ -273,5 +274,47 @@ describe("computeShortenRefundSuggestion", () => {
     expect(result.basis).toBe("prorata_removed");
     expect(result.removedValueCents).toBe(5_000);
     expect(result.suggestedRefundCents).toBe(5_000);
+  });
+});
+
+describe("resolveSpaceStayPricing", () => {
+  const tariffs = [
+    { durationClass: "hourly" as const, priceHT: 2_000, vatRate: 20, enabled: true },
+    { durationClass: "daily" as const, priceHT: 18_000, vatRate: 20, enabled: true },
+    { durationClass: "weekly" as const, priceHT: 90_000, vatRate: 20, enabled: true },
+    { durationClass: "monthly" as const, priceHT: 260_000, vatRate: 20, enabled: true },
+  ];
+
+  it("keeps daily for a short multi-day stay (below weekly threshold)", () => {
+    const result = resolveSpaceStayPricing({
+      startAt: new Date("2026-08-12T06:00:00.000Z"),
+      endAt: new Date("2026-08-14T17:00:00.000Z"),
+      tariffs,
+    });
+    expect(result.durationClass).toBe("daily");
+    expect(result.units).toBe(3);
+    expect(result.spaceHT).toBe(54_000);
+  });
+
+  it("selects weekly instead of 7× daily when the stay crosses the weekly tier", () => {
+    const result = resolveSpaceStayPricing({
+      startAt: new Date("2026-08-12T06:00:00.000Z"),
+      endAt: new Date("2026-08-18T17:00:00.000Z"),
+      tariffs,
+    });
+    expect(result.durationClass).toBe("weekly");
+    expect(result.units).toBe(1);
+    expect(result.unitPriceHT).toBe(90_000);
+    expect(result.spaceHT).toBe(90_000);
+    expect(result.spaceHT).toBeLessThan(7 * 18_000);
+  });
+
+  it("does not apply monthly to a 7-day stay even if ceil(days/30)=1", () => {
+    const result = resolveSpaceStayPricing({
+      startAt: new Date("2026-08-12T06:00:00.000Z"),
+      endAt: new Date("2026-08-18T17:00:00.000Z"),
+      tariffs,
+    });
+    expect(result.durationClass).not.toBe("monthly");
   });
 });

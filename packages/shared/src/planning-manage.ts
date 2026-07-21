@@ -2,7 +2,13 @@
  * Pure helpers for Planning Wave 2 manage actions (cents-only arithmetic).
  */
 
+import { computeTtcCents } from "./money.js";
 import type { SpaceDurationClass } from "./spaces.js";
+
+/** Inclusive Paris-day threshold before a weekly tariff may apply. */
+export const SPACE_STAY_WEEKLY_MIN_DAYS = 7;
+/** Inclusive Paris-day threshold before a monthly tariff may apply (aligns with booking UI). */
+export const SPACE_STAY_MONTHLY_MIN_DAYS = 28;
 
 export type SuggestedRefundBasis = "not_started" | "in_progress" | "ended" | "unpaid";
 
@@ -351,6 +357,105 @@ export function countBillableUnits(
     }
   }
 }
+
+export interface SpaceTariffCandidate {
+  durationClass: SpaceDurationClass;
+  priceHT: number;
+  vatRate: number;
+  enabled?: boolean;
+}
+
+export interface SpaceStayPricing {
+  durationClass: SpaceDurationClass;
+  units: number;
+  unitPriceHT: number;
+  vatRate: number;
+  spaceHT: number;
+  spaceTTC: number;
+}
+
+/**
+ * Whether a duration-class tariff may be offered for this stay length.
+ * Prevents e.g. a monthly forfait from winning on a 2-day stay via ceil(days/30)=1.
+ */
+export function isSpaceTariffApplicableToStay(
+  durationClass: SpaceDurationClass,
+  startAt: Date,
+  endAt: Date,
+): boolean {
+  const dailyUnits = countBillableUnits(startAt, endAt, "daily");
+  const ms = endAt.getTime() - startAt.getTime();
+
+  switch (durationClass) {
+    case "hourly":
+      return dailyUnits <= 1;
+    case "halfday":
+      return dailyUnits <= 1 && ms <= 6 * MS_PER_HOUR;
+    case "daily":
+      return true;
+    case "weekly":
+      return dailyUnits >= SPACE_STAY_WEEKLY_MIN_DAYS;
+    case "monthly":
+      return dailyUnits >= SPACE_STAY_MONTHLY_MIN_DAYS;
+    default: {
+      const _exhaustive: never = durationClass;
+      throw new RangeError(`Unknown durationClass: ${String(_exhaustive)}`);
+    }
+  }
+}
+
+/**
+ * Price a stay by selecting the cheapest applicable enabled tariff tier
+ * (not a linear extrapolation of the original booking's durationClass).
+ */
+export function resolveSpaceStayPricing(input: {
+  startAt: Date;
+  endAt: Date;
+  tariffs: ReadonlyArray<SpaceTariffCandidate>;
+}): SpaceStayPricing {
+  const enabled = input.tariffs.filter(
+    (tariff) =>
+      tariff.enabled !== false &&
+      Number.isInteger(tariff.priceHT) &&
+      tariff.priceHT >= 0 &&
+      isSpaceTariffApplicableToStay(tariff.durationClass, input.startAt, input.endAt),
+  );
+  if (enabled.length === 0) {
+    throw new RangeError("Aucun tarif applicable pour cette durée sur cet espace");
+  }
+
+  let best: SpaceStayPricing | null = null;
+  for (const tariff of enabled) {
+    const units = countBillableUnits(input.startAt, input.endAt, tariff.durationClass);
+    const spaceHT = units * tariff.priceHT;
+    const spaceTTC = computeTtcCents(spaceHT, tariff.vatRate);
+    const candidate: SpaceStayPricing = {
+      durationClass: tariff.durationClass,
+      units,
+      unitPriceHT: tariff.priceHT,
+      vatRate: tariff.vatRate,
+      spaceHT,
+      spaceTTC,
+    };
+    if (
+      !best ||
+      candidate.spaceHT < best.spaceHT ||
+      (candidate.spaceHT === best.spaceHT &&
+        SPACE_DURATION_RANK[candidate.durationClass] > SPACE_DURATION_RANK[best.durationClass])
+    ) {
+      best = candidate;
+    }
+  }
+  return best!;
+}
+
+const SPACE_DURATION_RANK: Record<SpaceDurationClass, number> = {
+  hourly: 0,
+  halfday: 1,
+  daily: 2,
+  weekly: 3,
+  monthly: 4,
+};
 
 export type ShortenRefundBasis = "cgv_scale" | "prorata_removed" | "ended" | "unpaid";
 

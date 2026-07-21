@@ -12,9 +12,8 @@ import {
   computePriceDeltaCents,
   computeShortenRefundSuggestion,
   computeSuggestedRefundCents,
-  computeTtcCents,
-  countBillableUnits,
   isWithin48hOfStart,
+  resolveSpaceStayPricing,
   PlanningCancelPreviewSchema,
   PlanningCancelResultSchema,
   PlanningContactTransferPreviewSchema,
@@ -50,6 +49,7 @@ import {
   type PlanningSpaceChangePreview,
   type PlanningSpaceChangeRequest,
   type PlanningSpaceChangeResult,
+  type SpaceStayPricing,
 } from "@coworkprysme/shared";
 import {
   connectMongo,
@@ -830,6 +830,8 @@ export class PlanningManageService {
       conflictMessage,
       conflictingReservation,
       within48h: isWithin48hOfStart(reservation.startAt),
+      previousDurationClass: pricing.previousDurationClass,
+      nextDurationClass: pricing.nextDurationClass,
       previousUnits: pricing.previousUnits,
       nextUnits: pricing.nextUnits,
       unitPriceHT: pricing.unitPriceHT,
@@ -981,13 +983,14 @@ export class PlanningManageService {
 
     reservation.startAt = newStart;
     reservation.endAt = newEnd;
+    reservation.durationClass = pricing.nextDurationClass;
     await reservation.save();
 
     let billedDifference = false;
     if (invoice && pricing.complementTTC > 0 && request.billDifference) {
       const label =
         kind === "extend"
-          ? `Complément — prolongation du séjour (${pricing.nextUnits - pricing.previousUnits} unité(s))`
+          ? `Complément — prolongation (${pricing.previousDurationClass} → ${pricing.nextDurationClass}, ${pricing.nextUnits} unité(s))`
           : `Complément — report du créneau`;
       await appendInvoiceAdjustment(invoice, {
         label,
@@ -1000,6 +1003,10 @@ export class PlanningManageService {
     const auditDiff: Record<string, { before: unknown; after: unknown }> = {
       startAt: { before: toIso(previousStartAt), after: toIso(newStart) },
       endAt: { before: toIso(previousEndAt), after: toIso(newEnd) },
+      durationClass: {
+        before: pricing.previousDurationClass,
+        after: pricing.nextDurationClass,
+      },
       kind: { before: null, after: kind },
       complementTTC: { before: 0, after: pricing.complementTTC },
       billedDifference: { before: false, after: billedDifference },
@@ -1448,13 +1455,15 @@ export class PlanningManageService {
   private async priceDateChange(
     reservation: {
       spaceId: Types.ObjectId;
-      durationClass: Parameters<typeof countBillableUnits>[2];
+      durationClass: string;
     },
     newStart: Date,
     newEnd: Date,
     oldStart: Date,
     oldEnd: Date,
   ): Promise<{
+    previousDurationClass: SpaceStayPricing["durationClass"];
+    nextDurationClass: SpaceStayPricing["durationClass"];
     unitPriceHT: number;
     vatRate: number;
     previousUnits: number;
@@ -1465,29 +1474,36 @@ export class PlanningManageService {
   }> {
     const Space = await getSpaceModel();
     const space = await Space.findById(reservation.spaceId).select({ tariffs: 1 }).lean().exec();
-    const tariff = space?.tariffs.find(
-      (t) => t.durationClass === reservation.durationClass && t.enabled,
-    );
-    if (!tariff) {
+    const tariffs = (space?.tariffs ?? []).map((tariff) => ({
+      durationClass: tariff.durationClass as SpaceStayPricing["durationClass"],
+      priceHT: tariff.priceHT,
+      vatRate: tariff.vatRate,
+      enabled: tariff.enabled,
+    }));
+
+    let previous: SpaceStayPricing;
+    let next: SpaceStayPricing;
+    try {
+      previous = resolveSpaceStayPricing({ startAt: oldStart, endAt: oldEnd, tariffs });
+      next = resolveSpaceStayPricing({ startAt: newStart, endAt: newEnd, tariffs });
+    } catch {
       throw new BadRequestException({
         code: "TARIFF_UNAVAILABLE",
-        message: "Aucun tarif actif pour cette durée sur cet espace",
+        message: "Aucun tarif applicable pour cette durée sur cet espace",
       });
     }
 
-    const previousUnits = countBillableUnits(oldStart, oldEnd, reservation.durationClass);
-    const nextUnits = countBillableUnits(newStart, newEnd, reservation.durationClass);
-    const previousSpaceTTC = computeTtcCents(tariff.priceHT * previousUnits, tariff.vatRate);
-    const nextSpaceTTC = computeTtcCents(tariff.priceHT * nextUnits, tariff.vatRate);
-    const complementTTC = Math.max(0, nextSpaceTTC - previousSpaceTTC);
+    const complementTTC = Math.max(0, next.spaceTTC - previous.spaceTTC);
 
     return {
-      unitPriceHT: tariff.priceHT,
-      vatRate: tariff.vatRate,
-      previousUnits,
-      nextUnits,
-      previousSpaceTTC,
-      nextSpaceTTC,
+      previousDurationClass: previous.durationClass,
+      nextDurationClass: next.durationClass,
+      unitPriceHT: next.unitPriceHT,
+      vatRate: next.vatRate,
+      previousUnits: previous.units,
+      nextUnits: next.units,
+      previousSpaceTTC: previous.spaceTTC,
+      nextSpaceTTC: next.spaceTTC,
       complementTTC,
     };
   }

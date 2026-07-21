@@ -423,8 +423,11 @@ export const PlanningDateChangePreviewSchema = z.object({
   conflictingReservation: PlanningRestoreConflictSchema.nullable(),
   /** True when fewer than 48h remain before the ORIGINAL start. */
   within48h: z.boolean(),
+  previousDurationClass: SpaceDurationClassSchema,
+  nextDurationClass: SpaceDurationClassSchema,
   previousUnits: z.number().int().nonnegative(),
   nextUnits: z.number().int().nonnegative(),
+  /** Unit price HT of the tariff tier selected for the NEW stay. */
   unitPriceHT: z.number().int().nonnegative(),
   vatRate: z.number().nonnegative(),
   previousSpaceTTC: z.number().int().nonnegative(),
