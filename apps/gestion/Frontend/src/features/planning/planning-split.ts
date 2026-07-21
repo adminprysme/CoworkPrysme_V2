@@ -17,8 +17,11 @@ export const PLANNING_SPLIT_CALENDAR_MIN_PX = 300;
 /** Hard cap: detail must not claim more than this share of the workspace. */
 export const PLANNING_SPLIT_DETAIL_MAX_RATIO = 0.55;
 
-/** Matches PlanningCalendar sticky label floor (`clamp(120px, 16vw, 180px)`). */
-const PLANNING_LABEL_MIN_PX = 140;
+/** Matches PlanningCalendar sticky label ceiling (`clamp(120px, 16vw, 180px)`). */
+const PLANNING_LABEL_MIN_PX = 180;
+
+/** Small gutter for the split handle / borders so track mins stay honest. */
+const PLANNING_SPLIT_GUTTER_PX = 10;
 
 const COL_MIN_WIDTH: Record<PlanningViewMode, number> = {
   month: 40,
@@ -31,7 +34,7 @@ const RATIO_CEIL = PLANNING_SPLIT_DETAIL_MAX_RATIO;
 
 export function planningCalendarMinPx(mode: PlanningViewMode, columnCount: number): number {
   const cols = Math.max(1, columnCount);
-  return PLANNING_LABEL_MIN_PX + cols * COL_MIN_WIDTH[mode];
+  return PLANNING_LABEL_MIN_PX + cols * COL_MIN_WIDTH[mode] + PLANNING_SPLIT_GUTTER_PX;
 }
 
 export function readStoredDetailRatio(): number {
