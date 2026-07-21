@@ -141,3 +141,65 @@
     order: 3;
   }
 }
+
+/* Laptop / mid desktop: hairline-separated compact nav + legend */
+@media (min-width: 768px) and (max-width: 1920px) {
+  .controls {
+    gap: 0;
+    padding: 0;
+  }
+
+  .manageRow {
+    gap: 0.45rem 0.75rem;
+    padding: 0.4rem 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .navBtn {
+    width: 1.7rem;
+    height: 1.7rem;
+    font-size: 1rem;
+    border-radius: 7px;
+  }
+
+  .todayBtn {
+    padding: 0.22rem 0.55rem;
+    font-size: 0.76rem;
+    border-radius: 7px;
+  }
+
+  .rangeLabel {
+    font-size: 0.84rem;
+  }
+
+  .modeSwitch {
+    border-radius: 8px;
+  }
+
+  .modeBtn,
+  .modeActive {
+    padding: 0.28rem 0.6rem;
+    font-size: 0.76rem;
+  }
+
+  .legend {
+    gap: 0.4rem 0.75rem;
+    padding: 0.35rem 0 0.2rem;
+    font-size: 0.72rem;
+  }
+
+  .legendSwatch {
+    width: 0.65rem;
+    height: 0.65rem;
+  }
+
+  .filtersRow {
+    padding-top: 0.25rem;
+  }
+
+  .buildingFilter select {
+    padding: 0.22rem 0.45rem;
+    font-size: 0.76rem;
+  }
+}

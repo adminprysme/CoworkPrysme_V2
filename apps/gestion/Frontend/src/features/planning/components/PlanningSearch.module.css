@@ -114,20 +114,21 @@
   color: var(--color-text-muted);
 }
 
-/* Match compact filter pills on laptop / tablet landscape. */
-@media (min-width: 768px) and (max-width: 1600px) {
+/* Match compact filter pills on laptop / mid desktop. */
+@media (min-width: 768px) and (max-width: 1920px) {
   .field {
-    padding: 0.32rem 0.7rem;
-    border-radius: 10px;
-    gap: 0.4rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 8px;
+    gap: 0.35rem;
+    box-shadow: none;
   }
 
   .field input {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
   }
 
   .icon {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 }

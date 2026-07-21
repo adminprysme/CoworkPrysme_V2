@@ -189,7 +189,10 @@ export function PlanningFiltersBar({
       </div>
 
       <label className={styles.sortControl}>
-        <span className={styles.sortLabel}>Trier par</span>
+        <span className={styles.sortLabel}>
+          <span className={styles.sortLabelFull}>Trier par</span>
+          <span className={styles.sortLabelShort}>Trier</span>
+        </span>
         <select
           value={sort}
           onChange={(event) => onSortChange(event.target.value as PlanningSpaceSort)}

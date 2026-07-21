@@ -187,6 +187,10 @@
   white-space: nowrap;
 }
 
+.sortLabelShort {
+  display: none;
+}
+
 .sortControl select {
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -198,64 +202,102 @@
 }
 
 /*
- * Laptop / tablet landscape (≤1600): keep filters INLINE but denser.
- * Natural wrap of pill groups is OK — no popover / no extra click.
+ * Laptop / mid desktop (≤1920): one unified control band
+ * (search + filters + sort) — wrap only if width is truly tight.
  */
-@media (min-width: 768px) and (max-width: 1600px) {
+@media (min-width: 768px) and (max-width: 1920px) {
   .barWrap {
     align-items: center;
-    gap: 0.45rem 0.65rem;
+    flex-wrap: nowrap;
+    gap: 0.4rem 0.55rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface-muted);
   }
 
   .searchSlot {
-    flex: 0 1 16rem;
-    min-width: min(100%, 12rem);
-    max-width: 18rem;
+    flex: 0 1 12rem;
+    min-width: 8.5rem;
+    max-width: 14rem;
+  }
+
+  .desktopFilters {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.5rem;
+    min-width: 0;
   }
 
   .filtersBar {
-    gap: 0.4rem 0.65rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: 10px;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.45rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    min-width: 0;
   }
 
   .filterGroup {
-    gap: 0.3rem 0.4rem;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.3rem;
   }
 
   .filterGroupLabel {
-    font-size: 0.6rem;
-    letter-spacing: 0.06em;
+    font-size: 0.55rem;
+    letter-spacing: 0.05em;
+    color: var(--planning-slate, #3b6fa8);
   }
 
   .filterPills {
-    gap: 0.22rem;
+    flex-wrap: wrap;
+    gap: 0.15rem;
   }
 
   .filterPill {
-    padding: 0.18rem 0.5rem;
-    font-size: 0.74rem;
+    padding: 0.14rem 0.4rem;
+    font-size: 0.7rem;
   }
 
   .filterDivider {
-    font-size: 0.8rem;
+    align-self: stretch;
+    width: 1px;
+    min-height: 1.1rem;
+    margin: 0.08rem 0.05rem;
+    font-size: 0;
+    color: transparent;
+    background: var(--color-border);
   }
 
   .sortControl {
     margin-top: 0;
-    font-size: 0.74rem;
+    margin-left: auto;
+    font-size: 0.7rem;
+  }
+
+  .sortLabelFull {
+    display: none;
+  }
+
+  .sortLabelShort {
+    display: inline;
   }
 
   .sortControl select {
-    padding: 0.22rem 0.4rem;
-    font-size: 0.74rem;
+    padding: 0.14rem 0.3rem;
+    font-size: 0.7rem;
     border-radius: 6px;
+    max-width: 9.5rem;
   }
 
   .resetBtn {
     margin-top: 0;
-    padding: 0.2rem 0.45rem;
-    font-size: 0.72rem;
+    padding: 0.12rem 0.3rem;
+    font-size: 0.68rem;
   }
 }
 

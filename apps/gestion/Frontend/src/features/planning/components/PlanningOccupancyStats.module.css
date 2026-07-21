@@ -70,49 +70,69 @@
 }
 
 /*
- * Laptop / tablet (≤1600): denser KPI strip (~1.5–2× shorter than wide desktop).
- * Wide desktop (>1600) keeps the roomier cards above.
+ * Laptop / mid desktop (≤1920): compact pills beside the title.
  */
-@media (min-width: 768px) and (max-width: 1600px) {
+@media (min-width: 768px) and (max-width: 1920px) {
   .grid {
-    gap: 0.5rem;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
   }
 
   .card {
+    flex: 0 1 auto;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.65rem;
-    border-radius: 10px;
+    gap: 0.4rem;
+    padding: 0.28rem 0.55rem;
+    border-radius: 9px;
+    box-shadow: none;
+    max-width: 11.5rem;
   }
 
   .iconWrap {
-    width: 1.7rem;
-    height: 1.7rem;
-    border-radius: 8px;
+    width: 1.45rem;
+    height: 1.45rem;
+    border-radius: 7px;
   }
 
   .iconWrap svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
 
   .content {
-    gap: 0.05rem;
+    gap: 0;
+  }
+
+  .labelFull,
+  .periodFull {
+    display: none;
+  }
+
+  .labelShort,
+  .periodShort {
+    display: inline;
   }
 
   .label {
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     letter-spacing: 0.04em;
+    line-height: 1.15;
   }
 
   .period {
-    font-size: 0.62rem;
-    line-height: 1.2;
+    font-size: 0.58rem;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .value {
     margin-top: 0;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
+    line-height: 1.05;
   }
 }
 
@@ -133,6 +153,7 @@
     border-radius: 10px;
     box-shadow: none;
     min-width: 0;
+    max-width: none;
   }
 
   .iconWrap {

@@ -436,13 +436,10 @@ export function PlanningPage() {
               Vue d&apos;ensemble des réservations, disponibilités et occupation en temps réel.
             </p>
           </div>
+          <div className={styles.kpiStrip}>
+            <PlanningOccupancyStats occupancy={occupancy} loading={occupancyLoading} />
+          </div>
         </header>
-
-        <div className={styles.kpiStrip}>
-          <PlanningOccupancyStats occupancy={occupancy} loading={occupancyLoading} />
-        </div>
-
-        <div className={styles.separator} role="separator" />
 
         <PlanningToolbar
           mode={mode}
