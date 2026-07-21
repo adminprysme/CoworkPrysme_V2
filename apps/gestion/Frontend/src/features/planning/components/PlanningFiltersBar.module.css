@@ -4,6 +4,7 @@
   align-items: flex-start;
   gap: 0.65rem 0.85rem;
   flex-shrink: 0;
+  position: relative;
 }
 
 .searchSlot {
@@ -16,7 +17,7 @@
   display: contents;
 }
 
-.mobileActions {
+.filtersToggleWrap {
   display: none;
 }
 
@@ -196,18 +197,16 @@
   font-size: 0.82rem;
 }
 
-@media (max-width: 767px) {
+/*
+ * Compact chrome: mobile + small laptop (≤1366).
+ * Large desktop (>1366) keeps the always-visible filter strip.
+ */
+@media (max-width: 1366px) {
   .barWrap {
     align-items: center;
   }
 
-  .searchSlot {
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .mobileActions {
+  .filtersToggleWrap {
     display: flex;
     flex-shrink: 0;
   }
@@ -229,27 +228,9 @@
   .filtersSheet {
     display: flex;
     flex-direction: column;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
     z-index: 55;
-    max-height: min(85dvh, 40rem);
-    padding: 0.85rem 1rem 1.25rem;
-    border-radius: 16px 16px 0 0;
     background: var(--color-surface);
     box-shadow: var(--shadow-sm);
-    animation: planningFiltersSheetIn 0.22s ease;
-  }
-
-  @keyframes planningFiltersSheetIn {
-    from {
-      transform: translateY(110%);
-    }
-
-    to {
-      transform: translateY(0);
-    }
   }
 
   .filtersSheetHeader {
@@ -318,5 +299,71 @@
   .resetBtn {
     margin-top: 0;
     align-self: flex-start;
+  }
+}
+
+/* Small laptop / tablet landscape: anchored popover under the Filtres button. */
+@media (min-width: 768px) and (max-width: 1366px) {
+  .searchSlot {
+    flex: 1 1 auto;
+    min-width: min(100%, 12rem);
+    max-width: 20rem;
+  }
+
+  .filtersSheet {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    left: auto;
+    bottom: auto;
+    width: min(34rem, calc(100vw - 2rem));
+    max-height: min(70vh, 28rem);
+    padding: 0.85rem 1rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    animation: planningFiltersPopoverIn 0.16s ease;
+  }
+
+  @keyframes planningFiltersPopoverIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Phone: bottom sheet (unchanged interaction). */
+@media (max-width: 767px) {
+  .searchSlot {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .filtersSheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    max-height: min(85dvh, 40rem);
+    padding: 0.85rem 1rem 1.25rem;
+    border-radius: 16px 16px 0 0;
+    animation: planningFiltersSheetIn 0.22s ease;
+  }
+
+  @keyframes planningFiltersSheetIn {
+    from {
+      transform: translateY(110%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
   }
 }

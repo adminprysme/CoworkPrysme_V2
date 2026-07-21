@@ -159,3 +159,21 @@
     display: none;
   }
 }
+
+/* —— Small laptop (split-view + shorter header): free vertical room —— */
+@media (min-width: 1025px) and (max-width: 1366px) {
+  .topStack {
+    gap: 0.65rem;
+    padding: 0.85rem 1rem 0;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .detailPane {
+    /* Keep an independent scroll column once split is open. */
+    min-height: 0;
+    overflow: hidden;
+  }
+}

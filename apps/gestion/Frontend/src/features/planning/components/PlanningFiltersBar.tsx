@@ -214,7 +214,7 @@ export function PlanningFiltersBar({
     <div className={styles.barWrap}>
       {searchSlot ? <div className={styles.searchSlot}>{searchSlot}</div> : null}
 
-      <div className={styles.mobileActions}>
+      <div className={styles.filtersToggleWrap}>
         <button
           type="button"
           className={styles.filtersToggle}
