@@ -139,6 +139,9 @@ function ReservationEventBlock({
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [showLabel, setShowLabel] = useState(false);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchPointRef = useRef<{ x: number; y: number } | null>(null);
   const cancelled = reservation.status === "cancelled";
 
   useLayoutEffect(() => {
@@ -152,6 +155,33 @@ function ReservationEventBlock({
     observer.observe(el);
     return () => observer.disconnect();
   }, [leftPct, widthPct, lane]);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current != null) {
+        window.clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
+  function clearLongPressTimer() {
+    if (longPressTimerRef.current != null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
+  function startLongPress(clientX: number, clientY: number) {
+    clearLongPressTimer();
+    longPressTriggeredRef.current = false;
+    touchPointRef.current = { x: clientX, y: clientY };
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      longPressTimerRef.current = null;
+      onReservationHover?.(null, null);
+      onReservationContextMenu?.(reservation, clientX, clientY);
+    }, 480);
+  }
 
   const clientLabel = cancelled ? `Annulée · ${reservation.clientLabel}` : reservation.clientLabel;
 
@@ -177,7 +207,15 @@ function ReservationEventBlock({
         zIndex: selected ? 2 : cancelled ? 0 : 1,
       }}
       aria-label={`${cancelled ? "Annulée · " : ""}${reservation.reference} · ${reservation.clientLabel}`}
-      onClick={() => onReservationClick(reservation.id)}
+      onClick={() => {
+        // Long-press already opened the context menu — skip detail open.
+        if (longPressTriggeredRef.current) {
+          longPressTriggeredRef.current = false;
+          return;
+        }
+        onReservationHover?.(null, null);
+        onReservationClick(reservation.id);
+      }}
       onContextMenu={(event) => {
         // Maj + clic droit : laisser le menu natif du navigateur (pas de preventDefault).
         if (event.shiftKey) {
@@ -187,6 +225,31 @@ function ReservationEventBlock({
         event.stopPropagation();
         onReservationHover?.(null, null);
         onReservationContextMenu?.(reservation, event.clientX, event.clientY);
+      }}
+      onTouchStart={(event) => {
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        if (!touch) return;
+        startLongPress(touch.clientX, touch.clientY);
+      }}
+      onTouchMove={(event) => {
+        const origin = touchPointRef.current;
+        const touch = event.touches[0];
+        if (!origin || !touch) return;
+        const dx = Math.abs(touch.clientX - origin.x);
+        const dy = Math.abs(touch.clientY - origin.y);
+        if (dx > 10 || dy > 10) {
+          clearLongPressTimer();
+        }
+      }}
+      onTouchEnd={() => {
+        clearLongPressTimer();
+        touchPointRef.current = null;
+      }}
+      onTouchCancel={() => {
+        clearLongPressTimer();
+        touchPointRef.current = null;
+        longPressTriggeredRef.current = false;
       }}
       onMouseEnter={(event) => {
         onReservationHover?.(reservation, event.currentTarget.getBoundingClientRect(), spaceType);

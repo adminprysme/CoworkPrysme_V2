@@ -255,27 +255,33 @@ export function PlanningPage() {
       anchorRect: DOMRect | null,
       spaceType?: PlanningSpaceType,
     ) => {
-      if (contextMenu) {
+      // Hide tooltip whenever a blocking UI is open (context menu or detail panel).
+      if (contextMenu || selectedReservationId || selectedSpaceId) {
         return;
       }
       setHoveredReservation(reservation);
       setHoverAnchor(anchorRect);
       setHoverMeta(reservation ? { spaceType } : null);
     },
-    [contextMenu],
+    [contextMenu, selectedReservationId, selectedSpaceId],
   );
+
+  const clearReservationHover = useCallback(() => {
+    setHoveredReservation(null);
+    setHoverAnchor(null);
+    setHoverMeta(null);
+  }, []);
 
   const handleReservationContextMenu = useCallback(
     (reservation: PlanningCalendarReservation, clientX: number, clientY: number) => {
-      setHoveredReservation(null);
-      setHoverAnchor(null);
-      setHoverMeta(null);
+      clearReservationHover();
       setContextMenu({ reservation, x: clientX, y: clientY });
     },
-    [],
+    [clearReservationHover],
   );
 
   function openReservation(reservationId: string, tab: PlanningDrawerTab = "summary") {
+    clearReservationHover();
     setSelectedSpaceId(null);
     setSelectedReservationTab(tab);
     setSelectedReservationId(reservationId);
@@ -283,6 +289,7 @@ export function PlanningPage() {
   }
 
   function openSpaceHistory(spaceId: string) {
+    clearReservationHover();
     setSelectedReservationId(null);
     setSelectedSpaceId(spaceId);
     setContextMenu(null);
@@ -401,7 +408,7 @@ export function PlanningPage() {
         ) : null}
       </div>
 
-      {!contextMenu ? (
+      {!contextMenu && !splitOpen ? (
         <ReservationTooltip
           reservation={hoveredReservation}
           anchor={hoverAnchor}
