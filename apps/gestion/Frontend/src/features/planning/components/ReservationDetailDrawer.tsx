@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { IconCalendar, IconChevronDown, IconDoor, IconMail, IconPhone } from "@tabler/icons-react";
+import {
+  IconArrowsMaximize,
+  IconArrowsMinimize,
+  IconCalendar,
+  IconChevronDown,
+  IconDoor,
+  IconMail,
+  IconPhone,
+} from "@tabler/icons-react";
 import {
   formatAvailabilityWindow,
   formatServiceCustomAnswerValue,
@@ -41,6 +49,10 @@ interface ReservationDetailDrawerProps {
   onOpenReservation?: (reservationId: string) => void;
   /** Refresh calendar/occupancy after Manage mutations (restore, cancel, space change). */
   onReservationMutated?: () => void;
+  /** Desktop/laptop only: expand detail over the planning (manual overlay). */
+  fullscreen?: boolean;
+  showFullscreenToggle?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 function contactDisplayName(contact: PlanningContact): string {
@@ -61,6 +73,9 @@ export function ReservationDetailDrawer({
   initialTab = "summary",
   onOpenReservation,
   onReservationMutated,
+  fullscreen = false,
+  showFullscreenToggle = false,
+  onToggleFullscreen,
 }: ReservationDetailDrawerProps) {
   const titleId = useId();
   const [tab, setTab] = useState<TabId>(initialTab);
@@ -145,12 +160,30 @@ export function ReservationDetailDrawer({
             {detail?.reference ?? "…"}
           </h2>
         </div>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Retour">
-          <span className={styles.closeGlyph} aria-hidden="true">
-            ×
-          </span>
-          <span className={styles.closeLabel}>Retour</span>
-        </button>
+        <div className={styles.headerActions}>
+          {showFullscreenToggle && onToggleFullscreen ? (
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={onToggleFullscreen}
+              aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}
+              aria-pressed={fullscreen}
+              title={fullscreen ? "Quitter le plein écran" : "Plein écran"}
+            >
+              {fullscreen ? (
+                <IconArrowsMinimize size={18} stroke={1.7} aria-hidden />
+              ) : (
+                <IconArrowsMaximize size={18} stroke={1.7} aria-hidden />
+              )}
+            </button>
+          ) : null}
+          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Retour">
+            <span className={styles.closeGlyph} aria-hidden="true">
+              ×
+            </span>
+            <span className={styles.closeLabel}>Retour</span>
+          </button>
+        </div>
       </header>
 
       <div className={styles.tabs} role="tablist">

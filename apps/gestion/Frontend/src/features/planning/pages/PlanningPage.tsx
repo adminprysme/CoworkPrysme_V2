@@ -93,6 +93,7 @@ export function PlanningPage() {
     () => typeof window !== "undefined" && window.matchMedia(SPLIT_DESKTOP_MQ).matches,
   );
   const [splitDragging, setSplitDragging] = useState(false);
+  const [detailFullscreen, setDetailFullscreen] = useState(false);
   /** Monotonic id so overlapping calendar fetches cannot apply stale payloads. */
   const calendarLoadSeq = useRef(0);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -214,6 +215,12 @@ export function PlanningPage() {
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    if (!desktopSplit) {
+      setDetailFullscreen(false);
+    }
+  }, [desktopSplit]);
 
   useEffect(() => {
     if (!splitDragging) return;
@@ -364,6 +371,7 @@ export function PlanningPage() {
     setSelectedReservationId(null);
     setSelectedSpaceId(null);
     setSelectedReservationTab("summary");
+    setDetailFullscreen(false);
   }
 
   function resetFilters() {
@@ -428,7 +436,7 @@ export function PlanningPage() {
     handle.addEventListener("pointercancel", onUp);
   }
 
-  const showSplitHandle = splitOpen && desktopSplit;
+  const showSplitHandle = splitOpen && desktopSplit && !detailFullscreen;
   const workspaceStyle = showSplitHandle
     ? ({
         ["--planning-detail-ratio" as string]: `${(detailRatio * 100).toFixed(3)}%`,
@@ -436,7 +444,12 @@ export function PlanningPage() {
     : undefined;
 
   return (
-    <div className={styles.page} data-split={splitOpen ? "true" : undefined}>
+    <div
+      className={styles.page}
+      data-split={splitOpen ? "true" : undefined}
+      data-detail-fullscreen={detailFullscreen && desktopSplit ? "true" : undefined}
+    >
+      {" "}
       <div className={styles.topStack}>
         <header className={styles.header}>
           <div className={styles.headerIntro}>
@@ -479,7 +492,6 @@ export function PlanningPage() {
           searchSlot={<PlanningSearch onSelect={handleSearchSelect} />}
         />
       </div>
-
       <div
         ref={workspaceRef}
         className={styles.workspace}
@@ -519,7 +531,10 @@ export function PlanningPage() {
         ) : null}
 
         {selectedReservationId ? (
-          <div className={styles.detailPane}>
+          <div
+            className={styles.detailPane}
+            data-fullscreen={detailFullscreen && desktopSplit ? "true" : undefined}
+          >
             <ReservationDetailDrawer
               key={`${selectedReservationId}:${selectedReservationTab}`}
               reservationId={selectedReservationId}
@@ -527,6 +542,9 @@ export function PlanningPage() {
               onClose={closeDetailPanel}
               onOpenReservation={(id) => openReservation(id, "summary")}
               onReservationMutated={refreshAfterReservationMutation}
+              fullscreen={detailFullscreen}
+              showFullscreenToggle={desktopSplit}
+              onToggleFullscreen={() => setDetailFullscreen((current) => !current)}
             />
           </div>
         ) : selectedSpaceId ? (
@@ -539,7 +557,6 @@ export function PlanningPage() {
           </div>
         ) : null}
       </div>
-
       {!contextMenu && !splitOpen ? (
         <ReservationTooltip
           reservation={hoveredReservation}
@@ -547,7 +564,6 @@ export function PlanningPage() {
           meta={hoverMeta}
         />
       ) : null}
-
       <ReservationContextMenu
         state={contextMenu}
         onClose={() => setContextMenu(null)}

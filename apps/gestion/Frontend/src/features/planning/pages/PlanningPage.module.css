@@ -156,6 +156,33 @@
   .workspace[data-resizable="true"] .splitHandle:focus-visible {
     outline: none;
   }
+
+  /* Manual fullscreen overlay (same chrome as tablet, user-triggered). */
+  .detailPane[data-fullscreen="true"] {
+    position: fixed;
+    inset: 0;
+    z-index: var(--planning-overlay-z);
+    flex: none;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-left: 0;
+    border-top: 0;
+    box-shadow: var(--shadow-sm);
+    animation: planningDetailSlideIn 0.22s ease;
+  }
+
+  .page[data-detail-fullscreen="true"] .topStack,
+  .page[data-detail-fullscreen="true"] .calendarPane {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .page[data-detail-fullscreen="true"] .calendarPane {
+    overflow: hidden;
+  }
 }
 
 /* —— Tablet & mobile: detail becomes a full-screen overlay —— */

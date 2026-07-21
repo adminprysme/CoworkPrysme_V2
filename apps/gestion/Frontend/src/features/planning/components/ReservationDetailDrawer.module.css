@@ -111,6 +111,39 @@
   color: var(--color-text);
 }
 
+.headerActions {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.iconBtn:hover,
+.closeBtn:hover {
+  border-color: color-mix(in srgb, var(--color-secondary) 40%, var(--color-border));
+  color: var(--color-secondary);
+}
+
+.iconBtn:focus-visible,
+.closeBtn:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
 .closeLabel {
   display: none;
   font-size: 0.82rem;
@@ -134,6 +167,10 @@
 @media (max-width: 1024px) {
   .panel {
     border-left: 0;
+  }
+
+  .iconBtn {
+    display: none;
   }
 
   .closeBtn {
