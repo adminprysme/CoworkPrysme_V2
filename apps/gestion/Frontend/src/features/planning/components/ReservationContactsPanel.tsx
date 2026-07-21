@@ -562,7 +562,7 @@ export function ReservationContactsPanel({
               >
                 {activeMembersOnCardex.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {contactDisplayName(member)} — {member.email}
+                    {member.email}
                   </option>
                 ))}
               </select>
