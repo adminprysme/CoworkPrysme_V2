@@ -1,13 +1,16 @@
-import { compare, hash } from "bcryptjs";
+import { compare } from "bcryptjs";
 import type { ClientSession, Types } from "mongoose";
 
 import { connectMongo } from "../../connection.js";
-import { getCardexModel, getClientAccountModel } from "../client/index.js";
+import {
+  createClientAccount,
+  getCardexModel,
+  getClientAccountModel,
+  normalizeClientEmail,
+} from "../client/index.js";
 import { getInvoiceModel } from "../billing/invoice.schema.js";
 import {
-  EmailAlreadyRegisteredError,
   InvalidCredentialsError,
-  isDuplicateKeyError,
   LockMismatchError,
   LockNotAvailableError,
   ReservationOverlapError,
@@ -24,8 +27,6 @@ import {
   type ReservationDocument,
 } from "../reservation/reservation.schema.js";
 import { getSlotLockModel, type SlotLock } from "../reservation/slot-lock.schema.js";
-
-const BCRYPT_ROUNDS = 12;
 
 export interface ConfirmBookingCheckoutInput {
   lockId: Types.ObjectId | string;
@@ -66,10 +67,6 @@ export interface ConfirmBookingCheckoutResult {
   cardexId: Types.ObjectId;
   isNewAccount: boolean;
   clientEmail: string;
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }
 
 function lockMatchesRequest(
@@ -141,7 +138,7 @@ async function resolveClientAccount(
   session: ClientSession,
 ): Promise<{ clientAccountId: Types.ObjectId; cardexId?: Types.ObjectId; isNewAccount: boolean }> {
   const ClientAccount = await getClientAccountModel();
-  const normalizedEmail = normalizeEmail(input.email);
+  const normalizedEmail = normalizeClientEmail(input.email);
 
   if (input.accountMode === "existing") {
     const existing = await ClientAccount.findOne({
@@ -167,52 +164,20 @@ async function resolveClientAccount(
     };
   }
 
-  const passwordHash = await hash(input.password, BCRYPT_ROUNDS);
+  const created = await createClientAccount({
+    email: input.email,
+    password: input.password,
+    role: "owner",
+    privacyPolicyVersion: input.privacyPolicyVersion,
+    marketingCommunicationsAccepted: input.marketingCommunicationsAccepted,
+    now,
+    session,
+  });
 
-  const existingEmail = await ClientAccount.findOne({ email: normalizedEmail })
-    .session(session)
-    .select({ _id: 1 })
-    .lean()
-    .exec();
-  if (existingEmail) {
-    throw new EmailAlreadyRegisteredError();
-  }
-
-  try {
-    const [created] = await ClientAccount.create(
-      [
-        {
-          email: normalizedEmail,
-          passwordHash,
-          consent: {
-            privacyPolicyVersion: input.privacyPolicyVersion ?? "unknown",
-            acceptedAt: now,
-          },
-          marketingConsent: {
-            accepted: input.marketingCommunicationsAccepted === true,
-            ...(input.marketingCommunicationsAccepted === true ? { acceptedAt: now } : {}),
-          },
-          status: "active",
-          role: "owner",
-        },
-      ],
-      { session },
-    );
-
-    if (!created) {
-      throw new Error("Client account creation failed within transaction");
-    }
-
-    return {
-      clientAccountId: created._id,
-      isNewAccount: true,
-    };
-  } catch (error) {
-    if (isDuplicateKeyError(error)) {
-      throw new EmailAlreadyRegisteredError();
-    }
-    throw error;
-  }
+  return {
+    clientAccountId: created.clientAccountId,
+    isNewAccount: true,
+  };
 }
 
 async function ensureCardex(
@@ -417,7 +382,7 @@ export async function confirmBookingCheckout(
         clientAccountId: account.clientAccountId,
         cardexId,
         isNewAccount: account.isNewAccount,
-        clientEmail: normalizeEmail(input.email),
+        clientEmail: normalizeClientEmail(input.email),
       };
     });
 
@@ -438,7 +403,7 @@ export async function verifyClientAccountCredentials(
 ): Promise<boolean> {
   await connectMongo();
   const ClientAccount = await getClientAccountModel();
-  const normalizedEmail = normalizeEmail(email);
+  const normalizedEmail = normalizeClientEmail(email);
   const account = await ClientAccount.findOne({ email: normalizedEmail, status: "active" })
     .lean()
     .exec();
@@ -454,7 +419,7 @@ export async function verifyClientAccountCredentials(
 export async function clientAccountEmailExists(email: string): Promise<boolean> {
   await connectMongo();
   const ClientAccount = await getClientAccountModel();
-  const normalizedEmail = normalizeEmail(email);
+  const normalizedEmail = normalizeClientEmail(email);
   const account = await ClientAccount.findOne({ email: normalizedEmail, status: "active" })
     .select({ _id: 1 })
     .lean()
