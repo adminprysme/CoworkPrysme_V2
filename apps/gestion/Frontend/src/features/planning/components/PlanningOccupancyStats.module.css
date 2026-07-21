@@ -44,6 +44,11 @@
   color: var(--color-text-muted);
 }
 
+.labelShort,
+.periodShort {
+  display: none;
+}
+
 .period {
   margin: 0;
   font-size: 0.74rem;
@@ -64,10 +69,9 @@
   color: var(--color-text-muted);
 }
 
-/* Tablet: keep a readable 3-up or wrap gently without stacking to 1 column. */
+/* Tablet: keep a readable 3-up without stacking. */
 @media (max-width: 1024px) and (min-width: 768px) {
   .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.65rem;
   }
 
@@ -86,32 +90,59 @@
   }
 }
 
-/* Mobile: horizontal swipe carousel instead of a tall vertical stack. */
+/* Mobile: equal 3-column strip — no horizontal scroll, no clipping. */
 @media (max-width: 767px) {
   .grid {
-    display: flex;
-    gap: 0.65rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: 0.15rem;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    padding-bottom: 0.15rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    overflow: visible;
   }
 
   .card {
-    flex: 0 0 min(78vw, 16.5rem);
-    scroll-snap-align: start;
-    padding: 0.75rem 0.85rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+    padding: 0.45rem 0.4rem;
+    border-radius: 10px;
+    box-shadow: none;
+    min-width: 0;
   }
 
   .iconWrap {
-    width: 2.25rem;
-    height: 2.25rem;
+    display: none;
+  }
+
+  .label {
+    font-size: 0.58rem;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .labelFull,
+  .periodFull {
+    display: none;
+  }
+
+  .labelShort,
+  .periodShort {
+    display: inline;
+  }
+
+  .period {
+    font-size: 0.58rem;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .value {
-    font-size: 1.35rem;
+    margin-top: 0.1rem;
+    font-size: 1.05rem;
+    line-height: 1.05;
   }
 }
