@@ -82,7 +82,8 @@ export class MailService {
       return { dryRun: false, messageId, response };
     } catch (error) {
       this.logger.error(`Failed to send email to ${input.to}: ${String(error)}`);
-      throw error;
+      // Do not fail the business mutation (cancel/refund) when SMTP rejects.
+      return { dryRun: false, messageId: undefined, response: `error:${String(error)}` };
     }
   }
 }
