@@ -182,6 +182,14 @@ export function ReservationContactsPanel({
     [detail.contacts],
   );
 
+  /** Owner first; members keep API relative order (email / creation). */
+  const sortedContacts = useMemo(() => {
+    return [...detail.contacts].sort((a, b) => {
+      const rank = (role: string) => (role === "owner" ? 0 : 1);
+      return rank(a.role) - rank(b.role);
+    });
+  }, [detail.contacts]);
+
   const typedEmail = normalizeEmail(email);
   const hasPendingForTyped = typedEmail.length > 0 && pendingEmails.has(typedEmail);
   const hasContactForTyped = typedEmail.length > 0 && contactEmails.has(typedEmail);
@@ -663,7 +671,7 @@ export function ReservationContactsPanel({
           <p className={styles.muted}>Aucun compte client lié.</p>
         ) : (
           <ul className={styles.list}>
-            {detail.contacts.map((contact) => {
+            {sortedContacts.map((contact) => {
               const displayName = contactDisplayName(contact);
               const phone = contact.phone?.trim();
               const isOwnerActive =

@@ -755,6 +755,11 @@ export class PlanningService {
         : [];
 
     accounts.sort((a, b) => {
+      // Owner always first in Contacts (independent of creation order / reservation link).
+      const ownerRank = (role: string | undefined) => (role === "owner" ? 0 : 1);
+      const byOwner = ownerRank(a.role) - ownerRank(b.role);
+      if (byOwner !== 0) return byOwner;
+
       const viaA = contactIds.get(String(a._id));
       const viaB = contactIds.get(String(b._id));
       if (viaA === "reservation" && viaB !== "reservation") {
