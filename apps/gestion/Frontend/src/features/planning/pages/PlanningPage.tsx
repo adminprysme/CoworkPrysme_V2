@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   PlanningBuildingOption,
   PlanningCalendarReservation,
@@ -70,6 +70,8 @@ export function PlanningPage() {
   const [withReservationsOnly, setWithReservationsOnly] = useState(false);
   const [showCancelled, setShowCancelled] = useState(false);
   const [spaceSort, setSpaceSort] = useState<PlanningSpaceSort>("name_asc");
+  /** Monotonic id so overlapping calendar fetches cannot apply stale payloads. */
+  const calendarLoadSeq = useRef(0);
 
   const { from: displayFrom, to: displayTo } = useMemo(
     () => rangeForView(anchor, mode),
@@ -86,6 +88,7 @@ export function PlanningPage() {
 
   const load = useCallback(
     async (options?: { silent?: boolean }) => {
+      const requestId = ++calendarLoadSeq.current;
       if (!options?.silent) {
         setLoading(true);
         setError(null);
@@ -96,18 +99,26 @@ export function PlanningPage() {
           to: apiTo.toISOString(),
           buildingId: buildingId === "all" ? undefined : buildingId,
         });
+        // Drop stale responses — cancel→restore (or rapid filter changes) can
+        // otherwise re-apply an older `cancelled` payload after a newer one.
+        if (requestId !== calendarLoadSeq.current) {
+          return;
+        }
         setData(payload);
         setBuildingsCatalog((current) => {
           if (current.length > 0) return current;
           return payload.buildings;
         });
       } catch (err) {
+        if (requestId !== calendarLoadSeq.current) {
+          return;
+        }
         if (!options?.silent) {
           setError(err instanceof Error ? err.message : "Impossible de charger le planning");
           setData(null);
         }
       } finally {
-        if (!options?.silent) {
+        if (!options?.silent && requestId === calendarLoadSeq.current) {
           setLoading(false);
         }
       }

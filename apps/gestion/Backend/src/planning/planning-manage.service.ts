@@ -561,6 +561,12 @@ export class PlanningManageService {
 
     const auditDiff: Record<string, { before: unknown; after: unknown }> = {
       status: { before: previousStatus, after: "cancelled" },
+      // Always stamp spaceId so space-history audit filters can scope cancels
+      // the same way as restore / space-change / date-change manage actions.
+      spaceId: {
+        before: String(reservation.spaceId),
+        after: String(reservation.spaceId),
+      },
       acceptedRefundCents: { before: 0, after: accepted },
       suggestedRefundCents: {
         before: suggestion.suggestedRefundCents,

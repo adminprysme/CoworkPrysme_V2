@@ -930,25 +930,49 @@ export class PlanningService {
           companyName: cardex?.company?.legalName,
         });
 
-        if (status === "cancelled" && typeFilter.has("cancellation")) {
-          const cancelEntry = [...(reservation.statusHistory ?? [])]
-            .reverse()
-            .find((h) => h.to === "cancelled");
-          events.push({
-            id: `cancel-${String(reservation._id)}`,
-            type: "cancellation",
-            at: toIso(cancelEntry?.at ?? reservation.endAt),
-            startAt: toIso(reservation.startAt),
-            endAt: toIso(reservation.endAt),
-            title: clientLabel,
-            detail: cancelEntry?.reason,
-            clientLabel,
-            reservationId: String(reservation._id),
-            reservationReference: reservation.reference,
-            reservationStatus: status,
-            paymentStatus,
-          });
-        } else if (status !== "cancelled" && typeFilter.has("reservation")) {
+        // Cancellation events come from statusHistory transitions, not from the
+        // *current* status — otherwise a restored reservation would erase past
+        // cancellations from the timeline.
+        if (typeFilter.has("cancellation")) {
+          const cancelEntries = (reservation.statusHistory ?? []).filter(
+            (entry) => entry.to === "cancelled",
+          );
+          if (cancelEntries.length === 0 && status === "cancelled") {
+            events.push({
+              id: `cancel-${String(reservation._id)}`,
+              type: "cancellation",
+              at: toIso(reservation.endAt),
+              startAt: toIso(reservation.startAt),
+              endAt: toIso(reservation.endAt),
+              title: clientLabel,
+              clientLabel,
+              reservationId: String(reservation._id),
+              reservationReference: reservation.reference,
+              reservationStatus: status,
+              paymentStatus,
+            });
+          } else {
+            for (const [index, cancelEntry] of cancelEntries.entries()) {
+              events.push({
+                id: `cancel-${String(reservation._id)}-${index}-${toIso(cancelEntry.at)}`,
+                type: "cancellation",
+                at: toIso(cancelEntry.at),
+                startAt: toIso(reservation.startAt),
+                endAt: toIso(reservation.endAt),
+                title: clientLabel,
+                detail: cancelEntry.reason,
+                clientLabel,
+                reservationId: String(reservation._id),
+                reservationReference: reservation.reference,
+                // Current reservation status (e.g. confirmed after restore), not
+                // the historical cancel snapshot — the event type carries "cancellation".
+                reservationStatus: status,
+                paymentStatus,
+              });
+            }
+          }
+        }
+        if (status !== "cancelled" && typeFilter.has("reservation")) {
           events.push({
             id: `res-${String(reservation._id)}`,
             type: "reservation",

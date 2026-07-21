@@ -36,6 +36,8 @@ Emails manage : ne pas afficher de montants non réellement appliqués. Historiq
 
 - **404 sur previews date/party/transfer** : cause = process gestion-api orphelin (dist recompilé, process pas redémarré) — pas une route manquante. Vigilance connue : vérifier PID vs mtime du `dist` avant de conclure « route absente ».
 - **Recalcul date-change / paliers tarifaires** : bug confirmé puis corrigé (`c58e2e3`) — plus d’extrapolation linéaire du `durationClass` d’origine ; `resolveSpaceStayPricing` choisit le tarif applicable le moins cher (weekly si ≥ 7 jours Paris, monthly si ≥ 28).
+- **Booking vitrine paliers** : `POST /booking/price` + confirm atomique alignés sur `resolveSpaceStayPricing` (`17253d1`).
+- **Restauration vs filtre/style annulé** : calendrier se base bien sur `reservation.status` live (pas de `wasCancelled` dénormalisé). Bugs corrigés : (1) historique espace n’émettait les annulations que si le statut courant était encore `cancelled` — une restauration effaçait l’entrée d’annulation ; (2) `PlanningPage.load` sans séquençage pouvait réappliquer un payload `cancelled` périmé après restore.
 - **Preuves `proof.json` de calcul** (helpers shared) ≠ preuve d’intégration HTTP des routes preview.
 
 ### Points encore ouverts (explicitement notés, ne pas inventer le reste du backlog)
@@ -71,7 +73,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. Historiq
 10. `fadf140` refactor(gestion): reorganize Planning Manage tab into accordion sections
 11. `38809c0` feat(gestion): add Planning Manage date, party-size and contact-transfer flows
 12. `c58e2e3` fix(gestion): select tariff tier on Planning date-change reprice
-13. (à jour après commit booking) fix(vitrine): select tariff tier on booking price via resolveSpaceStayPricing
+13. `17253d1` fix(vitrine): select tariff tier on booking price via resolveSpaceStayPricing
 
 Preuves utiles (tmp, non forcément toutes commitées) :  
 `apps/gestion/Backend/tmp/manage-tariff-tier-proof/`, `manage-dates-calc-proof/`, `manage-preview-http-proof/`,  
