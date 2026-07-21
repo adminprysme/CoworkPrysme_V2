@@ -83,15 +83,28 @@
 
 .dropdown {
   position: relative;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
+}
+
+.dropdownType {
+  width: 11.5rem;
+}
+
+.dropdownStatus {
+  width: 12.5rem;
+}
+
+.dropdownDisplay {
+  width: 14.5rem;
 }
 
 .dropdownTrigger {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.4rem 0.65rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -117,9 +130,12 @@
   align-items: baseline;
   gap: 0.35rem;
   min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .dropdownGroup {
+  flex-shrink: 0;
   color: var(--planning-slate, #3b6fa8);
   font-size: 0.72rem;
   font-weight: 700;
@@ -134,6 +150,7 @@
 }
 
 .dropdownValue {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

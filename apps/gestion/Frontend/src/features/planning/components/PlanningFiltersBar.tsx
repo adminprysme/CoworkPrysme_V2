@@ -136,7 +136,7 @@ export function PlanningFiltersBar({
   const filtersBody = (
     <>
       <div className={styles.filtersBar} role="group" aria-label="Filtres du planning">
-        <div className={styles.dropdown}>
+        <div className={[styles.dropdown, styles.dropdownType].join(" ")}>
           <button
             type="button"
             className={styles.dropdownTrigger}
@@ -181,7 +181,7 @@ export function PlanningFiltersBar({
           ) : null}
         </div>
 
-        <div className={styles.dropdown}>
+        <div className={[styles.dropdown, styles.dropdownStatus].join(" ")}>
           <button
             type="button"
             className={styles.dropdownTrigger}
@@ -229,7 +229,7 @@ export function PlanningFiltersBar({
           ) : null}
         </div>
 
-        <div className={styles.dropdown}>
+        <div className={[styles.dropdown, styles.dropdownDisplay].join(" ")}>
           <button
             type="button"
             className={styles.dropdownTrigger}
