@@ -649,6 +649,13 @@ export class PlanningService {
 
     let refundStatus: PlanningReservationDetail["refundStatus"] = "none";
     let stripeRefundId: string | undefined;
+    let paymentMethod: PlanningReservationDetail["paymentMethod"];
+    if (
+      reservation.awaitingPaymentMethod === "card" ||
+      reservation.awaitingPaymentMethod === "bank_transfer"
+    ) {
+      paymentMethod = reservation.awaitingPaymentMethod;
+    }
     if (invoice?._id) {
       const latestRefund = await Payment.findOne({
         invoiceId: invoice._id,
@@ -667,6 +674,21 @@ export class PlanningService {
           refundStatus = "manual_succeeded";
         } else {
           refundStatus = "succeeded";
+        }
+      }
+      if (!paymentMethod) {
+        const latestInbound = await Payment.findOne({
+          invoiceId: invoice._id,
+          kind: { $ne: "refund" },
+          method: { $in: ["card", "transfer"] },
+        })
+          .sort({ createdAt: -1 })
+          .lean()
+          .exec();
+        if (latestInbound?.method === "card") {
+          paymentMethod = "card";
+        } else if (latestInbound?.method === "transfer") {
+          paymentMethod = "bank_transfer";
         }
       }
     }
@@ -869,6 +891,7 @@ export class PlanningService {
           }
         : null,
       awaitingPaymentMethod: reservation.awaitingPaymentMethod,
+      ...(paymentMethod ? { paymentMethod } : {}),
       awaitingPaymentExpiresAt: reservation.awaitingPaymentExpiresAt
         ? toIso(reservation.awaitingPaymentExpiresAt)
         : undefined,

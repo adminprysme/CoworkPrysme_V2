@@ -149,10 +149,15 @@ export function ReservationDetailDrawer({
           </p>
           {detail ? (
             <div className={styles.headerBadges}>
-              <span className={styles.statusChip}>
+              <span
+                className={styles.reservationStatusChip}
+                data-status={detail.status}
+                title="Statut réservation"
+              >
+                <span className={styles.badgeKind}>Réservation</span>
                 {RESERVATION_STATUS_LABELS[detail.status] ?? detail.status}
               </span>
-              <PaymentStatusBadge status={detail.paymentStatus} />
+              <PaymentStatusBadge status={detail.paymentStatus} showKindLabel />
               {detail.refundStatus && detail.refundStatus !== "none" ? (
                 <span className={styles.statusChip}>
                   {detail.refundStatus === "pending"
@@ -400,6 +405,14 @@ export function ReservationDetailDrawer({
               <p className={settled ? styles.paymentSettled : styles.paymentOpen}>
                 Payé {formatCentsEur(paidTotal)} · Reste dû {formatCentsEur(balanceDue)}
               </p>
+              {detail.paymentMethod || detail.awaitingPaymentMethod ? (
+                <p className={styles.paymentMethodLine}>
+                  Moyen de paiement ·{" "}
+                  {(detail.paymentMethod ?? detail.awaitingPaymentMethod) === "card"
+                    ? "Carte"
+                    : "Virement bancaire"}
+                </p>
+              ) : null}
             </section>
           </div>
         ) : null}

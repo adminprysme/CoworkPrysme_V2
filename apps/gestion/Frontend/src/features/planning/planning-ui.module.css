@@ -14,6 +14,7 @@
 .paymentBadge {
   display: inline-flex;
   align-items: center;
+  gap: 0.3rem;
   max-width: 100%;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
@@ -22,4 +23,18 @@
   font-weight: 650;
   white-space: nowrap;
   line-height: 1.2;
+}
+
+.badgeKind {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+.badgeKind::after {
+  content: "·";
+  margin-left: 0.28rem;
+  opacity: 0.7;
 }

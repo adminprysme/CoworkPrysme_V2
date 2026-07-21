@@ -26,19 +26,24 @@ export function clientInitials(label: string): string {
 export function PaymentStatusBadge({
   status,
   className,
+  showKindLabel = false,
 }: {
   status: PlanningPaymentStatus;
   className?: string;
+  /** Prefix with "Paiement ·" to distinguish from reservation status chips. */
+  showKindLabel?: boolean;
 }) {
   return (
     <span
       className={[styles.paymentBadge, className].filter(Boolean).join(" ")}
+      title="Statut paiement"
       style={{
         background: `color-mix(in srgb, ${PAYMENT_STATUS_COLORS[status]} 22%, transparent)`,
         color: PAYMENT_STATUS_COLORS[status],
         borderColor: `color-mix(in srgb, ${PAYMENT_STATUS_COLORS[status]} 45%, transparent)`,
       }}
     >
+      {showKindLabel ? <span className={styles.badgeKind}>Paiement</span> : null}
       {PAYMENT_STATUS_LABELS[status]}
     </span>
   );

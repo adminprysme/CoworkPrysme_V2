@@ -78,16 +78,65 @@
   color: var(--color-text-muted);
 }
 
+.reservationStatusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #5b8fc4 50%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 20%, var(--color-surface));
+  font-size: 0.68rem;
+  font-weight: 650;
+  /* Mix accent into --color-text so light/dark both keep contrast. */
+  color: color-mix(in srgb, #5b8fc4 42%, var(--color-text));
+}
+
+.reservationStatusChip[data-status="cancelled"],
+.reservationStatusChip[data-status="no_show"] {
+  border-color: color-mix(in srgb, #d97706 50%, var(--color-border));
+  background: color-mix(in srgb, #d97706 20%, var(--color-surface));
+  color: color-mix(in srgb, #d97706 38%, var(--color-text));
+}
+
+.reservationStatusChip[data-status="confirmed"],
+.reservationStatusChip[data-status="completed"] {
+  border-color: color-mix(in srgb, #34d399 50%, var(--color-border));
+  background: color-mix(in srgb, #34d399 18%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.reservationStatusChip[data-status="awaiting_payment"],
+.reservationStatusChip[data-status="pending"] {
+  border-color: color-mix(in srgb, #5b8fc4 50%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 20%, var(--color-surface));
+  color: color-mix(in srgb, #5b8fc4 42%, var(--color-text));
+}
+
+.badgeKind {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.badgeKind::after {
+  content: "·";
+  margin-left: 0.28rem;
+  opacity: 0.7;
+}
+
 .emailFailChip {
   display: inline-flex;
   align-items: center;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #b45309 45%, var(--color-border));
-  background: color-mix(in srgb, #b45309 12%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, #f59e0b 50%, var(--color-border));
+  background: color-mix(in srgb, #f59e0b 18%, var(--color-surface));
   font-size: 0.68rem;
   font-weight: 650;
-  color: #92400e;
+  color: color-mix(in srgb, #f59e0b 35%, var(--color-text));
 }
 
 .kicker {
@@ -477,6 +526,13 @@
 
 .paymentOpen {
   color: var(--color-text-muted);
+}
+
+.paymentMethodLine {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text);
+  font-weight: 550;
 }
 
 .muted {

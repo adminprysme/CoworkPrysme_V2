@@ -170,6 +170,11 @@ export const PlanningReservationDetailSchema = z.object({
     })
     .nullable(),
   awaitingPaymentMethod: z.enum(["card", "bank_transfer"]).optional(),
+  /**
+   * Chosen / recorded payment channel for staff UI (card vs bank transfer).
+   * Prefer latest matched Payment.method; fall back to awaitingPaymentMethod.
+   */
+  paymentMethod: z.enum(["card", "bank_transfer"]).optional(),
   awaitingPaymentExpiresAt: z.string().datetime().optional(),
   contacts: z.array(PlanningContactSchema),
   createdChannel: z.enum(["online", "staff", "phone"]),
