@@ -1,5 +1,3 @@
-import type { PlanningViewMode } from "@coworkprysme/shared";
-
 /** Detail pane share of the split workspace (0–1). Default = 30% detail / 70% planning. */
 export const PLANNING_SPLIT_DEFAULT_DETAIL_RATIO = 0.3;
 
@@ -9,33 +7,17 @@ export const PLANNING_SPLIT_STORAGE_KEY = "coworkprysme.planning.splitDetailRati
 export const PLANNING_SPLIT_DETAIL_MIN_PX = 320;
 
 /**
- * Absolute floor for the planning column (ESPACE label + a couple of day cols).
- * Dynamic track mins (see `planningCalendarMinPx`) usually raise this further.
+ * Planning column floor: sticky ESPACE label + ~3 day columns.
+ * The calendar already has its own horizontal scroll for denser views (month);
+ * we must NOT reserve width for every day column of the active view.
  */
-export const PLANNING_SPLIT_CALENDAR_MIN_PX = 300;
+export const PLANNING_SPLIT_CALENDAR_MIN_PX = 400;
 
-/** Hard cap: detail must not claim more than this share of the workspace. */
-export const PLANNING_SPLIT_DETAIL_MAX_RATIO = 0.55;
-
-/** Matches PlanningCalendar sticky label ceiling (`clamp(120px, 16vw, 180px)`). */
-const PLANNING_LABEL_MIN_PX = 180;
-
-/** Small gutter for the split handle / borders so track mins stay honest. */
-const PLANNING_SPLIT_GUTTER_PX = 10;
-
-const COL_MIN_WIDTH: Record<PlanningViewMode, number> = {
-  month: 40,
-  week: 72,
-  day: 48,
-};
+/** Hard cap on detail share — same for Jour / Semaine / Mois. */
+export const PLANNING_SPLIT_DETAIL_MAX_RATIO = 0.65;
 
 const RATIO_FLOOR = 0.18;
 const RATIO_CEIL = PLANNING_SPLIT_DETAIL_MAX_RATIO;
-
-export function planningCalendarMinPx(mode: PlanningViewMode, columnCount: number): number {
-  const cols = Math.max(1, columnCount);
-  return PLANNING_LABEL_MIN_PX + cols * COL_MIN_WIDTH[mode] + PLANNING_SPLIT_GUTTER_PX;
-}
 
 export function readStoredDetailRatio(): number {
   try {
@@ -57,17 +39,12 @@ export function persistDetailRatio(ratio: number): void {
   }
 }
 
-export function clampDetailRatio(
-  ratio: number,
-  workspaceWidthPx?: number,
-  calendarMinPx: number = PLANNING_SPLIT_CALENDAR_MIN_PX,
-): number {
+export function clampDetailRatio(ratio: number, workspaceWidthPx?: number): number {
   let min = RATIO_FLOOR;
   let max = RATIO_CEIL;
   if (workspaceWidthPx && workspaceWidthPx > 0) {
-    const calendarFloor = Math.max(PLANNING_SPLIT_CALENDAR_MIN_PX, calendarMinPx);
     min = Math.max(min, PLANNING_SPLIT_DETAIL_MIN_PX / workspaceWidthPx);
-    max = Math.min(max, 1 - calendarFloor / workspaceWidthPx);
+    max = Math.min(max, 1 - PLANNING_SPLIT_CALENDAR_MIN_PX / workspaceWidthPx);
     if (min > max) {
       return PLANNING_SPLIT_DEFAULT_DETAIL_RATIO;
     }

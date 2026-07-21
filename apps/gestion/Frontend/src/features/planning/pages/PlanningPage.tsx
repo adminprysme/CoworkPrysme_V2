@@ -44,7 +44,6 @@ import {
 import { sortPlanningSpaces, type PlanningSpaceSort } from "../planning-sort.js";
 import {
   addDays,
-  buildTimeColumns,
   formatRangeLabel,
   rangeForView,
   shiftAnchor,
@@ -54,7 +53,6 @@ import {
   clampDetailRatio,
   persistDetailRatio,
   PLANNING_SPLIT_DEFAULT_DETAIL_RATIO,
-  planningCalendarMinPx,
   readStoredDetailRatio,
 } from "../planning-split.js";
 import styles from "./PlanningPage.module.css";
@@ -112,12 +110,6 @@ export function PlanningPage() {
     return { apiFrom: dayStart, apiTo: addDays(dayStart, 1) };
   }, [anchor, mode, displayFrom, displayTo]);
   const rangeLabel = useMemo(() => formatRangeLabel(anchor, mode), [anchor, mode]);
-  const calendarMinPx = useMemo(() => {
-    const columns = buildTimeColumns(displayFrom, displayTo, mode);
-    return planningCalendarMinPx(mode, columns.length);
-  }, [displayFrom, displayTo, mode]);
-  const calendarMinPxRef = useRef(calendarMinPx);
-  calendarMinPxRef.current = calendarMinPx;
 
   const load = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -314,12 +306,12 @@ export function PlanningPage() {
     if (!splitOpen || !desktopSplit) return;
     function onResize() {
       const width = workspaceRef.current?.getBoundingClientRect().width;
-      setDetailRatio((current) => clampDetailRatio(current, width, calendarMinPxRef.current));
+      setDetailRatio((current) => clampDetailRatio(current, width));
     }
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [splitOpen, desktopSplit, calendarMinPx]);
+  }, [splitOpen, desktopSplit]);
 
   const handleReservationHover = useCallback(
     (
@@ -396,7 +388,7 @@ export function PlanningPage() {
 
   function applyDetailRatio(next: number, workspaceWidth?: number) {
     const width = workspaceWidth ?? workspaceRef.current?.getBoundingClientRect().width;
-    const clamped = clampDetailRatio(next, width, calendarMinPxRef.current);
+    const clamped = clampDetailRatio(next, width);
     setDetailRatio(clamped);
     return clamped;
   }
