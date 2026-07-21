@@ -14,6 +14,7 @@ import {
   PlanningCancelRequestSchema,
   PlanningContactTransferRequestSchema,
   PlanningDateChangeRequestSchema,
+  PlanningManualRefundRequestSchema,
   PlanningPartySizeRequestSchema,
   PlanningRestoreRequestSchema,
   PlanningSpaceChangeRequestSchema,
@@ -112,6 +113,20 @@ export class PlanningController {
       throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
     }
     return this.planningManage.confirmCancel(profile, id, parsed.data);
+  }
+
+  @Post("reservations/:id/manage/cancel/manual-refund")
+  async manageManualRefund(
+    @Req() request: Request,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = PlanningManualRefundRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Payload invalide");
+    }
+    return this.planningManage.confirmManualRefund(profile, id, parsed.data);
   }
 
   @Get("reservations/:id/manage/restore/preview")

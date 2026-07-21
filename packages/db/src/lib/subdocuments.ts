@@ -521,6 +521,12 @@ export interface ReconciliationInfo {
   qontoTxId?: string;
   /** Stripe PaymentIntent id — unique sparse index for webhook idempotence. */
   stripePaymentIntentId?: string;
+  /** Stripe Refund id (`re_…`) — unique sparse index for refund webhook idempotence. */
+  stripeRefundId?: string;
+  /** Client-supplied Stripe Idempotency-Key for refunds.create (unique sparse). */
+  idempotencyKey?: string;
+  /** Staff note when marking a manual (off-Stripe) transfer refund. */
+  manualNote?: string;
 }
 
 export const reconciliationSchema = new Schema<ReconciliationInfo>(
@@ -528,6 +534,9 @@ export const reconciliationSchema = new Schema<ReconciliationInfo>(
     status: { type: String, required: true },
     qontoTxId: { type: String },
     stripePaymentIntentId: { type: String },
+    stripeRefundId: { type: String },
+    idempotencyKey: { type: String },
+    manualNote: { type: String },
   },
   { _id: false },
 );

@@ -247,6 +247,8 @@ export function ReservationManagePanel({
   const [customRefundInput, setCustomRefundInput] = useState("");
   const [refundDeviationReason, setRefundDeviationReason] = useState("");
   const [confirmRefund, setConfirmRefund] = useState(false);
+  const [markManualRefundNow, setMarkManualRefundNow] = useState(false);
+  const [manualRefundNote, setManualRefundNote] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
@@ -456,7 +458,13 @@ export function ReservationManagePanel({
     if (parsed == null) {
       return null;
     }
-    if (parsed > cancelPreview.paidTotalCents) {
+    const ceiling =
+      cancelPreview.refundExecution === "stripe_card"
+        ? cancelPreview.stripeRefundableCents
+        : cancelPreview.refundExecution === "manual_transfer"
+          ? cancelPreview.transferRefundableCents
+          : cancelPreview.paidTotalCents;
+    if (parsed > ceiling) {
       return null;
     }
     return parsed;
@@ -505,6 +513,14 @@ export function ReservationManagePanel({
         acceptedRefundCents,
         refundDeviationReason:
           refundMode === "suggested" ? undefined : refundDeviationReason.trim(),
+        markManualRefundNow:
+          cancelPreview.refundExecution === "manual_transfer" && markManualRefundNow
+            ? true
+            : undefined,
+        manualRefundNote:
+          cancelPreview.refundExecution === "manual_transfer" && markManualRefundNow
+            ? manualRefundNote.trim()
+            : undefined,
       });
       onChanged();
     } catch (err) {
@@ -891,18 +907,27 @@ export function ReservationManagePanel({
     (!priceGapRequired || acknowledgePriceGap);
 
   const acceptedRefundCents = resolveAcceptedRefundCents();
+  const refundCeiling =
+    cancelPreview?.refundExecution === "stripe_card"
+      ? cancelPreview.stripeRefundableCents
+      : cancelPreview?.refundExecution === "manual_transfer"
+        ? cancelPreview.transferRefundableCents
+        : (cancelPreview?.paidTotalCents ?? 0);
   const reasonValid = cancelReason.trim().length >= 3;
   const deviationValid = refundMode === "suggested" || refundDeviationReason.trim().length >= 3;
   const customAmountValid =
     refundMode !== "custom" ||
-    (acceptedRefundCents != null &&
-      cancelPreview != null &&
-      acceptedRefundCents <= cancelPreview.paidTotalCents);
+    (acceptedRefundCents != null && cancelPreview != null && acceptedRefundCents <= refundCeiling);
+  const manualMarkValid =
+    cancelPreview?.refundExecution !== "manual_transfer" ||
+    !markManualRefundNow ||
+    (manualRefundNote.trim().length >= 3 && (acceptedRefundCents ?? 0) > 0);
   const canSubmitCancel =
     !!cancelPreview &&
     reasonValid &&
     deviationValid &&
     customAmountValid &&
+    manualMarkValid &&
     acceptedRefundCents != null &&
     confirmRefund &&
     !cancelSubmitting &&
@@ -911,7 +936,11 @@ export function ReservationManagePanel({
   const confirmLabel =
     refundMode === "none"
       ? "Je confirme l'absence de remboursement"
-      : `Je confirme le remboursement de ${formatCentsEur(acceptedRefundCents ?? 0)}`;
+      : cancelPreview?.refundExecution === "stripe_card"
+        ? `Je confirme le remboursement Stripe de ${formatCentsEur(acceptedRefundCents ?? 0)}`
+        : cancelPreview?.refundExecution === "manual_transfer"
+          ? `Je confirme le montant de remboursement virement de ${formatCentsEur(acceptedRefundCents ?? 0)}`
+          : `Je confirme le remboursement de ${formatCentsEur(acceptedRefundCents ?? 0)}`;
 
   const filteredSpaces =
     spaceMinCapacity == null
@@ -1530,12 +1559,6 @@ export function ReservationManagePanel({
             </button>
             {openAccordion === "transfer" ? (
               <div className={styles.accordionBody}>
-                <p className={styles.muted}>
-                  Seuls les contacts déjà liés au même cardex / entreprise sont proposés (même
-                  source que l&apos;onglet Contacts). Aucun impact sur le prix ni la facture. Un
-                  email sera envoyé à l&apos;ancien et au nouveau contact.
-                </p>
-
                 {transferCandidates.length === 0 ? (
                   <p className={styles.muted}>
                     Aucun autre contact disponible sur ce dossier client.
@@ -1646,6 +1669,21 @@ export function ReservationManagePanel({
                     </div>
                     <p className={styles.basisNote}>{REFUND_BASIS_LABELS[cancelPreview.basis]}</p>
 
+                    {cancelPreview.refundExecution === "stripe_card" ? (
+                      <p className={styles.basisNote}>
+                        Paiement carte : le remboursement sera exécuté automatiquement via Stripe
+                        (plafond remboursable {formatCentsEur(cancelPreview.stripeRefundableCents)}
+                        ).
+                      </p>
+                    ) : null}
+                    {cancelPreview.refundExecution === "manual_transfer" ? (
+                      <p className={styles.basisNote}>
+                        Paiement par virement : aucun remboursement Stripe. Initiez un virement
+                        retour hors système, puis cochez ci-dessous une fois effectué (plafond{" "}
+                        {formatCentsEur(cancelPreview.transferRefundableCents)}).
+                      </p>
+                    ) : null}
+
                     <div
                       className={styles.modeRow}
                       role="radiogroup"
@@ -1699,13 +1737,13 @@ export function ReservationManagePanel({
                         />
                         {acceptedRefundCents == null ? (
                           <span className={styles.fieldHintError}>
-                            Saisissez un montant valide (max.{" "}
-                            {formatCentsEur(cancelPreview.paidTotalCents)}
+                            Saisissez un montant valide (max. {formatCentsEur(refundCeiling)}
                             ).
                           </span>
                         ) : (
                           <span className={styles.fieldHint}>
-                            Soit {formatCentsEur(acceptedRefundCents)} (plafonné au montant réglé).
+                            Soit {formatCentsEur(acceptedRefundCents)} (plafonné au montant
+                            remboursable).
                           </span>
                         )}
                       </label>
@@ -1724,6 +1762,42 @@ export function ReservationManagePanel({
                           rows={2}
                         />
                       </label>
+                    ) : null}
+
+                    {cancelPreview.refundExecution === "manual_transfer" &&
+                    refundMode !== "none" &&
+                    (acceptedRefundCents ?? 0) > 0 ? (
+                      <>
+                        <label className={styles.checkboxRow}>
+                          <input
+                            type="checkbox"
+                            checked={markManualRefundNow}
+                            onChange={(event) => setMarkManualRefundNow(event.target.checked)}
+                          />
+                          <span>
+                            Remboursé hors Stripe — j&apos;ai déjà effectué le virement retour
+                          </span>
+                        </label>
+                        {markManualRefundNow ? (
+                          <label className={styles.field}>
+                            <span className={styles.fieldLabel}>
+                              Note de confirmation (référence virement, date…)
+                            </span>
+                            <textarea
+                              className={styles.textarea}
+                              value={manualRefundNote}
+                              onChange={(event) => setManualRefundNote(event.target.value)}
+                              placeholder="Ex. virement SEPA effectué le …, ref. …"
+                              rows={2}
+                            />
+                          </label>
+                        ) : (
+                          <p className={styles.muted}>
+                            Sans cette case, l&apos;annulation est enregistrée et le remboursement
+                            pourra être marqué plus tard via le même panneau.
+                          </p>
+                        )}
+                      </>
                     ) : null}
                   </div>
                 ) : null}

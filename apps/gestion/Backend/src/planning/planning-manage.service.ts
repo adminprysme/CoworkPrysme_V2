@@ -40,6 +40,8 @@ import {
   type PlanningDateChangeRequest,
   type PlanningDateChangeResult,
   type PlanningManageSpaceOption,
+  type PlanningManualRefundRequest,
+  type PlanningManualRefundResult,
   type PlanningPartySizePreview,
   type PlanningPartySizeRequest,
   type PlanningPartySizeResult,
@@ -51,6 +53,7 @@ import {
   type PlanningSpaceChangeRequest,
   type PlanningSpaceChangeResult,
   type SpaceStayPricing,
+  PlanningManualRefundResultSchema,
 } from "@coworkprysme/shared";
 import {
   connectMongo,
@@ -59,9 +62,12 @@ import {
   getCardexModel,
   getClientAccountModel,
   getInvoiceModel,
+  getPaymentModel,
   getReservationModel,
   getSpaceModel,
   findOverlappingReservation,
+  applyManualTransferRefund,
+  computePaymentRefundCaps,
   type ReservationDocument,
   type StaffProfileDocument,
   type StatusHistoryEntry,
@@ -76,6 +82,7 @@ import {
   renderContactTransferEmail,
   renderDateChangeEmail,
   renderPartySizeEmail,
+  renderRefundConfirmedEmail,
   renderRestoreEmail,
   renderSpaceChangeEmail,
 } from "./planning-manage-emails.js";
@@ -461,16 +468,25 @@ export class PlanningManageService {
 
     const Invoice = await getInvoiceModel();
     const invoice = await Invoice.findOne({ reservationId: reservation._id })
-      .select({ totals: 1 })
+      .select({ totals: 1, _id: 1 })
       .lean()
       .exec();
     const paidTotalCents = Math.trunc(invoice?.totals?.paidTotal ?? 0);
+    const caps = await this.loadRefundCaps(invoice?._id);
 
     const suggestion = computeSuggestedRefundCents({
       startAt: reservation.startAt,
       endAt: reservation.endAt,
       paidTotalCents,
     });
+
+    const executionCeiling =
+      caps.refundExecution === "stripe_card"
+        ? caps.stripeRefundableCents
+        : caps.refundExecution === "manual_transfer"
+          ? caps.transferRefundableCents
+          : 0;
+    const suggestedRefundCents = Math.min(suggestion.suggestedRefundCents, executionCeiling);
 
     const payload: PlanningCancelPreview = {
       reservationId: String(reservation._id),
@@ -479,11 +495,18 @@ export class PlanningManageService {
       startAt: toIso(reservation.startAt),
       endAt: toIso(reservation.endAt),
       paidTotalCents: suggestion.paidTotalCents,
-      suggestedRefundCents: suggestion.suggestedRefundCents,
+      suggestedRefundCents,
       basis: suggestion.basis,
       totalDurationMs: suggestion.totalDurationMs,
       remainingMs: suggestion.remainingMs,
       elapsedMs: suggestion.elapsedMs,
+      refundExecution: caps.refundExecution,
+      cardPaidCents: caps.cardPaidCents,
+      cardRefundedCents: caps.cardRefundedCents,
+      stripeRefundableCents: caps.stripeRefundableCents,
+      transferPaidCents: caps.transferPaidCents,
+      transferRefundedCents: caps.transferRefundedCents,
+      transferRefundableCents: caps.transferRefundableCents,
     };
     return PlanningCancelPreviewSchema.parse(payload);
   }
@@ -515,17 +538,23 @@ export class PlanningManageService {
     }
 
     const Invoice = await getInvoiceModel();
-    const invoice = await Invoice.findOne({ reservationId: reservation._id })
-      .select({ totals: 1 })
-      .lean()
-      .exec();
+    const invoice = await Invoice.findOne({ reservationId: reservation._id }).exec();
     const paidTotalCents = Math.trunc(invoice?.totals?.paidTotal ?? 0);
+    const caps = await this.loadRefundCaps(invoice?._id);
 
     const suggestion = computeSuggestedRefundCents({
       startAt: reservation.startAt,
       endAt: reservation.endAt,
       paidTotalCents,
     });
+
+    const executionCeiling =
+      caps.refundExecution === "stripe_card"
+        ? caps.stripeRefundableCents
+        : caps.refundExecution === "manual_transfer"
+          ? caps.transferRefundableCents
+          : 0;
+    const suggestedRefundCents = Math.min(suggestion.suggestedRefundCents, executionCeiling);
 
     if (!request.confirmRefund) {
       throw new BadRequestException({
@@ -536,7 +565,7 @@ export class PlanningManageService {
 
     const accepted = request.acceptedRefundCents;
     if (request.refundMode === "suggested") {
-      if (accepted !== suggestion.suggestedRefundCents) {
+      if (accepted !== suggestedRefundCents) {
         throw new BadRequestException({
           code: "REFUND_MISMATCH",
           message:
@@ -555,6 +584,36 @@ export class PlanningManageService {
         code: "REFUND_EXCEEDS_PAID",
         message: "Le remboursement ne peut pas dépasser le montant réglé",
       });
+    }
+
+    if (
+      accepted > 0 &&
+      caps.refundExecution === "stripe_card" &&
+      accepted > caps.stripeRefundableCents
+    ) {
+      throw new BadRequestException({
+        code: "REFUND_EXCEEDS_CARD_PAID",
+        message: `Le remboursement Stripe ne peut pas dépasser le montant carte encore remboursable (${caps.stripeRefundableCents} centimes)`,
+      });
+    }
+    if (
+      accepted > 0 &&
+      caps.refundExecution === "manual_transfer" &&
+      accepted > caps.transferRefundableCents
+    ) {
+      throw new BadRequestException({
+        code: "REFUND_EXCEEDS_TRANSFER_PAID",
+        message: `Le remboursement manuel ne peut pas dépasser le montant virement encore remboursable (${caps.transferRefundableCents} centimes)`,
+      });
+    }
+
+    if (request.markManualRefundNow) {
+      if (caps.refundExecution !== "manual_transfer") {
+        throw new BadRequestException({
+          code: "MANUAL_REFUND_NOT_APPLICABLE",
+          message: "Le marquage manuel n'est disponible que pour les paiements par virement",
+        });
+      }
     }
 
     if (request.refundMode !== "suggested") {
@@ -589,10 +648,11 @@ export class PlanningManageService {
       },
       acceptedRefundCents: { before: 0, after: accepted },
       suggestedRefundCents: {
-        before: suggestion.suggestedRefundCents,
-        after: suggestion.suggestedRefundCents,
+        before: suggestedRefundCents,
+        after: suggestedRefundCents,
       },
       refundMode: { before: "suggested", after: request.refundMode },
+      refundExecution: { before: null, after: caps.refundExecution },
     };
     if (request.refundMode !== "suggested" && request.refundDeviationReason) {
       auditDiff.refundDeviationReason = {
@@ -601,7 +661,7 @@ export class PlanningManageService {
       };
     }
 
-    await writePlanningManageAudit({
+    const { auditId } = await writePlanningManageAudit({
       profile,
       action: "reservation.cancel",
       reservationId: reservation._id,
@@ -609,6 +669,43 @@ export class PlanningManageService {
       reason: request.reason,
       at: now,
     });
+
+    let refundStatus: PlanningCancelResult["refundStatus"] = accepted > 0 ? undefined : "none";
+    let stripeRefundId: string | undefined;
+
+    if (
+      accepted > 0 &&
+      request.markManualRefundNow &&
+      caps.refundExecution === "manual_transfer" &&
+      invoice
+    ) {
+      const note = request.manualRefundNote?.trim() ?? "";
+      const applied = await applyManualTransferRefund({
+        invoiceId: invoice._id,
+        amountCents: accepted,
+        idempotencyKey: `gestion-manual-refund:${reservationId}:${auditId}`,
+        manualNote: note,
+        receivedAt: now,
+      });
+      await writePlanningManageAudit({
+        profile,
+        action: "reservation.refund",
+        reservationId: reservation._id,
+        diff: {
+          spaceId: {
+            before: String(reservation.spaceId),
+            after: String(reservation.spaceId),
+          },
+          amountCents: { before: 0, after: accepted },
+          refundStatus: { before: null, after: "manual_succeeded" },
+          paymentId: { before: null, after: String(applied.payment._id) },
+          method: { before: null, after: "transfer" },
+        },
+        reason: note,
+        at: now,
+      });
+      refundStatus = "manual_succeeded";
+    }
 
     const clientEmail = await this.resolveClientEmail(reservation.clientAccountId?.toString());
     if (clientEmail) {
@@ -619,18 +716,141 @@ export class PlanningManageService {
         endAt: formatFrDateTime(reservation.endAt),
         paidTotalCents,
         refundCents: accepted,
+        refundExecution: caps.refundExecution,
+        refundStatus: refundStatus ?? (accepted > 0 ? "pending" : "none"),
       });
       await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+    }
+
+    // Manual refund confirmation email (immediate — no Stripe wait).
+    if (refundStatus === "manual_succeeded" && clientEmail && accepted > 0) {
+      const refundMail = renderRefundConfirmedEmail({
+        reservationReference: reservation.reference,
+        amountCents: accepted,
+        channel: "manual_transfer",
+      });
+      await this.mail.sendMail({
+        to: clientEmail,
+        subject: refundMail.subject,
+        html: refundMail.html,
+      });
     }
 
     const detail = await this.planning.getReservationDetail(profile, reservationId);
     const result: PlanningCancelResult = {
       reservation: detail,
-      suggestedRefundCents: suggestion.suggestedRefundCents,
+      suggestedRefundCents,
       acceptedRefundCents: request.acceptedRefundCents,
       basis: suggestion.basis,
+      refundExecution: caps.refundExecution,
+      refundStatus: refundStatus ?? (accepted > 0 ? "pending" : "none"),
+      stripeRefundId,
     };
     return PlanningCancelResultSchema.parse(result);
+  }
+
+  /**
+   * Staff confirms an off-Stripe bank-transfer refund after the outbound wire.
+   * Available when transferRefundableCents > 0 (typically after cancel without mark-now).
+   */
+  async confirmManualRefund(
+    profile: StaffProfileDocument,
+    reservationId: string,
+    request: PlanningManualRefundRequest,
+  ): Promise<PlanningManualRefundResult> {
+    await connectMongo();
+    const id = assertObjectId(reservationId, "reservationId");
+
+    const Reservation = await getReservationModel();
+    const reservation = await Reservation.findById(id).lean().exec();
+    if (!reservation) {
+      throw new NotFoundException({
+        code: "RESERVATION_NOT_FOUND",
+        message: "Réservation introuvable",
+      });
+    }
+    if (!isBuildingIdInScope(reservation.buildingId, profile.scope.buildingIds)) {
+      throw new ForbiddenException();
+    }
+
+    const Invoice = await getInvoiceModel();
+    const invoice = await Invoice.findOne({ reservationId: reservation._id }).exec();
+    if (!invoice) {
+      throw new NotFoundException({
+        code: "INVOICE_NOT_FOUND",
+        message: "Facture introuvable",
+      });
+    }
+
+    const caps = await this.loadRefundCaps(invoice._id);
+    if (caps.transferRefundableCents <= 0) {
+      throw new BadRequestException({
+        code: "MANUAL_REFUND_NOT_APPLICABLE",
+        message: "Aucun montant virement remboursable sur cette réservation",
+      });
+    }
+    if (request.amountCents > caps.transferRefundableCents) {
+      throw new BadRequestException({
+        code: "REFUND_EXCEEDS_TRANSFER_PAID",
+        message: `Le remboursement ne peut pas dépasser ${caps.transferRefundableCents} centimes`,
+      });
+    }
+
+    const now = new Date();
+    const { auditId } = await writePlanningManageAudit({
+      profile,
+      action: "reservation.refund",
+      reservationId: reservation._id,
+      diff: {
+        spaceId: {
+          before: String(reservation.spaceId),
+          after: String(reservation.spaceId),
+        },
+        amountCents: { before: 0, after: request.amountCents },
+        refundStatus: { before: null, after: "manual_succeeded" },
+        method: { before: null, after: "transfer" },
+      },
+      reason: request.note.trim(),
+      at: now,
+    });
+
+    const applied = await applyManualTransferRefund({
+      invoiceId: invoice._id,
+      amountCents: request.amountCents,
+      idempotencyKey: `gestion-manual-refund:${reservationId}:${auditId}`,
+      manualNote: request.note.trim(),
+      receivedAt: now,
+    });
+
+    const clientEmail = await this.resolveClientEmail(reservation.clientAccountId?.toString());
+    if (clientEmail) {
+      const refundMail = renderRefundConfirmedEmail({
+        reservationReference: reservation.reference,
+        amountCents: request.amountCents,
+        channel: "manual_transfer",
+      });
+      await this.mail.sendMail({
+        to: clientEmail,
+        subject: refundMail.subject,
+        html: refundMail.html,
+      });
+    }
+
+    return PlanningManualRefundResultSchema.parse({
+      reservationId: String(reservation._id),
+      amountCents: request.amountCents,
+      refundStatus: "manual_succeeded",
+      paymentId: String(applied.payment._id),
+    });
+  }
+
+  private async loadRefundCaps(invoiceId: Types.ObjectId | string | undefined | null) {
+    if (!invoiceId) {
+      return computePaymentRefundCaps([]);
+    }
+    const Payment = await getPaymentModel();
+    const payments = await Payment.find({ invoiceId }).lean().exec();
+    return computePaymentRefundCaps(payments);
   }
 
   /**

@@ -17,14 +17,15 @@ export async function writePlanningManageAudit(input: {
     | "reservation.restore"
     | "reservation.date_change"
     | "reservation.party_size_change"
-    | "reservation.contact_transfer";
+    | "reservation.contact_transfer"
+    | "reservation.refund";
   reservationId: Types.ObjectId | string;
   diff?: PlanningAuditDiff;
   reason?: string;
   at?: Date;
-}): Promise<void> {
+}): Promise<{ auditId: string }> {
   const AuditLog = await getAuditLogModel();
-  await AuditLog.create({
+  const created = await AuditLog.create({
     actor: { kind: "staff", id: input.profile._id },
     action: input.action,
     entity: { type: "reservation", id: input.reservationId },
@@ -32,4 +33,5 @@ export async function writePlanningManageAudit(input: {
     reason: input.reason,
     at: input.at ?? new Date(),
   });
+  return { auditId: String(created._id) };
 }

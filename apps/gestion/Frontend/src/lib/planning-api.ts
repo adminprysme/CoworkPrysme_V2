@@ -10,6 +10,8 @@ import type {
   PlanningDateChangeRequest,
   PlanningDateChangeResult,
   PlanningManageSpaceOption,
+  PlanningManualRefundRequest,
+  PlanningManualRefundResult,
   PlanningPartySizePreview,
   PlanningPartySizeRequest,
   PlanningPartySizeResult,
@@ -140,6 +142,16 @@ export function confirmCancelReservation(
 ): Promise<PlanningCancelResult> {
   return planningFetch(
     `/planning/reservations/${encodeURIComponent(reservationId)}/manage/cancel`,
+    { method: "POST", body: JSON.stringify(request) },
+  );
+}
+
+export function confirmManualRefund(
+  reservationId: string,
+  request: PlanningManualRefundRequest,
+): Promise<PlanningManualRefundResult> {
+  return planningFetch(
+    `/planning/reservations/${encodeURIComponent(reservationId)}/manage/cancel/manual-refund`,
     { method: "POST", body: JSON.stringify(request) },
   );
 }

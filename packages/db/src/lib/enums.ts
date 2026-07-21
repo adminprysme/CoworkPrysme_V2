@@ -119,13 +119,13 @@ export const INVOICE_STATUSES = [
 ] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
-export const PAYMENT_KINDS = ["deposit", "balance", "full"] as const;
+export const PAYMENT_KINDS = ["deposit", "balance", "full", "refund"] as const;
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];
 
 export const PAYMENT_METHODS = ["card", "transfer", "direct_debit", "cash"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const RECONCILIATION_STATUSES = ["pending", "matched"] as const;
+export const RECONCILIATION_STATUSES = ["pending", "matched", "failed"] as const;
 export type ReconciliationStatus = (typeof RECONCILIATION_STATUSES)[number];
 
 export const NOTIFICATION_TEMPLATES = [

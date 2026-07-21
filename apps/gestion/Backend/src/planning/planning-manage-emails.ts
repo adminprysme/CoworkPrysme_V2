@@ -98,6 +98,8 @@ export interface CancellationEmailInput {
    * contain any monetary figure — neither « Montant réglé » nor a refund line.
    */
   refundCents: number;
+  refundExecution?: "stripe_card" | "manual_transfer" | "none";
+  refundStatus?: "none" | "pending" | "succeeded" | "failed" | "manual_succeeded";
 }
 
 export function renderCancellationEmail(input: CancellationEmailInput): {
@@ -111,11 +113,28 @@ export function renderCancellationEmail(input: CancellationEmailInput): {
     ? emailDetailRow("Montant réglé", formatEmailEuro(input.paidTotalCents), { last: true })
     : "";
 
-  const refundHtml = showRefund
-    ? `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
-          Un remboursement de <strong>${formatEmailEuro(input.refundCents)}</strong> vous sera proposé par notre équipe.
-        </p>`
-    : "";
+  let refundHtml = "";
+  if (showRefund) {
+    if (input.refundStatus === "manual_succeeded") {
+      refundHtml = `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
+          Un remboursement de <strong>${formatEmailEuro(input.refundCents)}</strong> a été enregistré.
+        </p>`;
+    } else if (input.refundExecution === "stripe_card") {
+      refundHtml = `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
+          Un remboursement de <strong>${formatEmailEuro(input.refundCents)}</strong> est en cours de traitement.
+          Vous recevrez une confirmation séparée dès qu'il sera effectif.
+        </p>`;
+    } else if (input.refundExecution === "manual_transfer") {
+      refundHtml = `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
+          Un remboursement de <strong>${formatEmailEuro(input.refundCents)}</strong> sera effectué par virement bancaire.
+          Vous recevrez une confirmation dès qu'il aura été initié par notre équipe.
+        </p>`;
+    } else {
+      refundHtml = `<p style="margin:16px 0;padding:10px 14px;background:#f6f3ef;border-radius:6px;border-left:4px solid #B87333;">
+          Un remboursement de <strong>${formatEmailEuro(input.refundCents)}</strong> est prévu.
+        </p>`;
+    }
+  }
 
   const body = `
     <p style="margin-top:0;">Votre réservation a été <strong>annulée</strong> par notre équipe.</p>
@@ -136,6 +155,53 @@ export function renderCancellationEmail(input: CancellationEmailInput): {
   return {
     subject: `Annulation de votre réservation ${input.reservationReference} — Cowork Prysme`,
     html: renderCoworkEmailLayout("Réservation annulée", body, siteUrl),
+  };
+}
+
+export interface RefundConfirmedEmailInput {
+  reservationReference: string;
+  amountCents: number;
+  channel: "stripe_card" | "manual_transfer";
+  stripeRefundId?: string;
+}
+
+export function renderRefundConfirmedEmail(input: RefundConfirmedEmailInput): {
+  subject: string;
+  html: string;
+} {
+  const siteUrl = resolvePublicSiteUrl();
+  const stripeNote =
+    input.channel === "stripe_card"
+      ? `<p style="margin:12px 0 0;">Selon votre banque, le crédit apparaît généralement sous quelques jours ouvrés sur votre relevé (délai indicatif, non contractuel).</p>`
+      : `<p style="margin:12px 0 0;">Le virement de remboursement a été initié par notre équipe.</p>`;
+
+  const stripeIdRow =
+    input.channel === "stripe_card" && input.stripeRefundId
+      ? emailDetailRow("Référence remboursement", escapeEmailHtml(input.stripeRefundId), {
+          last: true,
+        })
+      : "";
+
+  const body = `
+    <p style="margin-top:0;">Nous confirmons le remboursement lié à votre réservation.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+      ${emailDetailRow("Référence", `<strong>${escapeEmailHtml(input.reservationReference)}</strong>`)}
+      ${emailDetailRow(
+        "Montant remboursé",
+        `<strong>${formatEmailEuro(input.amountCents)}</strong>`,
+        {
+          last: !stripeIdRow,
+        },
+      )}
+      ${stripeIdRow}
+    </table>
+    ${stripeNote}
+    <p style="margin:24px 0 0;">Pour toute question, notre équipe reste à votre disposition.</p>
+  `;
+
+  return {
+    subject: `Remboursement confirmé — ${input.reservationReference} — Cowork Prysme`,
+    html: renderCoworkEmailLayout("Remboursement confirmé", body, siteUrl),
   };
 }
 

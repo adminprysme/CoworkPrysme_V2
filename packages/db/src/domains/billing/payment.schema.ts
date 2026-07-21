@@ -49,6 +49,27 @@ paymentSchema.index(
     sparse: true,
     partialFilterExpression: {
       "reconciliation.stripePaymentIntentId": { $type: "string" },
+      kind: { $ne: "refund" },
+    },
+  },
+);
+paymentSchema.index(
+  { "reconciliation.stripeRefundId": 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: {
+      "reconciliation.stripeRefundId": { $type: "string" },
+    },
+  },
+);
+paymentSchema.index(
+  { "reconciliation.idempotencyKey": 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: {
+      "reconciliation.idempotencyKey": { $type: "string" },
     },
   },
 );

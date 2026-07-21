@@ -289,6 +289,9 @@ export const PlanningSpaceChangeResultSchema = z.object({
 });
 export type PlanningSpaceChangeResult = z.infer<typeof PlanningSpaceChangeResultSchema>;
 
+export const PlanningRefundExecutionSchema = z.enum(["stripe_card", "manual_transfer", "none"]);
+export type PlanningRefundExecution = z.infer<typeof PlanningRefundExecutionSchema>;
+
 export const PlanningCancelPreviewSchema = z.object({
   reservationId: z.string(),
   reference: z.string(),
@@ -301,6 +304,15 @@ export const PlanningCancelPreviewSchema = z.object({
   totalDurationMs: z.number().int().nonnegative(),
   remainingMs: z.number().int().nonnegative(),
   elapsedMs: z.number().int().nonnegative(),
+  /** How a positive refund must be executed for this reservation. */
+  refundExecution: PlanningRefundExecutionSchema,
+  cardPaidCents: z.number().int().nonnegative(),
+  cardRefundedCents: z.number().int().nonnegative(),
+  /** Net Stripe ceiling: cardPaid − succeeded Stripe refunds. */
+  stripeRefundableCents: z.number().int().nonnegative(),
+  transferPaidCents: z.number().int().nonnegative(),
+  transferRefundedCents: z.number().int().nonnegative(),
+  transferRefundableCents: z.number().int().nonnegative(),
 });
 export type PlanningCancelPreview = z.infer<typeof PlanningCancelPreviewSchema>;
 
@@ -325,6 +337,13 @@ export const PlanningCancelRequestSchema = z
      * automatic suggestion. Traced in audit alongside the cancel reason.
      */
     refundDeviationReason: z.string().trim().min(3).max(2000).optional(),
+    /**
+     * Transfer-only: when true, apply the manual off-Stripe refund immediately
+     * at cancel time (staff confirms the outbound wire already happened).
+     */
+    markManualRefundNow: z.boolean().optional(),
+    /** Required when markManualRefundNow is true (min 3 chars). */
+    manualRefundNote: z.string().trim().min(3).max(2000).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.refundMode !== "suggested" && !value.refundDeviationReason) {
@@ -341,6 +360,22 @@ export const PlanningCancelRequestSchema = z
         message: "Le mode « Ne pas rembourser » impose un montant à 0",
       });
     }
+    if (value.markManualRefundNow) {
+      if (!value.manualRefundNote || value.manualRefundNote.trim().length < 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["manualRefundNote"],
+          message: "Une note est obligatoire pour marquer le remboursement manuel",
+        });
+      }
+      if (value.acceptedRefundCents <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acceptedRefundCents"],
+          message: "Un montant positif est requis pour un remboursement manuel",
+        });
+      }
+    }
   });
 export type PlanningCancelRequest = z.infer<typeof PlanningCancelRequestSchema>;
 
@@ -349,8 +384,26 @@ export const PlanningCancelResultSchema = z.object({
   suggestedRefundCents: z.number().int().nonnegative(),
   acceptedRefundCents: z.number().int().nonnegative(),
   basis: z.enum(["not_started", "in_progress", "ended", "unpaid"]),
+  refundExecution: PlanningRefundExecutionSchema,
+  refundStatus: z.enum(["none", "pending", "succeeded", "failed", "manual_succeeded"]).optional(),
+  stripeRefundId: z.string().optional(),
 });
 export type PlanningCancelResult = z.infer<typeof PlanningCancelResultSchema>;
+
+export const PlanningManualRefundRequestSchema = z.object({
+  amountCents: z.number().int().positive(),
+  note: z.string().trim().min(3).max(2000),
+  confirm: z.literal(true),
+});
+export type PlanningManualRefundRequest = z.infer<typeof PlanningManualRefundRequestSchema>;
+
+export const PlanningManualRefundResultSchema = z.object({
+  reservationId: z.string(),
+  amountCents: z.number().int().positive(),
+  refundStatus: z.literal("manual_succeeded"),
+  paymentId: z.string(),
+});
+export type PlanningManualRefundResult = z.infer<typeof PlanningManualRefundResultSchema>;
 
 export const PlanningRestoreConflictSchema = z.object({
   id: z.string(),
