@@ -108,6 +108,30 @@ function auditDiffDateLabel(value: unknown): string | undefined {
   return formatFrDateTime(date);
 }
 
+/** Follow-up audits that only record SMTP delivery (same action as the mutation). */
+function isEmailDeliveryOnlyAudit(
+  diff?: Record<string, { before: unknown; after: unknown }> | null,
+): boolean {
+  if (!diff || diff.emailSent == null) {
+    return false;
+  }
+  const substantive = Object.keys(diff).filter(
+    (key) => key !== "spaceId" && key !== "emailSent" && key !== "emailError",
+  );
+  return substantive.length === 0;
+}
+
+function withEmailDeliveryHint(
+  detail: string | undefined,
+  diff?: Record<string, { before: unknown; after: unknown }> | null,
+): string | undefined {
+  if (diff?.emailSent?.after !== false) {
+    return detail;
+  }
+  const hint = "⚠ Email non envoyé";
+  return detail ? `${detail} · ${hint}` : hint;
+}
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -738,6 +762,27 @@ export class PlanningService {
       accounts.find((a) => contactIds.get(String(a._id)) === "reservation")?.email ??
       accounts[0]?.email;
 
+    const AuditLog = await getAuditLogModel();
+    const latestEmailAudit = await AuditLog.findOne({
+      "entity.type": "reservation",
+      "entity.id": { $in: [reservation._id, String(reservation._id)] },
+      "diff.emailSent": { $exists: true },
+    })
+      .sort({ at: -1 })
+      .lean()
+      .exec();
+
+    let emailDeliveryWarning: PlanningReservationDetail["emailDeliveryWarning"];
+    if (latestEmailAudit?.diff?.emailSent?.after === false) {
+      const rawError = latestEmailAudit.diff.emailError?.after;
+      emailDeliveryWarning = {
+        at: toIso(latestEmailAudit.at),
+        ...(typeof rawError === "string" && rawError.trim()
+          ? { error: rawError.trim().slice(0, 400) }
+          : {}),
+      };
+    }
+
     const payload: PlanningReservationDetail = {
       id: String(reservation._id),
       reference: reservation.reference,
@@ -745,6 +790,7 @@ export class PlanningService {
       paymentStatus,
       refundStatus,
       stripeRefundId,
+      ...(emailDeliveryWarning ? { emailDeliveryWarning } : {}),
       readOnly: isReservationReadOnly(status),
       startAt: toIso(reservation.startAt),
       endAt: toIso(reservation.endAt),
@@ -1056,14 +1102,16 @@ export class PlanningService {
       const Reservation = await getReservationModel();
       const Invoice = await getInvoiceModel();
       const Cardex = await getCardexModel();
-      const logs = await AuditLog.find({
-        "entity.type": "reservation",
-        at: { $gte: from, $lt: to },
-        "diff.spaceId.after": String(id),
-      })
-        .sort({ at: -1 })
-        .lean()
-        .exec();
+      const logs = (
+        await AuditLog.find({
+          "entity.type": "reservation",
+          at: { $gte: from, $lt: to },
+          "diff.spaceId.after": String(id),
+        })
+          .sort({ at: -1 })
+          .lean()
+          .exec()
+      ).filter((log) => !isEmailDeliveryOnlyAudit(log.diff));
 
       const linkedReservationIds = [
         ...new Set(
@@ -1179,10 +1227,12 @@ export class PlanningService {
           startAt: reservation ? toIso(reservation.startAt) : undefined,
           endAt: reservation ? toIso(reservation.endAt) : undefined,
           title: clientLabel ?? "Changement de salle",
-          detail:
+          detail: withEmailDeliveryHint(
             typeof beforeSpaceName === "string"
               ? `Depuis l’espace ${beforeSpaceName}`
               : (log.reason ?? log.action),
+            log.diff,
+          ),
           clientLabel,
           reservationId,
           reservationReference: reservation?.reference,
@@ -1197,15 +1247,17 @@ export class PlanningService {
       const Reservation = await getReservationModel();
       const Invoice = await getInvoiceModel();
       const Cardex = await getCardexModel();
-      const logs = await AuditLog.find({
-        action: "reservation.restore",
-        "entity.type": "reservation",
-        at: { $gte: from, $lt: to },
-        "diff.spaceId.after": String(id),
-      })
-        .sort({ at: -1 })
-        .lean()
-        .exec();
+      const logs = (
+        await AuditLog.find({
+          action: "reservation.restore",
+          "entity.type": "reservation",
+          at: { $gte: from, $lt: to },
+          "diff.spaceId.after": String(id),
+        })
+          .sort({ at: -1 })
+          .lean()
+          .exec()
+      ).filter((log) => !isEmailDeliveryOnlyAudit(log.diff));
 
       const linkedReservationIds = [
         ...new Set(
@@ -1294,7 +1346,7 @@ export class PlanningService {
           startAt: reservation ? toIso(reservation.startAt) : undefined,
           endAt: reservation ? toIso(reservation.endAt) : undefined,
           title: clientLabel ?? "Réservation restaurée",
-          detail: log.reason ?? "Réservation restaurée",
+          detail: withEmailDeliveryHint(log.reason ?? "Réservation restaurée", log.diff),
           clientLabel,
           reservationId,
           reservationReference: reservation?.reference,
@@ -1442,15 +1494,17 @@ export class PlanningService {
     },
   ): Promise<PlanningHistoryEvent[]> {
     const AuditLog = await getAuditLogModel();
-    const logs = await AuditLog.find({
-      action: input.action,
-      "entity.type": "reservation",
-      at: { $gte: from, $lt: to },
-      "diff.spaceId.after": spaceId,
-    })
-      .sort({ at: -1 })
-      .lean()
-      .exec();
+    const logs = (
+      await AuditLog.find({
+        action: input.action,
+        "entity.type": "reservation",
+        at: { $gte: from, $lt: to },
+        "diff.spaceId.after": spaceId,
+      })
+        .sort({ at: -1 })
+        .lean()
+        .exec()
+    ).filter((log) => !isEmailDeliveryOnlyAudit(log.diff));
 
     if (logs.length === 0) {
       return [];
@@ -1541,7 +1595,10 @@ export class PlanningService {
         startAt: reservation ? toIso(reservation.startAt) : undefined,
         endAt: reservation ? toIso(reservation.endAt) : undefined,
         title: clientLabel ?? input.titleFallback,
-        detail: input.detail(log) ?? log.reason ?? input.titleFallback,
+        detail: withEmailDeliveryHint(
+          input.detail(log) ?? log.reason ?? input.titleFallback,
+          log.diff,
+        ),
         clientLabel,
         reservationId,
         reservationReference: reservation?.reference,

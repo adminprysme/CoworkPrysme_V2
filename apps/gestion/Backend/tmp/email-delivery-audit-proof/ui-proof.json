@@ -1,0 +1,5 @@
+{
+  "badgeVisible": true,
+  "htmlSnippet": "<span class=\"_emailFailChip_1kt1m_81\" title=\"Email non envoyé — Error: Can't send mail - all recipients were rejected: 501 5.1.5 Recipient address reserved by RFC 2606\">⚠ Email non envoyé</span>",
+  "screenshot": "ui-badge-fail.png"
+}

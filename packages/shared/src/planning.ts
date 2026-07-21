@@ -115,6 +115,16 @@ export const PlanningReservationDetailSchema = z.object({
    */
   refundStatus: z.enum(["none", "pending", "succeeded", "failed", "manual_succeeded"]).optional(),
   stripeRefundId: z.string().optional(),
+  /**
+   * Latest client email delivery failure (audit emailSent: false).
+   * Omitted when the most recent email attempt succeeded or none was recorded.
+   */
+  emailDeliveryWarning: z
+    .object({
+      at: z.string().datetime(),
+      error: z.string().optional(),
+    })
+    .optional(),
   readOnly: z.boolean(),
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),

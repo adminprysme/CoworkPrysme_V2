@@ -11,7 +11,12 @@ import {
 } from "@coworkprysme/db";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
-import { MailService } from "../mail/mail.service.js";
+import {
+  MailService,
+  emailDeliveryAuditDiff,
+  mailDeliveryFromResult,
+  type MailDeliveryOutcome,
+} from "../mail/mail.service.js";
 import { renderRefundConfirmedEmail } from "../planning/planning-manage-emails.js";
 
 @Injectable()
@@ -176,6 +181,10 @@ export class StripeRefundWebhookService {
     if (alreadyMailed) return;
 
     const email = await this.resolveClientEmail(reservation.clientAccountId?.toString());
+    let delivery: MailDeliveryOutcome = {
+      emailSent: false,
+      emailError: "no client email",
+    };
     if (email) {
       const mail = renderRefundConfirmedEmail({
         reservationReference: reservation.reference,
@@ -183,7 +192,12 @@ export class StripeRefundWebhookService {
         channel: "stripe_card",
         stripeRefundId: input.stripeRefundId,
       });
-      await this.mail.sendMail({ to: email, subject: mail.subject, html: mail.html });
+      const mailResult = await this.mail.sendMail({
+        to: email,
+        subject: mail.subject,
+        html: mail.html,
+      });
+      delivery = mailDeliveryFromResult(mailResult);
     }
 
     await AuditLog.create({
@@ -195,7 +209,7 @@ export class StripeRefundWebhookService {
         amountCents: { before: 0, after: input.amountCents },
         refundStatus: { before: "pending", after: "succeeded" },
         stripeRefundId: { before: null, after: input.stripeRefundId },
-        emailSent: { before: false, after: true },
+        ...emailDeliveryAuditDiff(delivery),
       },
       at: new Date(),
     });

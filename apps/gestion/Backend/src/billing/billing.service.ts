@@ -1,3 +1,4 @@
+import type { Types } from "mongoose";
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { InvoiceDocument } from "@coworkprysme/db";
 import type { ReservationDocument } from "@coworkprysme/db";
@@ -5,6 +6,7 @@ import {
   applyBankTransferPayment,
   confirmReservationAfterPayment,
   connectMongo,
+  getAuditLogModel,
   getBuildingModel,
   getClientAccountModel,
   getInvoiceModel,
@@ -20,7 +22,11 @@ import { renderPaymentConfirmedEmail } from "@coworkprysme/shared";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
-import { MailService } from "../mail/mail.service.js";
+import {
+  MailService,
+  emailDeliveryAuditDiff,
+  mailDeliveryFromResult,
+} from "../mail/mail.service.js";
 
 interface TransferPair {
   reservation: ReservationDocument;
@@ -159,6 +165,9 @@ export class BillingService {
     if (confirmed.transitioned && pair.clientEmail) {
       await this.sendConfirmationEmail({
         clientEmail: pair.clientEmail,
+        reservationId: pair.reservation._id,
+        spaceId: String(pair.reservation.spaceId),
+        staffProfileId: staffProfileId?.trim() || undefined,
         reservationReference: pair.reservation.reference,
         invoiceReference: paymentResult.invoice.reference,
         spaceName: pair.reservation.spaceSnapshot.name,
@@ -285,6 +294,9 @@ export class BillingService {
 
   private async sendConfirmationEmail(input: {
     clientEmail: string;
+    reservationId: Types.ObjectId;
+    spaceId: string;
+    staffProfileId?: string;
     reservationReference: string;
     invoiceReference: string;
     spaceName: string;
@@ -325,11 +337,28 @@ export class BillingService {
       );
     }
 
-    await this.mail.sendMail({
+    const mailResult = await this.mail.sendMail({
       to: input.clientEmail,
       subject: email.subject,
       html: email.html,
       attachments,
+    });
+    const delivery = mailDeliveryFromResult(mailResult);
+
+    const AuditLog = await getAuditLogModel();
+    await AuditLog.create({
+      actor: input.staffProfileId
+        ? { kind: "staff", id: input.staffProfileId }
+        : { kind: "system", id: "billing" },
+      action: "reservation.payment_confirmed",
+      entity: { type: "reservation", id: input.reservationId },
+      diff: {
+        spaceId: { before: input.spaceId, after: input.spaceId },
+        channel: { before: null, after: "bank_transfer" },
+        ...emailDeliveryAuditDiff(delivery),
+      },
+      reason: "bank_transfer_received",
+      at: new Date(),
     });
   }
 

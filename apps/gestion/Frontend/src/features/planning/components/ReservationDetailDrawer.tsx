@@ -164,6 +164,18 @@ export function ReservationDetailDrawer({
                         : "Remboursé"}
                 </span>
               ) : null}
+              {detail.emailDeliveryWarning ? (
+                <span
+                  className={styles.emailFailChip}
+                  title={
+                    detail.emailDeliveryWarning.error
+                      ? `Email non envoyé — ${detail.emailDeliveryWarning.error}`
+                      : "Email non envoyé"
+                  }
+                >
+                  ⚠ Email non envoyé
+                </span>
+              ) : null}
               {readOnly ? <span className={styles.readOnlyChip}>Lecture seule</span> : null}
             </div>
           ) : null}

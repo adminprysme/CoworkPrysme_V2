@@ -9,6 +9,7 @@ const {
   getClientAccountModelMock,
   getBuildingModelMock,
   getQontoTransferCandidateModelMock,
+  getAuditLogModelMock,
 } = vi.hoisted(() => ({
   applyBankTransferPaymentMock: vi.fn(),
   confirmReservationAfterPaymentMock: vi.fn(),
@@ -18,6 +19,7 @@ const {
   getClientAccountModelMock: vi.fn(),
   getBuildingModelMock: vi.fn(),
   getQontoTransferCandidateModelMock: vi.fn(),
+  getAuditLogModelMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -29,6 +31,7 @@ vi.mock("@coworkprysme/db", () => ({
   getClientAccountModel: getClientAccountModelMock,
   getBuildingModel: getBuildingModelMock,
   getQontoTransferCandidateModel: getQontoTransferCandidateModelMock,
+  getAuditLogModel: getAuditLogModelMock,
 }));
 
 import { BillingService } from "./billing.service.js";
@@ -41,7 +44,9 @@ describe("BillingService.markTransferReceivedByReference", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     connectMongoMock.mockResolvedValue(undefined);
-    mail = { sendMail: vi.fn() } as unknown as MailService;
+    mail = {
+      sendMail: vi.fn().mockResolvedValue({ dryRun: true }),
+    } as unknown as MailService;
     const invoicePdf = {
       generatePdfForInvoiceReference: vi.fn().mockResolvedValue({
         pdf: Buffer.from("%PDF-1.4 mock"),
@@ -58,6 +63,7 @@ describe("BillingService.markTransferReceivedByReference", () => {
       awaitingPaymentMethod: "bank_transfer",
       clientAccountId: "cli1",
       buildingId: "bldg1",
+      spaceId: "space1",
       spaceSnapshot: { name: "Salle A" },
       startAt: new Date("2026-07-20T10:00:00.000Z"),
       endAt: new Date("2026-07-20T12:00:00.000Z"),
@@ -118,6 +124,9 @@ describe("BillingService.markTransferReceivedByReference", () => {
           exec: async () => null,
         }),
       }),
+    });
+    getAuditLogModelMock.mockResolvedValue({
+      create: vi.fn().mockResolvedValue({ _id: "audit1" }),
     });
     applyBankTransferPaymentMock.mockResolvedValue({
       applied: true,

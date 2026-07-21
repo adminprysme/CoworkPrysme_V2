@@ -23,6 +23,57 @@ export interface SendMailResult {
   response?: string;
 }
 
+/** Honest delivery outcome for audit / staff UI (never throws). */
+export interface MailDeliveryOutcome {
+  emailSent: boolean;
+  /** Present only when emailSent is false — sanitized, no SMTP secrets. */
+  emailError?: string;
+}
+
+/**
+ * Interpret MailService.sendMail result for audit trails.
+ * emailSent is true only when response does not start with "error:".
+ */
+export function mailDeliveryFromResult(result: SendMailResult): MailDeliveryOutcome {
+  const response = result.response?.trim() ?? "";
+  if (response.startsWith("error:")) {
+    return {
+      emailSent: false,
+      emailError: sanitizeMailErrorMessage(
+        response
+          .slice("error:".length)
+          .trim()
+          .replace(/^Error:\s*/i, ""),
+      ),
+    };
+  }
+  return { emailSent: true };
+}
+
+/** Strip credentials / overly long SMTP dumps before persisting in audit. */
+export function sanitizeMailErrorMessage(raw: string): string {
+  const cleaned = raw
+    .replace(/pass(word)?\s*[:=]\s*\S+/gi, "password=[redacted]")
+    .replace(/auth\s*[:=]\s*\S+/gi, "auth=[redacted]")
+    .replace(/\bsk_(test|live)_[A-Za-z0-9]+/g, "[redacted]")
+    .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[email]")
+    .trim();
+  return cleaned.slice(0, 400) || "envoi email échoué";
+}
+
+/** Diff fragment for Planning / billing auditLogs. */
+export function emailDeliveryAuditDiff(
+  outcome: MailDeliveryOutcome,
+): Record<string, { before: unknown; after: unknown }> {
+  const diff: Record<string, { before: unknown; after: unknown }> = {
+    emailSent: { before: false, after: outcome.emailSent },
+  };
+  if (!outcome.emailSent && outcome.emailError) {
+    diff.emailError = { before: null, after: outcome.emailError };
+  }
+  return diff;
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);

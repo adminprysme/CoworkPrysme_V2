@@ -78,6 +78,18 @@
   color: var(--color-text-muted);
 }
 
+.emailFailChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #b45309 45%, var(--color-border));
+  background: color-mix(in srgb, #b45309 12%, var(--color-surface));
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: #92400e;
+}
+
 .kicker {
   margin: 0;
   font-size: 0.72rem;

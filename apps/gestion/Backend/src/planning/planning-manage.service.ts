@@ -77,9 +77,14 @@ import {
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
-import { MailService } from "../mail/mail.service.js";
+import {
+  MailService,
+  emailDeliveryAuditDiff,
+  mailDeliveryFromResult,
+} from "../mail/mail.service.js";
 import { StripeRefundService } from "../stripe/stripe-refund.service.js";
 import { writePlanningManageAudit } from "./planning-manage-audit.js";
+import { writeStaffEmailDeliveryAudit } from "./planning-manage-mail-delivery.js";
 import {
   renderCancellationEmail,
   renderContactTransferEmail,
@@ -434,11 +439,18 @@ export class PlanningManageService {
             ),
           )
         : undefined;
-      await this.mail.sendMail({
+      const mailResult = await this.mail.sendMail({
         to: clientEmail,
         subject: email.subject,
         html: email.html,
         attachments,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.space_change",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
       });
     }
 
@@ -838,7 +850,18 @@ export class PlanningManageService {
         refundExecution: caps.refundExecution,
         refundStatus: refundStatus ?? (accepted > 0 ? "pending" : "none"),
       });
-      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+      const cancelMailResult = await this.mail.sendMail({
+        to: clientEmail,
+        subject: email.subject,
+        html: email.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.cancel",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult: cancelMailResult,
+      });
     }
 
     // Manual refund confirmation email (immediate — no Stripe wait).
@@ -848,10 +871,17 @@ export class PlanningManageService {
         amountCents: accepted,
         channel: "manual_transfer",
       });
-      await this.mail.sendMail({
+      const mailResult = await this.mail.sendMail({
         to: clientEmail,
         subject: refundMail.subject,
         html: refundMail.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.refund",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
       });
     }
 
@@ -863,11 +893,12 @@ export class PlanningManageService {
         channel: "stripe_card",
         stripeRefundId,
       });
-      await this.mail.sendMail({
+      const mailResult = await this.mail.sendMail({
         to: clientEmail,
         subject: refundMail.subject,
         html: refundMail.html,
       });
+      const delivery = mailDeliveryFromResult(mailResult);
       await writePlanningManageAudit({
         profile,
         action: "reservation.refund",
@@ -878,7 +909,7 @@ export class PlanningManageService {
             after: String(reservation.spaceId),
           },
           stripeRefundId: { before: null, after: stripeRefundId },
-          emailSent: { before: false, after: true },
+          ...emailDeliveryAuditDiff(delivery),
           refundStatus: { before: "pending", after: "succeeded" },
           amountCents: { before: 0, after: accepted },
         },
@@ -979,10 +1010,17 @@ export class PlanningManageService {
         amountCents: request.amountCents,
         channel: "manual_transfer",
       });
-      await this.mail.sendMail({
+      const mailResult = await this.mail.sendMail({
         to: clientEmail,
         subject: refundMail.subject,
         html: refundMail.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.refund",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
       });
     }
 
@@ -1168,7 +1206,18 @@ export class PlanningManageService {
         startAt: formatFrDateTime(reservation.startAt),
         endAt: formatFrDateTime(reservation.endAt),
       });
-      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+      const mailResult = await this.mail.sendMail({
+        to: clientEmail,
+        subject: email.subject,
+        html: email.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.restore",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
+      });
     }
 
     const detail = await this.planning.getReservationDetail(profile, reservationId);
@@ -1475,11 +1524,18 @@ export class PlanningManageService {
             ),
           )
         : undefined;
-      await this.mail.sendMail({
+      const mailResult = await this.mail.sendMail({
         to: clientEmail,
         subject: email.subject,
         html: email.html,
         attachments,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.date_change",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
       });
     }
 
@@ -1594,7 +1650,18 @@ export class PlanningManageService {
         previousPartySize,
         newPartySize: request.newPartySize,
       });
-      await this.mail.sendMail({ to: clientEmail, subject: email.subject, html: email.html });
+      const mailResult = await this.mail.sendMail({
+        to: clientEmail,
+        subject: email.subject,
+        html: email.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.party_size_change",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
+      });
     }
 
     const detail = await this.planning.getReservationDetail(profile, reservationId);
@@ -1734,7 +1801,19 @@ export class PlanningManageService {
         nextContactLabel: nextAccount.email,
         audience: "previous",
       });
-      await this.mail.sendMail({ to: previousEmail, subject: email.subject, html: email.html });
+      const mailResult = await this.mail.sendMail({
+        to: previousEmail,
+        subject: email.subject,
+        html: email.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.contact_transfer",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
+        extraDiff: { emailAudience: { before: null, after: "previous" } },
+      });
     }
     if (nextAccount.email) {
       const email = renderContactTransferEmail({
@@ -1746,7 +1825,19 @@ export class PlanningManageService {
         nextContactLabel: nextAccount.email,
         audience: "next",
       });
-      await this.mail.sendMail({ to: nextAccount.email, subject: email.subject, html: email.html });
+      const mailResult = await this.mail.sendMail({
+        to: nextAccount.email,
+        subject: email.subject,
+        html: email.html,
+      });
+      await writeStaffEmailDeliveryAudit({
+        profile,
+        action: "reservation.contact_transfer",
+        reservationId: reservation._id,
+        spaceId: String(reservation.spaceId),
+        mailResult,
+        extraDiff: { emailAudience: { before: null, after: "next" } },
+      });
     }
 
     const detailAfter = await this.planning.getReservationDetail(profile, reservationId);
