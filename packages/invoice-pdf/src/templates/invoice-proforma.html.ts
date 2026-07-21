@@ -114,80 +114,80 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
   <meta charset="utf-8" />
   <title>Proforma ${escapeHtml(model.invoiceReference)}</title>
   <style>
-    @page { size: A4; margin: 14mm 14mm 16mm; }
+    @page { size: A4; margin: 10mm 12mm 12mm; }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       color: #1a1a1a;
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      font-size: 10.5pt;
-      line-height: 1.45;
+      font-size: 10pt;
+      line-height: 1.35;
     }
     .page {
       width: 100%;
     }
     .copper { color: #B87333; }
-    .muted { color: #666; font-size: 9.5pt; }
+    .muted { color: #666; font-size: 9pt; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; letter-spacing: 0.02em; }
     .header {
       display: flex;
       justify-content: space-between;
-      gap: 24px;
+      gap: 18px;
       align-items: flex-start;
-      padding-bottom: 16px;
+      padding-bottom: 10px;
       border-bottom: 2px solid #B87333;
     }
     .brand {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 6px;
       min-width: 0;
       max-width: 58%;
     }
     .logo {
       display: block;
-      height: 48px;
+      height: 40px;
       width: auto;
-      max-width: 220px;
+      max-width: 200px;
       object-fit: contain;
       object-position: left center;
     }
     .issuer {
-      font-size: 9.5pt;
-      line-height: 1.4;
+      font-size: 9pt;
+      line-height: 1.35;
       word-break: break-word;
     }
-    .issuer strong { font-size: 11pt; }
+    .issuer strong { font-size: 10.5pt; }
     .doc-meta {
       text-align: right;
       min-width: 38%;
     }
     .doc-kind {
       display: inline-block;
-      margin-bottom: 8px;
-      padding: 4px 10px;
+      margin-bottom: 6px;
+      padding: 3px 9px;
       border: 1px solid #B87333;
       border-radius: 999px;
       color: #B87333;
-      font-size: 9pt;
+      font-size: 8.5pt;
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
     }
     .doc-title {
-      margin: 0 0 6px;
-      font-size: 18pt;
+      margin: 0 0 4px;
+      font-size: 16pt;
       font-weight: 600;
       letter-spacing: -0.02em;
     }
-    .meta-list { margin: 0; padding: 0; list-style: none; font-size: 9.5pt; }
-    .meta-list li { margin: 0 0 3px; }
+    .meta-list { margin: 0; padding: 0; list-style: none; font-size: 9pt; }
+    .meta-list li { margin: 0 0 2px; }
     .parties {
       display: flex;
       justify-content: space-between;
-      gap: 24px;
-      margin: 22px 0 18px;
+      gap: 18px;
+      margin: 12px 0 10px;
     }
     .party {
       width: 48%;
@@ -195,17 +195,17 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       word-break: break-word;
     }
     .party-label {
-      margin: 0 0 6px;
-      font-size: 8.5pt;
+      margin: 0 0 4px;
+      font-size: 8pt;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #B87333;
       font-weight: 700;
     }
     .client-name {
-      font-size: 12pt;
+      font-size: 11pt;
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     table.lines {
       width: 100%;
@@ -217,15 +217,15 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
     table.lines th {
       background: #f6f3ef;
       color: #444;
-      font-size: 8.5pt;
+      font-size: 8pt;
       text-transform: uppercase;
       letter-spacing: 0.04em;
       text-align: left;
-      padding: 8px 8px;
+      padding: 6px 7px;
       border-bottom: 1px solid #ddd;
     }
     table.lines td {
-      padding: 9px 8px;
+      padding: 6px 7px;
       border-bottom: 1px solid #eee;
       vertical-align: top;
       word-break: break-word;
@@ -257,19 +257,19 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       display: flex;
       justify-content: flex-end;
       align-items: flex-start;
-      gap: 28px;
-      margin-top: 16px;
+      gap: 18px;
+      margin-top: 10px;
       page-break-inside: avoid;
     }
     .vat-box {
-      min-width: 300px;
+      min-width: 280px;
       flex: 1 1 auto;
-      max-width: 360px;
+      max-width: 340px;
     }
     .totals-box {
-      min-width: 240px;
+      min-width: 220px;
       flex: 0 0 auto;
-      padding: 12px 14px;
+      padding: 8px 12px;
       background: #f6f3ef;
       border-radius: 8px;
       border: none;
@@ -280,8 +280,8 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       print-color-adjust: exact;
     }
     .section-title {
-      margin: 0 0 8px;
-      font-size: 8.5pt;
+      margin: 0 0 5px;
+      font-size: 8pt;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #B87333;
@@ -292,7 +292,7 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       width: 100%;
       border-collapse: collapse;
       border-spacing: 0;
-      font-size: 9.5pt;
+      font-size: 9pt;
       table-layout: fixed;
       border: none;
     }
@@ -305,15 +305,15 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       border-right: none !important;
       background: transparent;
       vertical-align: baseline;
-      padding: 5px 0;
+      padding: 3px 0;
     }
     table.vat thead th {
       color: #888;
-      font-size: 7.5pt;
+      font-size: 7pt;
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      padding-bottom: 6px;
+      padding-bottom: 4px;
     }
     table.vat .vat-rate {
       width: 30%;
@@ -345,13 +345,13 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       border-collapse: collapse;
       border-spacing: 0;
       border: none;
-      font-size: 10pt;
+      font-size: 9.5pt;
     }
     table.totals td {
       border: none !important;
       border-top: none !important;
       border-bottom: none !important;
-      padding: 6px 0;
+      padding: 4px 0;
       background: transparent;
       vertical-align: baseline;
     }
@@ -359,43 +359,43 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       text-align: right;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
-      padding-left: 16px;
+      padding-left: 14px;
     }
     table.totals tr.grand td {
-      padding-top: 10px;
-      font-size: 12pt;
+      padding-top: 7px;
+      font-size: 11pt;
       font-weight: 700;
       color: #B87333;
     }
     .settlement-box {
-      margin-top: 14px;
-      padding: 12px 14px;
+      margin-top: 8px;
+      padding: 8px 12px;
       border-radius: 8px;
       border: 1px solid #e6e0d8;
       background: #fff;
       page-break-inside: avoid;
     }
     .settlement-box .section-title {
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .settlement-line {
       display: flex;
       justify-content: space-between;
-      gap: 16px;
-      padding: 5px 0;
-      font-size: 10.5pt;
+      gap: 14px;
+      padding: 3px 0;
+      font-size: 10pt;
       font-variant-numeric: tabular-nums;
     }
     .settlement-line.due {
-      margin-top: 4px;
-      padding-top: 8px;
+      margin-top: 2px;
+      padding-top: 6px;
       border-top: 1px solid #e6e0d8;
       font-weight: 700;
       color: #B87333;
     }
     .payment {
-      margin-top: 22px;
-      padding: 14px 16px;
+      margin-top: 10px;
+      padding: 10px 12px;
       border: 1px solid #e6e0d8;
       border-radius: 8px;
       page-break-inside: avoid;
@@ -403,23 +403,23 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
     .payment-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 18px 28px;
+      gap: 12px 22px;
     }
-    .payment-rib { margin-top: 12px; }
+    .payment-rib { margin-top: 8px; }
     .rib-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px 18px;
-      margin-top: 6px;
+      gap: 8px 14px;
+      margin-top: 4px;
     }
-    .rib-ref { margin: 10px 0 0; font-size: 9.5pt; color: #444; }
+    .rib-ref { margin: 8px 0 0; font-size: 9pt; color: #444; }
     .legal {
-      margin-top: 28px;
-      padding-top: 12px;
+      margin-top: 12px;
+      padding-top: 8px;
       border-top: 1px solid #ddd;
-      font-size: 8pt;
+      font-size: 7.5pt;
       color: #555;
-      line-height: 1.4;
+      line-height: 1.35;
       page-break-inside: avoid;
     }
   </style>

@@ -66,7 +66,7 @@ describe("invoice PDF template", () => {
     expect(html).toContain("Carte bancaire");
     expect(html).toContain(INVOICE_LATE_PAYMENT_LEGAL_NOTICE.replaceAll("'", "&#39;"));
     expect(html).toContain('class="logo"');
-    expect(html).toContain("height: 48px");
+    expect(html).toContain("height: 40px");
     expect(html).toContain("width: auto");
     expect(html).toContain("Base HT");
     expect(html).toContain("Montant TVA");
@@ -116,7 +116,16 @@ describe("invoice PDF template", () => {
       },
       cardex: {
         identity: { firstName: "Paul", lastName: "Thomas" },
-        company: { legalName: "CG Développement" },
+        company: {
+          legalName: "CG Développement",
+          siret: "88209583900016",
+          billingAddress: {
+            street: "36 Allée des Prés Rouets",
+            zip: "69510",
+            city: "Messimy",
+            country: "FR",
+          },
+        },
       },
       issuer,
       logoDataUri: "data:image/png;base64,aaa",
@@ -130,6 +139,7 @@ describe("invoice PDF template", () => {
     expect(model.totals.ttc).toBe(43200);
     expect(model.totals.paidTotal).toBe(21600);
     expect(model.totals.balanceDue).toBe(21600);
+    expect(model.client.addressLines).toEqual(["36 Allée des Prés Rouets", "69510 Messimy"]);
 
     const html = renderInvoiceProformaHtml(model);
     expect(html).toContain("Total TTC");
@@ -137,6 +147,8 @@ describe("invoice PDF template", () => {
     expect(html).toContain("Situation de paiement");
     expect(html).toContain("Déjà réglé");
     expect(html).toContain("Reste dû");
+    expect(html).toContain("36 Allée des Prés Rouets");
+    expect(html).toContain("69510 Messimy");
     // Full contract total remains visible (not replaced by remaining due).
     expect(html).toMatch(/Total TTC[\s\S]*432/);
     expect(html).toMatch(/Déjà réglé[\s\S]*216/);
