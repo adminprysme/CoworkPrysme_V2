@@ -94,8 +94,13 @@ export function resolveInvoicePdfPaymentMethod(input: {
 export function resolveInvoicePdfPaymentStatus(
   invoice: InvoicePdfSourceInvoice,
 ): InvoicePdfPaymentStatus {
-  if (invoice.status === "paid" || (invoice.totals.balanceDue ?? 0) <= 0) {
+  const balanceDue = Math.max(0, Math.trunc(invoice.totals.balanceDue ?? invoice.totals.ttc));
+  const paidTotal = Math.max(0, Math.trunc(invoice.totals.paidTotal ?? 0));
+  if (invoice.status === "paid" || balanceDue <= 0) {
     return "paid";
+  }
+  if (invoice.status === "partially_paid" || (paidTotal > 0 && balanceDue > 0)) {
+    return "partially_paid";
   }
   if (invoice.status === "proforma" || invoice.status === "issued") {
     return "awaiting";
@@ -172,6 +177,11 @@ export function buildInvoicePdfViewModel(input: {
       vat: input.invoice.totals.vat,
       ttc: input.invoice.totals.ttc,
       discountTotal: input.invoice.totals.discountTotal,
+      paidTotal: Math.max(0, Math.trunc(input.invoice.totals.paidTotal ?? 0)),
+      balanceDue: Math.max(
+        0,
+        Math.trunc(input.invoice.totals.balanceDue ?? input.invoice.totals.ttc),
+      ),
     },
     paymentMethod,
     paymentStatus: resolveInvoicePdfPaymentStatus(input.invoice),

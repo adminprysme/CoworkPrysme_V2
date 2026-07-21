@@ -31,6 +31,7 @@ function paymentMethodLabel(method: InvoicePdfViewModel["paymentMethod"]): strin
 
 function paymentStatusLabel(status: InvoicePdfViewModel["paymentStatus"]): string {
   if (status === "paid") return "Payé";
+  if (status === "partially_paid") return "Partiellement payé";
   if (status === "awaiting") return "En attente de paiement";
   return "Autre";
 }
@@ -366,6 +367,32 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       font-weight: 700;
       color: #B87333;
     }
+    .settlement-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid #e6e0d8;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+    .settlement-box .section-title {
+      margin-bottom: 6px;
+    }
+    .settlement-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 5px 0;
+      font-size: 10.5pt;
+      font-variant-numeric: tabular-nums;
+    }
+    .settlement-line.due {
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid #e6e0d8;
+      font-weight: 700;
+      color: #B87333;
+    }
     .payment {
       margin-top: 22px;
       padding: 14px 16px;
@@ -486,6 +513,18 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
             <tr class="grand"><td>Total TTC</td><td class="totals-num">${escapeHtml(formatEuro(model.totals.ttc))}</td></tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="settlement-box" aria-label="Situation de paiement">
+      <div class="section-title">Situation de paiement</div>
+      <div class="settlement-line">
+        <span>Déjà réglé</span>
+        <strong>${escapeHtml(formatEuro(model.totals.paidTotal))}</strong>
+      </div>
+      <div class="settlement-line due">
+        <span>Reste dû</span>
+        <strong>${escapeHtml(formatEuro(model.totals.balanceDue))}</strong>
       </div>
     </section>
 

@@ -72,6 +72,75 @@ describe("invoice PDF template", () => {
     expect(html).toContain("Montant TVA");
     expect(html).toContain('class="totals"');
     expect(html).not.toContain("total-row");
+    expect(html).toContain("Situation de paiement");
+    expect(html).toContain("Déjà réglé");
+    expect(html).toContain("Reste dû");
+  });
+
+  it("shows paid and balance due amounts on a partially paid invoice with complement", () => {
+    const model = buildInvoicePdfViewModel({
+      invoice: {
+        reference: "PF-2026-PARTIAL",
+        type: "proforma",
+        status: "partially_paid",
+        issuedAt: new Date("2026-07-21T08:00:00.000Z"),
+        lines: [
+          {
+            label: "FOCUS",
+            kind: "space",
+            qty: 1,
+            unitPriceHT: 18000,
+            vatRate: 20,
+            discount: 0,
+            totalHT: 18000,
+          },
+          {
+            label: "Complément — prolongation (daily → daily, 2 unité(s))",
+            kind: "fee",
+            qty: 1,
+            unitPriceHT: 18000,
+            vatRate: 20,
+            discount: 0,
+            totalHT: 18000,
+          },
+        ],
+        vatBreakdown: [{ rate: 20, baseHT: 36000, vat: 7200 }],
+        totals: {
+          ht: 36000,
+          vat: 7200,
+          ttc: 43200,
+          discountTotal: 0,
+          paidTotal: 21600,
+          balanceDue: 21600,
+        },
+      },
+      cardex: {
+        identity: { firstName: "Paul", lastName: "Thomas" },
+        company: { legalName: "CG Développement" },
+      },
+      issuer,
+      logoDataUri: "data:image/png;base64,aaa",
+      reservationReference: "RES-2026-PARTIAL",
+      reservationStartAt: "2026-11-02T07:00:00.000Z",
+      reservationEndAt: "2026-11-03T17:00:00.000Z",
+      paymentMethod: "bank_transfer",
+    });
+
+    expect(model.paymentStatus).toBe("partially_paid");
+    expect(model.totals.ttc).toBe(43200);
+    expect(model.totals.paidTotal).toBe(21600);
+    expect(model.totals.balanceDue).toBe(21600);
+
+    const html = renderInvoiceProformaHtml(model);
+    expect(html).toContain("Total TTC");
+    expect(html).toContain("Partiellement payé");
+    expect(html).toContain("Situation de paiement");
+    expect(html).toContain("Déjà réglé");
+    expect(html).toContain("Reste dû");
+    // Full contract total remains visible (not replaced by remaining due).
+    expect(html).toMatch(/Total TTC[\s\S]*432/);
+    expect(html).toMatch(/Déjà réglé[\s\S]*216/);
+    expect(html).toMatch(/Reste dû[\s\S]*216/);
   });
 
   it("keeps numeric qty for services and period for space on rich invoices", () => {

@@ -2,7 +2,7 @@ import type { InvoiceIssuerConfig } from "./invoice-issuer.config.js";
 
 export type InvoicePdfPaymentMethod = "card" | "bank_transfer" | "unknown";
 
-export type InvoicePdfPaymentStatus = "paid" | "awaiting" | "other";
+export type InvoicePdfPaymentStatus = "paid" | "partially_paid" | "awaiting" | "other";
 
 export interface InvoicePdfLineView {
   label: string;
@@ -50,6 +50,10 @@ export interface InvoicePdfViewModel {
     vat: number;
     ttc: number;
     discountTotal: number;
+    /** Amount already settled (cents). Always present for settlement clarity. */
+    paidTotal: number;
+    /** Remaining amount due (cents). Always present for settlement clarity. */
+    balanceDue: number;
   };
   paymentMethod: InvoicePdfPaymentMethod;
   paymentStatus: InvoicePdfPaymentStatus;
