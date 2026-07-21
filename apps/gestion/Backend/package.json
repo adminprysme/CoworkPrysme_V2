@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "sh -c 'set -a && . ./.env && set +a && exec nest start --watch'",
+    "dev": "node scripts/run-with-env.mjs nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "eslint src/",

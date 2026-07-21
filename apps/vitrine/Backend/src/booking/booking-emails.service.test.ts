@@ -13,6 +13,9 @@ vi.mock("@coworkprysme/db", () => ({
   getBuildingModel: vi.fn(),
   getClientAccountModel: vi.fn(),
   getReservationModel: vi.fn(),
+  getAuditLogModel: vi.fn().mockResolvedValue({
+    create: vi.fn().mockResolvedValue({ _id: "audit1" }),
+  }),
 }));
 
 import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
@@ -31,7 +34,13 @@ describe("BookingEmailsService PDF attachments (Phase 2)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mail = { sendMail: vi.fn().mockResolvedValue(undefined) };
+    mail = {
+      sendMail: vi.fn().mockResolvedValue({
+        dryRun: false,
+        messageId: "<mock@prysme.eu>",
+        response: "250 OK",
+      }),
+    };
     generatePdfForInvoiceReference.mockResolvedValue({
       pdf: Buffer.from("%PDF-1.4 card-or-proforma"),
       model: { invoiceReference: "PF-2026-TEST" },

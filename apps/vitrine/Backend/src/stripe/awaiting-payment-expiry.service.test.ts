@@ -166,6 +166,7 @@ describe("AwaitingPaymentExpiryService — Stripe PaymentIntent cancellation", (
       clientEmail: "client@example.com",
       reservationReference: "RES-2026-00102",
       spaceName: "Salle B",
+      reservationId: "res4",
     });
     expect(paymentIntentsCancelMock).not.toHaveBeenCalled();
     expect(result.expiredCount).toBe(1);

@@ -345,6 +345,7 @@ export class BookingConfirmService {
         rib: bankTransferRib,
         transferLabel: result.reservation.reference,
         building: buildingAccess,
+        reservationId: result.reservation._id,
       });
 
       await this.bookingEmails.sendStaffBookingNotifications({
@@ -359,6 +360,7 @@ export class BookingConfirmService {
         endAt: input.endAt,
         totalTTC: pricing.totalTTC,
         paymentMethod: input.paymentMethod,
+        reservationId: result.reservation._id,
       });
     } else {
       this.logger.log(

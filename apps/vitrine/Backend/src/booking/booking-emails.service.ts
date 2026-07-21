@@ -11,7 +11,7 @@ import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
-import { MailService, type MailAttachment } from "../mail/mail.service.js";
+import { MailService, type MailAttachment, type SendMailResult } from "../mail/mail.service.js";
 import { resolveBookingNotificationRecipients } from "../mail/resolve-booking-notification-recipients.js";
 import {
   buildingToEmailAccess,
@@ -23,6 +23,10 @@ import {
   renderStaffBookingNotificationEmail,
   type BookingConfirmationBuildingAccess,
 } from "../mail/templates/booking-emails.js";
+import {
+  writeBookingEmailDeliveryAudit,
+  type BookingEmailAction,
+} from "./booking-email-delivery-audit.js";
 
 type BuildingLean = Building & { _id: Types.ObjectId };
 
@@ -78,6 +82,7 @@ export class BookingEmailsService {
     lines: BookingEmailPricingLine[];
     vatBreakdown: BookingEmailVatLine[];
     building: BookingConfirmationBuildingAccess;
+    reservationId?: Types.ObjectId | string;
   }) {
     const clientEmail = input.clientEmail.trim().toLowerCase();
 
@@ -93,22 +98,30 @@ export class BookingEmailsService {
       building: input.building,
     });
 
-    const attachments = await this.invoicePdfAttachment(input.invoiceReference);
+    const { attachments, pdfAttached } = await this.invoicePdfAttachment(input.invoiceReference);
 
     // Permanent rule: building contact email is display-only, never a send recipient.
-    await this.mail.sendMail({
+    await this.sendAndAudit({
+      action: "booking.email.card_confirmation",
       to: clientEmail,
       subject: bookingEmail.subject,
       html: bookingEmail.html,
       attachments,
+      pdfAttached,
+      reservationId: input.reservationId,
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
     });
 
     if (input.isNewAccount) {
       const accountEmail = renderAccountCreatedEmail({ email: clientEmail });
-      await this.mail.sendMail({
+      await this.sendAndAudit({
+        action: "booking.email.account_created",
         to: clientEmail,
         subject: accountEmail.subject,
         html: accountEmail.html,
+        reservationId: input.reservationId,
+        reservationReference: input.reservationReference,
       });
     }
   }
@@ -126,6 +139,7 @@ export class BookingEmailsService {
     rib: { iban: string; bic: string; accountHolder: string; bankName?: string };
     transferLabel: string;
     building: BookingConfirmationBuildingAccess;
+    reservationId?: Types.ObjectId | string;
   }) {
     const clientEmail = input.clientEmail.trim().toLowerCase();
     const expiresAtLabel = input.expiresAt.toLocaleString("fr-FR", {
@@ -147,21 +161,29 @@ export class BookingEmailsService {
       building: input.building,
     });
 
-    const attachments = await this.invoicePdfAttachment(input.invoiceReference);
+    const { attachments, pdfAttached } = await this.invoicePdfAttachment(input.invoiceReference);
 
-    await this.mail.sendMail({
+    await this.sendAndAudit({
+      action: "booking.email.bank_transfer_instructions",
       to: clientEmail,
       subject: email.subject,
       html: email.html,
       attachments,
+      pdfAttached,
+      reservationId: input.reservationId,
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
     });
 
     if (input.isNewAccount) {
       const accountEmail = renderAccountCreatedEmail({ email: clientEmail });
-      await this.mail.sendMail({
+      await this.sendAndAudit({
+        action: "booking.email.account_created",
         to: clientEmail,
         subject: accountEmail.subject,
         html: accountEmail.html,
+        reservationId: input.reservationId,
+        reservationReference: input.reservationReference,
       });
     }
   }
@@ -179,6 +201,7 @@ export class BookingEmailsService {
     transferLabel: string;
     tier: "j2" | "j4" | "j6";
     building: BookingConfirmationBuildingAccess;
+    reservationId?: Types.ObjectId | string;
   }) {
     const clientEmail = input.clientEmail.trim().toLowerCase();
     const expiresAtLabel = input.expiresAt.toLocaleString("fr-FR", {
@@ -201,10 +224,15 @@ export class BookingEmailsService {
       tier: input.tier,
     });
     // Phase 2: reminders intentionally have no PDF attachment.
-    await this.mail.sendMail({
+    await this.sendAndAudit({
+      action: "booking.email.bank_transfer_reminder",
       to: clientEmail,
       subject: email.subject,
       html: email.html,
+      pdfAttached: false,
+      reservationId: input.reservationId,
+      reservationReference: input.reservationReference,
+      invoiceReference: input.invoiceReference,
     });
   }
 
@@ -212,16 +240,20 @@ export class BookingEmailsService {
     clientEmail: string;
     reservationReference: string;
     spaceName: string;
+    reservationId?: Types.ObjectId | string;
   }) {
     const clientEmail = input.clientEmail.trim().toLowerCase();
     const email = renderBankTransferExpiredEmail({
       reservationReference: input.reservationReference,
       spaceName: input.spaceName,
     });
-    await this.mail.sendMail({
+    await this.sendAndAudit({
+      action: "booking.email.bank_transfer_expired",
       to: clientEmail,
       subject: email.subject,
       html: email.html,
+      reservationId: input.reservationId,
+      reservationReference: input.reservationReference,
     });
   }
 
@@ -241,6 +273,7 @@ export class BookingEmailsService {
     endAt: Date | string;
     totalTTC: number;
     paymentMethod: "card" | "bank_transfer";
+    reservationId?: Types.ObjectId | string;
   }) {
     const recipients = await resolveBookingNotificationRecipients(input.buildingId);
     if (recipients.length === 0) {
@@ -266,10 +299,15 @@ export class BookingEmailsService {
     });
 
     for (const to of recipients) {
-      await this.mail.sendMail({
+      await this.sendAndAudit({
+        action: "booking.email.staff_notification",
         to,
         subject: staffEmail.subject,
         html: staffEmail.html,
+        pdfAttached: false,
+        reservationId: input.reservationId,
+        reservationReference: input.reservationReference,
+        invoiceReference: input.invoiceReference,
       });
     }
   }
@@ -344,6 +382,7 @@ export class BookingEmailsService {
         },
       ],
       building,
+      reservationId: reservation._id,
     });
 
     await this.sendStaffBookingNotifications({
@@ -358,25 +397,64 @@ export class BookingEmailsService {
       endAt: reservation.endAt,
       totalTTC: reservation.pricing.totalTTC,
       paymentMethod: "card",
+      reservationId: reservation._id,
     });
   }
 
-  /** Best-effort PDF attach — email still sends if generation fails. */
+  private async sendAndAudit(input: {
+    action: BookingEmailAction;
+    to: string;
+    subject: string;
+    html: string;
+    attachments?: MailAttachment[];
+    pdfAttached?: boolean;
+    reservationId?: Types.ObjectId | string;
+    reservationReference?: string;
+    invoiceReference?: string;
+  }): Promise<SendMailResult> {
+    const mailResult = await this.mail.sendMail({
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      attachments: input.attachments,
+    });
+    try {
+      await writeBookingEmailDeliveryAudit({
+        action: input.action,
+        reservationId: input.reservationId,
+        reservationReference: input.reservationReference,
+        invoiceReference: input.invoiceReference,
+        mailResult,
+        pdfAttached: input.pdfAttached,
+        to: input.to,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to write email delivery audit action=${input.action}: ${String(error)}`,
+      );
+    }
+    return mailResult;
+  }
+
+  /** Best-effort PDF attach — email still sends if generation fails (audited via pdfAttached). */
   private async invoicePdfAttachment(
     invoiceReference: string,
-  ): Promise<MailAttachment[] | undefined> {
+  ): Promise<{ attachments: MailAttachment[] | undefined; pdfAttached: boolean }> {
     try {
       const { pdf, model } = await this.invoicePdf.generatePdfForInvoiceReference(invoiceReference);
-      return [
-        {
-          filename: `${model.invoiceReference}.pdf`,
-          content: pdf,
-          contentType: "application/pdf",
-        },
-      ];
+      return {
+        attachments: [
+          {
+            filename: `${model.invoiceReference}.pdf`,
+            content: pdf,
+            contentType: "application/pdf",
+          },
+        ],
+        pdfAttached: true,
+      };
     } catch (error) {
       this.logger.error(`Invoice PDF attachment failed for ${invoiceReference}: ${String(error)}`);
-      return undefined;
+      return { attachments: undefined, pdfAttached: false };
     }
   }
 }

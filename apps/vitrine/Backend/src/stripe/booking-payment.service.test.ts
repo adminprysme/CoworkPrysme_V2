@@ -500,6 +500,10 @@ describe("Stripe booking payment", () => {
     expect(confirmReservationAfterCardPaymentMock).toHaveBeenCalledWith({
       reservationId: RESERVATION_ID,
     });
+    expect(sendEmailsAfterCardPaymentMock).toHaveBeenCalledWith({
+      reservationId: RESERVATION_ID,
+      invoiceReference: "PF-2026-00042",
+    });
     expect(result.reservationStatus).toBe("confirmed");
     expect(result.paymentState).toBe("paid");
   });

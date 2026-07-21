@@ -134,6 +134,7 @@ export class AwaitingPaymentExpiryService implements OnModuleInit, OnModuleDestr
           transferLabel: candidate.reference,
           tier: candidate.tier,
           building,
+          reservationId: candidate.reservationId,
         });
         sent += 1;
         this.logger.log(`Sent bank_transfer reminder ${candidate.tier} for ${candidate.reference}`);
@@ -149,6 +150,7 @@ export class AwaitingPaymentExpiryService implements OnModuleInit, OnModuleDestr
 
   private async sendBankTransferExpiredIfPossible(row: {
     reference: string;
+    reservationId?: string;
     clientAccountId?: string;
     spaceName?: string;
   }) {
@@ -164,6 +166,7 @@ export class AwaitingPaymentExpiryService implements OnModuleInit, OnModuleDestr
         clientEmail,
         reservationReference: row.reference,
         spaceName: row.spaceName ?? "Espace",
+        reservationId: row.reservationId,
       });
     } catch (error) {
       this.logger.error(
