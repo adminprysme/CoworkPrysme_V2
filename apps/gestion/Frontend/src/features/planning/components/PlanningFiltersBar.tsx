@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { IconChevronDown } from "@tabler/icons-react";
 import type { PlanningPaymentStatus } from "@coworkprysme/shared";
 
 import {
@@ -11,25 +12,32 @@ import {
 import { PLANNING_SPACE_SORT_OPTIONS, type PlanningSpaceSort } from "../planning-sort.js";
 import styles from "./PlanningFiltersBar.module.css";
 
-interface FilterPillProps {
-  active: boolean;
-  label: string;
-  onClick: () => void;
+type OpenMenu = "type" | "status" | "display" | null;
+
+const TYPE_OPTIONS: Array<{ value: PlanningTypeFilter; label: string }> = [
+  { value: "all", label: "Tous" },
+  { value: "meeting_room", label: "Salle de réunion" },
+  { value: "private_office", label: "Bureau" },
+];
+
+function typeSummary(value: PlanningTypeFilter): string {
+  return TYPE_OPTIONS.find((option) => option.value === value)?.label ?? "Tous";
 }
 
-function FilterPill({ active, label, onClick }: FilterPillProps) {
-  return (
-    <button
-      type="button"
-      className={[styles.filterPill, active ? styles.filterPillActive : ""]
-        .filter(Boolean)
-        .join(" ")}
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      {label}
-    </button>
+function statusSummary(statuses: PlanningPaymentStatusFilter): string {
+  if (statuses.size === 0) return "Tous";
+  const labels = PLANNING_PAYMENT_FILTER_OPTIONS.filter((option) => statuses.has(option.value)).map(
+    (option) => option.label,
   );
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.length} sélectionnés`;
+}
+
+function displaySummary(withReservationsOnly: boolean, showCancelled: boolean): string {
+  const parts: string[] = [];
+  if (withReservationsOnly) parts.push("Avec réservation");
+  if (showCancelled) parts.push("Annulées");
+  return parts.length > 0 ? parts.join(" · ") : "Tous";
 }
 
 export interface PlanningFiltersBarProps {
@@ -62,7 +70,12 @@ export function PlanningFiltersBar({
   searchSlot,
 }: PlanningFiltersBarProps) {
   const panelTitleId = useId();
+  const typeMenuId = useId();
+  const statusMenuId = useId();
+  const displayMenuId = useId();
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const showReset = hasActivePlanningFilters({
     typeFilter,
     paymentStatuses,
@@ -81,11 +94,34 @@ export function PlanningFiltersBar({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setFiltersOpen(false);
+        setOpenMenu(null);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [filtersOpen]);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    function onPointerDown(event: MouseEvent) {
+      const root = rootRef.current;
+      if (!root || !(event.target instanceof Node) || root.contains(event.target)) return;
+      setOpenMenu(null);
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenMenu(null);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenu]);
+
+  function toggleMenu(menu: Exclude<OpenMenu, null>) {
+    setOpenMenu((current) => (current === menu ? null : menu));
+  }
 
   function togglePaymentStatus(status: PlanningPaymentStatus) {
     const next = new Set(paymentStatuses);
@@ -100,91 +136,154 @@ export function PlanningFiltersBar({
   const filtersBody = (
     <>
       <div className={styles.filtersBar} role="group" aria-label="Filtres du planning">
-        <div className={styles.filterGroup}>
-          <span className={styles.filterGroupLabel} id="planning-filter-type-label">
-            Type
-          </span>
-          <div
-            className={styles.filterPills}
-            role="group"
-            aria-labelledby="planning-filter-type-label"
+        <div className={styles.dropdown}>
+          <button
+            type="button"
+            className={styles.dropdownTrigger}
+            aria-expanded={openMenu === "type"}
+            aria-haspopup="listbox"
+            aria-controls={typeMenuId}
+            onClick={() => toggleMenu("type")}
           >
-            <FilterPill
-              active={typeFilter === "all"}
-              label="Tous"
-              onClick={() => onTypeChange("all")}
+            <span className={styles.dropdownTriggerText}>
+              <span className={styles.dropdownGroup}>Type</span>
+              <span className={styles.dropdownValue}>{typeSummary(typeFilter)}</span>
+            </span>
+            <IconChevronDown
+              size={16}
+              stroke={1.75}
+              aria-hidden
+              className={styles.dropdownChevron}
             />
-            <FilterPill
-              active={typeFilter === "meeting_room"}
-              label="Salle de réunion"
-              onClick={() => onTypeChange("meeting_room")}
-            />
-            <FilterPill
-              active={typeFilter === "private_office"}
-              label="Bureau"
-              onClick={() => onTypeChange("private_office")}
-            />
-          </div>
+          </button>
+          {openMenu === "type" ? (
+            <div className={styles.dropdownMenu} id={typeMenuId} role="listbox">
+              {TYPE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={typeFilter === option.value}
+                  className={
+                    typeFilter === option.value
+                      ? styles.dropdownOptionActive
+                      : styles.dropdownOption
+                  }
+                  onClick={() => {
+                    onTypeChange(option.value);
+                    setOpenMenu(null);
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        <span className={styles.filterDivider} aria-hidden="true">
-          |
-        </span>
-
-        <div className={styles.filterGroup}>
-          <span className={styles.filterGroupLabel} id="planning-filter-status-label">
-            Statut
-          </span>
-          <div
-            className={styles.filterPills}
-            role="group"
-            aria-labelledby="planning-filter-status-label"
+        <div className={styles.dropdown}>
+          <button
+            type="button"
+            className={styles.dropdownTrigger}
+            aria-expanded={openMenu === "status"}
+            aria-haspopup="true"
+            aria-controls={statusMenuId}
+            onClick={() => toggleMenu("status")}
           >
-            <FilterPill
-              active={paymentAll}
-              label="Tous"
-              onClick={() => onPaymentStatusesChange(emptyPaymentStatusFilter())}
+            <span className={styles.dropdownTriggerText}>
+              <span className={styles.dropdownGroup}>Statut</span>
+              <span className={styles.dropdownValue}>{statusSummary(paymentStatuses)}</span>
+            </span>
+            <IconChevronDown
+              size={16}
+              stroke={1.75}
+              aria-hidden
+              className={styles.dropdownChevron}
             />
-            {PLANNING_PAYMENT_FILTER_OPTIONS.map((option) => (
-              <FilterPill
-                key={option.value}
-                active={paymentStatuses.has(option.value)}
-                label={option.label}
-                onClick={() => togglePaymentStatus(option.value)}
-              />
-            ))}
-          </div>
+          </button>
+          {openMenu === "status" ? (
+            <div className={styles.dropdownMenu} id={statusMenuId} role="group">
+              <label className={styles.dropdownCheckOption}>
+                <input
+                  type="checkbox"
+                  checked={paymentAll}
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      onPaymentStatusesChange(emptyPaymentStatusFilter());
+                    }
+                  }}
+                />
+                <span>Tous</span>
+              </label>
+              {PLANNING_PAYMENT_FILTER_OPTIONS.map((option) => (
+                <label key={option.value} className={styles.dropdownCheckOption}>
+                  <input
+                    type="checkbox"
+                    checked={paymentStatuses.has(option.value)}
+                    onChange={() => togglePaymentStatus(option.value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        <span className={styles.filterDivider} aria-hidden="true">
-          |
-        </span>
-
-        <div className={styles.filterGroup}>
-          <span className={styles.filterGroupLabel} id="planning-filter-occupancy-label">
-            Affichage
-          </span>
-          <div
-            className={styles.filterPills}
-            role="group"
-            aria-labelledby="planning-filter-occupancy-label"
+        <div className={styles.dropdown}>
+          <button
+            type="button"
+            className={styles.dropdownTrigger}
+            aria-expanded={openMenu === "display"}
+            aria-haspopup="true"
+            aria-controls={displayMenuId}
+            onClick={() => toggleMenu("display")}
           >
-            <FilterPill
-              active={!withReservationsOnly}
-              label="Tous"
-              onClick={() => onWithReservationsOnlyChange(false)}
+            <span className={styles.dropdownTriggerText}>
+              <span className={styles.dropdownGroup}>Affichage</span>
+              <span className={styles.dropdownValue}>
+                {displaySummary(withReservationsOnly, showCancelled)}
+              </span>
+            </span>
+            <IconChevronDown
+              size={16}
+              stroke={1.75}
+              aria-hidden
+              className={styles.dropdownChevron}
             />
-            <FilterPill
-              active={withReservationsOnly}
-              label="Avec réservation uniquement"
-              onClick={() => onWithReservationsOnlyChange(true)}
-            />
-            <FilterPill
-              active={showCancelled}
-              label="Afficher les annulées"
-              onClick={() => onShowCancelledChange(!showCancelled)}
-            />
-          </div>
+          </button>
+          {openMenu === "display" ? (
+            <div className={styles.dropdownMenu} id={displayMenuId} role="group">
+              <label className={styles.dropdownCheckOption}>
+                <input
+                  type="checkbox"
+                  checked={!withReservationsOnly && !showCancelled}
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      onWithReservationsOnlyChange(false);
+                      onShowCancelledChange(false);
+                    }
+                  }}
+                />
+                <span>Tous</span>
+              </label>
+              <label className={styles.dropdownCheckOption}>
+                <input
+                  type="checkbox"
+                  checked={withReservationsOnly}
+                  onChange={() => onWithReservationsOnlyChange(!withReservationsOnly)}
+                />
+                <span>Avec réservation uniquement</span>
+              </label>
+              <label className={styles.dropdownCheckOption}>
+                <input
+                  type="checkbox"
+                  checked={showCancelled}
+                  onChange={() => onShowCancelledChange(!showCancelled)}
+                />
+                <span>Afficher les annulées</span>
+              </label>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -214,7 +313,7 @@ export function PlanningFiltersBar({
   );
 
   return (
-    <div className={styles.barWrap}>
+    <div className={styles.barWrap} ref={rootRef}>
       {searchSlot ? <div className={styles.searchSlot}>{searchSlot}</div> : null}
 
       <div className={styles.filtersToggleWrap}>
@@ -223,7 +322,10 @@ export function PlanningFiltersBar({
           className={styles.filtersToggle}
           aria-expanded={filtersOpen}
           aria-controls={panelTitleId}
-          onClick={() => setFiltersOpen(true)}
+          onClick={() => {
+            setOpenMenu(null);
+            setFiltersOpen(true);
+          }}
         >
           Filtres
           {activeFilterCount > 0 ? (

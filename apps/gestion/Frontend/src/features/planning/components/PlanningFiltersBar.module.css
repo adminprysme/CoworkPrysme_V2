@@ -72,7 +72,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.65rem 1rem;
+  gap: 0.5rem 0.65rem;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -81,71 +81,128 @@
   min-width: 0;
 }
 
-.filterGroup {
-  display: flex;
-  flex-wrap: wrap;
+.dropdown {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.dropdownTrigger {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem 0.65rem;
-}
-
-.filterGroupLabel {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.filterPills {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.filterPill {
-  padding: 0.32rem 0.75rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 500;
-  line-height: 1.2;
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.filterPill:hover:not(.filterPillActive) {
+  gap: 0.45rem;
+  max-width: 100%;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
   color: var(--color-text);
-  border-color: var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  cursor: pointer;
 }
 
-.filterPillActive {
-  border-color: color-mix(in srgb, var(--color-secondary) 45%, var(--color-border));
-  background: var(--color-secondary-soft);
-  color: var(--color-secondary);
-  font-weight: 600;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-secondary) 18%, transparent);
+.dropdownTrigger:hover {
+  border-color: color-mix(in srgb, var(--color-secondary) 40%, var(--color-border));
 }
 
-.filterPill:focus-visible {
+.dropdownTrigger:focus-visible {
   outline: 2px solid var(--color-secondary);
   outline-offset: 2px;
 }
 
-.filterDivider {
-  color: var(--color-border);
-  font-size: 0.95rem;
-  line-height: 1;
-  user-select: none;
+.dropdownTriggerText {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.dropdownGroup {
+  color: var(--planning-slate, #3b6fa8);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dropdownGroup::after {
+  content: " :";
+  letter-spacing: 0;
+}
+
+.dropdownValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 560;
+}
+
+.dropdownChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.dropdownMenu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  min-width: max(100%, 12rem);
+  max-width: min(22rem, 80vw);
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md, 0 10px 28px rgba(15, 23, 42, 0.18));
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dropdownOption,
+.dropdownOptionActive {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 7px;
+  padding: 0.45rem 0.6rem;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.dropdownOption:hover,
+.dropdownCheckOption:hover {
+  background: color-mix(in srgb, var(--color-secondary) 10%, var(--color-surface));
+}
+
+.dropdownOptionActive {
+  background: var(--color-secondary-soft);
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.dropdownCheckOption {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.42rem 0.55rem;
+  border-radius: 7px;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.dropdownCheckOption input {
+  flex-shrink: 0;
+  accent-color: var(--color-secondary);
 }
 
 .resetBtn {
@@ -203,38 +260,38 @@
 
 /*
  * Laptop / mid desktop (≤1920): one unified control band
- * (search + filters + sort) — wrap only if width is truly tight.
+ * (search + 3 dropdowns + sort) on a single neat row.
  */
 @media (min-width: 768px) and (max-width: 1920px) {
   .barWrap {
     align-items: center;
     flex-wrap: nowrap;
-    gap: 0.4rem 0.55rem;
-    padding: 0.3rem 0.5rem;
+    gap: 0.45rem 0.55rem;
+    padding: 0.35rem 0.55rem;
     border: 1px solid var(--color-border);
     border-radius: 10px;
     background: var(--color-surface-muted);
   }
 
   .searchSlot {
-    flex: 0 1 12rem;
-    min-width: 8.5rem;
-    max-width: 14rem;
+    flex: 1 1 11rem;
+    min-width: 9rem;
+    max-width: 16rem;
   }
 
   .desktopFilters {
     display: flex;
     flex: 1 1 auto;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 0.3rem 0.5rem;
+    gap: 0.4rem 0.5rem;
     min-width: 0;
   }
 
   .filtersBar {
     flex: 1 1 auto;
-    flex-wrap: wrap;
-    gap: 0.3rem 0.45rem;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -242,41 +299,24 @@
     min-width: 0;
   }
 
-  .filterGroup {
-    flex-wrap: wrap;
-    gap: 0.2rem 0.3rem;
+  .dropdown {
+    flex: 0 1 auto;
   }
 
-  .filterGroupLabel {
-    font-size: 0.55rem;
-    letter-spacing: 0.05em;
-    color: var(--planning-slate, #3b6fa8);
+  .dropdownTrigger {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
   }
 
-  .filterPills {
-    flex-wrap: wrap;
-    gap: 0.15rem;
-  }
-
-  .filterPill {
-    padding: 0.14rem 0.4rem;
-    font-size: 0.7rem;
-  }
-
-  .filterDivider {
-    align-self: stretch;
-    width: 1px;
-    min-height: 1.1rem;
-    margin: 0.08rem 0.05rem;
-    font-size: 0;
-    color: transparent;
-    background: var(--color-border);
+  .dropdownGroup {
+    font-size: 0.68rem;
   }
 
   .sortControl {
     margin-top: 0;
     margin-left: auto;
-    font-size: 0.7rem;
+    font-size: 0.82rem;
   }
 
   .sortLabelFull {
@@ -288,16 +328,16 @@
   }
 
   .sortControl select {
-    padding: 0.14rem 0.3rem;
-    font-size: 0.7rem;
-    border-radius: 6px;
-    max-width: 9.5rem;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.82rem;
+    border-radius: 7px;
+    max-width: 10rem;
   }
 
   .resetBtn {
     margin-top: 0;
-    padding: 0.12rem 0.3rem;
-    font-size: 0.68rem;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
   }
 }
 
@@ -402,13 +442,20 @@
     align-items: stretch;
   }
 
-  .filterDivider {
-    display: none;
+  .dropdown {
+    width: 100%;
   }
 
-  .filterGroup {
-    flex-direction: column;
-    align-items: flex-start;
+  .dropdownTrigger {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dropdownMenu {
+    position: static;
+    margin-top: 0.35rem;
+    max-width: none;
+    box-shadow: none;
   }
 
   .sortControl {
