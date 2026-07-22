@@ -267,6 +267,11 @@ export class ClientAccountsStaffService {
     profile: StaffProfileDocument,
     cardexId: string,
     request: StaffTransferCardexOwnershipRequest,
+    /**
+     * Test/proof hook: runs after the fast-path active check and before the
+     * transaction (TOCTOU window). Never pass from HTTP controllers.
+     */
+    options?: { afterActivePrecheck?: () => Promise<void> },
   ): Promise<StaffTransferCardexOwnershipResult> {
     await connectMongo();
     const id = assertObjectId(cardexId, "cardexId");
@@ -321,6 +326,10 @@ export class ClientAccountsStaffService {
       });
     }
 
+    if (options?.afterActivePrecheck) {
+      await options.afterActivePrecheck();
+    }
+
     const mongooseInstance = await connectMongo();
     await assertReplicaSetForTransactions(mongooseInstance.connection);
     const session = await mongooseInstance.startSession();
@@ -328,15 +337,23 @@ export class ClientAccountsStaffService {
 
     try {
       await session.withTransaction(async () => {
+        // Atomic gate: promote only if still active at write time (closes TOCTOU).
+        const promoted = await ClientAccount.findOneAndUpdate(
+          { _id: nextAccount._id, status: "active" },
+          { $set: { role: "owner" } },
+          { session, returnDocument: "after" },
+        ).exec();
+
+        if (!promoted) {
+          throw new BadRequestException({
+            code: CLIENT_ACCOUNT_STAFF_ERROR_CODES.TRANSFER_TARGET_INVALID,
+            message: CLIENT_ACCOUNT_STAFF_ERROR_MESSAGES.TRANSFER_TARGET_NOT_ACTIVE,
+          });
+        }
+
         await Cardex.updateOne(
           { _id: cardex._id },
           { $set: { clientAccountId: nextAccount._id } },
-          { session },
-        ).exec();
-
-        await ClientAccount.updateOne(
-          { _id: nextAccount._id },
-          { $set: { role: "owner" } },
           { session },
         ).exec();
 
