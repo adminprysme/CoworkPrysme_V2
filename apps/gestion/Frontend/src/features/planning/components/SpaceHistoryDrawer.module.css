@@ -246,6 +246,14 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--history-space-change) 18%, transparent);
 }
 
+.typePillActive.toneRestoration {
+  border-color: color-mix(in srgb, var(--history-restoration) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--history-restoration) 14%, var(--color-surface));
+  color: var(--history-restoration);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--history-restoration) 18%, transparent);
+}
+
 .typePillActive.toneDateChange {
   border-color: color-mix(in srgb, var(--history-date-change) 50%, var(--color-border));
   background: color-mix(in srgb, var(--history-date-change) 14%, var(--color-surface));
