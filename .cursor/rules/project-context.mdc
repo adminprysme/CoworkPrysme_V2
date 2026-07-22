@@ -9,6 +9,10 @@ Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gesti
 
 ## Modules TERMINÉS et audités
 
+### Planning — Vague 3 entièrement close
+
+Aucun chantier Planning ouvert. Vague 3 livrée : **Stripe refunds** (remboursement réel carte + marquage manuel virement), **Invitation collaborateur**, **Désactivation / transfert propriété**, **Documents cardex**. Le chantier **Devis** n’est **pas** dans le Planning : reporté vers le futur chantier **Facturation** (ne pas le rouvrir ici).
+
 ### Planning / Contacts
 
 - **Invitation collaborateur** (clos) : schéma `clientAccountInvitations` + `ClientAccount.role` owner/member ; API staff create/list/resend/revoke ; acceptation publique vitrine ; UI Contacts (liste invitations, section repliable) ; E2E + redirect `/connexion`. Fixture de référence : **RES-2026-00024** / cardex MA CONCIERGERIE / owner `pthomas@prysme.eu`.
@@ -19,7 +23,16 @@ Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gesti
   - Auth client : code **`ACCOUNT_LOCKED`** (HTTP 403) + message exact « Ce compte a été désactivé. Contactez votre espace de coworking. » sur **les deux** entrées : `POST /booking/account/verify` et confirm booking `accountMode: "existing"`
   - UI Contacts : badges role/status, désactiver / réactiver (motif optionnel), transfert avec sélecteur (email seul), owner toujours en tête de liste
   - **Bug préexistant détecté et corrigé** pendant ce chantier : `Cardex.identity` (nom, téléphone) était collé à tort sur le compte dont `_id === Cardex.clientAccountId` (donc « suivait » le owner après transfert). L’identité appartient au **dossier** ; corrigé — plus d’attribution aux lignes de comptes + bloc UI **« Identité du dossier »** séparé (`detail.client` / cardex).
-- **Aucun chantier en cours** sur l’onglet Contacts du Planning à ce stade (invitations + désactivation / transfert clos).
+
+### Planning / Documents cardex
+
+- **Documents cardex** (clos, poussé `origin/master` → `013fd4a`) : onglet Documents du drawer réservation, **scopé cardex** (pas réservation).
+  - 3 sections : **Facturation** (liste auto des factures du cardex, pas d’upload manuel) ; **Contrats** (upload staff, `clientVisible: true`) ; **Autres** (upload staff, jamais visible client).
+  - Stockage via **`DocumentStorageService`** distinct du pipeline images/WebP (`cardex-documents/{cardexId}/{uuid}.{ext}`, PDF/JPEG/PNG/WebP, 15 Mo).
+  - API staff : CRUD documents + listing / PDF factures ; **`ClientsPermissionGuard`** réutilisé (comme Contacts) ; membership stricte `cardexId`+`documentId`/`invoiceId` → **404** cross-cardex.
+  - Renommage de libellé (`PATCH` label) ; audit `document.deleted` ; badge statut facture « Payée » (pas « Acquittée »).
+  - Fix robustesse Playwright (`isConnected` + retry) dans `@coworkprysme/invoice-pdf` pour génération PDF facture (process long-lived).
+  - Fixture de référence : **RES-2026-00024** / cardex `6a5f3efeebd0da8b88b67bc4` (contrat de test « eeee » / `proforma-PF-2026-00024.txt` retiré à la clôture).
 
 ## État d'avancement (tel que livré dans le repo / conversations récentes)
 
@@ -55,6 +68,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - **Scroll Planning (desktop / tablette / mobile)** : viewport verrouillé en `100dvh` + `overflow: hidden` ; shell `.content:has([data-planning-lock])` ne scrolle plus. Desktop = split 2 colonnes inchangé. ≤1024px = détail en overlay plein écran (scroll interne). ≤767px = KPI en carrousel horizontal + filtres dans un sheet « Filtres ».
 - **Preuves `proof.json` de calcul** (helpers shared) ≠ preuve d’intégration HTTP des routes preview.
 - **Identité cardex vs owner** (Contacts) : voir Modules TERMINÉS — bug d’affichage préexistant corrigé (`2f80edb`).
+- **Playwright / singleton PDF** (`@coworkprysme/invoice-pdf`) : browser Chromium mis en cache dans un process Nest long-lived. Hot-reload ou fermeture externe → `Target page, context or browser has been closed`. Correctif : vérifier `browser.isConnected()` + retry après reset du singleton (`7e814c5`). Si un 500 PDF réapparaît ailleurs (manage PJ, listing factures), suspecter d’abord ce cache plutôt qu’une régression métier.
 
 ### Points encore ouverts (explicitement notés, ne pas inventer le reste du backlog)
 
@@ -85,6 +99,14 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - API gestion : `clients-permission.guard.ts`, `client-accounts-staff.service.ts` / `.controller.ts`, `planning-invitations.service.ts`
 - API vitrine : `booking-account.service.ts`, `booking-confirm.service.ts` (map `ACCOUNT_LOCKED`)
 - UI : `ReservationContactsPanel.tsx`
+
+## Fichiers clés — Documents cardex
+
+- Shared : `packages/shared/src/cardex-documents-staff.ts`, `cardex-invoices-staff.ts`
+- DB : `packages/db/src/lib/enums.ts` (`CARDEX_DOCUMENT_CATEGORIES`), `subdocuments.ts` (`CardexDocumentMeta`)
+- Stockage : `apps/gestion/Backend/src/document-storage/*`
+- API : `cardex-documents.*.ts`, `cardex-invoices.*.ts` (wiring `planning.module.ts`) ; PDF via `@coworkprysme/invoice-pdf`
+- UI : `ReservationDocumentsPanel.tsx`, `lib/planning-api.ts`
 
 ## Fichiers clés Vague 2 Manage
 
