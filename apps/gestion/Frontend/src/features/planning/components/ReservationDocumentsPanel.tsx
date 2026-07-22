@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import {
   IconDownload,
   IconFileText,
+  IconPencil,
   IconPlus,
   IconReceipt,
   IconTrash,
@@ -22,6 +23,7 @@ import {
   downloadCardexInvoicePdf,
   fetchCardexDocuments,
   fetchCardexInvoices,
+  patchCardexDocumentLabel,
   PlanningApiError,
   uploadCardexDocument,
 } from "../../../lib/planning-api.js";
@@ -102,6 +104,8 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -138,6 +142,8 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
     setUploadFile(null);
     setUploadError(null);
     setDeleteConfirmId(null);
+    setRenameId(null);
+    setRenameValue("");
     setActionError(null);
     void loadAll();
   }, [loadAll]);
@@ -225,6 +231,34 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
     }
   };
 
+  const applyDocumentUpdate = (updated: StaffCardexDocument) => {
+    const updater = (list: StaffCardexDocument[]) =>
+      list.map((item) => (item.id === updated.id ? updated : item));
+    if (updated.category === "contract") {
+      setContracts(updater);
+    } else {
+      setOthers(updater);
+    }
+  };
+
+  const handleRenameDocument = async (doc: StaffCardexDocument) => {
+    if (!cardexId || !canManageClients) return;
+    setBusyId(doc.id);
+    setActionError(null);
+    try {
+      const updated = await patchCardexDocumentLabel(cardexId, doc.id, {
+        label: renameValue,
+      });
+      applyDocumentUpdate(updated);
+      setRenameId(null);
+      setRenameValue("");
+    } catch (error: unknown) {
+      setActionError(apiErrorMessage(error));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleDeleteDocument = async (doc: StaffCardexDocument) => {
     if (!cardexId || !canManageClients) return;
     setBusyId(doc.id);
@@ -297,6 +331,7 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
   const renderDocumentCard = (doc: StaffCardexDocument) => {
     const busy = busyId === doc.id;
     const confirming = deleteConfirmId === doc.id;
+    const renaming = renameId === doc.id;
 
     if (confirming) {
       return (
@@ -323,6 +358,63 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
                 className={styles.ghostBtn}
                 disabled={busy}
                 onClick={() => setDeleteConfirmId(null)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </li>
+      );
+    }
+
+    if (renaming) {
+      return (
+        <li key={doc.id} className={styles.card}>
+          <div className={styles.cardMain}>
+            <p className={styles.cardTitle}>Renommer le libellé</p>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Libellé (vide = effacer)</span>
+              <input
+                className={styles.input}
+                type="text"
+                maxLength={120}
+                value={renameValue}
+                disabled={busy}
+                autoFocus
+                onChange={(event) => setRenameValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleRenameDocument(doc);
+                  }
+                  if (event.key === "Escape") {
+                    setRenameId(null);
+                    setRenameValue("");
+                  }
+                }}
+              />
+            </label>
+            <p className={styles.metaRowMuted}>Fichier : {doc.originalFilename}</p>
+            {actionError && busyId === doc.id ? (
+              <p className={styles.error}>{actionError}</p>
+            ) : null}
+            <div className={styles.formActions}>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                disabled={busy || !canManageClients}
+                onClick={() => void handleRenameDocument(doc)}
+              >
+                {busy ? "Enregistrement…" : "Enregistrer"}
+              </button>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                disabled={busy}
+                onClick={() => {
+                  setRenameId(null);
+                  setRenameValue("");
+                }}
               >
                 Annuler
               </button>
@@ -369,19 +461,37 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
             {busy ? "…" : "Télécharger"}
           </button>
           {canManageClients ? (
-            <button
-              type="button"
-              className={styles.dangerOutlineBtn}
-              disabled={busy}
-              onClick={() => {
-                setActionError(null);
-                setUploadCategory(null);
-                setDeleteConfirmId(doc.id);
-              }}
-            >
-              <IconTrash size={15} stroke={1.7} aria-hidden />
-              Supprimer
-            </button>
+            <>
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                disabled={busy}
+                onClick={() => {
+                  setActionError(null);
+                  setUploadCategory(null);
+                  setDeleteConfirmId(null);
+                  setRenameId(doc.id);
+                  setRenameValue(doc.label ?? "");
+                }}
+              >
+                <IconPencil size={15} stroke={1.7} aria-hidden />
+                Renommer
+              </button>
+              <button
+                type="button"
+                className={styles.dangerOutlineBtn}
+                disabled={busy}
+                onClick={() => {
+                  setActionError(null);
+                  setUploadCategory(null);
+                  setRenameId(null);
+                  setDeleteConfirmId(doc.id);
+                }}
+              >
+                <IconTrash size={15} stroke={1.7} aria-hidden />
+                Supprimer
+              </button>
+            </>
           ) : null}
         </div>
       </li>
@@ -408,7 +518,9 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
       ) : null}
 
       {listError ? <p className={styles.error}>{listError}</p> : null}
-      {actionError && !deleteConfirmId ? <p className={styles.error}>{actionError}</p> : null}
+      {actionError && !deleteConfirmId && !renameId ? (
+        <p className={styles.error}>{actionError}</p>
+      ) : null}
       {loading ? <p className={styles.muted}>Chargement des documents…</p> : null}
 
       {!loading ? (

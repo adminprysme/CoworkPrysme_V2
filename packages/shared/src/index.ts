@@ -764,11 +764,13 @@ export {
   StaffCardexDocumentCategorySchema,
   StaffCardexDocumentSchema,
   StaffCardexDocumentsListResponseSchema,
+  StaffPatchCardexDocumentRequestSchema,
   StaffUploadCardexDocumentFieldsSchema,
   type CardexDocumentStaffErrorCode,
   type StaffCardexDocument,
   type StaffCardexDocumentCategory,
   type StaffCardexDocumentsListResponse,
+  type StaffPatchCardexDocumentRequest,
   type StaffUploadCardexDocumentFields,
 } from "./cardex-documents-staff.js";
 

@@ -18,6 +18,15 @@ export const StaffUploadCardexDocumentFieldsSchema = z.object({
 });
 export type StaffUploadCardexDocumentFields = z.infer<typeof StaffUploadCardexDocumentFieldsSchema>;
 
+/** PATCH label only — empty string clears the label. */
+export const StaffPatchCardexDocumentRequestSchema = z.object({
+  label: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(z.string().max(STAFF_CARDEX_DOCUMENT_LABEL_MAX_LENGTH)),
+});
+export type StaffPatchCardexDocumentRequest = z.infer<typeof StaffPatchCardexDocumentRequestSchema>;
+
 export const StaffCardexDocumentSchema = z.object({
   id: z.string(),
   category: StaffCardexDocumentCategorySchema,

@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -15,6 +17,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import {
   CARDEX_DOCUMENT_STAFF_ERROR_CODES,
   CARDEX_DOCUMENT_STAFF_ERROR_MESSAGES,
+  StaffPatchCardexDocumentRequestSchema,
   StaffUploadCardexDocumentFieldsSchema,
 } from "@coworkprysme/shared";
 import { parseGestionApiEnv } from "@coworkprysme/shared/server";
@@ -120,6 +123,23 @@ export class CardexDocumentsController {
       response.destroy();
     });
     stream.pipe(response);
+  }
+
+  @Patch(":cardexId/documents/:documentId")
+  async patchLabel(
+    @Param("cardexId") cardexId: string,
+    @Param("documentId") documentId: string,
+    @Body() body: unknown,
+  ) {
+    const parsed = StaffPatchCardexDocumentRequestSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: CARDEX_DOCUMENT_STAFF_ERROR_CODES.VALIDATION_ERROR,
+        message: "Libellé invalide (120 caractères max)",
+        issues: parsed.error.issues,
+      });
+    }
+    return this.documents.updateLabel(cardexId, documentId, parsed.data.label);
   }
 
   @Delete(":cardexId/documents/:documentId")

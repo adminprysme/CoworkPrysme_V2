@@ -18,6 +18,7 @@ import {
 import { access } from "node:fs/promises";
 import type { Types } from "mongoose";
 
+/* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { DocumentStorageService } from "../document-storage/document-storage.service.js";
 import { writeCardexDocumentAudit } from "./cardex-documents-audit.js";
 
@@ -214,6 +215,41 @@ export class CardexDocumentsService {
     });
 
     return { ok: true };
+  }
+
+  async updateLabel(
+    cardexId: string,
+    documentId: string,
+    label: string,
+  ): Promise<StaffCardexDocument> {
+    const { cardex, entry, id, docId } = await this.findDocumentInCardex(cardexId, documentId);
+    const trimmed = label.trim();
+    const Cardex = await getCardexModel();
+
+    if (trimmed.length > 0) {
+      await Cardex.updateOne(
+        { _id: id, "documents._id": docId },
+        { $set: { "documents.$.label": trimmed } },
+      ).exec();
+      entry.label = trimmed;
+    } else {
+      await Cardex.updateOne(
+        { _id: id, "documents._id": docId },
+        { $unset: { "documents.$.label": "" } },
+      ).exec();
+      Reflect.deleteProperty(entry, "label");
+    }
+
+    // Re-read mapped view from DB to mirror list payload
+    const refreshed = await Cardex.findById(cardex._id).exec();
+    const next = refreshed ? documentsArray(refreshed).id(docId) : null;
+    if (!next) {
+      throw new NotFoundException({
+        code: CARDEX_DOCUMENT_STAFF_ERROR_CODES.DOCUMENT_NOT_FOUND,
+        message: CARDEX_DOCUMENT_STAFF_ERROR_MESSAGES.DOCUMENT_NOT_FOUND,
+      });
+    }
+    return mapDocument(next);
   }
 
   private async findDocumentInCardex(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   StaffCardexDocumentsListResponseSchema,
+  StaffPatchCardexDocumentRequestSchema,
   StaffUploadCardexDocumentFieldsSchema,
 } from "./cardex-documents-staff.js";
 
@@ -32,5 +33,16 @@ describe("cardex-documents-staff schemas", () => {
     });
     expect(parsed.contracts[0]?.clientVisible).toBe(true);
     expect(parsed.contracts[0]).not.toHaveProperty("storageKey");
+  });
+
+  it("patch label trims and allows empty clear", () => {
+    expect(StaffPatchCardexDocumentRequestSchema.parse({ label: "  RIB  " })).toEqual({
+      label: "RIB",
+    });
+    expect(StaffPatchCardexDocumentRequestSchema.parse({ label: "   " })).toEqual({ label: "" });
+  });
+
+  it("rejects patch labels longer than 120 chars", () => {
+    expect(() => StaffPatchCardexDocumentRequestSchema.parse({ label: "x".repeat(121) })).toThrow();
   });
 });

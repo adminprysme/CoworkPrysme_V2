@@ -35,6 +35,7 @@ import type {
   StaffCardexInvoicesListResponse,
   StaffClientAccount,
   StaffDeactivateClientAccountRequest,
+  StaffPatchCardexDocumentRequest,
   StaffTransferCardexOwnershipRequest,
   StaffTransferCardexOwnershipResult,
   StaffUploadCardexDocumentFields,
@@ -431,6 +432,20 @@ export function deleteCardexDocument(cardexId: string, documentId: string): Prom
   return planningFetch(
     `/planning/cardexes/${encodeURIComponent(cardexId)}/documents/${encodeURIComponent(documentId)}`,
     { method: "DELETE" },
+  );
+}
+
+export function patchCardexDocumentLabel(
+  cardexId: string,
+  documentId: string,
+  request: StaffPatchCardexDocumentRequest,
+): Promise<StaffCardexDocument> {
+  return planningFetch(
+    `/planning/cardexes/${encodeURIComponent(cardexId)}/documents/${encodeURIComponent(documentId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(request),
+    },
   );
 }
 
