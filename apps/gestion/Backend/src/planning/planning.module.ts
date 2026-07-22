@@ -15,6 +15,7 @@ import { CardexDocumentsService } from "./cardex-documents.service.js";
 import { CardexInvoicesController } from "./cardex-invoices.controller.js";
 import { CardexInvoicesService } from "./cardex-invoices.service.js";
 import { PlanningController } from "./planning.controller.js";
+import { PlanningInvitationsController } from "./planning-invitations.controller.js";
 import { PlanningInvitationsService } from "./planning-invitations.service.js";
 import { PlanningManageService } from "./planning-manage.service.js";
 import { PlanningService } from "./planning.service.js";
@@ -23,6 +24,7 @@ import { PlanningService } from "./planning.service.js";
   imports: [AuthModule, MailModule, InvoicePdfModule, StripeModule, DocumentStorageModule],
   controllers: [
     PlanningController,
+    PlanningInvitationsController,
     ClientAccountsStaffController,
     CardexesStaffController,
     CardexDocumentsController,
