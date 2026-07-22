@@ -32,11 +32,16 @@ interface ReservationDocumentsPanelProps {
   detail: PlanningReservationDetail;
 }
 
+/**
+ * Libellés du champ Invoice.status (= état de paiement / cycle de vie),
+ * PAS du type document. Le type (`proforma` | `final`) reste affiché à part ;
+ * « facture acquittée » CDC n'existe pas ici — ne jamais dire « Acquittée ».
+ */
 const INVOICE_STATUS_LABELS: Record<StaffInvoiceStatus, string> = {
-  proforma: "Proforma",
+  proforma: "À payer",
   issued: "Émise",
   partially_paid: "Partiellement payée",
-  paid: "Acquittée",
+  paid: "Payée",
   overdue: "En retard",
   cancelled: "Annulée",
 };
