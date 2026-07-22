@@ -1,0 +1,349 @@
+.root {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.banner {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #5b8fc4 40%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 14%, var(--color-surface));
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.section {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.count {
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.sectionHint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.empty,
+.muted {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, var(--color-surface));
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.error {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #f87171 45%, var(--color-border));
+  background: color-mix(in srgb, #f87171 12%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 55%, var(--color-text));
+  font-size: 0.82rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface-muted) 70%, var(--color-surface));
+}
+
+.cardIcon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--planning-slate, #3b6fa8) 12%, var(--color-surface));
+  color: color-mix(in srgb, var(--planning-slate, #3b6fa8) 70%, var(--color-text));
+}
+
+.cardMain {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.meta {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metaRow,
+.metaRowMuted {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaRowMuted {
+  font-style: italic;
+  font-size: 0.72rem;
+}
+
+.cardActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.statusChip,
+.visibilityChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.statusChip[data-status="paid"] {
+  border-color: color-mix(in srgb, #34d399 50%, var(--color-border));
+  background: color-mix(in srgb, #34d399 16%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.statusChip[data-status="proforma"],
+.statusChip[data-status="issued"] {
+  border-color: color-mix(in srgb, #5b8fc4 50%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 16%, var(--color-surface));
+  color: color-mix(in srgb, #5b8fc4 42%, var(--color-text));
+}
+
+.statusChip[data-status="partially_paid"] {
+  border-color: color-mix(in srgb, #f59e0b 50%, var(--color-border));
+  background: color-mix(in srgb, #f59e0b 16%, var(--color-surface));
+  color: color-mix(in srgb, #f59e0b 40%, var(--color-text));
+}
+
+.statusChip[data-status="overdue"],
+.statusChip[data-status="cancelled"] {
+  border-color: color-mix(in srgb, #f87171 45%, var(--color-border));
+  background: color-mix(in srgb, #f87171 14%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 45%, var(--color-text));
+}
+
+.visibilityChip[data-visible="true"] {
+  border-color: color-mix(in srgb, #34d399 45%, var(--color-border));
+  background: color-mix(in srgb, #34d399 12%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.visibilityChip[data-visible="false"] {
+  border-color: color-mix(in srgb, #94a3b8 50%, var(--color-border));
+  background: color-mix(in srgb, #94a3b8 12%, var(--color-surface));
+  color: color-mix(in srgb, #94a3b8 55%, var(--color-text));
+}
+
+.uploadForm {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.uploadFormTitle {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
+}
+
+.input,
+.fileInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.fileInput {
+  padding: 0.45rem 0.55rem;
+}
+
+.input:focus,
+.fileInput:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-primary, #3b6fa8) 45%, transparent);
+  outline-offset: 1px;
+  border-color: var(--color-primary, #3b6fa8);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.ghostBtn,
+.dangerBtn,
+.dangerOutlineBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.primaryBtn {
+  border: 0;
+  padding: 0.45rem 0.8rem;
+  background: var(--color-primary, #3b6fa8);
+  color: #fff;
+}
+
+.secondaryBtn {
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.7rem;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.ghostBtn {
+  border: 0;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.dangerBtn {
+  border: 0;
+  padding: 0.45rem 0.8rem;
+  background: color-mix(in srgb, #f87171 85%, #7f1d1d);
+  color: #fff;
+}
+
+.dangerOutlineBtn {
+  border: 1px solid color-mix(in srgb, #f87171 45%, var(--color-border));
+  padding: 0.4rem 0.7rem;
+  background: color-mix(in srgb, #f87171 8%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 55%, var(--color-text));
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.ghostBtn:disabled,
+.dangerBtn:disabled,
+.dangerOutlineBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .card {
+    flex-wrap: wrap;
+  }
+
+  .cardActions {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-self: stretch;
+  }
+
+  .cardTitle {
+    white-space: normal;
+  }
+
+  .metaRow,
+  .metaRowMuted {
+    white-space: normal;
+  }
+}

@@ -29,10 +29,15 @@ import type {
   PlanningSpaceChangeRequest,
   PlanningSpaceChangeResult,
   PlanningSpaceHistoryResponse,
+  StaffCardexDocument,
+  StaffCardexDocumentsListResponse,
+  StaffCardexInvoice,
+  StaffCardexInvoicesListResponse,
   StaffClientAccount,
   StaffDeactivateClientAccountRequest,
   StaffTransferCardexOwnershipRequest,
   StaffTransferCardexOwnershipResult,
+  StaffUploadCardexDocumentFields,
 } from "@coworkprysme/shared";
 
 import { API_URL } from "./api.js";
@@ -73,32 +78,92 @@ function extractErrorPayload(json: unknown): { code: string | null; message: str
   return { code: null, message: null };
 }
 
+async function throwPlanningApiError(response: Response): Promise<never> {
+  let message = `API ${response.status}`;
+  let code: string | null = null;
+  try {
+    const body: unknown = await response.json();
+    const payload = extractErrorPayload(body);
+    if (payload.message) message = payload.message;
+    code = payload.code;
+  } catch {
+    if (response.status === 413) {
+      message = "Fichier trop volumineux (maximum 15 Mo).";
+      code = "FILE_TOO_LARGE";
+    }
+  }
+  throw new PlanningApiError(response.status, message, code);
+}
+
 async function planningFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     credentials: "include",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(init?.headers ?? {}),
     },
   });
 
   if (!response.ok) {
-    let message = `API ${response.status}`;
-    let code: string | null = null;
-    try {
-      const body: unknown = await response.json();
-      const payload = extractErrorPayload(body);
-      if (payload.message) message = payload.message;
-      code = payload.code;
-    } catch {
-      // keep default
-    }
-    throw new PlanningApiError(response.status, message, code);
+    await throwPlanningApiError(response);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
+}
+
+async function planningFetchBlob(
+  path: string,
+): Promise<{ blob: Blob; contentDisposition: string | null }> {
+  const response = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    headers: { Accept: "*/*" },
+  });
+
+  if (!response.ok) {
+    await throwPlanningApiError(response);
+  }
+
+  return {
+    blob: await response.blob(),
+    contentDisposition: response.headers.get("content-disposition"),
+  };
+}
+
+function filenameFromContentDisposition(header: string | null, fallback: string): string {
+  if (!header) return fallback;
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      // fall through
+    }
+  }
+  const plain = /filename="([^"]+)"/i.exec(header) ?? /filename=([^;]+)/i.exec(header);
+  return plain?.[1]?.trim() || fallback;
+}
+
+export async function downloadBlobAsFile(path: string, fallbackFilename: string): Promise<void> {
+  const { blob, contentDisposition } = await planningFetchBlob(path);
+  const filename = filenameFromContentDisposition(contentDisposition, fallbackFilename);
+  const url = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function fetchPlanningCalendar(params: {
@@ -340,3 +405,59 @@ export function transferCardexOwnership(
     body: JSON.stringify(request),
   });
 }
+
+export function fetchCardexDocuments(cardexId: string): Promise<StaffCardexDocumentsListResponse> {
+  return planningFetch(`/planning/cardexes/${encodeURIComponent(cardexId)}/documents`);
+}
+
+export function uploadCardexDocument(
+  cardexId: string,
+  file: File,
+  fields: StaffUploadCardexDocumentFields,
+): Promise<StaffCardexDocument> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("category", fields.category);
+  if (fields.label) {
+    form.append("label", fields.label);
+  }
+  return planningFetch(`/planning/cardexes/${encodeURIComponent(cardexId)}/documents`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function deleteCardexDocument(cardexId: string, documentId: string): Promise<{ ok: true }> {
+  return planningFetch(
+    `/planning/cardexes/${encodeURIComponent(cardexId)}/documents/${encodeURIComponent(documentId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function downloadCardexDocument(
+  cardexId: string,
+  documentId: string,
+  fallbackFilename: string,
+): Promise<void> {
+  return downloadBlobAsFile(
+    `/planning/cardexes/${encodeURIComponent(cardexId)}/documents/${encodeURIComponent(documentId)}/download`,
+    fallbackFilename,
+  );
+}
+
+export function fetchCardexInvoices(cardexId: string): Promise<StaffCardexInvoicesListResponse> {
+  return planningFetch(`/planning/cardexes/${encodeURIComponent(cardexId)}/invoices`);
+}
+
+export function downloadCardexInvoicePdf(
+  cardexId: string,
+  invoiceId: string,
+  fallbackFilename: string,
+): Promise<void> {
+  return downloadBlobAsFile(
+    `/planning/cardexes/${encodeURIComponent(cardexId)}/invoices/${encodeURIComponent(invoiceId)}/pdf`,
+    fallbackFilename,
+  );
+}
+
+export type { StaffCardexDocument, StaffCardexInvoice };

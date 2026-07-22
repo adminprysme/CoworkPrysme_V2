@@ -21,6 +21,7 @@ import {
 } from "../planning-ui.js";
 import { formatCentsEur, formatDateTime } from "../planning-utils.js";
 import { ReservationContactsPanel } from "./ReservationContactsPanel.js";
+import { ReservationDocumentsPanel } from "./ReservationDocumentsPanel.js";
 import { ReservationManagePanel } from "./ReservationManagePanel.js";
 import styles from "./ReservationDetailDrawer.module.css";
 
@@ -239,7 +240,7 @@ export function ReservationDetailDrawer({
           className={tab === "documents" ? styles.tabActive : styles.tab}
           onClick={() => setTab("documents")}
         >
-          Documents <span className={styles.soon}>à venir</span>
+          Documents
         </button>
       </div>
 
@@ -431,12 +432,7 @@ export function ReservationDetailDrawer({
         ) : null}
 
         {!loading && detail && tab === "documents" ? (
-          <div className={styles.cards}>
-            <p className={styles.banner}>
-              Les documents de réservation (contrats, factures PDF, etc.) seront disponibles ici
-              prochainement.
-            </p>
-          </div>
+          <ReservationDocumentsPanel detail={detail} />
         ) : null}
       </div>
     </aside>
