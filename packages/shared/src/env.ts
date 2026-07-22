@@ -61,6 +61,12 @@ const siteUrlSchema = (env: NodeJS.ProcessEnv) =>
       }
     });
 
+/** Optional public site URL — empty string treated as absent. */
+const optionalSiteUrlField = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().url().optional(),
+);
+
 const allowedOriginsSchema = z
   .string()
   .min(1)
@@ -79,14 +85,37 @@ const allowedOriginsSchema = z
     }
   });
 
+/**
+ * Shared Mongo + site URL env for `@coworkprysme/db` (Nest APIs, not only Next.js).
+ *
+ * Site URL precedence (production requires at least one):
+ * 1. `PUBLIC_SITE_URL` (gestion-api / vitrine-api)
+ * 2. else `NEXT_PUBLIC_SITE_URL` (vitrine-web)
+ * Resolved value is exposed as `SITE_URL`.
+ */
 export function createServerEnvSchema(env: NodeJS.ProcessEnv) {
-  return z.object({
-    MONGODB_URI: mongoUriSchema(env),
-    MONGODB_INTERNAL_NETWORK_TRUSTED: mongodbInternalNetworkTrustedSchema,
-    MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
-    MONGODB_DB_PRYSMA: z.string().min(1).default("prysma_bdd"),
-    NEXT_PUBLIC_SITE_URL: siteUrlSchema(env),
-  });
+  return z
+    .object({
+      MONGODB_URI: mongoUriSchema(env),
+      MONGODB_INTERNAL_NETWORK_TRUSTED: mongodbInternalNetworkTrustedSchema,
+      MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
+      MONGODB_DB_PRYSMA: z.string().min(1).default("prysma_bdd"),
+      PUBLIC_SITE_URL: optionalSiteUrlField,
+      NEXT_PUBLIC_SITE_URL: optionalSiteUrlField,
+    })
+    .superRefine((data, ctx) => {
+      if (isProduction(env) && !data.PUBLIC_SITE_URL && !data.NEXT_PUBLIC_SITE_URL) {
+        ctx.addIssue({
+          code: "custom",
+          message: GENERIC_ENV_ERROR,
+          path: ["PUBLIC_SITE_URL"],
+        });
+      }
+    })
+    .transform((data) => ({
+      ...data,
+      SITE_URL: data.PUBLIC_SITE_URL ?? data.NEXT_PUBLIC_SITE_URL,
+    }));
 }
 
 export type ServerEnv = z.infer<ReturnType<typeof createServerEnvSchema>>;
@@ -233,6 +262,7 @@ export function parseServerEnv(env: NodeJS.ProcessEnv = process.env): ServerEnv 
     MONGODB_INTERNAL_NETWORK_TRUSTED: env.MONGODB_INTERNAL_NETWORK_TRUSTED,
     MONGODB_DB_COWORK: env.MONGODB_DB_COWORK,
     MONGODB_DB_PRYSMA: env.MONGODB_DB_PRYSMA,
+    PUBLIC_SITE_URL: env.PUBLIC_SITE_URL,
     NEXT_PUBLIC_SITE_URL: env.NEXT_PUBLIC_SITE_URL,
   });
 

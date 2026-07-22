@@ -101,7 +101,8 @@ docker build -f apps/gestion/Backend/Dockerfile -t gestion-api .
 | `MONGODB_DB_PRYSMA`                | gestion-api uniquement   | Base SSO (lecture seule, défaut `prysma_bdd`)                                                                        |
 | `ALLOWED_ORIGIN`                   | vitrine-api, gestion-api | Origines CORS autorisées, séparées par des virgules (jamais `*`)                                                     |
 | `GESTION_API_URL`                  | vitrine-api              | URL de délégation vers gestion-api                                                                                   |
-| `NEXT_PUBLIC_SITE_URL`             | vitrine-web              | URL publique du site                                                                                                 |
+| `PUBLIC_SITE_URL`                  | gestion-api, vitrine-api | URL publique du site (prioritaire pour `parseServerEnv` / `@coworkprysme/db`)                                        |
+| `NEXT_PUBLIC_SITE_URL`             | vitrine-web (+ repli db) | URL publique du site (vitrine-web) ; repli `parseServerEnv` si `PUBLIC_SITE_URL` absente                             |
 | `NEXT_PUBLIC_API_URL`              | vitrine-web              | URL de vitrine-api (CSP `connect-src`)                                                                               |
 | `VITE_API_URL`                     | gestion-web              | URL de gestion-api (bundle + CSP nginx)                                                                              |
 

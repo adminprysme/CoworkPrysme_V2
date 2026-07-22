@@ -131,11 +131,11 @@ Validation Zod centralisée dans `packages/shared/src/env.ts`, parsers dédiés 
 | `parseGestionApiEnv` | `initGestionApiEnv()` dans `apps/gestion/Backend/src/main.ts`             |
 | `parseGestionWebEnv` | côté client Vite (`import.meta.env`)                                      |
 
-| Variable               | Dev                  | Production                                                                                                     |
-| ---------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `MONGODB_URI`          | `mongodb://` accepté | `mongodb+srv://`, `?tls=true`, **ou** `MONGODB_INTERNAL_NETWORK_TRUSTED=true` (réseau Docker interne sans TLS) |
-| `ALLOWED_ORIGIN`       | liste CSV explicite  | idem, **jamais `*`**                                                                                           |
-| `NEXT_PUBLIC_SITE_URL` | optionnel            | **obligatoire** (vitrine-web)                                                                                  |
+| Variable                                   | Dev                  | Production                                                                                                                                                                 |
+| ------------------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MONGODB_URI`                              | `mongodb://` accepté | `mongodb+srv://`, `?tls=true`, **ou** `MONGODB_INTERNAL_NETWORK_TRUSTED=true` (réseau Docker interne sans TLS)                                                             |
+| `ALLOWED_ORIGIN`                           | liste CSV explicite  | idem, **jamais `*`**                                                                                                                                                       |
+| `NEXT_PUBLIC_SITE_URL` / `PUBLIC_SITE_URL` | optionnel            | **au moins une** obligatoire pour `parseServerEnv` / `@coworkprysme/db` : `PUBLIC_SITE_URL` prioritaire, sinon `NEXT_PUBLIC_SITE_URL` (vitrine-web). Résolu en `SITE_URL`. |
 
 ### CORS (APIs Nest)
 

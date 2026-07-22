@@ -126,6 +126,60 @@ describe("parseServerEnv", () => {
     }
   });
 
+  it("accepts PUBLIC_SITE_URL alone in production", () => {
+    const env = parseServerEnv({
+      NODE_ENV: "production",
+      MONGODB_URI: "mongodb+srv://cluster.example.com/db",
+      MONGODB_DB_COWORK: "cowork_bdd",
+      MONGODB_DB_PRYSMA: "prysma_bdd",
+      PUBLIC_SITE_URL: "https://gestion.example.com",
+    });
+
+    expect(env.PUBLIC_SITE_URL).toBe("https://gestion.example.com");
+    expect(env.NEXT_PUBLIC_SITE_URL).toBeUndefined();
+    expect(env.SITE_URL).toBe("https://gestion.example.com");
+  });
+
+  it("accepts NEXT_PUBLIC_SITE_URL alone in production", () => {
+    const env = parseServerEnv({
+      NODE_ENV: "production",
+      MONGODB_URI: "mongodb+srv://cluster.example.com/db",
+      MONGODB_DB_COWORK: "cowork_bdd",
+      MONGODB_DB_PRYSMA: "prysma_bdd",
+      NEXT_PUBLIC_SITE_URL: "https://vitrine.example.com",
+    });
+
+    expect(env.NEXT_PUBLIC_SITE_URL).toBe("https://vitrine.example.com");
+    expect(env.PUBLIC_SITE_URL).toBeUndefined();
+    expect(env.SITE_URL).toBe("https://vitrine.example.com");
+  });
+
+  it("prefers PUBLIC_SITE_URL over NEXT_PUBLIC_SITE_URL when both are set", () => {
+    const env = parseServerEnv({
+      NODE_ENV: "production",
+      MONGODB_URI: "mongodb+srv://cluster.example.com/db",
+      MONGODB_DB_COWORK: "cowork_bdd",
+      MONGODB_DB_PRYSMA: "prysma_bdd",
+      PUBLIC_SITE_URL: "https://public.example.com",
+      NEXT_PUBLIC_SITE_URL: "https://next.example.com",
+    });
+
+    expect(env.SITE_URL).toBe("https://public.example.com");
+    expect(env.PUBLIC_SITE_URL).toBe("https://public.example.com");
+    expect(env.NEXT_PUBLIC_SITE_URL).toBe("https://next.example.com");
+  });
+
+  it("rejects production when neither PUBLIC_SITE_URL nor NEXT_PUBLIC_SITE_URL is set", () => {
+    expect(() =>
+      parseServerEnv({
+        NODE_ENV: "production",
+        MONGODB_URI: "mongodb+srv://cluster.example.com/db",
+        MONGODB_DB_COWORK: "cowork_bdd",
+        MONGODB_DB_PRYSMA: "prysma_bdd",
+      }),
+    ).toThrow(GENERIC_ENV_ERROR);
+  });
+
   it("parses comma-separated ALLOWED_ORIGIN for gestion-api", () => {
     const env = parseGestionApiEnv({
       NODE_ENV: "development",
