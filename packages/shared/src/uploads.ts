@@ -13,6 +13,8 @@ export const BUILDING_PHOTO_STORAGE_KEY_PATTERN = /^buildings\/[a-f0-9]{24}\/[0-
 export const DEFAULT_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 /** Product limit for a single service photo upload (15 Mo). */
 export const DEFAULT_UPLOAD_MAX_BYTES_SERVICE = 15 * 1024 * 1024;
+/** Product limit for a single cardex document upload (PDF / identity images, 15 Mo). */
+export const DEFAULT_UPLOAD_MAX_BYTES_DOCUMENT = 15 * 1024 * 1024;
 export const DEFAULT_UPLOAD_MAX_PHOTOS_PER_BUILDING = 15;
 export const DEFAULT_UPLOAD_MAX_PHOTOS_PER_SPACE = 15;
 export const DEFAULT_UPLOAD_MAX_DIMENSION_PX = 2048;
@@ -24,6 +26,11 @@ export const UploadLimitsSchema = z.object({
     .int()
     .positive()
     .default(DEFAULT_UPLOAD_MAX_BYTES_SERVICE),
+  UPLOAD_MAX_BYTES_DOCUMENT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_UPLOAD_MAX_BYTES_DOCUMENT),
   UPLOAD_MAX_PHOTOS_PER_BUILDING: z.coerce
     .number()
     .int()

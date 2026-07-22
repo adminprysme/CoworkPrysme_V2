@@ -14,6 +14,7 @@ import { QontoModule } from "./qonto/qonto.module.js";
 import { ServicesModule } from "./services/services.module.js";
 import { SpacesModule } from "./spaces/spaces.module.js";
 import { StripeModule } from "./stripe/stripe.module.js";
+import { DocumentStorageModule } from "./document-storage/document-storage.module.js";
 import { UploadsModule } from "./uploads/uploads.module.js";
 import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.js";
 
@@ -25,6 +26,7 @@ import { VitrineContentModule } from "./vitrine-content/vitrine-content.module.j
     AuthModule,
     PermissionsModule,
     UploadsModule,
+    DocumentStorageModule,
     BuildingsModule,
     SpacesModule,
     ServicesModule,
