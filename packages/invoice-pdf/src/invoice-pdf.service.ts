@@ -48,6 +48,25 @@ export class InvoicePdfService {
   }
 
   async htmlToPdf(html: string): Promise<Buffer> {
+    try {
+      return await this.renderPdfWithBrowser(html);
+    } catch (error) {
+      if (!isBrowserClosedError(error)) {
+        throw error;
+      }
+      this.logger.warn(
+        "Playwright browser closed mid-render — clearing cached instance and retrying once",
+      );
+      await this.resetBrowser();
+      return await this.renderPdfWithBrowser(html);
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.resetBrowser();
+  }
+
+  private async renderPdfWithBrowser(html: string): Promise<Buffer> {
     const browser = await this.getBrowser();
     const page = await browser.newPage();
     try {
@@ -59,19 +78,7 @@ export class InvoicePdfService {
       });
       return Buffer.from(pdf);
     } finally {
-      await page.close();
-    }
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    if (!this.browserPromise) return;
-    try {
-      const browser = await this.browserPromise;
-      await browser.close();
-    } catch (error) {
-      this.logger.warn(`Failed to close Playwright browser: ${String(error)}`);
-    } finally {
-      this.browserPromise = null;
+      await page.close().catch(() => undefined);
     }
   }
 
@@ -157,13 +164,50 @@ export class InvoicePdfService {
     });
   }
 
-  private getBrowser(): Promise<Browser> {
-    if (!this.browserPromise) {
-      this.browserPromise = chromium.launch({
+  private async getBrowser(): Promise<Browser> {
+    if (this.browserPromise) {
+      try {
+        const existing = await this.browserPromise;
+        if (existing.isConnected()) {
+          return existing;
+        }
+        this.logger.warn("Playwright browser disconnected — relaunching");
+      } catch (error) {
+        this.logger.warn(`Cached Playwright browser unusable — relaunching: ${String(error)}`);
+      }
+      this.browserPromise = null;
+    }
+
+    this.browserPromise = chromium
+      .launch({
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      })
+      .catch((error) => {
+        this.browserPromise = null;
+        throw error;
       });
-    }
+
     return this.browserPromise;
   }
+
+  private async resetBrowser(): Promise<void> {
+    const pending = this.browserPromise;
+    this.browserPromise = null;
+    if (!pending) return;
+    try {
+      const browser = await pending;
+      await browser.close();
+    } catch (error) {
+      this.logger.warn(`Failed to close Playwright browser: ${String(error)}`);
+    }
+  }
+}
+
+function isBrowserClosedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /Target page, context or browser has been closed/i.test(message) ||
+    /Browser\.hasBeenClosed/i.test(message)
+  );
 }
