@@ -21,6 +21,16 @@ function requiresSecureMongoUri(uri: string): boolean {
   }
 }
 
+/** Explicit opt-in: plaintext mongodb:// on a trusted internal network (Docker Coolify / localhost). */
+function isMongoInternalNetworkTrusted(env: NodeJS.ProcessEnv): boolean {
+  return env.MONGODB_INTERNAL_NETWORK_TRUSTED === "true";
+}
+
+const mongodbInternalNetworkTrustedSchema = z
+  .enum(["true", "false"])
+  .optional()
+  .transform((value) => value === "true");
+
 const mongoUriSchema = (env: NodeJS.ProcessEnv) =>
   z
     .string()
@@ -31,7 +41,11 @@ const mongoUriSchema = (env: NodeJS.ProcessEnv) =>
         return;
       }
 
-      if (isProduction(env) && !requiresSecureMongoUri(uri)) {
+      if (
+        isProduction(env) &&
+        !requiresSecureMongoUri(uri) &&
+        !isMongoInternalNetworkTrusted(env)
+      ) {
         ctx.addIssue({ code: "custom", message: GENERIC_ENV_ERROR });
       }
     });
@@ -68,6 +82,7 @@ const allowedOriginsSchema = z
 export function createServerEnvSchema(env: NodeJS.ProcessEnv) {
   return z.object({
     MONGODB_URI: mongoUriSchema(env),
+    MONGODB_INTERNAL_NETWORK_TRUSTED: mongodbInternalNetworkTrustedSchema,
     MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
     MONGODB_DB_PRYSMA: z.string().min(1).default("prysma_bdd"),
     NEXT_PUBLIC_SITE_URL: siteUrlSchema(env),
@@ -110,6 +125,7 @@ const uploadsDirSchema = (env: NodeJS.ProcessEnv) =>
 export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
   z.object({
     MONGODB_URI: mongoUriSchema(env),
+    MONGODB_INTERNAL_NETWORK_TRUSTED: mongodbInternalNetworkTrustedSchema,
     MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
     ALLOWED_ORIGIN: allowedOriginsSchema,
     GESTION_API_URL: z.string().url(),
@@ -142,6 +158,7 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
   z
     .object({
       MONGODB_URI: mongoUriSchema(env),
+      MONGODB_INTERNAL_NETWORK_TRUSTED: mongodbInternalNetworkTrustedSchema,
       MONGODB_DB_COWORK: z.string().min(1).default("cowork_bdd"),
       MONGODB_DB_PRYSMA: z.string().min(1).default("prysma_bdd"),
       ALLOWED_ORIGIN: allowedOriginsSchema,
@@ -213,6 +230,7 @@ export function parseServerEnv(env: NodeJS.ProcessEnv = process.env): ServerEnv 
 
   const result = createServerEnvSchema(env).safeParse({
     MONGODB_URI: env.MONGODB_URI,
+    MONGODB_INTERNAL_NETWORK_TRUSTED: env.MONGODB_INTERNAL_NETWORK_TRUSTED,
     MONGODB_DB_COWORK: env.MONGODB_DB_COWORK,
     MONGODB_DB_PRYSMA: env.MONGODB_DB_PRYSMA,
     NEXT_PUBLIC_SITE_URL: env.NEXT_PUBLIC_SITE_URL,
@@ -270,6 +288,7 @@ export function parseVitrineApiEnv(env: NodeJS.ProcessEnv = process.env): Vitrin
 
   const result = VitrineApiEnvSchema(env).safeParse({
     MONGODB_URI: env.MONGODB_URI,
+    MONGODB_INTERNAL_NETWORK_TRUSTED: env.MONGODB_INTERNAL_NETWORK_TRUSTED,
     MONGODB_DB_COWORK: env.MONGODB_DB_COWORK,
     ALLOWED_ORIGIN: env.ALLOWED_ORIGIN,
     GESTION_API_URL: env.GESTION_API_URL,
@@ -293,6 +312,7 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
 
   const result = GestionApiEnvSchema(env).safeParse({
     MONGODB_URI: env.MONGODB_URI,
+    MONGODB_INTERNAL_NETWORK_TRUSTED: env.MONGODB_INTERNAL_NETWORK_TRUSTED,
     MONGODB_DB_COWORK: env.MONGODB_DB_COWORK,
     MONGODB_DB_PRYSMA: env.MONGODB_DB_PRYSMA,
     ALLOWED_ORIGIN: env.ALLOWED_ORIGIN,

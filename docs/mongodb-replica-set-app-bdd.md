@@ -52,6 +52,16 @@ Concerne **toute** l’instance partagée `app-bdd` (17+ apps Coolify du groupe)
 
 Script de restauration déclarative (VPS) : `/tmp/RESTORE_mongo_localhost_27017.sh` (réécrit pour `ports_mappings` + `RestartDatabase`).
 
+### Env apps CoworkPrysme (Zod prod)
+
+Sans TLS sur `app-bdd` (instance partagée 17+ apps — hors périmètre). Le schéma Zod prod accepte :
+
+1. `mongodb+srv://`, ou
+2. `mongodb://…?tls=true`, ou
+3. `mongodb://` plaintext **uniquement** si `MONGODB_INTERNAL_NETWORK_TRUSTED=true` (acceptation de risque documentée : URI sur le réseau Docker Coolify / localhost, jamais IP publique).
+
+À poser sur **gestion-api** et **vitrine-api** Coolify au déploiement, en plus de l’URI Docker interne actuelle.
+
 ### 4. Incident secondaire pendant la correction
 
 - Un script de surveillance (~20 min) mis en place pour la non-régression a traité **toute** écoute sur `:27017` (y compris le mapping localhost voulu) comme anomalie, a détruit à plusieurs reprises le proxy/mapping local, puis a tenté des rollbacks « public ».
@@ -169,3 +179,4 @@ Archive locale : `backups/mongo-pre-replicaset-20260715-143347/` (`cowork_bdd` +
 3. Si transactions nécessaires : tester `startSession()` en staging avant prod.
 4. Ne pas supposer que l'instance n'héberge que votre projet — **instance partagée**.
 5. Vérifier que `app-bdd` reste `is_public=false` et que le port hôte n’écoute que sur `127.0.0.1` (pas `0.0.0.0`).
+6. Apps Nest Zod (CoworkPrysme) : si URI `mongodb://` sans TLS vers ce réseau interne, poser `MONGODB_INTERNAL_NETWORK_TRUSTED=true` en prod.

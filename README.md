@@ -93,18 +93,19 @@ docker build -f apps/gestion/Backend/Dockerfile -t gestion-api .
 
 ## Variables d'environnement (résumé)
 
-| Variable               | Apps concernées          | Description                                                      |
-| ---------------------- | ------------------------ | ---------------------------------------------------------------- |
-| `MONGODB_URI`          | vitrine-api, gestion-api | URI cluster MongoDB                                              |
-| `MONGODB_DB_COWORK`    | vitrine-api, gestion-api | Base applicative (défaut `cowork_bdd`)                           |
-| `MONGODB_DB_PRYSMA`    | gestion-api uniquement   | Base SSO (lecture seule, défaut `prysma_bdd`)                    |
-| `ALLOWED_ORIGIN`       | vitrine-api, gestion-api | Origines CORS autorisées, séparées par des virgules (jamais `*`) |
-| `GESTION_API_URL`      | vitrine-api              | URL de délégation vers gestion-api                               |
-| `NEXT_PUBLIC_SITE_URL` | vitrine-web              | URL publique du site                                             |
-| `NEXT_PUBLIC_API_URL`  | vitrine-web              | URL de vitrine-api (CSP `connect-src`)                           |
-| `VITE_API_URL`         | gestion-web              | URL de gestion-api (bundle + CSP nginx)                          |
+| Variable                           | Apps concernées          | Description                                                                                                          |
+| ---------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `MONGODB_URI`                      | vitrine-api, gestion-api | URI cluster MongoDB                                                                                                  |
+| `MONGODB_INTERNAL_NETWORK_TRUSTED` | vitrine-api, gestion-api | Opt-in prod : `true` pour autoriser `mongodb://` sans TLS/srv sur réseau interne Docker (jamais pour un hôte public) |
+| `MONGODB_DB_COWORK`                | vitrine-api, gestion-api | Base applicative (défaut `cowork_bdd`)                                                                               |
+| `MONGODB_DB_PRYSMA`                | gestion-api uniquement   | Base SSO (lecture seule, défaut `prysma_bdd`)                                                                        |
+| `ALLOWED_ORIGIN`                   | vitrine-api, gestion-api | Origines CORS autorisées, séparées par des virgules (jamais `*`)                                                     |
+| `GESTION_API_URL`                  | vitrine-api              | URL de délégation vers gestion-api                                                                                   |
+| `NEXT_PUBLIC_SITE_URL`             | vitrine-web              | URL publique du site                                                                                                 |
+| `NEXT_PUBLIC_API_URL`              | vitrine-web              | URL de vitrine-api (CSP `connect-src`)                                                                               |
+| `VITE_API_URL`                     | gestion-web              | URL de gestion-api (bundle + CSP nginx)                                                                              |
 
-En production, `MONGODB_URI` doit utiliser `mongodb+srv://` ou `?tls=true`.
+En production, `MONGODB_URI` doit utiliser `mongodb+srv://`, `?tls=true`, **ou** être accompagné de `MONGODB_INTERNAL_NETWORK_TRUSTED=true` lorsque l’URI pointe vers le Mongo Docker interne partagé (`app-bdd`) sans TLS. Ne jamais poser ce flag pour une URI vers Internet / IP publique.
 
 ## Bases de données
 

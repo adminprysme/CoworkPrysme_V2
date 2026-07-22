@@ -56,6 +56,60 @@ describe("parseServerEnv", () => {
     expect(env.MONGODB_URI).toContain("mongodb+srv://");
   });
 
+  it("accepts mongodb:// with tls=true in production", () => {
+    const env = parseServerEnv({
+      NODE_ENV: "production",
+      MONGODB_URI: "mongodb://mongo.example.com:27017/db?tls=true",
+      MONGODB_DB_COWORK: "cowork_bdd",
+      MONGODB_DB_PRYSMA: "prysma_bdd",
+      NEXT_PUBLIC_SITE_URL: "https://example.com",
+    });
+
+    expect(env.MONGODB_URI).toContain("tls=true");
+    expect(env.MONGODB_INTERNAL_NETWORK_TRUSTED).toBe(false);
+  });
+
+  it("accepts plaintext mongodb:// in production when internal network is trusted", () => {
+    const uri =
+      "mongodb://coworkprysme_v2_app:secret@a48ggo0osck4c4044gw4ogok:27017/?authSource=admin&replicaSet=rs0";
+    const env = parseServerEnv({
+      NODE_ENV: "production",
+      MONGODB_URI: uri,
+      MONGODB_INTERNAL_NETWORK_TRUSTED: "true",
+      MONGODB_DB_COWORK: "cowork_bdd",
+      MONGODB_DB_PRYSMA: "prysma_bdd",
+      NEXT_PUBLIC_SITE_URL: "https://example.com",
+    });
+
+    expect(env.MONGODB_URI).toBe(uri);
+    expect(env.MONGODB_INTERNAL_NETWORK_TRUSTED).toBe(true);
+  });
+
+  it("rejects plaintext mongodb:// to a public-style host without tls/srv or trust flag", () => {
+    expect(() =>
+      parseServerEnv({
+        NODE_ENV: "production",
+        MONGODB_URI: "mongodb://user:pass@db.example.com:27017/db",
+        MONGODB_DB_COWORK: "cowork_bdd",
+        MONGODB_DB_PRYSMA: "prysma_bdd",
+        NEXT_PUBLIC_SITE_URL: "https://example.com",
+      }),
+    ).toThrow(GENERIC_ENV_ERROR);
+  });
+
+  it("rejects plaintext mongodb:// when trust flag is not exactly true", () => {
+    expect(() =>
+      parseServerEnv({
+        NODE_ENV: "production",
+        MONGODB_URI: "mongodb://a48ggo0osck4c4044gw4ogok:27017/",
+        MONGODB_INTERNAL_NETWORK_TRUSTED: "false",
+        MONGODB_DB_COWORK: "cowork_bdd",
+        MONGODB_DB_PRYSMA: "prysma_bdd",
+        NEXT_PUBLIC_SITE_URL: "https://example.com",
+      }),
+    ).toThrow(GENERIC_ENV_ERROR);
+  });
+
   it("never includes secret values in error messages", () => {
     const secretUri = "mongodb://user:supersecret@localhost:27017";
 
