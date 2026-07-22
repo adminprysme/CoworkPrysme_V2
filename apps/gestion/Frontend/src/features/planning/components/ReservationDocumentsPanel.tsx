@@ -96,6 +96,7 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
 
   const [uploadCategory, setUploadCategory] = useState<StaffCardexDocumentCategory | null>(null);
   const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +135,7 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
   useEffect(() => {
     setUploadCategory(null);
     setUploadLabel("");
+    setUploadFile(null);
     setUploadError(null);
     setDeleteConfirmId(null);
     setActionError(null);
@@ -143,14 +145,19 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
   const openUpload = (category: StaffCardexDocumentCategory) => {
     setUploadCategory(category);
     setUploadLabel("");
+    setUploadFile(null);
     setUploadError(null);
     setActionError(null);
     setDeleteConfirmId(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const closeUpload = () => {
     setUploadCategory(null);
     setUploadLabel("");
+    setUploadFile(null);
     setUploadError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -161,7 +168,12 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
     event.preventDefault();
     if (!cardexId || !uploadCategory || !canManageClients) return;
 
-    const file = fileInputRef.current?.files?.[0];
+    // Prefer React state (synced via onChange) — reading only the DOM ref can miss the
+    // selected file after re-renders of the conditional upload form.
+    const form = event.currentTarget;
+    const input = form.elements.namedItem("file");
+    const fromForm = input instanceof HTMLInputElement && input.files?.[0] ? input.files[0] : null;
+    const file = uploadFile ?? fromForm;
     if (!file) {
       setUploadError("Veuillez sélectionner un fichier.");
       return;
@@ -240,8 +252,13 @@ export function ReservationDocumentsPanel({ detail }: ReservationDocumentsPanelP
             ref={fileInputRef}
             className={styles.fileInput}
             type="file"
+            name="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
             disabled={uploading}
+            onChange={(event) => {
+              setUploadFile(event.target.files?.[0] ?? null);
+              setUploadError(null);
+            }}
           />
         </label>
         <label className={styles.field}>
