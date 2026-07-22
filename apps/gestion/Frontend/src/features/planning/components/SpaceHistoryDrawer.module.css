@@ -306,6 +306,37 @@
   .body {
     padding-bottom: max(1.4rem, env(safe-area-inset-bottom, 0px));
   }
+
+  .groupHead {
+    align-items: stretch;
+  }
+
+  .groupDisclosure {
+    width: 100%;
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+
+  .groupHead .linkBtn {
+    width: 100%;
+    align-self: stretch;
+    text-align: center;
+  }
+}
+
+@media (max-width: 767px) {
+  .groupHead {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .nestedTimeline {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .nestedTimeline::before {
+    left: calc(0.75rem + var(--timeline-gutter) / 2);
+  }
 }
 
 .empty {
@@ -338,6 +369,154 @@
   font-size: 0.82rem;
   line-height: 1.45;
   color: var(--color-text-muted);
+}
+
+.groupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.groupListItem {
+  min-width: 0;
+}
+
+.group {
+  --event-tone: var(--history-reservation);
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--event-tone) 6%, var(--color-surface));
+  overflow: hidden;
+}
+
+.groupHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.groupDisclosure {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 14rem;
+  padding: 0.15rem 0.1rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.groupDisclosure:hover {
+  background: color-mix(in srgb, var(--event-tone) 10%, transparent);
+}
+
+.groupDisclosure:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.groupDisclosureMain {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.35;
+}
+
+.groupReference {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+}
+
+.groupMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.groupCount {
+  font-weight: 650;
+  color: color-mix(in srgb, var(--event-tone) 55%, var(--color-text-muted));
+}
+
+.groupChevron,
+.groupChevronOpen {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.groupChevronOpen {
+  transform: rotate(180deg);
+}
+
+.groupHead .linkBtn {
+  margin-top: 0.1rem;
+  align-self: center;
+}
+
+.nestedTimeline {
+  --timeline-gutter: 1.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0 0.85rem 0.75rem;
+  display: grid;
+  gap: 0;
+  position: relative;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: var(--color-surface);
+}
+
+.nestedTimeline::before {
+  content: "";
+  position: absolute;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  left: calc(0.85rem + var(--timeline-gutter) / 2);
+  width: 1px;
+  background: var(--color-border);
+  transform: translateX(-50%);
+}
+
+.nestedEvent {
+  --event-tone: var(--history-reservation);
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--timeline-gutter) minmax(0, 1fr);
+  gap: 0.55rem;
+  padding: 0.55rem 0 0.35rem;
+}
+
+.nestedEventTitle {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--color-text);
+  line-height: 1.35;
 }
 
 .timeline {

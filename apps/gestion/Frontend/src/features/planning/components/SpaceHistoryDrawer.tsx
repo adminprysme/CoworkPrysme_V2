@@ -1,8 +1,9 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { IconCalendarOff } from "@tabler/icons-react";
+import { IconCalendarOff, IconChevronDown } from "@tabler/icons-react";
 import type {
   PlanningHistoryEvent,
   PlanningHistoryEventType,
+  PlanningReservationStatus,
   PlanningSpaceHistoryResponse,
 } from "@coworkprysme/shared";
 
@@ -12,6 +13,21 @@ import { formatDateTime } from "../planning-utils.js";
 import styles from "./SpaceHistoryDrawer.module.css";
 
 type RangePreset = "7d" | "30d" | "year" | "custom";
+
+type HistoryListItem =
+  | {
+      kind: "reservation";
+      key: string;
+      reservationId: string;
+      events: PlanningHistoryEvent[];
+      latestAt: string;
+    }
+  | {
+      kind: "standalone";
+      key: string;
+      event: PlanningHistoryEvent;
+      latestAt: string;
+    };
 
 function isReservationLinkedEvent(type: PlanningHistoryEventType): boolean {
   return (
@@ -47,6 +63,76 @@ function eventStartIso(event: PlanningHistoryEvent): string | null {
   if (event.type === "reservation") return event.at;
   return null;
 }
+
+function groupHistoryEvents(events: PlanningHistoryEvent[]): HistoryListItem[] {
+  const byReservation = new Map<string, PlanningHistoryEvent[]>();
+  const standalone: PlanningHistoryEvent[] = [];
+
+  for (const event of events) {
+    if (event.reservationId) {
+      const list = byReservation.get(event.reservationId) ?? [];
+      list.push(event);
+      byReservation.set(event.reservationId, list);
+      continue;
+    }
+    standalone.push(event);
+  }
+
+  const items: HistoryListItem[] = [];
+
+  for (const [reservationId, groupEvents] of byReservation) {
+    const chronological = groupEvents
+      .slice()
+      .sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id));
+    const latest = chronological[chronological.length - 1]!;
+    items.push({
+      kind: "reservation",
+      key: reservationId,
+      reservationId,
+      events: chronological,
+      latestAt: latest.at,
+    });
+  }
+
+  for (const event of standalone) {
+    items.push({
+      kind: "standalone",
+      key: event.id,
+      event,
+      latestAt: event.at,
+    });
+  }
+
+  items.sort((a, b) => b.latestAt.localeCompare(a.latestAt) || a.key.localeCompare(b.key));
+  return items;
+}
+
+function pickGroupSummary(events: PlanningHistoryEvent[]): {
+  dossierLabel: string;
+  reference: string | null;
+  status: PlanningReservationStatus | null;
+  startIso: string | null;
+  endIso: string | null;
+} {
+  const newestFirst = events.slice().reverse();
+  const withLabel = newestFirst.find((event) => eventPrimaryLabel(event).trim());
+  const withRef = newestFirst.find((event) => event.reservationReference?.trim());
+  const withStatus = newestFirst.find((event) => event.reservationStatus);
+  const withDates = newestFirst.find((event) => event.startAt || event.endAt);
+
+  return {
+    dossierLabel: withLabel ? eventPrimaryLabel(withLabel) : "Réservation",
+    reference: withRef?.reservationReference?.trim() || null,
+    status: withStatus?.reservationStatus ?? null,
+    startIso: withDates ? eventStartIso(withDates) : null,
+    endIso: withDates?.endAt ?? null,
+  };
+}
+
+function eventCountLabel(count: number): string {
+  return count <= 1 ? `${count} événement` : `${count} événements`;
+}
+
 const RANGE_PRESETS: Array<{ id: RangePreset; label: string }> = [
   { id: "7d", label: "7 jours" },
   { id: "30d", label: "30 jours" },
@@ -57,6 +143,7 @@ const RANGE_PRESETS: Array<{ id: RangePreset; label: string }> = [
 const TYPE_OPTIONS: Array<{
   id: PlanningHistoryEventType;
   label: string;
+  singularLabel: string;
   tone:
     | "reservation"
     | "cancellation"
@@ -68,15 +155,35 @@ const TYPE_OPTIONS: Array<{
     | "refund"
     | "closure";
 }> = [
-  { id: "reservation", label: "Réservations", tone: "reservation" },
-  { id: "cancellation", label: "Annulations", tone: "cancellation" },
-  { id: "space_change", label: "Changements de salle", tone: "spaceChange" },
-  { id: "restoration", label: "Restaurations", tone: "restoration" },
-  { id: "date_change", label: "Dates", tone: "dateChange" },
-  { id: "party_size_change", label: "Effectif", tone: "partySize" },
-  { id: "contact_transfer", label: "Transferts", tone: "contactTransfer" },
-  { id: "refund", label: "Remboursements", tone: "refund" },
-  { id: "closure", label: "Fermetures", tone: "closure" },
+  { id: "reservation", label: "Réservations", singularLabel: "Réservation", tone: "reservation" },
+  { id: "cancellation", label: "Annulations", singularLabel: "Annulation", tone: "cancellation" },
+  {
+    id: "space_change",
+    label: "Changements de salle",
+    singularLabel: "Changement de salle",
+    tone: "spaceChange",
+  },
+  { id: "restoration", label: "Restaurations", singularLabel: "Restauration", tone: "restoration" },
+  {
+    id: "date_change",
+    label: "Dates",
+    singularLabel: "Modification des dates",
+    tone: "dateChange",
+  },
+  {
+    id: "party_size_change",
+    label: "Effectif",
+    singularLabel: "Modification d’effectif",
+    tone: "partySize",
+  },
+  {
+    id: "contact_transfer",
+    label: "Transferts",
+    singularLabel: "Transfert de contact",
+    tone: "contactTransfer",
+  },
+  { id: "refund", label: "Remboursements", singularLabel: "Remboursement", tone: "refund" },
+  { id: "closure", label: "Fermetures", singularLabel: "Fermeture", tone: "closure" },
 ];
 
 function toneClassName(tone: (typeof TYPE_OPTIONS)[number]["tone"]): string {
@@ -152,14 +259,17 @@ export function SpaceHistoryDrawer({
   const [data, setData] = useState<PlanningSpaceHistoryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
 
   const typeKey = useMemo(() => types.slice().sort().join(","), [types]);
   const spaceName = data?.space.name ?? "…";
+  const groupedItems = useMemo(() => (data ? groupHistoryEvents(data.events) : []), [data]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setExpandedKeys(new Set());
     const fromIso = new Date(`${from}T00:00:00`).toISOString();
     const toDate = new Date(`${to}T00:00:00`);
     toDate.setDate(toDate.getDate() + 1);
@@ -212,6 +322,95 @@ export function SpaceHistoryDrawer({
     });
   }
 
+  function toggleExpanded(key: string) {
+    setExpandedKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function renderStandaloneEvent(event: PlanningHistoryEvent) {
+    const option = TYPE_OPTIONS.find((item) => item.id === event.type);
+    const toneClass = toneClassName(option?.tone ?? "reservation");
+    const primaryLabel = eventPrimaryLabel(event);
+    const showReference =
+      Boolean(event.reservationReference) && event.reservationReference !== primaryLabel;
+    const contextualDetail = eventContextualDetail(event);
+    const startIso = eventStartIso(event);
+
+    return (
+      <li key={event.id} className={[styles.event, toneClass].join(" ")}>
+        <span className={styles.eventDot} aria-hidden="true" />
+        <div className={styles.eventContent}>
+          {event.type === "closure" ? (
+            <time className={styles.eventTime} dateTime={event.at}>
+              {formatDateTime(event.at)}
+            </time>
+          ) : null}
+          <strong className={styles.eventTitle}>{primaryLabel}</strong>
+          <div className={styles.eventDetails}>
+            {isReservationLinkedEvent(event.type) ? (
+              <>
+                {showReference ? (
+                  <p className={styles.eventReference}>{event.reservationReference}</p>
+                ) : null}
+                {event.reservationStatus ? (
+                  <p>
+                    Statut :{" "}
+                    {RESERVATION_STATUS_LABELS[event.reservationStatus] ?? event.reservationStatus}
+                  </p>
+                ) : null}
+                {startIso ? <p>Début : {formatDateTime(startIso)}</p> : null}
+                {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
+                {contextualDetail ? <p>{contextualDetail}</p> : null}
+              </>
+            ) : (
+              <>
+                {event.detail ? <p>{event.detail}</p> : null}
+                {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
+              </>
+            )}
+          </div>
+          {event.reservationId && onOpenReservation ? (
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => onOpenReservation(event.reservationId!)}
+            >
+              Ouvrir la réservation
+            </button>
+          ) : null}
+        </div>
+      </li>
+    );
+  }
+
+  function renderNestedEvent(event: PlanningHistoryEvent) {
+    const option = TYPE_OPTIONS.find((item) => item.id === event.type);
+    const toneClass = toneClassName(option?.tone ?? "reservation");
+    const typeLabel = option?.singularLabel ?? event.title;
+    const contextualDetail = eventContextualDetail(event);
+
+    return (
+      <li key={event.id} className={[styles.nestedEvent, toneClass].join(" ")}>
+        <span className={styles.eventDot} aria-hidden="true" />
+        <div className={styles.eventContent}>
+          <time className={styles.eventTime} dateTime={event.at}>
+            {formatDateTime(event.at)}
+          </time>
+          <strong className={styles.nestedEventTitle}>{typeLabel}</strong>
+          {contextualDetail ? (
+            <div className={styles.eventDetails}>
+              <p>{contextualDetail}</p>
+            </div>
+          ) : null}
+        </div>
+      </li>
+    );
+  }
+
   return (
     <aside className={styles.panel} aria-labelledby={titleId}>
       <header className={styles.header}>
@@ -226,7 +425,7 @@ export function SpaceHistoryDrawer({
           <h2 id={titleId} className={styles.title}>
             Historique
           </h2>
-          <p className={styles.meta}>Lecture seule · chronologique</p>
+          <p className={styles.meta}>Lecture seule · regroupé par réservation</p>
         </div>
         <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Retour">
           <span className={styles.closeGlyph} aria-hidden="true">
@@ -323,61 +522,79 @@ export function SpaceHistoryDrawer({
             </p>
           </div>
         ) : null}
-        {!loading && data && data.events.length > 0 ? (
-          <ol className={styles.timeline}>
-            {data.events.map((event) => {
-              const option = TYPE_OPTIONS.find((item) => item.id === event.type);
-              const toneClass = toneClassName(option?.tone ?? "reservation");
-              const primaryLabel = eventPrimaryLabel(event);
-              const showReference =
-                Boolean(event.reservationReference) && event.reservationReference !== primaryLabel;
-              const contextualDetail = eventContextualDetail(event);
-              const startIso = eventStartIso(event);
+        {!loading && data && groupedItems.length > 0 ? (
+          <ol className={styles.groupList}>
+            {groupedItems.map((item) => {
+              if (item.kind === "standalone") {
+                return (
+                  <li key={item.key} className={styles.groupListItem}>
+                    <ol className={styles.timeline}>{renderStandaloneEvent(item.event)}</ol>
+                  </li>
+                );
+              }
+
+              const summary = pickGroupSummary(item.events);
+              const expanded = expandedKeys.has(item.key);
+              const panelId = `space-history-group-${item.key}`;
+              const latestTone =
+                TYPE_OPTIONS.find(
+                  (option) => option.id === item.events[item.events.length - 1]?.type,
+                )?.tone ?? "reservation";
 
               return (
-                <li key={event.id} className={[styles.event, toneClass].join(" ")}>
-                  <span className={styles.eventDot} aria-hidden="true" />
-                  <div className={styles.eventContent}>
-                    {event.type === "closure" ? (
-                      <time className={styles.eventTime} dateTime={event.at}>
-                        {formatDateTime(event.at)}
-                      </time>
-                    ) : null}
-                    <strong className={styles.eventTitle}>{primaryLabel}</strong>
-                    <div className={styles.eventDetails}>
-                      {isReservationLinkedEvent(event.type) ? (
-                        <>
-                          {showReference ? (
-                            <p className={styles.eventReference}>{event.reservationReference}</p>
+                <li key={item.key} className={[styles.group, toneClassName(latestTone)].join(" ")}>
+                  <div className={styles.groupHead}>
+                    <button
+                      type="button"
+                      className={styles.groupDisclosure}
+                      aria-expanded={expanded}
+                      aria-controls={panelId}
+                      onClick={() => toggleExpanded(item.key)}
+                    >
+                      <span className={styles.groupDisclosureMain}>
+                        <strong className={styles.groupTitle}>{summary.dossierLabel}</strong>
+                        {summary.reference ? (
+                          <span className={styles.groupReference}>{summary.reference}</span>
+                        ) : null}
+                        <span className={styles.groupMeta}>
+                          {summary.status ? (
+                            <span>
+                              {RESERVATION_STATUS_LABELS[summary.status] ?? summary.status}
+                            </span>
                           ) : null}
-                          {event.reservationStatus ? (
-                            <p>
-                              Statut :{" "}
-                              {RESERVATION_STATUS_LABELS[event.reservationStatus] ??
-                                event.reservationStatus}
-                            </p>
+                          {summary.startIso ? (
+                            <span>Début {formatDateTime(summary.startIso)}</span>
                           ) : null}
-                          {startIso ? <p>Début : {formatDateTime(startIso)}</p> : null}
-                          {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
-                          {contextualDetail ? <p>{contextualDetail}</p> : null}
-                        </>
-                      ) : (
-                        <>
-                          {event.detail ? <p>{event.detail}</p> : null}
-                          {event.endAt ? <p>Fin : {formatDateTime(event.endAt)}</p> : null}
-                        </>
-                      )}
-                    </div>
-                    {event.reservationId && onOpenReservation ? (
+                          {summary.endIso ? (
+                            <span>Fin {formatDateTime(summary.endIso)}</span>
+                          ) : null}
+                          <span className={styles.groupCount}>
+                            {eventCountLabel(item.events.length)}
+                          </span>
+                        </span>
+                      </span>
+                      <IconChevronDown
+                        size={18}
+                        stroke={1.7}
+                        aria-hidden
+                        className={expanded ? styles.groupChevronOpen : styles.groupChevron}
+                      />
+                    </button>
+                    {onOpenReservation ? (
                       <button
                         type="button"
                         className={styles.linkBtn}
-                        onClick={() => onOpenReservation(event.reservationId!)}
+                        onClick={() => onOpenReservation(item.reservationId)}
                       >
                         Ouvrir la réservation
                       </button>
                     ) : null}
                   </div>
+                  {expanded ? (
+                    <ol id={panelId} className={styles.nestedTimeline}>
+                      {item.events.map((event) => renderNestedEvent(event))}
+                    </ol>
+                  ) : null}
                 </li>
               );
             })}
