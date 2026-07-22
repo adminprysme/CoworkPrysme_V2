@@ -756,3 +756,18 @@ export {
   type StaffTransferCardexOwnershipRequest,
   type StaffTransferCardexOwnershipResult,
 } from "./client-account-staff.js";
+
+export {
+  CARDEX_DOCUMENT_STAFF_ERROR_CODES,
+  CARDEX_DOCUMENT_STAFF_ERROR_MESSAGES,
+  STAFF_CARDEX_DOCUMENT_LABEL_MAX_LENGTH,
+  StaffCardexDocumentCategorySchema,
+  StaffCardexDocumentSchema,
+  StaffCardexDocumentsListResponseSchema,
+  StaffUploadCardexDocumentFieldsSchema,
+  type CardexDocumentStaffErrorCode,
+  type StaffCardexDocument,
+  type StaffCardexDocumentCategory,
+  type StaffCardexDocumentsListResponse,
+  type StaffUploadCardexDocumentFields,
+} from "./cardex-documents-staff.js";
