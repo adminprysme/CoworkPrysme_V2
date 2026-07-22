@@ -220,6 +220,7 @@ Les transactions Mongo (`createReservation`) exigent un **replica set** (un nœu
 - Le TTL des locks fonctionne sans replica set ; les transactions, non.
 - Utilitaire : `assertReplicaSetForTransactions()` / `detectReplicaSet()` dans `packages/db`.
 - **Action Coolify** : configurer MongoDB avec `--replSet rs0` + `rs.initiate()`, ou utiliser un cluster managé.
+- Instance partagée **`app-bdd`** : détail replica set + **incident exposition 27017 (22/07/2026)** et état réseau cible (`127.0.0.1` only, `is_public=false`) → `docs/mongodb-replica-set-app-bdd.md`.
 
 Les tests d'intégration de `packages/db` démarrent un replica set mono-nœud en mémoire (`mongodb-memory-server`) à chaque run CI.
 
