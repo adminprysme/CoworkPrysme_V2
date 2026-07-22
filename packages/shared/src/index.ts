@@ -771,3 +771,19 @@ export {
   type StaffCardexDocumentsListResponse,
   type StaffUploadCardexDocumentFields,
 } from "./cardex-documents-staff.js";
+
+export {
+  CARDEX_INVOICE_STAFF_ERROR_CODES,
+  CARDEX_INVOICE_STAFF_ERROR_MESSAGES,
+  StaffCardexInvoiceSchema,
+  StaffCardexInvoicesListResponseSchema,
+  StaffInvoiceStatusSchema,
+  StaffInvoiceTotalsSchema,
+  StaffInvoiceTypeSchema,
+  type CardexInvoiceStaffErrorCode,
+  type StaffCardexInvoice,
+  type StaffCardexInvoicesListResponse,
+  type StaffInvoiceStatus,
+  type StaffInvoiceTotals,
+  type StaffInvoiceType,
+} from "./cardex-invoices-staff.js";
