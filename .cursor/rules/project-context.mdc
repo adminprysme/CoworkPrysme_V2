@@ -11,14 +11,33 @@ Monorepo `coworkprysme_v2`. Ports locaux habituels : gestion-web **3002**, gesti
 
 ### Planning — Vague 3 entièrement close
 
-Aucun chantier Planning ouvert. Vague 3 livrée : **Stripe refunds** (remboursement réel carte + marquage manuel virement), **Invitation collaborateur**, **Désactivation / transfert propriété**, **Documents cardex**. Le chantier **Devis** n’est **pas** dans le Planning : reporté vers le futur chantier **Facturation** (ne pas le rouvrir ici).
+Aucun chantier Planning ouvert. Vague 3 livrée : **Stripe refunds** (remboursement réel carte + marquage manuel virement), **Invitation collaborateur**, **Désactivation / transfert propriété**, **Documents cardex**. Le chantier **Devis** n’est **pas** dans le Planning : reporté vers le futur chantier **Facturation** (ne pas le rouvrir ici). **Audit sécurité / cohérence Planning clos** (Vagues 1–3) — voir section dédiée ci-dessous.
+
+### Audit sécurité Planning (clos)
+
+Audit ciblé (permissions, IDOR, scénarios combinés) sur l’ensemble du module Planning (Vagues 1, 2, 3). **État : clos** — 2 corrections critiques/moyennes appliquées et poussées sur `origin/master` ; le reste est design assumé ou vigilance mineure (pas d’action requise).
+
+**Corrections livrées**
+
+- **C1** (`da65ec8`, poussé) : les 4 endpoints invitations (create / list / resend / revoke) vivaient sous `PlanningPermissionGuard` alors que l’UI Contacts gate déjà ces actions sur `permissions.clients`. Un staff `planning=true` / `clients=false` pouvait donc lister/créer/renvoyer/révoquer des invitations. Corrigé en extrayant les routes dans `PlanningInvitationsController` avec `ClientsPermissionGuard` — même modèle **cardex-global** que deactivate / reactivate / transfer-ownership / documents / invoices. Chemins API inchangés.
+- **M1** (`098eb8e`, poussé) : fenêtre TOCTOU sur `transfer-ownership` entre la vérif `status === active` du compte cible (hors txn) et l’écriture d’ownership — confirmée exploitable par simulation (ownership assignable à un compte verrouillé entre check et write). Fermée en rendant la vérif **atomique dans la transaction** (`findOneAndUpdate` conditionnel sur `status: "active"`) ; 0 doc → rollback + `TRANSFER_TARGET_INVALID`. Même principe que l’acceptation d’invitation.
+
+**Choix de conception assumés (pas des bugs)**
+
+- **M2 — 403 vs 404 Planning** : le module Planning distingue volontairement **403** (hors scope bâtiment) de **404** (introuvable) sur réservations / manage / history — différent du **404 unifié** utilisé sur cardex / documents / invitations / factures. Raison : la frontière bâtiment est un découpage **interne** à la même organisation (staff scope-restreint), pas une frontière de confidentialité entre deux clients distincts ; le risque de fuite est bien plus faible, et le 403 apporte une utilité opérationnelle (message clair pour un staff qui suit un lien hors de son périmètre). Le 404 unifié reste la règle stricte partout où la frontière est « entre deux clients / cardex différents ».
+- **M3 — clients / cardex org-wide** : documents, factures, deactivate, transfer-ownership, invitations sont volontairement **sans scope bâtiment** — `permissions.clients` donne accès au cardex complet quel que soit le bâtiment, **par design**.
+
+**Vigilance légère (pas d’action requise)**
+
+- **m1** : accept invitation (vitrine) et transfer-ownership (gestion) n’ont pas de lock partagé — pas de risque catastrophique observé ; ordre d’écriture non garanti en parallèle.
+- **m2** : delete document / download document — race non critique possible (ENOENT si suppression pendant un téléchargement en cours).
 
 ### Planning / Contacts
 
-- **Invitation collaborateur** (clos) : schéma `clientAccountInvitations` + `ClientAccount.role` owner/member ; API staff create/list/resend/revoke ; acceptation publique vitrine ; UI Contacts (liste invitations, section repliable) ; E2E + redirect `/connexion`. Fixture de référence : **RES-2026-00024** / cardex MA CONCIERGERIE / owner `pthomas@prysme.eu`.
+- **Invitation collaborateur** (clos) : schéma `clientAccountInvitations` + `ClientAccount.role` owner/member ; API staff create/list/resend/revoke via `PlanningInvitationsController` + **`ClientsPermissionGuard`** (cardex-global, aligné UI Contacts) ; acceptation publique vitrine ; UI Contacts (liste invitations, section repliable) ; E2E + redirect `/connexion`. Fixture de référence : **RES-2026-00024** / cardex MA CONCIERGERIE / owner `pthomas@prysme.eu`.
 - **Désactivation de compte ClientAccount** (clos, poussé `origin/master`) :
   - status `locked` = désactivé staff (pas de suppression RGPD) ; métadonnées `lockedAt` / `lockedByStaffProfileId` / `lockReason?` / `unlockedAt` / `unlockedByStaffProfileId`
-  - API : `POST /planning/client-accounts/:id/deactivate|reactivate`, `POST /planning/cardexes/:id/transfer-ownership` (transaction : `Cardex.clientAccountId` + roles owner→member / member→owner ; **pas** de changement `reservation.clientAccountId`)
+  - API : `POST /planning/client-accounts/:id/deactivate|reactivate`, `POST /planning/cardexes/:id/transfer-ownership` (transaction : `Cardex.clientAccountId` + roles owner→member / member→owner ; **pas** de changement `reservation.clientAccountId` ; promo owner filtrée atomiquement sur `status: "active"` — voir audit M1)
   - **`ClientsPermissionGuard`** → `permissions.clients` uniquement (miroir billing) — **indépendant** de `PlanningPermissionGuard` et du scope bâtiment
   - Auth client : code **`ACCOUNT_LOCKED`** (HTTP 403) + message exact « Ce compte a été désactivé. Contactez votre espace de coworking. » sur **les deux** entrées : `POST /booking/account/verify` et confirm booking `accountMode: "existing"`
   - UI Contacts : badges role/status, désactiver / réactiver (motif optionnel), transfert avec sélecteur (email seul), owner toujours en tête de liste
@@ -96,7 +115,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 
 - Shared : `packages/shared/src/client-invitation.ts`, `client-account-staff.ts`, `planning.ts` (contacts `role`/`status`)
 - DB : `packages/db/src/domains/client/client-account.schema.ts`, `client-account-invitation.schema.ts`, `confirm-booking-checkout.ts` (`AccountLockedError` / verify)
-- API gestion : `clients-permission.guard.ts`, `client-accounts-staff.service.ts` / `.controller.ts`, `planning-invitations.service.ts`
+- API gestion : `clients-permission.guard.ts`, `client-accounts-staff.service.ts` / `.controller.ts`, `planning-invitations.controller.ts` / `.service.ts`
 - API vitrine : `booking-account.service.ts`, `booking-confirm.service.ts` (map `ACCOUNT_LOCKED`)
 - UI : `ReservationContactsPanel.tsx`
 
