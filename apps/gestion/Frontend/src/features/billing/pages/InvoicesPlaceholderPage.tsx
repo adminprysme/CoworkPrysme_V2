@@ -1,4 +1,4 @@
-import styles from "./BillingPages.module.css";
+import styles from "../BillingPages.module.css";
 
 export function InvoicesPlaceholderPage() {
   return (

@@ -1,7 +1,7 @@
 import type { QuoteProspect } from "@coworkprysme/shared";
 
-import pageStyles from "../../BillingPages.module.css";
-import styles from "./QuoteWizard.module.css";
+import pageStyles from "../../../BillingPages.module.css";
+import styles from "../QuoteWizard.module.css";
 
 type ClientStepProps = {
   prospect: QuoteProspect;
