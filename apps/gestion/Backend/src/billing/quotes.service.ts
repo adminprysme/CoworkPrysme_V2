@@ -138,11 +138,28 @@ export class QuotesService {
     if (query.cardexId) filter.cardexId = query.cardexId;
     if (query.q) {
       const q = query.q.trim();
+      const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = { $regex: escapeRegex(q), $options: "i" };
+      const Cardex = await getCardexModel();
+      const matchingCardexes = await Cardex.find({
+        $or: [
+          { "identity.firstName": rx },
+          { "identity.lastName": rx },
+          { "company.legalName": rx },
+        ],
+      })
+        .select({ _id: 1 })
+        .lean()
+        .exec();
+      const cardexIds = matchingCardexes.map((row) => row._id);
       filter.$or = [
-        { reference: { $regex: q, $options: "i" } },
-        { "prospect.email": { $regex: q, $options: "i" } },
-        { "prospect.displayName": { $regex: q, $options: "i" } },
-        { "prospect.companyName": { $regex: q, $options: "i" } },
+        { reference: rx },
+        { "prospect.email": rx },
+        { "prospect.firstName": rx },
+        { "prospect.lastName": rx },
+        { "prospect.displayName": rx },
+        { "prospect.companyName": rx },
+        ...(cardexIds.length > 0 ? [{ cardexId: { $in: cardexIds } }] : []),
       ];
     }
 

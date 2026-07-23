@@ -193,31 +193,37 @@ describe("QuotesService", () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it("rejects delete on non-draft", async () => {
-      const doc = baseQuoteDoc({ status: "sent" });
-      getQuoteModelMock.mockResolvedValue({
-        findById: () => ({ exec: async () => doc }),
-      });
+    it.each(["sent", "accepted"] as const)(
+      "rejects delete on %s (409 Conflict — draft only)",
+      async (status) => {
+        const doc = baseQuoteDoc({ status });
+        getQuoteModelMock.mockResolvedValue({
+          findById: () => ({ exec: async () => doc }),
+        });
 
-      await expect(service.deleteDraft(staffProfile(), QUOTE_ID)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
-      expect(doc.deleteOne).not.toHaveBeenCalled();
-    });
+        await expect(service.deleteDraft(staffProfile(), QUOTE_ID)).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(doc.deleteOne).not.toHaveBeenCalled();
+      },
+    );
 
-    it("rejects send when already accepted", async () => {
-      const doc = baseQuoteDoc({ status: "accepted" });
-      getQuoteModelMock.mockResolvedValue({
-        findById: () => ({ exec: async () => doc }),
-      });
+    it.each(["sent", "accepted", "refused", "expired"] as const)(
+      "rejects send when status is already %s",
+      async (status) => {
+        const doc = baseQuoteDoc({ status });
+        getQuoteModelMock.mockResolvedValue({
+          findById: () => ({ exec: async () => doc }),
+        });
 
-      await expect(service.send(staffProfile(), QUOTE_ID)).rejects.toBeInstanceOf(
-        ConflictException,
-      );
-      expect(attachQuoteAcceptTokenMock).not.toHaveBeenCalled();
-    });
+        await expect(service.send(staffProfile(), QUOTE_ID)).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(attachQuoteAcceptTokenMock).not.toHaveBeenCalled();
+      },
+    );
 
-    it("rejects refuse when not sent", async () => {
+    it("rejects refuse on draft", async () => {
       const doc = baseQuoteDoc({ status: "draft" });
       getQuoteModelMock.mockResolvedValue({
         findById: () => ({ exec: async () => doc }),
@@ -239,7 +245,7 @@ describe("QuotesService", () => {
       );
     });
 
-    it("rejects send without prospect identity when no cardex", async () => {
+    it("rejects send without prospect identity when no cardex (email alone)", async () => {
       const doc = baseQuoteDoc({
         prospect: { email: "only@example.com" },
         cardexId: undefined,
@@ -266,9 +272,9 @@ describe("QuotesService", () => {
   });
 
   describe("send / refuse / expire / delete draft", () => {
-    it("sends draft → sent with accept token and email", async () => {
-      const draft = baseQuoteDoc({ status: "draft" });
-      const sent = baseQuoteDoc({ status: "draft" });
+    it("sends draft → sent with accept token and email (prospect first+last, no cardex)", async () => {
+      const draft = baseQuoteDoc({ status: "draft", cardexId: undefined });
+      const sent = baseQuoteDoc({ status: "draft", cardexId: undefined });
       let call = 0;
       getQuoteModelMock.mockResolvedValue({
         findById: () => ({
@@ -288,11 +294,46 @@ describe("QuotesService", () => {
         expect.objectContaining({
           to: "prospect@example.com",
           subject: expect.stringContaining("DEV-2026-00001"),
+          html: expect.stringContaining("Accepter le devis"),
         }),
       );
+      const mailCall = (mail.sendMail as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+        html: string;
+        attachments?: unknown;
+      };
+      expect(mailCall.html).toContain("/accepter-devis?token=");
+      expect(mailCall.html).toContain("a".repeat(64));
+      expect(mailCall.attachments).toBeUndefined();
       expect(result.emailSent).toBe(true);
       expect(result.quote.status).toBe("sent");
       expect(result.acceptUrl).toContain("/accepter-devis?token=");
+    });
+
+    it("sends prospect with displayName only (no first/last, no cardex)", async () => {
+      const draft = baseQuoteDoc({
+        status: "draft",
+        cardexId: undefined,
+        prospect: { email: "display@example.com", displayName: "Ada Corp" },
+      });
+      const sent = baseQuoteDoc({
+        status: "draft",
+        cardexId: undefined,
+        prospect: { email: "display@example.com", displayName: "Ada Corp" },
+      });
+      let call = 0;
+      getQuoteModelMock.mockResolvedValue({
+        findById: () => ({
+          exec: async () => {
+            call += 1;
+            return call === 1 ? draft : sent;
+          },
+        }),
+      });
+
+      const result = await service.send(staffProfile(), QUOTE_ID);
+      expect(result.quote.status).toBe("sent");
+      expect(attachQuoteAcceptTokenMock).toHaveBeenCalled();
+      expect(mail.sendMail).toHaveBeenCalled();
     });
 
     it("refuses sent → refused", async () => {
@@ -372,8 +413,8 @@ describe("QuotesService", () => {
       expect(result.internalNote).toBe("follow-up");
     });
 
-    it("rejects non-internalNote patch on sent", async () => {
-      const doc = baseQuoteDoc({ status: "sent" });
+    it("rejects non-internalNote patch on sent (409 — not silently ignored)", async () => {
+      const doc = baseQuoteDoc({ status: "sent", depositPercent: 0 });
       getQuoteModelMock.mockResolvedValue({
         findById: () => ({ exec: async () => doc }),
       });
@@ -381,6 +422,57 @@ describe("QuotesService", () => {
       await expect(
         service.update(staffProfile(), QUOTE_ID, { depositPercent: 10 }),
       ).rejects.toBeInstanceOf(ConflictException);
+      expect(doc.depositPercent).toBe(0);
+      expect(doc.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("list search q", () => {
+    it("matches prospect name fields and cardex identity/company", async () => {
+      const CARDEX_ID = "cccccccccccccccccccccccc";
+      const findQuotes = vi.fn().mockReturnValue({
+        sort: () => ({
+          skip: () => ({
+            limit: () => ({
+              lean: () => ({
+                exec: async () => [
+                  baseQuoteDoc({
+                    prospect: { email: "p@example.com", displayName: "Prospect Ada" },
+                  }),
+                ],
+              }),
+            }),
+          }),
+        }),
+      });
+      const countDocuments = vi.fn().mockReturnValue({ exec: async () => 1 });
+      getQuoteModelMock.mockResolvedValue({
+        find: findQuotes,
+        countDocuments,
+      });
+      getCardexModelMock.mockResolvedValue({
+        find: () => ({
+          select: () => ({
+            lean: () => ({
+              exec: async () => [{ _id: CARDEX_ID }],
+            }),
+          }),
+        }),
+        findById: () => ({ select: () => ({ lean: () => ({ exec: async () => null }) }) }),
+      });
+
+      await service.list({ q: "Ada", page: 1, pageSize: 20 });
+
+      expect(findQuotes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          $or: expect.arrayContaining([
+            expect.objectContaining({ "prospect.displayName": expect.anything() }),
+            expect.objectContaining({ "prospect.firstName": expect.anything() }),
+            expect.objectContaining({ "prospect.lastName": expect.anything() }),
+            { cardexId: { $in: [CARDEX_ID] } },
+          ]),
+        }),
+      );
     });
   });
 });
