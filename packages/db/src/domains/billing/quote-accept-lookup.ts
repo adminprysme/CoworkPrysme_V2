@@ -1,5 +1,7 @@
 import type { Types } from "mongoose";
 
+import { resolveQuoteAcceptTokenExpiresAt } from "@coworkprysme/shared";
+
 import { connectMongo } from "../../connection.js";
 import type { Quote } from "./quote.schema.js";
 import { getQuoteModel } from "./quote.schema.js";
@@ -26,8 +28,13 @@ export class QuoteAcceptLookupError extends Error {
 export interface AttachQuoteAcceptTokenInput {
   quoteId: Types.ObjectId;
   tokenSecret: string;
-  /** Defaults to quote.validUntil when omitted. */
+  /**
+   * Optional upper bound; final expiry is still
+   * `min(expiresAt ?? validUntil, now + 30d)` (LOCKED product b).
+   */
   expiresAt?: Date;
+  /** Injectable clock for TTL tests. */
+  now?: Date;
 }
 
 export interface AttachQuoteAcceptTokenResult {
@@ -51,7 +58,12 @@ export async function attachQuoteAcceptToken(
   }
 
   const { rawToken, tokenHash } = issueQuoteAcceptToken(input.tokenSecret);
-  const expiresAt = input.expiresAt ?? quote.validUntil;
+  const now = input.now ?? new Date();
+  const validBound =
+    input.expiresAt && input.expiresAt.getTime() < quote.validUntil.getTime()
+      ? input.expiresAt
+      : quote.validUntil;
+  const expiresAt = resolveQuoteAcceptTokenExpiresAt(validBound, now);
 
   quote.acceptTokenHash = tokenHash;
   quote.acceptTokenExpiresAt = expiresAt;

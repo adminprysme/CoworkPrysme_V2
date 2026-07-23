@@ -588,21 +588,42 @@ export {
 
 export {
   BillingLineKindSchema,
+  QUOTE_ACCEPT_TOKEN_MAX_TTL_MS,
   QuoteAcceptedByKindSchema,
   QuoteDepositPercentSchema,
   QuoteLinePriceSourceSchema,
   QuotePaymentMethodSchema,
   QuoteProspectBillingAddressSchema,
   QuoteProspectSchema,
+  QuoteSendProspectSchema,
   QuoteStatusSchema,
+  resolveQuoteAcceptTokenExpiresAt,
   type BillingLineKind,
   type QuoteAcceptedByKind,
   type QuoteLinePriceSource,
   type QuotePaymentMethod,
   type QuoteProspect,
   type QuoteProspectBillingAddress,
+  type QuoteSendProspect,
   type QuoteStatus,
 } from "./billing-quotes.js";
+
+export {
+  applyQuoteLinePricing,
+  computeHtFromTtcCents,
+  computeQuoteDeposit,
+  computeQuoteTotals,
+  computeQuoteVatBreakdown,
+  recomputeQuotePricing,
+  type AppliedQuoteLinePricing,
+  type QuoteBillingTotals,
+  type QuoteDepositResult,
+  type QuoteLinePricingInput,
+  type QuoteLineTotalsInput,
+  type QuoteVatBreakdownLine,
+  type RecomputeQuotePricingInput,
+  type RecomputeQuotePricingResult,
+} from "./billing-quote-pricing.js";
 
 export {
   CLIENT_ACCOUNT_ACTIVATION_ERROR_CODES,

@@ -1,5 +1,12 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
+import {
+  QUOTE_ACCEPT_TOKEN_MAX_TTL_MS,
+  resolveQuoteAcceptTokenExpiresAt,
+} from "@coworkprysme/shared";
+
+export { QUOTE_ACCEPT_TOKEN_MAX_TTL_MS, resolveQuoteAcceptTokenExpiresAt };
+
 /** SHA-256(token + ":" + QUOTE_ACCEPT_TOKEN_SECRET) — never store or log the raw token. */
 export function hashQuoteAcceptToken(rawToken: string, secret: string): string {
   return createHash("sha256").update(`${rawToken}:${secret}`).digest("hex");
@@ -23,6 +30,27 @@ export function issueQuoteAcceptToken(secret: string): IssuedQuoteAcceptToken {
   return {
     rawToken,
     tokenHash: hashQuoteAcceptToken(rawToken, secret),
+  };
+}
+
+export interface IssuedQuoteAcceptTokenWithExpiry extends IssuedQuoteAcceptToken {
+  /** `min(validUntil, now + QUOTE_ACCEPT_TOKEN_MAX_TTL_MS)`. */
+  expiresAt: Date;
+}
+
+/**
+ * Issues accept token + computes expiry (LOCKED product b).
+ * Prefer this when attaching on send; `attachQuoteAcceptToken` applies the same rule.
+ */
+export function issueQuoteAcceptTokenWithExpiry(
+  secret: string,
+  validUntil: Date,
+  now: Date = new Date(),
+): IssuedQuoteAcceptTokenWithExpiry {
+  const issued = issueQuoteAcceptToken(secret);
+  return {
+    ...issued,
+    expiresAt: resolveQuoteAcceptTokenExpiresAt(validUntil, now),
   };
 }
 

@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   BillingLineKindSchema,
+  QUOTE_ACCEPT_TOKEN_MAX_TTL_MS,
   QuoteDepositPercentSchema,
   QuotePaymentMethodSchema,
   QuoteProspectSchema,
+  QuoteSendProspectSchema,
   QuoteStatusSchema,
+  resolveQuoteAcceptTokenExpiresAt,
 } from "./billing-quotes.js";
 
 describe("billing-quotes schemas", () => {
@@ -28,11 +31,42 @@ describe("billing-quotes schemas", () => {
     expect(() => QuoteDepositPercentSchema.parse(12.5)).toThrow();
   });
 
-  it("requires email on prospect and lowercases it", () => {
+  it("requires email on draft prospect and lowercases it", () => {
     expect(QuoteProspectSchema.parse({ email: "  Client@Example.COM " })).toEqual({
       email: "client@example.com",
     });
     expect(() => QuoteProspectSchema.parse({})).toThrow();
+  });
+
+  it("QuoteSendProspectSchema requires (firstName+lastName) OR displayName", () => {
+    expect(() => QuoteSendProspectSchema.parse({ email: "a@example.com" })).toThrow();
+    expect(() =>
+      QuoteSendProspectSchema.parse({ email: "a@example.com", firstName: "Only" }),
+    ).toThrow();
+    expect(
+      QuoteSendProspectSchema.parse({
+        email: "a@example.com",
+        firstName: "Alice",
+        lastName: "Martin",
+      }),
+    ).toMatchObject({ firstName: "Alice", lastName: "Martin" });
+    expect(
+      QuoteSendProspectSchema.parse({
+        email: "a@example.com",
+        displayName: "Alice Martin",
+      }),
+    ).toMatchObject({ displayName: "Alice Martin" });
+  });
+
+  it("resolveQuoteAcceptTokenExpiresAt = min(validUntil, now+30d)", () => {
+    expect(QUOTE_ACCEPT_TOKEN_MAX_TTL_MS).toBe(30 * 24 * 60 * 60 * 1000);
+    const now = new Date("2026-07-23T12:00:00.000Z");
+    const sooner = new Date("2026-08-01T12:00:00.000Z"); // 9 days
+    const farther = new Date("2026-12-01T12:00:00.000Z"); // > 30 days
+    expect(resolveQuoteAcceptTokenExpiresAt(sooner, now).toISOString()).toBe(sooner.toISOString());
+    expect(resolveQuoteAcceptTokenExpiresAt(farther, now).toISOString()).toBe(
+      new Date(now.getTime() + QUOTE_ACCEPT_TOKEN_MAX_TTL_MS).toISOString(),
+    );
   });
 
   it("mirrors billing line kinds", () => {

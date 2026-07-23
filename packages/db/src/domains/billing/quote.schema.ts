@@ -61,7 +61,7 @@ export interface Quote {
   expiredAt?: Date;
   createdByStaffProfileId?: Types.ObjectId;
   acceptTokenHash?: string;
-  /** Aligned with validUntil (or ≤). */
+  /** Aligned with min(validUntil, now+30d) at token issue (LOCKED product b). */
   acceptTokenExpiresAt?: Date;
   acceptedBy?: QuoteAcceptedBy;
   createdAt: Date;

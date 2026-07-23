@@ -66,11 +66,15 @@ export {
   type ApplyStripeCardRefundResult,
 } from "./apply-stripe-card-refund.js";
 export {
+  QUOTE_ACCEPT_TOKEN_MAX_TTL_MS,
   hashQuoteAcceptToken,
   isQuoteAcceptTokenFormat,
   issueQuoteAcceptToken,
+  issueQuoteAcceptTokenWithExpiry,
   quoteAcceptTokenMatchesHash,
+  resolveQuoteAcceptTokenExpiresAt,
   type IssuedQuoteAcceptToken,
+  type IssuedQuoteAcceptTokenWithExpiry,
 } from "./quote-accept-token.js";
 export {
   attachQuoteAcceptToken,

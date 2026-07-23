@@ -31,7 +31,7 @@ export const QuoteProspectBillingAddressSchema = z.object({
 });
 export type QuoteProspectBillingAddress = z.infer<typeof QuoteProspectBillingAddressSchema>;
 
-/** Prospect / clientDraft identity before cardex (send without cardex). */
+/** Prospect / clientDraft identity before cardex (draft may be email-only). */
 export const QuoteProspectSchema = z.object({
   email: z.string().trim().email().toLowerCase(),
   firstName: optionalTrimmed,
@@ -43,4 +43,34 @@ export const QuoteProspectSchema = z.object({
 });
 export type QuoteProspect = z.infer<typeof QuoteProspectSchema>;
 
+/**
+ * Prospect required to **send** a quote without cardex (LOCKED product a):
+ * email + `(firstName AND lastName) OR displayName` — not email alone.
+ * Aligns with `resolveProspectIdentity` (packages/db bootstrap).
+ */
+export const QuoteSendProspectSchema = QuoteProspectSchema.superRefine((prospect, context) => {
+  const hasNames = Boolean(prospect.firstName && prospect.lastName);
+  const hasDisplay = Boolean(prospect.displayName);
+  if (!hasNames && !hasDisplay) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["displayName"],
+      message:
+        "Le prospect doit avoir un prénom et un nom, ou un nom d'affichage, pour l'envoi du devis.",
+    });
+  }
+});
+export type QuoteSendProspect = z.infer<typeof QuoteSendProspectSchema>;
+
 export const QuoteDepositPercentSchema = z.number().int().min(0).max(100);
+
+/** Max accept-token lifetime from issue time (LOCKED product b). */
+export const QUOTE_ACCEPT_TOKEN_MAX_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * `acceptTokenExpiresAt = min(validUntil, now + 30 days)`.
+ */
+export function resolveQuoteAcceptTokenExpiresAt(validUntil: Date, now: Date = new Date()): Date {
+  const capped = now.getTime() + QUOTE_ACCEPT_TOKEN_MAX_TTL_MS;
+  return new Date(Math.min(validUntil.getTime(), capped));
+}

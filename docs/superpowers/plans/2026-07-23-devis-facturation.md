@@ -33,6 +33,8 @@ Autres LOCKED déjà actés :
 2. Acompte = **pourcentage** du total → montant dérivé auto.
 3. Un devis peut inclure **plusieurs espaces différents**.
 4. Entrée UI = Facturation uniquement.
+5. **Product a (2026-07-23)** — prospect send : `(firstName AND lastName) OR displayName` (pas email seul).
+6. **Product b (2026-07-23)** — accept token TTL : `min(validUntil, now + 30 days)`.
 
 ## Global Constraints
 
@@ -250,7 +252,7 @@ Fichier : `packages/db/src/domains/billing/quote.schema.ts` (+ subdocuments si b
 | `sentAt` / `acceptedAt` / `refusedAt` / `expiredAt`              | Date?                                       | traçabilité                                                                                                                          |
 | `createdByStaffProfileId`                                        | ObjectId                                    | auteur                                                                                                                               |
 | `acceptTokenHash`                                                | string?                                     | token opaque hashé — **un seul** token = preuve identité + accès devis (path client)                                                 |
-| `acceptTokenExpiresAt`                                           | Date?                                       | aligné `validUntil` (ou ≤)                                                                                                           |
+| `acceptTokenExpiresAt`                                           | Date?                                       | **LOCKED product b** : `min(validUntil, now + 30d)` à l’émission (`QUOTE_ACCEPT_TOKEN_MAX_TTL_MS`)                                   |
 | `acceptedBy`                                                     | `"client"` \| `"staff"` + refs              | audit chemin d’accept                                                                                                                |
 
 **Prospect / clientDraft (indicatif) :**
@@ -266,6 +268,8 @@ Fichier : `packages/db/src/domains/billing/quote.schema.ts` (+ subdocuments si b
   billingAddress?: { /* lines, city, postalCode, country */ };
 }
 ```
+
+**LOCKED product a (2026-07-23) — send sans cardex :** email + `(firstName AND lastName) OR displayName` (`QuoteSendProspectSchema`). Draft peut rester plus permissif (`QuoteProspectSchema` = email seul OK). Aligné `resolveProspectIdentity`.
 
 À l’accept (staff ou client), ces champs alimentent la création / réutilisation `Cardex` + `ClientAccount`.
 
@@ -475,8 +479,13 @@ Fichiers clés à créer/étendre :
 ### 5.3 Deposit calculation
 
 - Source de vérité : **`depositPercent`** (0–100, Zod).
-- Montant dérivé serveur à chaque recalcul / au `send` (snapshot figé à l’envoi).
-- Affichage : « Acompte X % = Y € TTC » + **ventilation TVA acompte sur PDF facture** (LOCKED #4).
+- Montant dérivé serveur à chaque recalcul / au `send` (snapshot figé à l’envoi) :
+  `depositAmountTTC = round(totals.ttc * depositPercent / 100)`.
+- **TVA acompte (LOCKED #4)** — méthode figée dans `computeQuoteDeposit` (`packages/shared`) :
+  1. allouer le TTC acompte **au prorata des parts TTC par taux** (`baseHT + vat` du `vatBreakdown`) ;
+  2. pour chaque tranche : `baseHT = round(ttc * 100 / (100 + rate))`, `vat = ttc - baseHT` ;
+  3. `depositAmountHT = sum(baseHT)` ; snapshot `depositVatBreakdown` — **pas** de ligne factice « acompte » dans `lines`.
+- Affichage : « Acompte X % = Y € TTC » + ventilation TVA acompte sur PDF facture.
 - À l’accept : `paymentSituation: "deposit"` si percent > 0 ; premier paiement attendu = `depositAmountTTC` (`Payment.kind: "deposit"`).
 - Montant payment-link (LOCKED #5) : `depositAmountTTC` si `depositPercent > 0`, sinon full balance TTC selon `paymentSituation`.
 
@@ -694,7 +703,7 @@ Sous-chantier **#9** après accept unifié #8 — le link dépend de l’invoice
 | ------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
 | **1**  | Schema Quote extensions                            | `draft`, `cardexId` optionnel, `prospect`/`clientDraft`, deposit%, overrides, multi-space lines, internalNote, `reservationIds`, `acceptTokenHash` ; `ClientAccount.status` += `pending_activation` ; `Reservation.quoteId` / `Invoice.quoteId`+`reservationIds` ; doc schema + Zod shared | — (A+A1 + §5.1.3 LOCKED)                |
 | **2**  | Accept token + account-on-accept + staff bootstrap | token accept unifié ; register-on-accept vitrine ; activation MDP post staff-accept ; **pas** d’invite new_client pré-send                                                                                                                                                                 | #1                                      |
-| **3**  | Pricing override + deposit engine (+ TVA acompte)  | helpers shared + tests (cents, %, forced, ventilation TVA acompte)                                                                                                                                                                                                                         | #1                                      |
+| **3**  | Pricing override + deposit engine (+ TVA acompte)  | helpers shared + tests (cents, %, forced, ventilation TVA acompte) — **GO / done with product a+b**                                                                                                                                                                                        | #1                                      |
 | **4**  | CRUD API + permissions                             | draft/list/detail/patch/**delete draft**/send/refuse/expire ; `BillingPermissionGuard`                                                                                                                                                                                                     | #1, #3                                  |
 | **5**  | Availability / locks wizard staff                  | multi-acquire 10 min, refresh, release                                                                                                                                                                                                                                                     | #4                                      |
 | **6**  | UI wizard 6 steps + liste devis                    | `/billing/quotes`, bouton staff accept, keep transfer ; ClientStep = prospect                                                                                                                                                                                                              | #4, #5, #2                              |
@@ -736,8 +745,8 @@ Les décisions LOCKED #1–#8 (multi-espace A/A1, Stripe B, delete hard, TVA aco
 
 1. ~~**§5.1.3 Résolution 3.b**~~ — **VALIDATED (2026-07-23).**
 2. ~~Naming `pending_activation`~~ — **LOCKED** (plus un choix libre).
-3. TTL exact du token **accept** devis vs `validUntil` (reco : `expiresAt = validUntil`) — alignement proposé, confirmer si besoin d’un plafond plus court.
-4. Champs minimaux obligatoires de `prospect`/`clientDraft` pour send sans cardex (email + ?).
+3. ~~TTL exact du token **accept** devis vs `validUntil`~~ — **LOCKED (product b, 2026-07-23)** : `acceptTokenExpiresAt = min(validUntil, now + 30 days)` (`QUOTE_ACCEPT_TOKEN_MAX_TTL_MS`).
+4. ~~Champs minimaux obligatoires de `prospect`/`clientDraft` pour send sans cardex~~ — **LOCKED (product a, 2026-07-23)** : email + `(firstName AND lastName) OR displayName` (`QuoteSendProspectSchema`) — pas email seul.
 
 ---
 

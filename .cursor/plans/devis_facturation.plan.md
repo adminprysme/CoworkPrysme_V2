@@ -24,8 +24,8 @@ todos:
     content: "Slice 2: Accept token unifié + account-on-accept + staff bootstrap + activation MDP (pas invite pré-send)"
     status: pending
   - id: c3-pricing
-    content: "Slice 3: Pricing override + deposit engine + ventilation TVA acompte"
-    status: pending
+    content: "Slice 3: Pricing override + deposit engine + ventilation TVA acompte (+ locks a/b prospect send + accept TTL 30d)"
+    status: completed
   - id: c4-crud
     content: "Slice 4: CRUD /billing/quotes + hard delete draft + BillingPermissionGuard"
     status: pending
@@ -123,5 +123,12 @@ schema → **accept token + bootstrap** → pricing → CRUD (+ delete draft) �
 ## Open questions (reste)
 
 1. ~~**Valider §5.1.3**~~ — **VALIDATED (2026-07-23)** ; naming `pending_activation` **LOCKED**.
-2. Champs minimaux `prospect` pour send ?
-3. TTL token accept = `validUntil` (reco) ?
+2. ~~Champs minimaux `prospect` pour send~~ — **LOCKED product a (2026-07-23)** : email + `(firstName AND lastName) OR displayName` (`QuoteSendProspectSchema`).
+3. ~~TTL token accept~~ — **LOCKED product b (2026-07-23)** : `acceptTokenExpiresAt = min(validUntil, now + 30 days)`.
+
+## Product locks a/b (2026-07-23)
+
+| Id    | Décision                                                                   | Statut     |
+| ----- | -------------------------------------------------------------------------- | ---------- |
+| **a** | Send prospect : `(firstName AND lastName) OR displayName` — pas email seul | **LOCKED** |
+| **b** | Accept token TTL : `min(validUntil, now + 30d)`                            | **LOCKED** |

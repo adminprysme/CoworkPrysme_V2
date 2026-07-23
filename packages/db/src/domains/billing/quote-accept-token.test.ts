@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  QUOTE_ACCEPT_TOKEN_MAX_TTL_MS,
   hashQuoteAcceptToken,
   isQuoteAcceptTokenFormat,
   issueQuoteAcceptToken,
+  issueQuoteAcceptTokenWithExpiry,
   quoteAcceptTokenMatchesHash,
+  resolveQuoteAcceptTokenExpiresAt,
 } from "./quote-accept-token.js";
 
 const SECRET = "quote-accept-secret-at-least-32-chars!!";
@@ -35,5 +38,23 @@ describe("quote accept token", () => {
     expect(isQuoteAcceptTokenFormat("short")).toBe(false);
     expect(isQuoteAcceptTokenFormat("g".repeat(64))).toBe(false);
     expect(quoteAcceptTokenMatchesHash("short", "a".repeat(64), SECRET)).toBe(false);
+  });
+
+  it("issueQuoteAcceptTokenWithExpiry uses min(validUntil, now+30d)", () => {
+    const now = new Date("2026-07-23T12:00:00.000Z");
+    const sooner = new Date("2026-08-05T00:00:00.000Z");
+    const farther = new Date("2027-01-01T00:00:00.000Z");
+
+    const shortLived = issueQuoteAcceptTokenWithExpiry(SECRET, sooner, now);
+    expect(shortLived.expiresAt.toISOString()).toBe(sooner.toISOString());
+    expect(shortLived.rawToken).toMatch(/^[a-f0-9]{64}$/);
+
+    const capped = issueQuoteAcceptTokenWithExpiry(SECRET, farther, now);
+    expect(capped.expiresAt.toISOString()).toBe(
+      new Date(now.getTime() + QUOTE_ACCEPT_TOKEN_MAX_TTL_MS).toISOString(),
+    );
+    expect(resolveQuoteAcceptTokenExpiresAt(farther, now).getTime()).toBe(
+      capped.expiresAt.getTime(),
+    );
   });
 });
