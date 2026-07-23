@@ -1,16 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
   BankTransferPendingListItem,
-  BankTransferPendingLookupResponse,
   BankTransferValidatedListItem,
 } from "@coworkprysme/shared";
 
-import {
-  listBankTransfers,
-  lookupBankTransfer,
-  markBankTransferReceived,
-} from "../../../lib/billing-api.js";
+import { listBankTransfers, markBankTransferReceived } from "../../../lib/billing-api.js";
 import { BillingStats } from "../components/BillingStats.js";
 import styles from "./MarkTransferReceivedPage.module.css";
 
@@ -36,6 +31,56 @@ function clientDisplay(row: { clientLabel: string; companyName?: string | null }
   return row.clientLabel;
 }
 
+function normalizeFilter(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function matchesTransferFilter(
+  row: {
+    reservationReference: string;
+    invoiceReference?: string;
+    clientLabel: string;
+    companyName?: string | null;
+    spaceName: string;
+  },
+  query: string,
+): boolean {
+  if (!query) return true;
+  const haystack = [
+    row.reservationReference,
+    row.invoiceReference ?? "",
+    row.clientLabel,
+    row.companyName ?? "",
+    row.spaceName,
+  ]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
+function ClientIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M5.5 19.5c1.6-3 4-4.5 6.5-4.5s4.9 1.5 6.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SpaceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.75" />
+      <path d="M3 10h18M8 15h3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function MarkTransferReceivedPage() {
   const [pending, setPending] = useState<BankTransferPendingListItem[]>([]);
   const [validated, setValidated] = useState<BankTransferValidatedListItem[]>([]);
@@ -44,9 +89,7 @@ export function MarkTransferReceivedPage() {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
-  const [reference, setReference] = useState("");
-  const [lookup, setLookup] = useState<BankTransferPendingLookupResponse | null>(null);
-  const [lookupLoading, setLookupLoading] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
   const [markingRef, setMarkingRef] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -78,6 +121,18 @@ export function MarkTransferReceivedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
   }, []);
 
+  const filterNormalized = useMemo(() => normalizeFilter(filterQuery), [filterQuery]);
+
+  const filteredPending = useMemo(
+    () => pending.filter((row) => matchesTransferFilter(row, filterNormalized)),
+    [pending, filterNormalized],
+  );
+
+  const filteredValidated = useMemo(
+    () => validated.filter((row) => matchesTransferFilter(row, filterNormalized)),
+    [validated, filterNormalized],
+  );
+
   const pendingBalanceCents = useMemo(
     () => pending.reduce((sum, row) => sum + (row.balanceDueCents ?? 0), 0),
     [pending],
@@ -107,27 +162,6 @@ export function MarkTransferReceivedPage() {
     [pending.length, pendingBalanceCents, validated.length, validatedDays],
   );
 
-  async function handleLookup(event: FormEvent) {
-    event.preventDefault();
-    setLookupLoading(true);
-    setError(null);
-    setSuccess(null);
-    setLookup(null);
-    try {
-      const result = await lookupBankTransfer(reference.trim());
-      setLookup(result);
-      if (!result.found) {
-        setError(result.message ?? "Référence introuvable.");
-      } else if (result.message) {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Recherche impossible.");
-    } finally {
-      setLookupLoading(false);
-    }
-  }
-
   async function handleMarkReceived(options: {
     reservationReference: string;
     withQonto: boolean;
@@ -147,8 +181,6 @@ export function MarkTransferReceivedPage() {
           result.qontoTxId ? " · lié Qonto" : ""
         }.`,
       );
-      setLookup(null);
-      setReference("");
       await loadList();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Encaissement impossible.");
@@ -157,27 +189,28 @@ export function MarkTransferReceivedPage() {
     }
   }
 
-  const canMarkLookup =
-    lookup?.found === true &&
-    lookup.reservationStatus === "awaiting_payment" &&
-    lookup.awaitingPaymentMethod === "bank_transfer" &&
-    (lookup.amountDueCents ?? 0) > 0;
-
-  const lookupSuggestion = lookup?.qontoSuggestion;
-  const canConfirmLookupQonto = canMarkLookup && lookupSuggestion?.matchStatus === "exact";
-
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.title}>Suivi des virements</h1>
-        <p className={styles.lead}>
-          Les virements en attente s’affichent automatiquement. Marquez-les reçus depuis la liste,
-          ou recherchez une référence précise. Une suggestion Qonto n’est jamais appliquée sans
-          confirmation explicite.
-        </p>
       </header>
 
       <BillingStats ariaLabel="Indicateurs virements" loading={listLoading} items={transferStats} />
+
+      <div className={styles.filterBar}>
+        <input
+          className={styles.filterInput}
+          type="search"
+          value={filterQuery}
+          onChange={(event) => setFilterQuery(event.target.value)}
+          placeholder="Filtrer par référence, client, société ou espace…"
+          aria-label="Filtrer les virements"
+          autoComplete="off"
+        />
+        <button type="button" className={styles.secondaryButton} onClick={() => void loadList()}>
+          Actualiser
+        </button>
+      </div>
 
       {error ? (
         <p className={styles.error} role="alert">
@@ -199,29 +232,33 @@ export function MarkTransferReceivedPage() {
         <div className={styles.sectionHead}>
           <h2 id="transfers-pending-title" className={styles.sectionTitle}>
             En attente
-            {!listLoading ? <span className={styles.count}> ({pending.length})</span> : null}
+            {!listLoading ? (
+              <span className={styles.count}> ({filteredPending.length})</span>
+            ) : null}
           </h2>
-          <button type="button" className={styles.secondaryButton} onClick={() => void loadList()}>
-            Actualiser
-          </button>
         </div>
 
         {listLoading ? <p className={styles.muted}>Chargement…</p> : null}
-        {!listLoading && pending.length === 0 ? (
-          <p className={styles.emptyState}>Aucun virement en attente.</p>
+        {!listLoading && filteredPending.length === 0 ? (
+          <p className={styles.emptyState}>
+            {pending.length === 0
+              ? "Aucun virement en attente."
+              : "Aucun virement en attente pour ce filtre."}
+          </p>
         ) : null}
 
-        {!listLoading && pending.length > 0 ? (
+        {!listLoading && filteredPending.length > 0 ? (
           <ul className={styles.list}>
-            {pending.map((row) => {
+            {filteredPending.map((row) => {
               const marking = markingRef === row.reservationReference;
               const suggestion = row.qontoSuggestion;
               const canQonto = suggestion?.matchStatus === "exact";
               return (
-                <li key={row.reservationId} className={styles.card}>
+                <li key={row.reservationId} className={`${styles.card} ${styles.cardPending}`}>
                   <div className={styles.cardMain}>
                     <div className={styles.cardTitleRow}>
                       <strong className={styles.cardTitle}>{row.reservationReference}</strong>
+                      <span className={styles.badgePending}>En attente</span>
                       {suggestion ? (
                         <span
                           className={
@@ -236,16 +273,29 @@ export function MarkTransferReceivedPage() {
                         </span>
                       ) : null}
                     </div>
-                    <p className={styles.meta}>{clientDisplay(row)}</p>
-                    <p className={styles.meta}>
-                      {row.spaceName} · {formatDateTime(row.startAt)} → {formatDateTime(row.endAt)}
-                    </p>
-                    <p className={styles.meta}>
-                      Solde {formatEuroFromCents(row.balanceDueCents)}
-                      {row.awaitingPaymentExpiresAt
-                        ? ` · échéance ${formatDateTime(row.awaitingPaymentExpiresAt)}`
-                        : ""}
-                    </p>
+                    <div className={styles.meta}>
+                      <p className={styles.metaRow}>
+                        <ClientIcon />
+                        <span className={styles.metaStrong}>{clientDisplay(row)}</span>
+                      </p>
+                      <p className={styles.metaRow}>
+                        <SpaceIcon />
+                        <span>
+                          {row.spaceName} · {formatDateTime(row.startAt)} →{" "}
+                          {formatDateTime(row.endAt)}
+                        </span>
+                      </p>
+                    </div>
+                    <div className={styles.balanceRow}>
+                      <span className={styles.balanceAmount}>
+                        {formatEuroFromCents(row.balanceDueCents)}
+                      </span>
+                      {row.awaitingPaymentExpiresAt ? (
+                        <span className={styles.balanceHint}>
+                          Échéance {formatDateTime(row.awaitingPaymentExpiresAt)}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className={styles.cardActions}>
                     {canQonto ? (
@@ -295,7 +345,9 @@ export function MarkTransferReceivedPage() {
         >
           <span id="transfers-validated-title" className={styles.sectionTitle}>
             Validés
-            {!listLoading ? <span className={styles.count}> ({validated.length})</span> : null}
+            {!listLoading ? (
+              <span className={styles.count}> ({filteredValidated.length})</span>
+            ) : null}
             <span className={styles.pendingHint}> · {validatedDays} jours</span>
           </span>
           <span className={validatedOpen ? styles.chevronOpen : styles.chevron} aria-hidden="true">
@@ -324,13 +376,17 @@ export function MarkTransferReceivedPage() {
               />
             </label>
 
-            {!listLoading && validated.length === 0 ? (
-              <p className={styles.emptyState}>Aucun virement validé sur cette période.</p>
+            {!listLoading && filteredValidated.length === 0 ? (
+              <p className={styles.emptyState}>
+                {validated.length === 0
+                  ? "Aucun virement validé sur cette période."
+                  : "Aucun virement validé pour ce filtre."}
+              </p>
             ) : null}
 
-            {!listLoading && validated.length > 0 ? (
+            {!listLoading && filteredValidated.length > 0 ? (
               <ul className={styles.list}>
-                {validated.map((row) => (
+                {filteredValidated.map((row) => (
                   <li key={row.paymentId} className={styles.card}>
                     <div className={styles.cardMain}>
                       <div className={styles.cardTitleRow}>
@@ -339,141 +395,24 @@ export function MarkTransferReceivedPage() {
                           {row.origin === "qonto" ? "Confirmé via Qonto" : "Confirmé manuellement"}
                         </span>
                       </div>
-                      <p className={styles.meta}>{clientDisplay(row)}</p>
-                      <p className={styles.meta}>
-                        {row.spaceName} · {formatEuroFromCents(row.amountReceivedCents)} ·{" "}
-                        {formatDateTime(row.receivedAt)}
-                      </p>
+                      <div className={styles.meta}>
+                        <p className={styles.metaRow}>
+                          <ClientIcon />
+                          <span className={styles.metaStrong}>{clientDisplay(row)}</span>
+                        </p>
+                        <p className={styles.metaRow}>
+                          <SpaceIcon />
+                          <span>
+                            {row.spaceName} · {formatEuroFromCents(row.amountReceivedCents)} ·{" "}
+                            {formatDateTime(row.receivedAt)}
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   </li>
                 ))}
               </ul>
             ) : null}
-          </div>
-        ) : null}
-      </section>
-
-      <section className={styles.section} aria-labelledby="transfers-lookup-title">
-        <h2 id="transfers-lookup-title" className={styles.sectionTitle}>
-          Recherche par référence
-        </h2>
-        <p className={styles.muted}>
-          Complément à la liste — saisissez une référence RES-… ou PF-… pour un virement précis.
-        </p>
-
-        <form className={styles.form} onSubmit={(event) => void handleLookup(event)}>
-          <label className={styles.label} htmlFor="transfer-ref">
-            Référence
-          </label>
-          <div className={styles.row}>
-            <input
-              id="transfer-ref"
-              className={styles.input}
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              placeholder="RES-2026-00042"
-              autoComplete="off"
-            />
-            <button
-              type="submit"
-              className={styles.secondaryButton}
-              disabled={lookupLoading || !reference.trim()}
-            >
-              {lookupLoading ? "Recherche…" : "Rechercher"}
-            </button>
-          </div>
-        </form>
-
-        {lookup?.found && lookup.reservationReference ? (
-          <div className={styles.preview} aria-label="Aperçu du virement">
-            <p className={styles.previewRow}>
-              <span>Réservation</span>
-              <strong>{lookup.reservationReference}</strong>
-            </p>
-            <p className={styles.previewRow}>
-              <span>Facture</span>
-              <strong>{lookup.invoiceReference}</strong>
-            </p>
-            <p className={styles.previewRow}>
-              <span>Statut</span>
-              <strong>{lookup.reservationStatus}</strong>
-            </p>
-            {lookup.spaceName ? (
-              <p className={styles.previewRow}>
-                <span>Espace</span>
-                <strong>{lookup.spaceName}</strong>
-              </p>
-            ) : null}
-            {lookup.clientEmail ? (
-              <p className={styles.previewRow}>
-                <span>Client</span>
-                <strong>{lookup.clientEmail}</strong>
-              </p>
-            ) : null}
-            {typeof lookup.amountDueCents === "number" ? (
-              <p className={styles.previewRow}>
-                <span>Montant dû</span>
-                <strong>{formatEuroFromCents(lookup.amountDueCents)}</strong>
-              </p>
-            ) : null}
-
-            {lookupSuggestion ? (
-              <div
-                className={
-                  lookupSuggestion.matchStatus === "exact"
-                    ? styles.suggestionExact
-                    : styles.suggestionMismatch
-                }
-              >
-                <p className={styles.suggestionTitle}>
-                  {lookupSuggestion.matchStatus === "exact"
-                    ? "Suggestion Qonto — correspondance exacte"
-                    : "Suggestion Qonto — montant incohérent"}
-                </p>
-                <p className={styles.previewRow}>
-                  <span>Montant observé</span>
-                  <strong>{formatEuroFromCents(lookupSuggestion.amountCents)}</strong>
-                </p>
-              </div>
-            ) : (
-              <p className={styles.suggestionHint}>Aucune suggestion Qonto pour cette référence.</p>
-            )}
-
-            <div className={styles.actions}>
-              {canConfirmLookupQonto ? (
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  disabled={Boolean(markingRef)}
-                  onClick={() =>
-                    void handleMarkReceived({
-                      reservationReference: lookup.reservationReference!,
-                      withQonto: true,
-                      qontoTxId: lookupSuggestion!.qontoTxId,
-                    })
-                  }
-                >
-                  {markingRef ? "Encaissement…" : "Confirmer suggestion Qonto"}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className={canConfirmLookupQonto ? styles.secondaryButton : styles.primaryButton}
-                disabled={!canMarkLookup || Boolean(markingRef)}
-                onClick={() =>
-                  void handleMarkReceived({
-                    reservationReference: lookup.reservationReference!,
-                    withQonto: false,
-                  })
-                }
-              >
-                {markingRef
-                  ? "Encaissement…"
-                  : canConfirmLookupQonto
-                    ? "Marquer reçu (manuel)"
-                    : "Marquer virement reçu"}
-              </button>
-            </div>
           </div>
         ) : null}
       </section>
