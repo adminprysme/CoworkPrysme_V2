@@ -200,6 +200,324 @@
   border-radius: 8px;
 }
 
+/* —— Catalogue cards (Espaces / Services) —— */
+.catalogFilters {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem);
+  align-items: end;
+}
+
+.filterSearchField {
+  position: relative;
+  display: block;
+}
+
+.filterSearchField svg {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.filterSearchField input {
+  width: 100%;
+  padding-left: 2.15rem;
+}
+
+.catalogGrid {
+  display: grid;
+  gap: 0.85rem;
+  /* auto-fill keeps empty tracks so a single card stays ~half width on desktop */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16.5rem), 1fr));
+  align-items: start;
+}
+
+.catalogCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.catalogCardSelected {
+  border-color: var(--color-primary, var(--color-accent, #c58369));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #c58369) 55%, transparent);
+}
+
+.catalogMedia {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  max-height: 9.5rem;
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.catalogMediaImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.catalogMediaFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Bureau → teal brand gradient ; salle → copper brand gradient */
+.catalogMediaFallback[data-space-type="private_office"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-secondary) 88%, #0b3a42),
+    color-mix(in srgb, var(--color-secondary) 55%, #1a6b78)
+  );
+}
+
+.catalogMediaFallback[data-space-type="meeting_room"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-primary) 92%, #7a4030),
+    color-mix(in srgb, var(--color-primary) 60%, #d4a08c)
+  );
+}
+
+.catalogMediaFallback[data-kind="service"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 85%, #1e3a5f),
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 55%, var(--color-secondary))
+  );
+}
+
+.selectedBadge {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary, #c58369) 92%, #fff);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.catalogBody {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem 0.9rem 0.95rem;
+}
+
+.catalogTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.catalogTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.catalogMeta {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.catalogPrice {
+  margin: 0.15rem 0 0;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.catalogPriceMuted {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.catalogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: end;
+  margin-top: 0.25rem;
+}
+
+.selectedConfig {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.selectedFields {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+
+/* Availability mini-grid — Planning palette:
+   free = --planning-paid green, busy = --color-danger, pending = --planning-partial orange */
+.availabilityPreview {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, var(--color-surface));
+}
+
+.availabilityHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+}
+
+.availabilityTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.availabilityStatus {
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.availabilityStatus[data-kind="free"] {
+  color: var(--planning-paid, #2f9e6b);
+}
+
+.availabilityStatus[data-kind="busy"] {
+  color: var(--color-danger, #b42318);
+}
+
+.availabilityStatus[data-kind="pending"] {
+  color: var(--planning-partial, #d97706);
+}
+
+.availabilityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  gap: 0.28rem;
+}
+
+.availabilityCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.55rem;
+  padding: 0.15rem 0.2rem;
+  border-radius: 5px;
+  font-size: 0.65rem;
+  font-weight: 650;
+  color: #fff;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.availabilityCell[data-kind="free"] {
+  background: var(--planning-paid, #2f9e6b);
+}
+
+.availabilityCell[data-kind="busy"] {
+  background: var(--color-danger, #b42318);
+}
+
+.availabilityCell[data-kind="pending"] {
+  background: var(--planning-partial, #d97706);
+}
+
+.availabilityRange {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.availabilityHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.availabilityLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+}
+
+.availabilityLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.availabilityLegend span::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 2px;
+}
+
+.availabilityLegend span[data-kind="free"]::before {
+  background: var(--planning-paid, #2f9e6b);
+}
+
+.availabilityLegend span[data-kind="busy"]::before {
+  background: var(--color-danger, #b42318);
+}
+
+.availabilityLegend span[data-kind="pending"]::before {
+  background: var(--planning-partial, #d97706);
+}
+
+@media (max-width: 640px) {
+  .catalogFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .catalogGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .recapGrid {
   display: grid;
   gap: 0.55rem;
@@ -296,6 +614,12 @@
 
 .searchResultBtn:hover {
   border-color: var(--color-primary);
+}
+
+.clientIdentityGrid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: 1fr 1fr;
 }
 
 .kindToggle {

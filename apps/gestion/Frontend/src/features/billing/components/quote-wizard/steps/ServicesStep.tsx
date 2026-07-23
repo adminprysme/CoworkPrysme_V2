@@ -2,7 +2,7 @@ import type { ServiceResponse } from "@coworkprysme/shared";
 
 import pageStyles from "../../../BillingPages.module.css";
 import type { WizardServicePick } from "../../../lib/quote-wizard-state.js";
-import { formatEuroFromCents } from "../../../lib/quote-wizard-state.js";
+import { QuoteServiceCard } from "../QuoteServiceCard.js";
 import styles from "../QuoteWizard.module.css";
 
 type ServicesStepProps = {
@@ -12,13 +12,10 @@ type ServicesStepProps = {
 };
 
 export function ServicesStep({ catalog, selected, onChange }: ServicesStepProps) {
-  const selectedIds = new Set(selected.map((item) => item.serviceId));
+  const selectedById = new Map(selected.map((item) => [item.serviceId, item]));
 
-  function toggle(service: ServiceResponse) {
-    if (selectedIds.has(service.id)) {
-      onChange(selected.filter((item) => item.serviceId !== service.id));
-      return;
-    }
+  function add(service: ServiceResponse) {
+    if (selectedById.has(service.id)) return;
     onChange([
       ...selected,
       {
@@ -31,6 +28,14 @@ export function ServicesStep({ catalog, selected, onChange }: ServicesStepProps)
     ]);
   }
 
+  function remove(serviceId: string) {
+    onChange(selected.filter((item) => item.serviceId !== serviceId));
+  }
+
+  function setQty(serviceId: string, qty: number) {
+    onChange(selected.map((item) => (item.serviceId === serviceId ? { ...item, qty } : item)));
+  }
+
   return (
     <section className={styles.panel} aria-labelledby="quote-services-title">
       <h2 id="quote-services-title" className={styles.panelTitle}>
@@ -41,41 +46,19 @@ export function ServicesStep({ catalog, selected, onChange }: ServicesStepProps)
       {catalog.length === 0 ? (
         <p className={pageStyles.muted}>Aucun service actif.</p>
       ) : (
-        <div className={styles.serviceList}>
+        <div className={styles.catalogGrid}>
           {catalog.map((service) => {
-            const pick = selected.find((item) => item.serviceId === service.id);
+            const pick = selectedById.get(service.id);
             return (
-              <div key={service.id} className={styles.serviceRow}>
-                <label className={styles.checkboxLabel}>
-                  <input type="checkbox" checked={Boolean(pick)} onChange={() => toggle(service)} />
-                  <span>
-                    {service.label}
-                    <span className={pageStyles.muted}>
-                      {" "}
-                      — {formatEuroFromCents(service.priceHTCents)} HT
-                    </span>
-                  </span>
-                </label>
-                {pick ? (
-                  <label className={pageStyles.label} style={{ minWidth: "6rem" }}>
-                    Qté
-                    <input
-                      className={pageStyles.input}
-                      type="number"
-                      min={1}
-                      value={pick.qty}
-                      onChange={(event) => {
-                        const qty = Math.max(1, Number(event.target.value) || 1);
-                        onChange(
-                          selected.map((item) =>
-                            item.serviceId === service.id ? { ...item, qty } : item,
-                          ),
-                        );
-                      }}
-                    />
-                  </label>
-                ) : null}
-              </div>
+              <QuoteServiceCard
+                key={service.id}
+                service={service}
+                selected={Boolean(pick)}
+                qty={pick?.qty ?? 1}
+                onAdd={() => add(service)}
+                onRemove={() => remove(service.id)}
+                onQtyChange={(qty) => setQty(service.id, qty)}
+              />
             );
           })}
         </div>
