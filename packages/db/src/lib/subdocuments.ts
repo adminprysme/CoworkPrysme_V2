@@ -315,7 +315,17 @@ export const quoteLineSchema = new Schema<QuoteLine>(
       required: true,
       default: "auto",
     },
-    priceOverrideReason: { type: String, trim: true, maxlength: 1000 },
+    priceOverrideReason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      required: [
+        function (this: { priceSource?: string }) {
+          return this.priceSource === "forced";
+        },
+        "priceOverrideReason is required when priceSource is forced",
+      ],
+    },
     priceOverriddenByStaffProfileId: {
       type: Schema.Types.ObjectId,
       ref: "StaffProfile",

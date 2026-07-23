@@ -152,6 +152,48 @@ describe("quote schema", () => {
     void connection.close();
   });
 
+  it("requires priceOverrideReason when priceSource is forced", () => {
+    const connection = mongoose.createConnection();
+    const Quote = registerQuoteModel(connection);
+
+    const missing = new Quote(
+      minimalQuoteInput({
+        lines: [
+          spaceQuoteLine({
+            forcedUnitPriceHT: 20000,
+            unitPriceHT: 20000,
+            totalHT: 20000,
+            totalVAT: 4000,
+            totalTTC: 24000,
+            priceSource: "forced",
+          }),
+        ],
+        totals: { ht: 20000, vat: 4000, ttc: 24000, discountTotal: 0 },
+      }),
+    );
+    expect(missing.validateSync()?.errors["lines.0.priceOverrideReason"]).toBeDefined();
+
+    const empty = new Quote(
+      minimalQuoteInput({
+        lines: [
+          spaceQuoteLine({
+            forcedUnitPriceHT: 20000,
+            unitPriceHT: 20000,
+            totalHT: 20000,
+            totalVAT: 4000,
+            totalTTC: 24000,
+            priceSource: "forced",
+            priceOverrideReason: "   ",
+          }),
+        ],
+        totals: { ht: 20000, vat: 4000, ttc: 24000, discountTotal: 0 },
+      }),
+    );
+    expect(empty.validateSync()?.errors["lines.0.priceOverrideReason"]).toBeDefined();
+
+    void connection.close();
+  });
+
   it("rejects non-integer cents on quote line calculated fields", () => {
     const path = quoteLineSchema.path("calculatedUnitPriceHT");
     expect(path?.validators.length).toBeGreaterThan(0);

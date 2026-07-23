@@ -61,10 +61,12 @@ describe("billing-quotes schemas", () => {
   it("resolveQuoteAcceptTokenExpiresAt = min(validUntil, now+30d)", () => {
     expect(QUOTE_ACCEPT_TOKEN_MAX_TTL_MS).toBe(30 * 24 * 60 * 60 * 1000);
     const now = new Date("2026-07-23T12:00:00.000Z");
-    const sooner = new Date("2026-08-01T12:00:00.000Z"); // 9 days
-    const farther = new Date("2026-12-01T12:00:00.000Z"); // > 30 days
-    expect(resolveQuoteAcceptTokenExpiresAt(sooner, now).toISOString()).toBe(sooner.toISOString());
-    expect(resolveQuoteAcceptTokenExpiresAt(farther, now).toISOString()).toBe(
+    const in10Days = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+    const in6Months = new Date(now.getTime() + 183 * 24 * 60 * 60 * 1000); // ~6 months
+    expect(resolveQuoteAcceptTokenExpiresAt(in10Days, now).toISOString()).toBe(
+      in10Days.toISOString(),
+    );
+    expect(resolveQuoteAcceptTokenExpiresAt(in6Months, now).toISOString()).toBe(
       new Date(now.getTime() + QUOTE_ACCEPT_TOKEN_MAX_TTL_MS).toISOString(),
     );
   });
