@@ -1,5 +1,6 @@
 import type {
   BankTransferPendingLookupResponse,
+  BankTransferTransfersResponse,
   MarkBankTransferReceivedRequest,
   MarkBankTransferReceivedResponse,
 } from "@coworkprysme/shared";
@@ -33,6 +34,15 @@ async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export function listBankTransfers(validatedDays?: number): Promise<BankTransferTransfersResponse> {
+  const qs = new URLSearchParams();
+  if (typeof validatedDays === "number") {
+    qs.set("validatedDays", String(validatedDays));
+  }
+  const suffix = qs.toString() ? `?${qs}` : "";
+  return billingFetch<BankTransferTransfersResponse>(`/billing/transfers${suffix}`);
 }
 
 export function lookupBankTransfer(reference: string): Promise<BankTransferPendingLookupResponse> {

@@ -18,6 +18,11 @@ export function BillingLayout() {
 
   return (
     <div className={styles.root}>
+      <header className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Facturation</h1>
+        <p className={styles.pageSubtitle}>Virements, devis et factures</p>
+      </header>
+
       <nav className={styles.tabs} aria-label="Facturation">
         {TABS.map((tab) => (
           <NavLink
@@ -32,7 +37,7 @@ export function BillingLayout() {
           </NavLink>
         ))}
       </nav>
-      <div className={styles.outlet}>
+      <div className={styles.tabCard}>
         <Outlet />
       </div>
     </div>

@@ -10,6 +10,8 @@ const {
   getBuildingModelMock,
   getQontoTransferCandidateModelMock,
   getAuditLogModelMock,
+  getCardexModelMock,
+  getPaymentModelMock,
 } = vi.hoisted(() => ({
   applyBankTransferPaymentMock: vi.fn(),
   confirmReservationAfterPaymentMock: vi.fn(),
@@ -20,6 +22,8 @@ const {
   getBuildingModelMock: vi.fn(),
   getQontoTransferCandidateModelMock: vi.fn(),
   getAuditLogModelMock: vi.fn(),
+  getCardexModelMock: vi.fn(),
+  getPaymentModelMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -32,6 +36,8 @@ vi.mock("@coworkprysme/db", () => ({
   getBuildingModel: getBuildingModelMock,
   getQontoTransferCandidateModel: getQontoTransferCandidateModelMock,
   getAuditLogModel: getAuditLogModelMock,
+  getCardexModel: getCardexModelMock,
+  getPaymentModel: getPaymentModelMock,
 }));
 
 import { BillingService } from "./billing.service.js";
@@ -122,6 +128,13 @@ describe("BillingService.markTransferReceivedByReference", () => {
         }),
         lean: () => ({
           exec: async () => null,
+        }),
+      }),
+      find: () => ({
+        sort: () => ({
+          lean: () => ({
+            exec: async () => [],
+          }),
         }),
       }),
     });
@@ -235,8 +248,70 @@ describe("BillingService.markTransferReceivedByReference", () => {
     expect(applyBankTransferPaymentMock).not.toHaveBeenCalled();
   });
 
+  it("TRAP: manual mark without qontoTxId leaves Payment.qontoTxId absent even when a Qonto candidate exists", async () => {
+    getQontoTransferCandidateModelMock.mockResolvedValue({
+      findOne: () => ({
+        sort: () => ({
+          lean: () => ({
+            exec: async () => ({
+              qontoTxId: "tx-should-not-auto-link",
+              reservationReference: "RES-2026-BT01",
+              matchStatus: "exact",
+              amountCents: 12000,
+            }),
+          }),
+        }),
+        lean: () => ({
+          exec: async () => ({
+            qontoTxId: "tx-should-not-auto-link",
+            reservationReference: "RES-2026-BT01",
+            matchStatus: "exact",
+            amountCents: 12000,
+          }),
+        }),
+      }),
+    });
+    applyBankTransferPaymentMock.mockResolvedValue({
+      applied: true,
+      invoice: { reference: "PF-BT01" },
+      payment: {
+        _id: "pay-manual",
+        reconciliation: { status: "matched" },
+      },
+    });
+
+    const result = await service.markTransferReceivedByReference("RES-2026-BT01", "staff1");
+
+    expect(applyBankTransferPaymentMock).toHaveBeenCalledWith({
+      invoiceId: "inv1",
+      amountReceived: 12000,
+      markedByStaffProfileId: "staff1",
+      qontoTxId: undefined,
+    });
+    expect(result.qontoTxId).toBeNull();
+    expect(result.paymentId).toBe("pay-manual");
+  });
+
   it("attaches Qonto suggestion on lookup when candidate exists", async () => {
     getQontoTransferCandidateModelMock.mockResolvedValue({
+      find: () => ({
+        sort: () => ({
+          lean: () => ({
+            exec: async () => [
+              {
+                qontoTxId: "tx-sug-1",
+                matchStatus: "exact",
+                amountCents: 12000,
+                currency: "EUR",
+                settledAt: new Date("2026-07-16T10:00:00.000Z"),
+                observedLabel: "RES-2026-BT01",
+                reservationReference: "RES-2026-BT01",
+                amountDueCents: 12000,
+              },
+            ],
+          }),
+        }),
+      }),
       findOne: () => ({
         sort: () => ({
           lean: () => ({
@@ -260,6 +335,165 @@ describe("BillingService.markTransferReceivedByReference", () => {
       matchStatus: "exact",
       qontoTxId: "tx-sug-1",
       amountCents: 12000,
+    });
+  });
+});
+
+describe("BillingService.listTransfers", () => {
+  let service: BillingService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    connectMongoMock.mockResolvedValue(undefined);
+    const mail = { sendMail: vi.fn() } as unknown as MailService;
+    const invoicePdf = { generatePdfForInvoiceReference: vi.fn() };
+    service = new BillingService(mail, invoicePdf as never);
+  });
+
+  it("returns pending awaiting bank_transfer holds and validated Payment.method=transfer rows", async () => {
+    const pendingReservation = {
+      _id: "res-pending",
+      reference: "RES-2026-PEND",
+      status: "awaiting_payment",
+      awaitingPaymentMethod: "bank_transfer",
+      cardexId: "cardex-1",
+      spaceSnapshot: { name: "FOCUS" },
+      startAt: new Date("2026-08-01T08:00:00.000Z"),
+      endAt: new Date("2026-08-01T17:00:00.000Z"),
+      awaitingPaymentExpiresAt: new Date("2026-07-30T10:00:00.000Z"),
+    };
+    const pendingInvoice = {
+      _id: "inv-pending",
+      reference: "PF-PEND",
+      reservationId: "res-pending",
+      totals: { balanceDue: 15000 },
+    };
+    const validatedReservation = {
+      _id: "res-ok",
+      reference: "RES-2026-OK",
+      cardexId: "cardex-2",
+      spaceSnapshot: { name: "OPEN" },
+      startAt: new Date("2026-07-10T08:00:00.000Z"),
+      endAt: new Date("2026-07-10T17:00:00.000Z"),
+      // awaitingPaymentMethod intentionally absent — cleared on confirm
+    };
+    const validatedInvoice = {
+      _id: "inv-ok",
+      reference: "PF-OK",
+      reservationId: "res-ok",
+    };
+
+    getReservationModelMock.mockResolvedValue({
+      find: (query: { status?: string; awaitingPaymentMethod?: string; _id?: unknown }) => {
+        if (query.status === "awaiting_payment") {
+          return {
+            sort: () => ({
+              exec: async () => [pendingReservation],
+            }),
+          };
+        }
+        return {
+          exec: async () => [validatedReservation],
+        };
+      },
+    });
+    getInvoiceModelMock.mockResolvedValue({
+      find: (query: { reservationId?: unknown; _id?: unknown }) => ({
+        exec: async () => {
+          if (query.reservationId) {
+            return [pendingInvoice];
+          }
+          return [validatedInvoice];
+        },
+      }),
+    });
+    getPaymentModelMock.mockResolvedValue({
+      find: () => ({
+        sort: () => ({
+          exec: async () => [
+            {
+              _id: "pay-qonto",
+              invoiceId: "inv-ok",
+              cardexId: "cardex-2",
+              amount: 9000,
+              receivedAt: new Date("2026-07-12T10:00:00.000Z"),
+              reconciliation: { status: "matched", qontoTxId: "tx-linked" },
+            },
+            {
+              _id: "pay-manual",
+              invoiceId: "inv-ok",
+              cardexId: "cardex-2",
+              amount: 1000,
+              receivedAt: new Date("2026-07-11T10:00:00.000Z"),
+              reconciliation: { status: "matched" },
+            },
+          ],
+        }),
+      }),
+    });
+    getCardexModelMock.mockResolvedValue({
+      find: () => ({
+        select: () => ({
+          lean: () => ({
+            exec: async () => [
+              {
+                _id: "cardex-1",
+                identity: { firstName: "Alice", lastName: "Martin" },
+                company: { legalName: "ACME SAS" },
+              },
+              {
+                _id: "cardex-2",
+                identity: { firstName: "Bob", lastName: "Dupont" },
+                company: undefined,
+              },
+            ],
+          }),
+        }),
+      }),
+    });
+    getQontoTransferCandidateModelMock.mockResolvedValue({
+      find: () => ({
+        sort: () => ({
+          lean: () => ({
+            exec: async () => [
+              {
+                qontoTxId: "tx-sug-pending",
+                matchStatus: "exact",
+                amountCents: 15000,
+                currency: "EUR",
+                settledAt: new Date("2026-07-20T10:00:00.000Z"),
+                observedLabel: "RES-2026-PEND",
+                reservationReference: "RES-2026-PEND",
+                amountDueCents: 15000,
+              },
+            ],
+          }),
+        }),
+      }),
+    });
+
+    const result = await service.listTransfers(60);
+
+    expect(result.validatedDays).toBe(60);
+    expect(result.pending).toHaveLength(1);
+    expect(result.pending[0]).toMatchObject({
+      reservationReference: "RES-2026-PEND",
+      clientLabel: "Alice Martin",
+      companyName: "ACME SAS",
+      balanceDueCents: 15000,
+      qontoSuggestion: expect.objectContaining({ qontoTxId: "tx-sug-pending" }),
+    });
+    expect(result.validated).toHaveLength(2);
+    expect(result.validated[0]).toMatchObject({
+      paymentId: "pay-qonto",
+      origin: "qonto",
+      qontoTxId: "tx-linked",
+      clientLabel: "Bob Dupont",
+    });
+    expect(result.validated[1]).toMatchObject({
+      paymentId: "pay-manual",
+      origin: "manual",
+      qontoTxId: null,
     });
   });
 });

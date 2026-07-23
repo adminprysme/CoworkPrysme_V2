@@ -11,6 +11,8 @@ import {
 } from "@nestjs/common";
 import {
   BankTransferPendingLookupResponseSchema,
+  BankTransferTransfersQuerySchema,
+  BankTransferTransfersResponseSchema,
   MarkBankTransferReceivedRequestSchema,
   MarkBankTransferReceivedResponseSchema,
 } from "@coworkprysme/shared";
@@ -29,6 +31,16 @@ export class BillingController {
     private readonly billing: BillingService,
     private readonly staffContext: StaffContextService,
   ) {}
+
+  @Get("transfers")
+  async listTransfers(@Query() query: unknown) {
+    const parsed = BankTransferTransfersQuerySchema.safeParse(query ?? {});
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Invalid query");
+    }
+    const payload = await this.billing.listTransfers(parsed.data.validatedDays);
+    return BankTransferTransfersResponseSchema.parse(payload);
+  }
 
   @Get("transfers/lookup")
   async lookup(@Query("reference") reference?: string) {

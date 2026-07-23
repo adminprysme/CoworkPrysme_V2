@@ -1,6 +1,7 @@
 import { ForbiddenException, RequestMethod } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { BillingController } from "../billing/billing.controller.js";
 import { QuotesController } from "../billing/quotes.controller.js";
 import { BillingPermissionGuard } from "./billing-permission.guard.js";
 import { SessionGuard } from "./session.guard.js";
@@ -39,6 +40,50 @@ describe("BillingPermissionGuard", () => {
     };
 
     await expect(guard.canActivate(context as never)).resolves.toBe(true);
+  });
+});
+
+describe("BillingController transfers permission", () => {
+  const TRANSFER_ROUTES: Array<{ methodName: string; httpMethod: RequestMethod; path: string }> = [
+    { methodName: "listTransfers", httpMethod: RequestMethod.GET, path: "transfers" },
+    { methodName: "lookup", httpMethod: RequestMethod.GET, path: "transfers/lookup" },
+    {
+      methodName: "markReceivedByReference",
+      httpMethod: RequestMethod.POST,
+      path: "transfers/mark-received",
+    },
+    {
+      methodName: "markReceivedByInvoiceId",
+      httpMethod: RequestMethod.POST,
+      path: "invoices/:invoiceId/mark-transfer-received",
+    },
+  ];
+
+  it("applies SessionGuard + BillingPermissionGuard at controller class level", () => {
+    const guards = Reflect.getMetadata(GUARDS_METADATA, BillingController) as unknown[];
+    expect(guards).toEqual(expect.arrayContaining([SessionGuard, BillingPermissionGuard]));
+  });
+
+  it("exposes GET /billing/transfers under the class guard", () => {
+    for (const route of TRANSFER_ROUTES) {
+      const handler = BillingController.prototype[route.methodName as keyof BillingController];
+      expect(handler, `missing handler ${route.methodName}`).toBeTypeOf("function");
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(route.httpMethod);
+      const path = Reflect.getMetadata(PATH_METADATA, handler);
+      expect(path === route.path || path === route.path.replace(/^\//, "")).toBe(true);
+    }
+  });
+
+  it("denies GET /billing/transfers when billing permission is false (class guard 403)", async () => {
+    const requireProfileFromRequest = vi.fn().mockResolvedValue({
+      permissions: { billing: false, planning: true, clients: true },
+    });
+    const guard = new BillingPermissionGuard({ requireProfileFromRequest } as never);
+    const context = {
+      switchToHttp: () => ({ getRequest: () => ({}) }),
+    };
+
+    await expect(guard.canActivate(context as never)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
 
