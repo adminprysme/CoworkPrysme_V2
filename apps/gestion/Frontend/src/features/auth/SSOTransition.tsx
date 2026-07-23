@@ -89,7 +89,7 @@ export function SSOTransition({ onComplete, userName, authSucceeded }: SSOTransi
       </div>
 
       <div className={styles.card}>
-        <h1 className={styles.title}>GESTION</h1>
+        <h1 className={styles.title}>COWORK PRYSME</h1>
         <p className={styles.subtitle}>Connexion via Centrale Prysma</p>
 
         <div className={styles.progressContainer}>
