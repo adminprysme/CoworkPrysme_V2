@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import type { QuoteStatus, StaffQuoteListItem } from "@coworkprysme/shared";
 
@@ -58,7 +58,6 @@ function clientLabel(quote: StaffQuoteListItem): string {
 }
 
 export function QuotesListPage() {
-  const location = useLocation();
   const [quotes, setQuotes] = useState<StaffQuoteListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<QuoteStatus | "">("");
@@ -66,9 +65,6 @@ export function QuotesListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const wizardWasOpen = useRef(false);
-
-  const wizardOpen = location.pathname !== "/billing/quotes";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,13 +90,6 @@ export function QuotesListPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (wizardWasOpen.current && !wizardOpen) {
-      void load();
-    }
-    wizardWasOpen.current = wizardOpen;
-  }, [wizardOpen, load]);
 
   const quoteStats = useMemo(() => {
     let draft = 0;
@@ -153,7 +142,7 @@ export function QuotesListPage() {
           <h1 className={styles.title}>Devis</h1>
         </div>
         <Link to="/billing/quotes/new" className={styles.primaryButton}>
-          Nouveau devis
+          Créer un devis
         </Link>
       </header>
 
@@ -301,8 +290,6 @@ export function QuotesListPage() {
       ) : null}
 
       {!loading && total > 0 ? <p className={styles.muted}>{total} devis au total</p> : null}
-
-      <Outlet />
     </div>
   );
 }

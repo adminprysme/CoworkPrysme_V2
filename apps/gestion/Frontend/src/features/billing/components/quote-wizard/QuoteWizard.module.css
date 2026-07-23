@@ -1,105 +1,25 @@
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
+.shell {
   display: grid;
-  place-items: center;
-  padding: clamp(0.75rem, 2vw, 1.25rem);
-  background: color-mix(in srgb, var(--color-text) 42%, transparent);
-  backdrop-filter: blur(6px);
-}
-
-.dialog {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  /* Fixed desktop footprint — same width/height on every wizard step */
-  width: 920px;
-  height: 720px;
-  max-width: calc(100vw - 2rem);
-  max-height: calc(100dvh - 2rem);
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  background: var(--color-surface);
-  box-shadow:
-    0 24px 64px color-mix(in srgb, var(--color-text) 18%, transparent),
-    0 8px 24px color-mix(in srgb, var(--color-text) 10%, transparent);
-  overflow: hidden;
-}
-
-.dialogAccent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-  flex-shrink: 0;
-}
-
-.modalHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.2rem 1.25rem 0.75rem;
-  flex-shrink: 0;
-}
-
-.modalHeaderMain {
+  gap: 1.1rem;
+  width: 100%;
   min-width: 0;
-  flex: 1;
 }
 
-.modalTitle {
+.header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
   font-weight: 700;
-}
-
-.closeBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface-muted);
-  color: var(--color-text-muted);
-  font-size: 1.35rem;
-  line-height: 1;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.closeBtn:hover:not(:disabled) {
-  border-color: var(--color-secondary);
-  color: var(--color-secondary);
-  background: var(--color-secondary-soft);
-}
-
-.closeBtn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.closeBtn:focus-visible {
-  outline: 2px solid var(--color-secondary);
-  outline-offset: 2px;
 }
 
 .steps {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  padding: 0 1.25rem 0.75rem;
-  flex-shrink: 0;
 }
 
 .step {
@@ -128,14 +48,11 @@
   color: var(--color-text);
 }
 
-.modalBody {
+.body {
   display: flex;
-  flex: 1;
   flex-direction: column;
   gap: 0.85rem;
-  min-height: 0;
-  padding: 0.35rem 1.25rem 0.85rem;
-  overflow-y: auto;
+  min-width: 0;
 }
 
 .panel {
@@ -158,9 +75,8 @@
   gap: 0.65rem;
   justify-content: space-between;
   align-items: center;
-  padding: 0.85rem 1.25rem 1.1rem;
+  padding-top: 0.35rem;
   border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
 }
 
 .footerRight {
@@ -252,15 +168,15 @@
 
 .splitLayout {
   display: grid;
-  gap: 0.85rem;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
   align-items: start;
   min-height: 0;
 }
 
 .splitMain {
   min-width: 0;
-  max-height: min(28rem, 48vh);
+  max-height: min(40rem, 70vh);
   overflow: auto;
   padding-right: 0.15rem;
 }
@@ -268,8 +184,8 @@
 .splitSide {
   min-width: 0;
   position: sticky;
-  top: 0;
-  max-height: min(32rem, 52vh);
+  top: 0.5rem;
+  max-height: min(42rem, 74vh);
   overflow: auto;
 }
 
@@ -744,6 +660,10 @@
     position: static;
     overflow: visible;
   }
+
+  .siretRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 .recapGrid {
@@ -897,25 +817,4 @@
   padding: 0 0.35rem;
   font-size: 0.9rem;
   font-weight: 600;
-}
-
-/* Tablet & mobile: fullscreen modal */
-@media (max-width: 1024px) {
-  .overlay {
-    padding: 0;
-    place-items: stretch;
-  }
-
-  .dialog {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
-    border-radius: 0;
-    border: 0;
-  }
-
-  .siretRow {
-    grid-template-columns: 1fr;
-  }
 }

@@ -66,10 +66,9 @@ export function AppRouter() {
                 </Route>
                 <Route path="/billing" element={<BillingLayout />}>
                   <Route index element={<MarkTransferReceivedPage />} />
-                  <Route path="quotes" element={<QuotesListPage />}>
-                    <Route path="new" element={<QuoteWizardPage />} />
-                    <Route path=":quoteId" element={<QuoteWizardPage />} />
-                  </Route>
+                  <Route path="quotes" element={<QuotesListPage />} />
+                  <Route path="quotes/new" element={<QuoteWizardPage />} />
+                  <Route path="quotes/:quoteId" element={<QuoteWizardPage />} />
                   <Route path="invoices" element={<InvoicesPlaceholderPage />} />
                 </Route>
                 <Route path="/planning" element={<PlanningLayout />}>
