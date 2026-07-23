@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { AUTH_MODE, loginLocal, loginSso } from "../../lib/api.js";
+import { AUTH_MODE, CENTRALE_HOME_URL, loginLocal, loginSso } from "../../lib/api.js";
 import { useAuth } from "../../app/AuthProvider.js";
 import { ThemeToggle } from "../../components/ThemeToggle.js";
 import styles from "./LoginPage.module.css";
@@ -16,6 +16,13 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ssoPending, setSsoPending] = useState(false);
+
+  function handleCentraleLogin() {
+    if (!CENTRALE_HOME_URL) {
+      return;
+    }
+    window.location.href = CENTRALE_HOME_URL;
+  }
 
   useEffect(() => {
     if (AUTH_MODE !== "sso") {
@@ -116,6 +123,17 @@ export function LoginPage() {
             ) : (
               <p>Connectez-vous via Centrale Application.</p>
             )}
+            {!CENTRALE_HOME_URL ? (
+              <p className={styles.error}>URL Centrale non configurée (VITE_CENTRALE_HOME_URL).</p>
+            ) : null}
+            <button
+              className={styles.button}
+              type="button"
+              disabled={ssoPending || !CENTRALE_HOME_URL}
+              onClick={handleCentraleLogin}
+            >
+              Se connecter via Centrale
+            </button>
           </div>
         )}
       </div>
