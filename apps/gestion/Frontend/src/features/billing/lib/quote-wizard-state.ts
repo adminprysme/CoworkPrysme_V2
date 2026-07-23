@@ -2,6 +2,7 @@ import type {
   QuotePaymentMethod,
   QuotePaymentSituation,
   QuoteProspect,
+  ServiceCustomAnswer,
   ServiceResponse,
   SpaceResponse,
   StaffQuoteLineInput,
@@ -37,6 +38,9 @@ export type WizardServicePick = {
   priceHTCents: number;
   vatRate: number;
   qty: number;
+  /** Draft answers keyed by custom question id (booking-style). */
+  answerValues?: Record<string, unknown>;
+  customAnswers?: ServiceCustomAnswer[];
 };
 
 export type WizardPricingOverride = {

@@ -208,6 +208,14 @@
   align-items: end;
 }
 
+.catalogFiltersWithBuilding {
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem) minmax(7rem, 9rem);
+}
+
+.catalogFiltersSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .filterSearchField {
   position: relative;
   display: block;
@@ -235,6 +243,159 @@
   align-items: start;
 }
 
+.catalogGridCompact {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11.5rem), 1fr));
+  align-items: start;
+}
+
+.splitLayout {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  align-items: start;
+  min-height: 0;
+}
+
+.splitMain {
+  min-width: 0;
+  max-height: min(28rem, 48vh);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.splitSide {
+  min-width: 0;
+  position: sticky;
+  top: 0;
+  max-height: min(32rem, 52vh);
+  overflow: auto;
+}
+
+.detailPanel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #c58369) 18%, transparent);
+}
+
+.detailBanner {
+  position: relative;
+  flex: 0 0 auto;
+  height: 4.5rem;
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.detailBannerImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detailBannerFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.detailBannerFallback[data-space-type="private_office"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-secondary) 88%, #0b3a42),
+    color-mix(in srgb, var(--color-secondary) 55%, #1a6b78)
+  );
+}
+
+.detailBannerFallback[data-space-type="meeting_room"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-primary) 92%, #7a4030),
+    color-mix(in srgb, var(--color-primary) 60%, #d4a08c)
+  );
+}
+
+.detailBannerFallback[data-kind="service"] {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 85%, #1e3a5f),
+    color-mix(in srgb, var(--planning-slate, #3b6fa8) 55%, var(--color-secondary))
+  );
+}
+
+.detailBody {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem 1rem;
+}
+
+.detailHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.detailEmpty {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  padding: 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface-muted) 40%, var(--color-surface));
+  text-align: center;
+}
+
+.selectedChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.selectedChip {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.selectedChipActive {
+  border-color: var(--color-primary, #c58369);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary, #c58369) 12%, var(--color-surface));
+}
+
 .catalogCard {
   display: flex;
   flex-direction: column;
@@ -243,9 +404,15 @@
   border-radius: 12px;
   background: var(--color-surface);
   overflow: hidden;
+  cursor: pointer;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
+}
+
+.catalogCard:focus-visible {
+  outline: 2px solid var(--color-primary, #c58369);
+  outline-offset: 2px;
 }
 
 .catalogCardSelected {
@@ -253,10 +420,17 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #c58369) 55%, transparent);
 }
 
+.catalogCardFocused {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-primary, #c58369) 55%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-primary, #c58369) 22%, transparent);
+}
+
 .catalogMedia {
   position: relative;
+  flex: 0 0 auto;
   aspect-ratio: 16 / 10;
-  max-height: 9.5rem;
+  max-height: 7.5rem;
   background: var(--color-surface-muted);
   border-bottom: 1px solid var(--color-border);
   overflow: hidden;
@@ -376,15 +550,55 @@
 .selectedConfig {
   display: grid;
   gap: 0.75rem;
-  margin-top: 0.35rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border);
 }
 
 .selectedFields {
   display: grid;
   gap: 0.65rem;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+
+.serviceQuestions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.serviceQuestionField {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.serviceQuestionLabel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.serviceQuestionType {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.serviceQuestionError {
+  font-size: 0.75rem;
+  color: var(--color-danger, #b42318);
+}
+
+.serviceIncompleteHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--planning-partial, #d97706);
+  font-weight: 650;
+}
+
+.rangeRow {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: 1fr 1fr;
 }
 
 /* Availability mini-grid — Planning palette:
@@ -509,12 +723,26 @@
 }
 
 @media (max-width: 640px) {
-  .catalogFilters {
+  .catalogFilters,
+  .catalogFiltersWithBuilding,
+  .catalogFiltersSingle {
     grid-template-columns: 1fr;
   }
 
-  .catalogGrid {
+  .catalogGrid,
+  .catalogGridCompact {
     grid-template-columns: 1fr;
+  }
+
+  .splitLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .splitMain,
+  .splitSide {
+    max-height: none;
+    position: static;
+    overflow: visible;
   }
 }
 

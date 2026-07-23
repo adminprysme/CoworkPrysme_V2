@@ -12,7 +12,6 @@ import type {
 
 import { fetchBuildings } from "../../../lib/buildings-api.js";
 import {
-  acquireQuoteLocks,
   checkQuoteAvailability,
   createQuote,
   getQuote,
@@ -111,6 +110,7 @@ export function QuoteWizardPage() {
   const [services, setServices] = useState<ServiceResponse[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [busy, setBusy] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -247,6 +247,67 @@ export function QuoteWizardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional unmount release
   }, []);
 
+  useEffect(() => {
+    if (QUOTE_WIZARD_STEPS[stepIndex]?.id !== "spaces") return;
+
+    const slots = state.spaces
+      .map((slot) => {
+        const startAt = fromDatetimeLocalValue(slot.startLocal);
+        const endAt = fromDatetimeLocalValue(slot.endLocal);
+        if (!slot.spaceId || !startAt || !endAt) return null;
+        return {
+          spaceId: slot.spaceId,
+          startAt,
+          endAt,
+          partySize: slot.partySize,
+          needsCheck: slot.available === undefined,
+        };
+      })
+      .filter((slot): slot is NonNullable<typeof slot> => Boolean(slot));
+
+    if (slots.length === 0 || !slots.some((slot) => slot.needsCheck)) return;
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setCheckingAvailability(true);
+        try {
+          const result = await checkQuoteAvailability({
+            slots: slots.map(({ spaceId, startAt, endAt, partySize }) => ({
+              spaceId,
+              startAt,
+              endAt,
+              partySize,
+            })),
+            quoteDraftId: state.quoteId ?? undefined,
+          });
+          setState((prev) => ({
+            ...prev,
+            spaces: prev.spaces.map((slot) => {
+              const startAt = fromDatetimeLocalValue(slot.startLocal);
+              const endAt = fromDatetimeLocalValue(slot.endLocal);
+              const match = result.results.find(
+                (item) =>
+                  item.spaceId === slot.spaceId && item.startAt === startAt && item.endAt === endAt,
+              );
+              if (!match) return slot;
+              return {
+                ...slot,
+                available: match.available,
+                availabilityReason: match.reason,
+              };
+            }),
+          }));
+        } catch {
+          // Soft fail: keep pending preview; user can retry by tweaking dates.
+        } finally {
+          setCheckingAvailability(false);
+        }
+      })();
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [state.spaces, state.quoteId, stepIndex]);
+
   const patchState = useCallback((patch: Partial<QuoteWizardState>) => {
     setState((prev) => ({ ...prev, ...patch }));
   }, []);
@@ -338,95 +399,30 @@ export function QuoteWizardPage() {
           throw new Error(clientError);
         }
         await ensureDraftSaved();
+      } else if (QUOTE_WIZARD_STEPS[stepIndex]?.id === "services") {
+        for (const pick of state.services) {
+          const service = serviceCatalog.get(pick.serviceId);
+          if (!service) continue;
+          const required = service.customQuestions.filter((question) => question.required);
+          if (required.length === 0) continue;
+          const values = pick.answerValues ?? {};
+          const missing = required.find((question) => {
+            if (!question.id) return false;
+            const value = values[question.id];
+            return value == null || value === "";
+          });
+          if (missing) {
+            throw new Error(
+              `Complétez les questions obligatoires pour « ${service.label} » avant de continuer.`,
+            );
+          }
+        }
       } else if (stepIndex === 3 || stepIndex === 4) {
         await ensureDraftSaved();
       }
       setStepIndex((prev) => Math.min(prev + 1, QUOTE_WIZARD_STEPS.length - 1));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Étape suivante impossible.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleCheckAvailability() {
-    setBusy(true);
-    setError(null);
-    try {
-      const draft = await ensureDraftSaved();
-      const slots = state.spaces
-        .map((slot) => {
-          const startAt = fromDatetimeLocalValue(slot.startLocal);
-          const endAt = fromDatetimeLocalValue(slot.endLocal);
-          if (!slot.spaceId || !startAt || !endAt) return null;
-          return {
-            spaceId: slot.spaceId,
-            startAt,
-            endAt,
-            partySize: slot.partySize,
-          };
-        })
-        .filter((slot): slot is NonNullable<typeof slot> => Boolean(slot));
-      if (slots.length === 0) {
-        throw new Error("Renseignez au moins un créneau complet.");
-      }
-      const result = await checkQuoteAvailability({
-        slots,
-        quoteDraftId: draft.id,
-      });
-      patchState({
-        spaces: state.spaces.map((slot) => {
-          const startAt = fromDatetimeLocalValue(slot.startLocal);
-          const match = result.results.find(
-            (item) =>
-              item.spaceId === slot.spaceId &&
-              item.startAt === startAt &&
-              item.endAt === fromDatetimeLocalValue(slot.endLocal),
-          );
-          if (!match) return slot;
-          return {
-            ...slot,
-            available: match.available,
-            availabilityReason: match.reason,
-          };
-        }),
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Vérification impossible.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleAcquireLocks() {
-    setBusy(true);
-    setError(null);
-    try {
-      const draft = await ensureDraftSaved();
-      const slots = state.spaces
-        .map((slot) => {
-          const startAt = fromDatetimeLocalValue(slot.startLocal);
-          const endAt = fromDatetimeLocalValue(slot.endLocal);
-          if (!slot.spaceId || !startAt || !endAt) return null;
-          return {
-            spaceId: slot.spaceId,
-            startAt,
-            endAt,
-            partySize: slot.partySize,
-          };
-        })
-        .filter((slot): slot is NonNullable<typeof slot> => Boolean(slot));
-      if (slots.length === 0) {
-        throw new Error("Renseignez au moins un créneau complet.");
-      }
-      const result = await acquireQuoteLocks({
-        quoteDraftId: draft.id,
-        slots,
-      });
-      patchState({ locksExpiresAt: result.expiresAt });
-      setInfo("Créneaux verrouillés pour le wizard.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Verrouillage impossible.");
     } finally {
       setBusy(false);
     }
@@ -543,10 +539,8 @@ export function QuoteWizardPage() {
               buildings={buildings}
               spacesByBuilding={spacesByBuilding}
               locksExpiresAt={state.locksExpiresAt}
-              busy={busy}
+              checkingAvailability={checkingAvailability}
               onChange={(spaces) => patchState({ spaces })}
-              onCheckAvailability={() => void handleCheckAvailability()}
-              onAcquireLocks={() => void handleAcquireLocks()}
             />
           ) : null}
 

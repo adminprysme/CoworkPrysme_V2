@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconSearch } from "@tabler/icons-react";
 import type { BuildingResponse, SpaceResponse } from "@coworkprysme/shared";
 
@@ -6,6 +6,7 @@ import pageStyles from "../../../BillingPages.module.css";
 import type { WizardSpaceSlot } from "../../../lib/quote-wizard-state.js";
 import { newSlotKey } from "../../../lib/quote-wizard-state.js";
 import { QuoteSpaceCard } from "../QuoteSpaceCard.js";
+import { SpaceDetailPanel } from "../SpaceDetailPanel.js";
 import styles from "../QuoteWizard.module.css";
 
 type SpacesStepProps = {
@@ -13,10 +14,8 @@ type SpacesStepProps = {
   buildings: BuildingResponse[];
   spacesByBuilding: Map<string, SpaceResponse[]>;
   locksExpiresAt: string | null;
-  busy: boolean;
+  checkingAvailability?: boolean;
   onChange: (slots: WizardSpaceSlot[]) => void;
-  onCheckAvailability: () => void;
-  onAcquireLocks: () => void;
 };
 
 type CatalogEntry = {
@@ -29,13 +28,13 @@ export function SpacesStep({
   buildings,
   spacesByBuilding,
   locksExpiresAt,
-  busy,
+  checkingAvailability = false,
   onChange,
-  onCheckAvailability,
-  onAcquireLocks,
 }: SpacesStepProps) {
   const [search, setSearch] = useState("");
   const [minCapacity, setMinCapacity] = useState(0);
+  const [buildingFilter, setBuildingFilter] = useState("");
+  const [focusedSpaceId, setFocusedSpaceId] = useState<string | null>(null);
 
   const buildingById = useMemo(() => {
     const map = new Map<string, BuildingResponse>();
@@ -52,19 +51,36 @@ export function SpacesStep({
         entries.push({ space, building });
       }
     }
-    entries.sort((a, b) => a.space.name.localeCompare(b.space.name, "fr"));
+    entries.sort((a, b) => {
+      const buildingCmp = (a.building?.name ?? "").localeCompare(b.building?.name ?? "", "fr");
+      if (buildingCmp !== 0) return buildingCmp;
+      return a.space.name.localeCompare(b.space.name, "fr");
+    });
     return entries;
   }, [spacesByBuilding, buildingById]);
+
+  const buildingsInCatalog = useMemo(() => {
+    const seen = new Map<string, BuildingResponse>();
+    for (const entry of catalog) {
+      if (entry.building && !seen.has(entry.building.id)) {
+        seen.set(entry.building.id, entry.building);
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  }, [catalog]);
+
+  const showBuildingFilter = buildingsInCatalog.length > 1;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return catalog.filter(({ space, building }) => {
+      if (buildingFilter && building?.id !== buildingFilter) return false;
       if (minCapacity > 0 && space.capacity < minCapacity) return false;
       if (!q) return true;
       const haystack = `${space.name} ${building?.name ?? ""}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [catalog, search, minCapacity]);
+  }, [catalog, search, minCapacity, buildingFilter]);
 
   const slotBySpaceId = useMemo(() => {
     const map = new Map<string, WizardSpaceSlot>();
@@ -76,7 +92,21 @@ export function SpacesStep({
     return map;
   }, [slots]);
 
+  useEffect(() => {
+    if (focusedSpaceId && slotBySpaceId.has(focusedSpaceId)) return;
+    const last = slots[slots.length - 1];
+    setFocusedSpaceId(last?.spaceId ?? null);
+  }, [slots, focusedSpaceId, slotBySpaceId]);
+
+  const focusedEntry = useMemo(() => {
+    if (!focusedSpaceId) return null;
+    return catalog.find((entry) => entry.space.id === focusedSpaceId) ?? null;
+  }, [catalog, focusedSpaceId]);
+
+  const focusedSlot = focusedSpaceId ? slotBySpaceId.get(focusedSpaceId) : undefined;
+
   function selectSpace(space: SpaceResponse) {
+    setFocusedSpaceId(space.id);
     if (slotBySpaceId.has(space.id)) return;
     onChange([
       ...slots,
@@ -93,7 +123,11 @@ export function SpacesStep({
   }
 
   function deselectSpace(spaceId: string) {
-    onChange(slots.filter((slot) => slot.spaceId !== spaceId));
+    const next = slots.filter((slot) => slot.spaceId !== spaceId);
+    onChange(next);
+    if (focusedSpaceId === spaceId) {
+      setFocusedSpaceId(next[next.length - 1]?.spaceId ?? null);
+    }
   }
 
   function patchSpace(
@@ -115,11 +149,18 @@ export function SpacesStep({
         Espaces
       </h2>
       <p className={pageStyles.muted}>
-        Sélectionnez un ou plusieurs espaces, renseignez les créneaux, puis vérifiez la
-        disponibilité et verrouillez.
+        Sélectionnez un ou plusieurs espaces. La configuration (durée, personnes) s’édite dans le
+        panneau — la disponibilité se vérifie automatiquement.
       </p>
 
-      <div className={styles.catalogFilters}>
+      <div
+        className={[
+          styles.catalogFilters,
+          showBuildingFilter ? styles.catalogFiltersWithBuilding : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <label className={`${pageStyles.label} ${styles.filterSearch}`}>
           Rechercher
           <span className={styles.filterSearchField}>
@@ -133,6 +174,23 @@ export function SpacesStep({
             />
           </span>
         </label>
+        {showBuildingFilter ? (
+          <label className={pageStyles.label}>
+            Bâtiment
+            <select
+              className={pageStyles.input}
+              value={buildingFilter}
+              onChange={(event) => setBuildingFilter(event.target.value)}
+            >
+              <option value="">Tous</option>
+              {buildingsInCatalog.map((building) => (
+                <option key={building.id} value={building.id}>
+                  {building.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className={pageStyles.label}>
           Capacité min.
           <input
@@ -146,50 +204,75 @@ export function SpacesStep({
         </label>
       </div>
 
-      {filtered.length === 0 ? (
-        <p className={pageStyles.muted}>Aucun espace ne correspond aux filtres.</p>
-      ) : (
-        <div className={styles.catalogGrid}>
-          {filtered.map(({ space, building }) => {
-            const slot = slotBySpaceId.get(space.id);
-            return (
-              <QuoteSpaceCard
-                key={space.id}
-                space={space}
-                building={building}
-                selected={Boolean(slot)}
-                startLocal={slot?.startLocal ?? ""}
-                endLocal={slot?.endLocal ?? ""}
-                partySize={slot?.partySize ?? 1}
-                available={slot?.available}
-                availabilityReason={slot?.availabilityReason}
-                onSelect={() => selectSpace(space)}
-                onDeselect={() => deselectSpace(space.id)}
-                onPatch={(patch) => patchSpace(space.id, patch)}
-              />
-            );
-          })}
+      {slots.length > 1 ? (
+        <div className={styles.selectedChips} aria-label="Espaces sélectionnés">
+          {slots.map((slot) => (
+            <button
+              key={slot.key}
+              type="button"
+              className={[
+                styles.selectedChip,
+                slot.spaceId === focusedSpaceId ? styles.selectedChipActive : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => setFocusedSpaceId(slot.spaceId)}
+            >
+              {slot.spaceName || "Espace"}
+            </button>
+          ))}
         </div>
-      )}
+      ) : null}
 
-      <div className={pageStyles.toolbar}>
-        <button
-          type="button"
-          className={pageStyles.secondaryButton}
-          disabled={busy || slots.length === 0}
-          onClick={onCheckAvailability}
-        >
-          Vérifier dispo
-        </button>
-        <button
-          type="button"
-          className={pageStyles.primaryButton}
-          disabled={busy || slots.length === 0}
-          onClick={onAcquireLocks}
-        >
-          Verrouiller
-        </button>
+      <div className={styles.splitLayout}>
+        <div className={styles.splitMain}>
+          {filtered.length === 0 ? (
+            <p className={pageStyles.muted}>Aucun espace ne correspond aux filtres.</p>
+          ) : (
+            <div className={styles.catalogGridCompact}>
+              {filtered.map(({ space, building }) => {
+                const slot = slotBySpaceId.get(space.id);
+                return (
+                  <QuoteSpaceCard
+                    key={space.id}
+                    space={space}
+                    building={building}
+                    selected={Boolean(slot)}
+                    focused={focusedSpaceId === space.id}
+                    onSelect={() => selectSpace(space)}
+                    onDeselect={() => deselectSpace(space.id)}
+                    onFocus={() => setFocusedSpaceId(space.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.splitSide}>
+          {focusedEntry && focusedSlot ? (
+            <SpaceDetailPanel
+              space={focusedEntry.space}
+              building={focusedEntry.building}
+              startLocal={focusedSlot.startLocal}
+              endLocal={focusedSlot.endLocal}
+              partySize={focusedSlot.partySize}
+              available={focusedSlot.available}
+              availabilityReason={focusedSlot.availabilityReason}
+              checkingAvailability={checkingAvailability}
+              onPatch={(patch) => patchSpace(focusedEntry.space.id, patch)}
+              onDeselect={() => deselectSpace(focusedEntry.space.id)}
+            />
+          ) : (
+            <div className={styles.detailEmpty}>
+              <p className={pageStyles.muted}>
+                Sélectionnez un espace pour configurer la durée et le nombre de personnes.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
       {locksExpiresAt ? (
         <p className={pageStyles.muted}>
           Locks actifs jusqu’à{" "}

@@ -1,37 +1,61 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { IconPhoto } from "@tabler/icons-react";
 import type { ServiceResponse } from "@coworkprysme/shared";
 
 import { servicePhotoUrl } from "../../../../lib/services-api.js";
 import { formatEuroFromCents } from "../../lib/quote-wizard-state.js";
 import pageStyles from "../../BillingPages.module.css";
+import { serviceAnswersComplete } from "./QuoteServiceQuestionsForm.js";
 import styles from "./QuoteWizard.module.css";
 
 type QuoteServiceCardProps = {
   service: ServiceResponse;
   selected: boolean;
-  qty: number;
+  focused?: boolean;
+  answerValues: Record<string, unknown>;
   onAdd: () => void;
   onRemove: () => void;
-  onQtyChange: (qty: number) => void;
+  onFocus: () => void;
 };
 
 export function QuoteServiceCard({
   service,
   selected,
-  qty,
+  focused = false,
+  answerValues,
   onAdd,
   onRemove,
-  onQtyChange,
+  onFocus,
 }: QuoteServiceCardProps) {
   const photoPath = service.photo?.url;
   const [imgFailed, setImgFailed] = useState(false);
   const showPhoto = Boolean(photoPath) && !imgFailed;
+  const complete = serviceAnswersComplete(service.customQuestions, answerValues);
+
+  function onCardClick(event: MouseEvent<HTMLElement>) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button")) return;
+    if (selected) {
+      onFocus();
+      return;
+    }
+    onAdd();
+  }
 
   return (
     <article
-      className={`${styles.catalogCard} ${selected ? styles.catalogCardSelected : ""}`}
+      className={[
+        styles.catalogCard,
+        selected ? styles.catalogCardSelected : "",
+        focused ? styles.catalogCardFocused : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-kind="service"
+      data-selected={selected ? "true" : "false"}
+      data-focused={focused ? "true" : "false"}
+      data-complete={complete ? "true" : "false"}
+      onClick={onCardClick}
     >
       <div className={styles.catalogMedia}>
         {showPhoto ? (
@@ -47,7 +71,9 @@ export function QuoteServiceCard({
             <span>Service</span>
           </div>
         )}
-        {selected ? <span className={styles.selectedBadge}>Ajouté</span> : null}
+        {selected ? (
+          <span className={styles.selectedBadge}>{complete ? "Ajouté" : "À compléter"}</span>
+        ) : null}
       </div>
 
       <div className={styles.catalogBody}>
@@ -59,23 +85,25 @@ export function QuoteServiceCard({
 
         <div className={styles.catalogActions}>
           {selected ? (
-            <>
-              <label className={pageStyles.label} style={{ minWidth: "5.5rem", flex: "0 0 auto" }}>
-                Qté
-                <input
-                  className={pageStyles.input}
-                  type="number"
-                  min={1}
-                  value={qty}
-                  onChange={(event) => onQtyChange(Math.max(1, Number(event.target.value) || 1))}
-                />
-              </label>
-              <button type="button" className={pageStyles.secondaryButton} onClick={onRemove}>
-                Retirer
-              </button>
-            </>
+            <button
+              type="button"
+              className={pageStyles.secondaryButton}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRemove();
+              }}
+            >
+              Retirer
+            </button>
           ) : (
-            <button type="button" className={pageStyles.primaryButton} onClick={onAdd}>
+            <button
+              type="button"
+              className={pageStyles.primaryButton}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAdd();
+              }}
+            >
               Ajouter
             </button>
           )}

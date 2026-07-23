@@ -10,6 +10,7 @@ type SpaceAvailabilityPreviewProps = {
   /** Result of wizard availability check (sous-chantier #5). */
   available?: boolean;
   availabilityReason?: string;
+  checking?: boolean;
 };
 
 function pad2(value: number): string {
@@ -35,7 +36,6 @@ function formatRangeLabel(startLocal: string, endLocal: string): string {
 /**
  * Build a compact mini-slot timeline for the chosen range.
  * Colors mirror Planning: green free / red busy / orange pending validation.
- * Dress-up of the existing availability check (no new API).
  */
 function buildCells(
   startLocal: string,
@@ -99,6 +99,7 @@ export function SpaceAvailabilityPreview({
   endLocal,
   available,
   availabilityReason,
+  checking = false,
 }: SpaceAvailabilityPreviewProps) {
   const cells = useMemo(
     () => (startLocal && endLocal ? buildCells(startLocal, endLocal, available) : []),
@@ -109,7 +110,7 @@ export function SpaceAvailabilityPreview({
     return (
       <div className={styles.availabilityPreview}>
         <p className={styles.availabilityHint}>
-          Renseignez début et fin pour prévisualiser la disponibilité.
+          Choisissez une durée pour prévisualiser la disponibilité.
         </p>
       </div>
     );
@@ -120,7 +121,9 @@ export function SpaceAvailabilityPreview({
       ? "Disponible"
       : available === false
         ? `Indisponible${availabilityReason ? ` — ${availabilityReason}` : ""}`
-        : "À valider (vérifier la dispo)";
+        : checking
+          ? "Vérification…"
+          : "En attente de vérification";
 
   return (
     <div className={styles.availabilityPreview}>
