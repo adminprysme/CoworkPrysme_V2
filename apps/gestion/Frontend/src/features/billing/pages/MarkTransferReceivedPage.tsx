@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
 import type {
   BankTransferPendingListItem,
@@ -11,6 +11,7 @@ import {
   lookupBankTransfer,
   markBankTransferReceived,
 } from "../../../lib/billing-api.js";
+import { BillingStats } from "../components/BillingStats.js";
 import styles from "./MarkTransferReceivedPage.module.css";
 
 function formatEuroFromCents(cents: number): string {
@@ -76,6 +77,35 @@ export function MarkTransferReceivedPage() {
     // Initial load only — subsequent refreshes via Actualiser / mark / blur.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
   }, []);
+
+  const pendingBalanceCents = useMemo(
+    () => pending.reduce((sum, row) => sum + (row.balanceDueCents ?? 0), 0),
+    [pending],
+  );
+
+  const transferStats = useMemo(
+    () => [
+      {
+        key: "pending",
+        label: "En attente",
+        value: String(pending.length),
+        accent: "var(--color-primary)",
+      },
+      {
+        key: "balance",
+        label: "Solde total dû",
+        value: formatEuroFromCents(pendingBalanceCents),
+        accent: "var(--color-accent, var(--color-primary))",
+      },
+      {
+        key: "validated",
+        label: `Validés (${validatedDays}j)`,
+        value: String(validated.length),
+        accent: "var(--color-secondary)",
+      },
+    ],
+    [pending.length, pendingBalanceCents, validated.length, validatedDays],
+  );
 
   async function handleLookup(event: FormEvent) {
     event.preventDefault();
@@ -146,6 +176,8 @@ export function MarkTransferReceivedPage() {
           confirmation explicite.
         </p>
       </header>
+
+      <BillingStats ariaLabel="Indicateurs virements" loading={listLoading} items={transferStats} />
 
       {error ? (
         <p className={styles.error} role="alert">

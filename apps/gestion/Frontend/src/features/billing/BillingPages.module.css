@@ -1,7 +1,8 @@
 .page {
   display: grid;
   gap: 1.25rem;
-  max-width: 56rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .header {

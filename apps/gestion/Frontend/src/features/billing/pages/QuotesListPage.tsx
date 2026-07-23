@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { QuoteStatus, StaffQuoteListItem } from "@coworkprysme/shared";
@@ -10,6 +10,7 @@ import {
   refuseQuote,
   STAFF_QUOTE_ACCEPT_AVAILABLE,
 } from "../../../lib/billing-quotes-api.js";
+import { BillingStats } from "../components/BillingStats.js";
 import styles from "../BillingPages.module.css";
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -90,6 +91,37 @@ export function QuotesListPage() {
     void load();
   }, [load]);
 
+  const quoteStats = useMemo(() => {
+    let draft = 0;
+    let sent = 0;
+    let accepted = 0;
+    for (const quote of quotes) {
+      if (quote.status === "draft") draft += 1;
+      else if (quote.status === "sent") sent += 1;
+      else if (quote.status === "accepted") accepted += 1;
+    }
+    return [
+      {
+        key: "draft",
+        label: "Brouillons",
+        value: String(draft),
+        accent: "var(--color-secondary)",
+      },
+      {
+        key: "sent",
+        label: "Envoyés",
+        value: String(sent),
+        accent: "var(--color-primary)",
+      },
+      {
+        key: "accepted",
+        label: "Acceptés",
+        value: String(accepted),
+        accent: "var(--color-accent, var(--color-primary))",
+      },
+    ];
+  }, [quotes]);
+
   async function runAction(id: string, action: () => Promise<unknown>) {
     setBusyId(id);
     setError(null);
@@ -117,6 +149,8 @@ export function QuotesListPage() {
           Nouveau devis
         </Link>
       </header>
+
+      <BillingStats ariaLabel="Indicateurs devis" loading={loading} items={quoteStats} />
 
       <div className={styles.toolbar}>
         <input
