@@ -1,11 +1,14 @@
-import { ForbiddenException } from "@nestjs/common";
-import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants";
-import { RequestMethod } from "@nestjs/common";
+import { ForbiddenException, RequestMethod } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QuotesController } from "../billing/quotes.controller.js";
 import { BillingPermissionGuard } from "./billing-permission.guard.js";
 import { SessionGuard } from "./session.guard.js";
+
+/** NestJS metadata keys (avoid deep `@nestjs/common/constants` import for tsc). */
+const GUARDS_METADATA = "__guards__";
+const METHOD_METADATA = "method";
+const PATH_METADATA = "path";
 
 describe("BillingPermissionGuard", () => {
   let requireProfileFromRequest: ReturnType<typeof vi.fn>;
@@ -43,6 +46,10 @@ describe("QuotesController billing permission on all endpoints", () => {
   const EXPECTED_ROUTES: Array<{ methodName: string; httpMethod: RequestMethod; path: string }> = [
     { methodName: "create", httpMethod: RequestMethod.POST, path: "/" },
     { methodName: "list", httpMethod: RequestMethod.GET, path: "/" },
+    { methodName: "checkAvailability", httpMethod: RequestMethod.POST, path: "availability/check" },
+    { methodName: "acquireLocks", httpMethod: RequestMethod.POST, path: "locks/acquire" },
+    { methodName: "refreshLocks", httpMethod: RequestMethod.POST, path: "locks/refresh" },
+    { methodName: "releaseLocks", httpMethod: RequestMethod.POST, path: "locks/release" },
     { methodName: "getById", httpMethod: RequestMethod.GET, path: ":id" },
     { methodName: "update", httpMethod: RequestMethod.PATCH, path: ":id" },
     { methodName: "deleteDraft", httpMethod: RequestMethod.DELETE, path: ":id" },
@@ -56,7 +63,7 @@ describe("QuotesController billing permission on all endpoints", () => {
     expect(guards).toEqual(expect.arrayContaining([SessionGuard, BillingPermissionGuard]));
   });
 
-  it("exposes exactly the 8 quote CRUD/lifecycle endpoints under the class guard", () => {
+  it("exposes the 8 CRUD/lifecycle + 4 locks/availability endpoints under the class guard", () => {
     for (const route of EXPECTED_ROUTES) {
       const handler = QuotesController.prototype[route.methodName as keyof QuotesController];
       expect(handler, `missing handler ${route.methodName}`).toBeTypeOf("function");
@@ -64,10 +71,10 @@ describe("QuotesController billing permission on all endpoints", () => {
       const path = Reflect.getMetadata(PATH_METADATA, handler);
       expect(path === route.path || path === route.path.replace(/^\//, "")).toBe(true);
     }
-    expect(EXPECTED_ROUTES).toHaveLength(8);
+    expect(EXPECTED_ROUTES).toHaveLength(12);
   });
 
-  it("denies each of the 8 endpoints when billing permission is false (class guard)", async () => {
+  it("denies each quote endpoint when billing permission is false (class guard)", async () => {
     const requireProfileFromRequest = vi.fn().mockResolvedValue({
       permissions: { billing: false, planning: true, clients: true },
     });

@@ -638,6 +638,31 @@ export {
 } from "./billing-quotes.js";
 
 export {
+  BILLING_QUOTE_LOCKS_ERROR_CODES,
+  StaffQuoteAvailabilityCheckRequestSchema,
+  StaffQuoteAvailabilityCheckResponseSchema,
+  StaffQuoteAvailabilitySlotResultSchema,
+  StaffQuoteLockItemSchema,
+  StaffQuoteLockSlotSchema,
+  StaffQuoteLocksAcquireRequestSchema,
+  StaffQuoteLocksAcquireResponseSchema,
+  StaffQuoteLocksRefreshResponseSchema,
+  StaffQuoteLocksReleaseResponseSchema,
+  StaffQuoteLocksSessionRequestSchema,
+  type BillingQuoteLocksErrorCode,
+  type StaffQuoteAvailabilityCheckRequest,
+  type StaffQuoteAvailabilityCheckResponse,
+  type StaffQuoteAvailabilitySlotResult,
+  type StaffQuoteLockItem,
+  type StaffQuoteLockSlot,
+  type StaffQuoteLocksAcquireRequest,
+  type StaffQuoteLocksAcquireResponse,
+  type StaffQuoteLocksRefreshResponse,
+  type StaffQuoteLocksReleaseResponse,
+  type StaffQuoteLocksSessionRequest,
+} from "./billing-quote-locks.js";
+
+export {
   applyQuoteLinePricing,
   computeHtFromTtcCents,
   computeQuoteDeposit,

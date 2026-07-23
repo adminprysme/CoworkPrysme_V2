@@ -21,12 +21,18 @@ export {
 } from "./create-reservation.js";
 export {
   acquireLock,
+  acquireLocksForSession,
+  buildStaffQuoteLockSessionId,
   findActiveLock,
   findActiveLockBySessionId,
+  findActiveLocksBySessionId,
+  refreshLocksBySessionId,
   releaseLock,
   releaseLockById,
+  releaseLocksBySessionId,
   SLOT_LOCK_DURATION_MS,
   type AcquireLockInput,
+  type AcquireLockSlotInput,
   type ReleaseLockInput,
 } from "./locks.js";
 export {

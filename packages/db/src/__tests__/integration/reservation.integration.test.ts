@@ -5,14 +5,20 @@ import { connectMongo, getCoworkDb } from "../../connection.js";
 import {
   acquireLock,
   assertRangeAvailable,
+  acquireLocksForSession,
+  buildStaffQuoteLockSessionId,
   createReservation,
   ensureReservationIndexes,
   findActiveLockBySessionId,
+  findActiveLocksBySessionId,
   findOverlappingActiveLock,
+  refreshLocksBySessionId,
   registerReservationModel,
   registerSlotLockGateModel,
   registerSlotLockModel,
   releaseLockById,
+  releaseLocksBySessionId,
+  SLOT_LOCK_DURATION_MS,
 } from "../../domains/reservation/index.js";
 import { ReservationOverlapError, SlotLockConflictError } from "../../lib/errors.js";
 import {
@@ -137,6 +143,59 @@ describe("integration: reservation core (replica set)", () => {
 
       await expect(releaseLockById(lock._id, "other-session")).resolves.toBe(false);
       await expect(releaseLockById(lock._id, "owner-session")).resolves.toBe(true);
+    });
+
+    it("acquireLocksForSession multi-acquires then refresh/release; conflict rolls back", async () => {
+      const spaceA = new Types.ObjectId();
+      const spaceB = new Types.ObjectId();
+      const startAt = new Date("2026-07-01T10:00:00.000Z");
+      const endAt = new Date("2026-07-01T11:00:00.000Z");
+      const sessionId = buildStaffQuoteLockSessionId(
+        "aaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbb",
+      );
+
+      const locks = await acquireLocksForSession({
+        sessionId,
+        slots: [
+          { spaceId: spaceA, startAt, endAt },
+          { spaceId: spaceB, startAt, endAt },
+        ],
+      });
+      expect(locks).toHaveLength(2);
+
+      const beforeRefresh = locks[0]!.expiresAt.getTime();
+      const now = new Date(beforeRefresh - 60_000);
+      const refreshed = await refreshLocksBySessionId(sessionId, now);
+      expect(refreshed.refreshed).toBe(2);
+      expect(refreshed.expiresAt.getTime()).toBe(now.getTime() + SLOT_LOCK_DURATION_MS);
+
+      const active = await findActiveLocksBySessionId(sessionId, now);
+      expect(active).toHaveLength(2);
+
+      await releaseLocksBySessionId(sessionId);
+      await acquireLock({
+        spaceId: spaceB,
+        startAt,
+        endAt,
+        sessionId: "blocker-session",
+      });
+
+      await expect(
+        acquireLocksForSession({
+          sessionId,
+          slots: [
+            { spaceId: spaceA, startAt, endAt },
+            { spaceId: spaceB, startAt, endAt },
+          ],
+        }),
+      ).rejects.toBeInstanceOf(SlotLockConflictError);
+
+      const leftover = await findActiveLocksBySessionId(sessionId);
+      expect(leftover).toHaveLength(0);
+
+      const released = await releaseLocksBySessionId("blocker-session");
+      expect(released).toBe(1);
     });
 
     it("findActiveLockBySessionId returns the newest valid lock for the session", async () => {

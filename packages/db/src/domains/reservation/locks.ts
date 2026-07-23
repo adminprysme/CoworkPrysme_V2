@@ -168,3 +168,86 @@ export async function findActiveLockBySessionId(
 
   return lock;
 }
+
+/** Stable sessionId for staff quote wizard locks (distinct prefix from vitrine tunnel). */
+export function buildStaffQuoteLockSessionId(staffProfileId: string, quoteDraftId: string): string {
+  return `staff-quote:${staffProfileId}:${quoteDraftId}`;
+}
+
+export interface AcquireLockSlotInput {
+  spaceId: Types.ObjectId;
+  startAt: Date;
+  endAt: Date;
+  partySize?: number;
+  durationClass?: "hourly" | "daily";
+}
+
+/**
+ * Multi-acquire for a wizard session: replaces any prior locks for `sessionId`,
+ * then acquires each slot. On conflict/failure, rolls back all locks for the session.
+ */
+export async function acquireLocksForSession(input: {
+  sessionId: string;
+  slots: AcquireLockSlotInput[];
+  now?: Date;
+}): Promise<SlotLockDocument[]> {
+  const now = input.now ?? new Date();
+  await releaseLocksBySessionId(input.sessionId);
+
+  const created: SlotLockDocument[] = [];
+  try {
+    for (const slot of input.slots) {
+      const lock = await acquireLock({
+        spaceId: slot.spaceId,
+        startAt: slot.startAt,
+        endAt: slot.endAt,
+        sessionId: input.sessionId,
+        partySize: slot.partySize,
+        durationClass: slot.durationClass,
+        now,
+      });
+      created.push(lock);
+    }
+    return created;
+  } catch (error) {
+    await releaseLocksBySessionId(input.sessionId);
+    throw error;
+  }
+}
+
+/** Extends TTL of all active locks for a session to `now + SLOT_LOCK_DURATION_MS`. */
+export async function refreshLocksBySessionId(
+  sessionId: string,
+  now: Date = new Date(),
+): Promise<{ refreshed: number; expiresAt: Date }> {
+  const SlotLock = await getSlotLockModel();
+  const expiresAt = new Date(now.getTime() + SLOT_LOCK_DURATION_MS);
+  const result = await SlotLock.updateMany(
+    { sessionId, expiresAt: { $gte: now } },
+    { $set: { expiresAt } },
+  );
+  return { refreshed: result.modifiedCount, expiresAt };
+}
+
+/** Deletes every lock owned by the session (wizard abandon / send / accept). */
+export async function releaseLocksBySessionId(sessionId: string): Promise<number> {
+  const SlotLock = await getSlotLockModel();
+  const result = await SlotLock.deleteMany({ sessionId });
+  return result.deletedCount ?? 0;
+}
+
+/** Lists active (non-expired) locks for a session. */
+export async function findActiveLocksBySessionId(
+  sessionId: string,
+  now: Date = new Date(),
+): Promise<Array<SlotLock & { _id: Types.ObjectId }>> {
+  const SlotLock = await getSlotLockModel();
+  const locks = await SlotLock.find({
+    sessionId,
+    expiresAt: { $gte: now },
+  })
+    .sort({ createdAt: 1 })
+    .lean<Array<SlotLock & { _id: Types.ObjectId }>>()
+    .exec();
+  return locks.filter((lock) => isSlotLockValid(lock, now));
+}

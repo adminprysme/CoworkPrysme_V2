@@ -13,7 +13,10 @@ import {
 } from "@nestjs/common";
 import {
   StaffCreateQuoteRequestSchema,
+  StaffQuoteAvailabilityCheckRequestSchema,
   StaffQuoteListQuerySchema,
+  StaffQuoteLocksAcquireRequestSchema,
+  StaffQuoteLocksSessionRequestSchema,
   StaffUpdateQuoteRequestSchema,
 } from "@coworkprysme/shared";
 import type { Request } from "express";
@@ -22,6 +25,7 @@ import type { Request } from "express";
 import { BillingPermissionGuard } from "../auth/billing-permission.guard.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { StaffContextService } from "../auth/staff-context.service.js";
+import { QuotesLocksService } from "./quotes-locks.service.js";
 import { QuotesService } from "./quotes.service.js";
 
 @Controller("billing/quotes")
@@ -29,6 +33,7 @@ import { QuotesService } from "./quotes.service.js";
 export class QuotesController {
   constructor(
     private readonly quotes: QuotesService,
+    private readonly quoteLocks: QuotesLocksService,
     private readonly staffContext: StaffContextService,
   ) {}
 
@@ -55,6 +60,59 @@ export class QuotesController {
       });
     }
     return this.quotes.list(parsed.data);
+  }
+
+  /** Static paths before `:id` so Nest does not treat them as ObjectIds. */
+  @Post("availability/check")
+  async checkAvailability(@Req() request: Request, @Body() body: unknown) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = StaffQuoteAvailabilityCheckRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quoteLocks.checkAvailability(profile, parsed.data);
+  }
+
+  @Post("locks/acquire")
+  async acquireLocks(@Req() request: Request, @Body() body: unknown) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = StaffQuoteLocksAcquireRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quoteLocks.acquire(profile, parsed.data);
+  }
+
+  @Post("locks/refresh")
+  async refreshLocks(@Req() request: Request, @Body() body: unknown) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = StaffQuoteLocksSessionRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quoteLocks.refresh(profile, parsed.data);
+  }
+
+  @Post("locks/release")
+  async releaseLocks(@Req() request: Request, @Body() body: unknown) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const parsed = StaffQuoteLocksSessionRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: "VALIDATION_ERROR",
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quoteLocks.release(profile, parsed.data);
   }
 
   @Get(":id")
