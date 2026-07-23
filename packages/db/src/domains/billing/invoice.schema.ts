@@ -18,7 +18,12 @@ export interface Invoice {
   currency: string;
   type: (typeof INVOICE_TYPES)[number];
   cardexId: Types.ObjectId;
+  /** Primary reservation (compat) — first of the A1 group when multi-space. */
   reservationId?: Types.ObjectId;
+  /** Devis-derived discriminant (A1 group). */
+  quoteId?: Types.ObjectId;
+  /** All reservations covered by this grouped proforma (Option A1). */
+  reservationIds?: Types.ObjectId[];
   lines: BillingLine[];
   vatBreakdown: VatBreakdownLine[];
   totals: InvoiceTotals;
@@ -41,6 +46,11 @@ const invoiceSchema = new Schema<Invoice>(
     type: { type: String, enum: INVOICE_TYPES, required: true },
     cardexId: objectIdRef("Cardex"),
     reservationId: { type: Schema.Types.ObjectId, ref: "Reservation" },
+    quoteId: { type: Schema.Types.ObjectId, ref: "Quote", required: false },
+    reservationIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Reservation" }],
+      default: undefined,
+    },
     lines: { type: [billingLineSchema], default: [] },
     vatBreakdown: { type: [vatBreakdownLineSchema], default: [] },
     totals: { type: invoiceTotalsSchema, required: true },
@@ -57,6 +67,7 @@ const invoiceSchema = new Schema<Invoice>(
 invoiceSchema.index({ reference: 1 }, { unique: true });
 invoiceSchema.index({ cardexId: 1, issuedAt: -1 });
 invoiceSchema.index({ status: 1, dueDate: 1 });
+invoiceSchema.index({ quoteId: 1 });
 
 export type InvoiceModel = Model<Invoice>;
 

@@ -1,11 +1,15 @@
 import { Schema, type Types } from "mongoose";
 
 import {
+  BILLING_LINE_KINDS,
   CARDEX_DOCUMENT_CATEGORIES,
   DURATION_CLASSES,
+  QUOTE_LINE_PRICE_SOURCES,
   WEEK_DAYS,
+  type BillingLineKind,
   type CardexDocumentCategory,
   type DurationClass,
+  type QuoteLinePriceSource,
   type WeekDay,
 } from "./enums.js";
 import { centsField, objectIdRef } from "./schema-helpers.js";
@@ -239,6 +243,124 @@ export const billingLineSchema = new Schema<BillingLine>(
     totalHT: centsField(),
     totalVAT: centsField(),
     totalTTC: centsField(),
+  },
+  { _id: false },
+);
+
+/** Quote line — BillingLine base + space/slot refs + dual calculated/forced pricing. */
+export interface QuoteLine {
+  lineId: string;
+  kind: BillingLineKind | string;
+  label: string;
+
+  spaceId?: Types.ObjectId;
+  buildingId?: Types.ObjectId;
+  startAt?: Date;
+  endAt?: Date;
+  partySize?: number;
+  durationClass?: DurationClass;
+  units?: number;
+
+  calculatedUnitPriceHT: number;
+  calculatedTotalHT: number;
+  calculatedTotalVAT: number;
+  calculatedTotalTTC: number;
+
+  forcedUnitPriceHT?: number;
+  unitPriceHT: number;
+  qty: number;
+  vatRate: number;
+  discount: number;
+  totalHT: number;
+  totalVAT: number;
+  totalTTC: number;
+
+  priceSource: QuoteLinePriceSource;
+  priceOverrideReason?: string;
+  priceOverriddenByStaffProfileId?: Types.ObjectId;
+  priceOverriddenAt?: Date;
+}
+
+export const quoteLineSchema = new Schema<QuoteLine>(
+  {
+    lineId: { type: String, required: true, trim: true },
+    kind: { type: String, enum: BILLING_LINE_KINDS, required: true },
+    label: { type: String, required: true },
+
+    spaceId: { type: Schema.Types.ObjectId, ref: "Space", required: false },
+    buildingId: { type: Schema.Types.ObjectId, ref: "Building", required: false },
+    startAt: { type: Date },
+    endAt: { type: Date },
+    partySize: { type: Number, min: 1 },
+    durationClass: { type: String, enum: DURATION_CLASSES },
+    units: { type: Number, min: 0 },
+
+    calculatedUnitPriceHT: centsField({ min: 0 }),
+    calculatedTotalHT: centsField(),
+    calculatedTotalVAT: centsField(),
+    calculatedTotalTTC: centsField(),
+
+    forcedUnitPriceHT: centsField({ required: false, min: 0 }),
+    unitPriceHT: centsField({ min: 0 }),
+    qty: { type: Number, required: true, min: 0 },
+    vatRate: { type: Number, required: true },
+    discount: centsField({ min: 0 }),
+    totalHT: centsField(),
+    totalVAT: centsField(),
+    totalTTC: centsField(),
+
+    priceSource: {
+      type: String,
+      enum: QUOTE_LINE_PRICE_SOURCES,
+      required: true,
+      default: "auto",
+    },
+    priceOverrideReason: { type: String, trim: true, maxlength: 1000 },
+    priceOverriddenByStaffProfileId: {
+      type: Schema.Types.ObjectId,
+      ref: "StaffProfile",
+      required: false,
+    },
+    priceOverriddenAt: { type: Date },
+  },
+  { _id: false },
+);
+
+/** Prospect / clientDraft identity before cardex exists (send without cardex). */
+export interface QuoteProspect {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  phone?: string;
+  companyName?: string;
+  billingAddress?: Address;
+}
+
+export const quoteProspectSchema = new Schema<QuoteProspect>(
+  {
+    email: { type: String, required: true, lowercase: true, trim: true },
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+    displayName: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    companyName: { type: String, trim: true },
+    billingAddress: { type: addressSchema },
+  },
+  { _id: false },
+);
+
+export interface QuoteAcceptedBy {
+  kind: "client" | "staff";
+  clientAccountId?: Types.ObjectId;
+  staffProfileId?: Types.ObjectId;
+}
+
+export const quoteAcceptedBySchema = new Schema<QuoteAcceptedBy>(
+  {
+    kind: { type: String, enum: ["client", "staff"], required: true },
+    clientAccountId: { type: Schema.Types.ObjectId, ref: "ClientAccount", required: false },
+    staffProfileId: { type: Schema.Types.ObjectId, ref: "StaffProfile", required: false },
   },
   { _id: false },
 );

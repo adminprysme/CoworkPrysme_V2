@@ -64,7 +64,20 @@ export type BankTransferReminderTier = (typeof BANK_TRANSFER_REMINDER_TIERS)[num
 export const CREATED_CHANNELS = ["online", "staff", "phone"] as const;
 export type CreatedChannel = (typeof CREATED_CHANNELS)[number];
 
-export const CLIENT_ACCOUNT_STATUSES = ["active", "locked", "anonymized"] as const;
+/**
+ * Client login lifecycle:
+ * - active — usable credentials
+ * - locked — staff-deactivated (Contacts) — auth code ACCOUNT_LOCKED
+ * - anonymized — future RGPD
+ * - pending_activation — staff-accept bootstrap before password set (Devis) —
+ *   auth code ACCOUNT_PENDING_ACTIVATION (never reuse locked)
+ */
+export const CLIENT_ACCOUNT_STATUSES = [
+  "active",
+  "locked",
+  "anonymized",
+  "pending_activation",
+] as const;
 export type ClientAccountStatus = (typeof CLIENT_ACCOUNT_STATUSES)[number];
 
 /** Cardex attachment role — owner = Cardex.clientAccountId; member = invited collaborator. */
@@ -117,8 +130,18 @@ export type DiscountAppliesTo = (typeof DISCOUNT_APPLIES_TO)[number];
 export const DISCOUNT_CODE_STATUSES = ["active", "expired", "disabled"] as const;
 export type DiscountCodeStatus = (typeof DISCOUNT_CODE_STATUSES)[number];
 
-export const QUOTE_STATUSES = ["sent", "accepted", "refused", "expired"] as const;
+export const QUOTE_STATUSES = ["draft", "sent", "accepted", "refused", "expired"] as const;
 export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
+
+/** Preferred settlement mode chosen at quote creation (SEPA = stub UI only). */
+export const QUOTE_PAYMENT_METHODS = ["card", "bank_transfer", "direct_debit"] as const;
+export type QuotePaymentMethod = (typeof QUOTE_PAYMENT_METHODS)[number];
+
+export const QUOTE_LINE_PRICE_SOURCES = ["auto", "forced"] as const;
+export type QuoteLinePriceSource = (typeof QUOTE_LINE_PRICE_SOURCES)[number];
+
+export const QUOTE_ACCEPTED_BY_KINDS = ["client", "staff"] as const;
+export type QuoteAcceptedByKind = (typeof QUOTE_ACCEPTED_BY_KINDS)[number];
 
 export const INVOICE_TYPES = ["proforma", "final"] as const;
 export type InvoiceType = (typeof INVOICE_TYPES)[number];

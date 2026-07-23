@@ -29,6 +29,8 @@ export interface Reservation {
   buildingId: Types.ObjectId;
   clientAccountId?: Types.ObjectId;
   cardexId?: Types.ObjectId;
+  /** Set when reservation was created from a devis accept (Option A group key). */
+  quoteId?: Types.ObjectId;
   type: (typeof RESERVATION_TYPES)[number];
   startAt: Date;
   endAt: Date;
@@ -64,6 +66,7 @@ const reservationSchema = new Schema<Reservation>(
     buildingId: objectIdRef("Building"),
     clientAccountId: optionalObjectIdRef("ClientAccount"),
     cardexId: optionalObjectIdRef("Cardex"),
+    quoteId: optionalObjectIdRef("Quote"),
     type: { type: String, enum: RESERVATION_TYPES, required: true },
     startAt: { type: Date, required: true },
     endAt: { type: Date, required: true },
@@ -90,6 +93,7 @@ const reservationSchema = new Schema<Reservation>(
 
 reservationSchema.index({ spaceId: 1, startAt: 1, endAt: 1, status: 1 });
 reservationSchema.index({ cardexId: 1, startAt: -1 });
+reservationSchema.index({ quoteId: 1 });
 reservationSchema.index({ reference: 1 }, { unique: true });
 reservationSchema.index(
   { status: 1, awaitingPaymentExpiresAt: 1 },

@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 /** Mirrors packages/db CLIENT_ACCOUNT_STATUSES (keep in sync). */
-export const ClientAccountStatusSchema = z.enum(["active", "locked", "anonymized"]);
+export const ClientAccountStatusSchema = z.enum([
+  "active",
+  "locked",
+  "anonymized",
+  "pending_activation",
+]);
 export type ClientAccountStatus = z.infer<typeof ClientAccountStatusSchema>;
 
 /** Mirrors packages/db CLIENT_ACCOUNT_ROLES (keep in sync). */
@@ -89,8 +94,17 @@ export type StaffTransferCardexOwnershipResult = z.infer<
 export const CLIENT_ACCOUNT_LOCKED_USER_MESSAGE =
   "Ce compte a été désactivé. Contactez votre espace de coworking." as const;
 
+/**
+ * Message shown when status is pending_activation (staff-accept bootstrap).
+ * MUST stay distinct from CLIENT_ACCOUNT_LOCKED_USER_MESSAGE.
+ */
+export const CLIENT_ACCOUNT_PENDING_ACTIVATION_USER_MESSAGE =
+  "Ce compte n'est pas encore activé. Consultez votre email pour définir votre mot de passe." as const;
+
 export const CLIENT_ACCOUNT_AUTH_ERROR_CODES = {
   ACCOUNT_LOCKED: "ACCOUNT_LOCKED",
+  /** Staff-accept bootstrap — password not set yet. Never collapse with ACCOUNT_LOCKED. */
+  ACCOUNT_PENDING_ACTIVATION: "ACCOUNT_PENDING_ACTIVATION",
 } as const;
 
 export type ClientAccountAuthErrorCode =

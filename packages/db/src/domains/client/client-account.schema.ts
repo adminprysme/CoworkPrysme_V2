@@ -28,7 +28,7 @@ export interface ClientAccount {
   emailVerifiedAt?: Date;
   consent: ConsentRecord;
   marketingConsent?: MarketingConsentRecord;
-  /** active | locked (staff-deactivated) | anonymized (future RGPD). */
+  /** active | locked (staff-deactivated) | anonymized | pending_activation (devis staff-accept). */
   status: (typeof CLIENT_ACCOUNT_STATUSES)[number];
   /** Set when status becomes locked (staff deactivate). Cleared on reactivate. */
   lockedAt?: Date;

@@ -119,6 +119,7 @@ Machine à états ; les couleurs du planning (§3.3) sont dérivées de `status`
 | `buildingId`                | ObjectId → buildings      |                                                                                                |
 | `clientAccountId`           | ObjectId → clientAccounts | nul si créée par le staff pour un walk-in                                                      |
 | `cardexId`                  | ObjectId → cardex         |                                                                                                |
+| `quoteId`                   | ObjectId → quotes?        | présent si créée depuis accept devis (clé de groupe Option A)                                  |
 | `type`                      | Enum                      | `meeting_room` / `private_office` / `long_term` / `recurring`                                  |
 | `startAt`, `endAt`          | Date                      |                                                                                                |
 | `durationClass`             | Enum                      | `hourly` / `halfday` / `daily` / `weekly` / `monthly` — pilote les règles d'annulation (§3.10) |
@@ -143,6 +144,7 @@ Machine à états ; les couleurs du planning (§3.3) sont dérivées de `status`
 
 - `{ spaceId: 1, startAt: 1, endAt: 1, status: 1 }` — détection de chevauchement (§1.2) et rendu planning.
 - `{ cardexId: 1, startAt: -1 }` — historique client, duplication de réservation.
+- `{ quoteId: 1 }` — réservations issues d’un devis (Option A).
 - `{ reference: 1 }` unique.
 - `{ status: 1, awaitingPaymentExpiresAt: 1 }` (partiel `awaiting_payment`) — sweeper d'expiration.
 - `{ status: 1, awaitingPaymentMethod: 1, "statusHistory.at": 1 }` (partiel virement) — relances bank_transfer.
@@ -180,21 +182,21 @@ Document technique (1 par `spaceId`) touché dans la **transaction** `acquireLoc
 
 ### `clientAccounts` — authentification client
 
-| Champ                      | Type                     | Note                                                              |
-| -------------------------- | ------------------------ | ----------------------------------------------------------------- |
-| `email`                    | String                   | unique                                                            |
-| `passwordHash`             | String                   | bcrypt/argon2 — jamais en clair                                   |
-| `cardexId`                 | ObjectId → cardex        | nul jusqu'à la 1ʳᵉ réservation                                    |
-| `role`                     | Enum                     | `owner` / `member` — owner = `Cardex.clientAccountId`             |
-| `emailVerifiedAt`          | Date                     |                                                                   |
-| `consent`                  | Object                   | `{ privacyPolicyVersion, acceptedAt }` (§4.5 RGPD)                |
-| `marketingConsent`         | Object                   | opt-in marketing (tunnel)                                         |
-| `status`                   | Enum                     | `active` / `locked` (désactivé staff) / `anonymized` (RGPD futur) |
-| `lockedAt`                 | Date                     | renseigné à la désactivation staff                                |
-| `lockedByStaffProfileId`   | ObjectId → staffProfiles | auteur de la désactivation                                        |
-| `lockReason`               | String                   | motif optionnel (max 500)                                         |
-| `unlockedAt`               | Date                     | dernière réactivation                                             |
-| `unlockedByStaffProfileId` | ObjectId → staffProfiles | auteur de la réactivation                                         |
+| Champ                      | Type                     | Note                                                                                                                                                                                            |
+| -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `email`                    | String                   | unique                                                                                                                                                                                          |
+| `passwordHash`             | String                   | bcrypt/argon2 — jamais en clair                                                                                                                                                                 |
+| `cardexId`                 | ObjectId → cardex        | nul jusqu'à la 1ʳᵉ réservation                                                                                                                                                                  |
+| `role`                     | Enum                     | `owner` / `member` — owner = `Cardex.clientAccountId`                                                                                                                                           |
+| `emailVerifiedAt`          | Date                     |                                                                                                                                                                                                 |
+| `consent`                  | Object                   | `{ privacyPolicyVersion, acceptedAt }` (§4.5 RGPD)                                                                                                                                              |
+| `marketingConsent`         | Object                   | opt-in marketing (tunnel)                                                                                                                                                                       |
+| `status`                   | Enum                     | `active` / `locked` (désactivé staff) / `anonymized` (RGPD futur) / `pending_activation` (bootstrap staff-accept devis — MDP non défini ; auth `ACCOUNT_PENDING_ACTIVATION` ≠ `ACCOUNT_LOCKED`) |
+| `lockedAt`                 | Date                     | renseigné à la désactivation staff                                                                                                                                                              |
+| `lockedByStaffProfileId`   | ObjectId → staffProfiles | auteur de la désactivation                                                                                                                                                                      |
+| `lockReason`               | String                   | motif optionnel (max 500)                                                                                                                                                                       |
+| `unlockedAt`               | Date                     | dernière réactivation                                                                                                                                                                           |
+| `unlockedByStaffProfileId` | ObjectId → staffProfiles | auteur de la réactivation                                                                                                                                                                       |
 
 **Index** : `{ email: 1 }` unique, `{ cardexId: 1, role: 1 }`, `{ cardexId: 1, status: 1 }`.
 
@@ -303,37 +305,56 @@ Collection unifiée avec un discriminant `kind`. _(À valider : voir §9 — on 
 
 ### `quotes` — devis
 
-Cycle de vie propre : envoyé → accepté/refusé (§4.6).
+Cycle de vie : `draft` → `sent` → `accepted` / `refused` / `expired` (§4.6 + chantier Devis).
 
-| Champ                       | Type     | Note                                                                                |
-| --------------------------- | -------- | ----------------------------------------------------------------------------------- |
-| `reference`                 | String   | unique                                                                              |
-| `cardexId`, `reservationId` | ObjectId |                                                                                     |
-| `lines`                     | [Object] | `{ label, kind, qty, unitPriceHT, vatRate, discount, totalHT, totalVAT, totalTTC }` |
-| `vatBreakdown`              | [Object] | ventilation par taux `{ rate, baseHT, vat }` (§1.3)                                 |
-| `totals`                    | Object   | `{ ht, vat, ttc, discountTotal }`                                                   |
-| `status`                    | Enum     | `sent` / `accepted` / `refused` / `expired`                                         |
-| `validUntil`                | Date     |                                                                                     |
+| Champ                                               | Type          | Note                                                                                                                                     |
+| --------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `reference`                                         | String        | unique                                                                                                                                   |
+| `cardexId`                                          | ObjectId?     | **optionnel** jusqu’à accept / bootstrap staff                                                                                           |
+| `clientAccountId`                                   | ObjectId?     | contact principal ; optionnel jusqu’à accept                                                                                             |
+| `prospect`                                          | Object?       | identité pré-cardex (`email`, nom, téléphone, company, `billingAddress`) — alias produit `clientDraft`                                   |
+| `reservationId`                                     | ObjectId?     | **déprécié** — préférer `reservationIds`                                                                                                 |
+| `reservationIds`                                    | [ObjectId]    | rempli à l’accept (Option A multi-espaces)                                                                                               |
+| `lines`                                             | [Object]      | `QuoteLine` : base billing + `spaceId`/`buildingId`/`startAt`/`endAt` + `calculated*` / `forcedUnitPriceHT` + `priceSource` auto\|forced |
+| `vatBreakdown`                                      | [Object]      | ventilation par taux `{ rate, baseHT, vat }` (§1.3)                                                                                      |
+| `totals`                                            | Object        | `{ ht, vat, ttc, discountTotal }`                                                                                                        |
+| `depositPercent`                                    | Number        | 0–100 ; montants acompte dérivés serveur                                                                                                 |
+| `depositAmountHT` / `depositAmountTTC`              | Int (cents)?  | snapshot                                                                                                                                 |
+| `depositVatBreakdown`                               | [Object]?     | ventilation TVA acompte (PDF facture)                                                                                                    |
+| `paymentSituation`                                  | Enum?         | `immediate` / `on_quote` / `deposit` / `net_30`                                                                                          |
+| `paymentMethodPreferred`                            | Enum?         | `card` / `bank_transfer` / `direct_debit` (stub UI)                                                                                      |
+| `status`                                            | Enum          | `draft` / `sent` / `accepted` / `refused` / `expired`                                                                                    |
+| `validUntil`                                        | Date          | validité devis **et** borne TTL `awaiting_payment` post-accept                                                                           |
+| `internalNote`                                      | String?       | **staff-only** — jamais PDF/email client                                                                                                 |
+| `publicConditions` / `paymentTermsLabel`            | String?       | conditions client                                                                                                                        |
+| `sentAt` / `acceptedAt` / `refusedAt` / `expiredAt` | Date?         | traçabilité                                                                                                                              |
+| `createdByStaffProfileId`                           | ObjectId?     | auteur staff                                                                                                                             |
+| `acceptTokenHash` / `acceptTokenExpiresAt`          | String?/Date? | token accept client (hash opaque)                                                                                                        |
+| `acceptedBy`                                        | Object?       | `{ kind: client\|staff, clientAccountId?, staffProfileId? }`                                                                             |
+
+**Index** : `{ reference: 1 }` unique, `{ cardexId: 1, createdAt: -1 }`, `{ status: 1, validUntil: 1 }`, `{ acceptTokenHash: 1 }` unique sparse.
 
 ### `invoices` — proforma → acquittée
 
 Une seule collection, cycle de vie par `status` (la proforma se **complète** jusqu'à fin de séjour via le post-master, §4.6).
 
-| Champ                       | Type     | Note                                                                         |
-| --------------------------- | -------- | ---------------------------------------------------------------------------- |
-| `reference`                 | String   | unique                                                                       |
-| `type`                      | Enum     | `proforma` / `final`                                                         |
-| `cardexId`, `reservationId` | ObjectId |                                                                              |
-| `lines`                     | [Object] | idem devis ; ajout possible via **post-master** tant que `status = proforma` |
-| `vatBreakdown`              | [Object] | multi-TVA ventilée (§1.3)                                                    |
-| `totals`                    | Object   | `{ ht, vat, ttc, discountTotal, paidTotal, balanceDue }`                     |
-| `paymentSituation`          | Enum     | `immediate` / `on_quote` / `deposit` / `net_30` (§4.6)                       |
-| `status`                    | Enum     | `proforma` / `issued` / `partially_paid` / `paid` / `overdue` / `cancelled`  |
-| `dueDate`                   | Date     | pilote les relances et le journal des débiteurs                              |
-| `pdfStorageKey`             | String   | PDF généré                                                                   |
-| `issuedAt`, `paidAt`        | Date     |                                                                              |
+| Champ                       | Type        | Note                                                                         |
+| --------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `reference`                 | String      | unique                                                                       |
+| `type`                      | Enum        | `proforma` / `final`                                                         |
+| `cardexId`, `reservationId` | ObjectId    | `reservationId` = primaire (compat)                                          |
+| `quoteId`                   | ObjectId?   | discriminant devis-derived (A1)                                              |
+| `reservationIds`            | [ObjectId]? | groupe A1 multi-espaces                                                      |
+| `lines`                     | [Object]    | idem devis ; ajout possible via **post-master** tant que `status = proforma` |
+| `vatBreakdown`              | [Object]    | multi-TVA ventilée (§1.3)                                                    |
+| `totals`                    | Object      | `{ ht, vat, ttc, discountTotal, paidTotal, balanceDue }`                     |
+| `paymentSituation`          | Enum        | `immediate` / `on_quote` / `deposit` / `net_30` (§4.6)                       |
+| `status`                    | Enum        | `proforma` / `issued` / `partially_paid` / `paid` / `overdue` / `cancelled`  |
+| `dueDate`                   | Date        | pilote les relances et le journal des débiteurs                              |
+| `pdfStorageKey`             | String      | PDF généré                                                                   |
+| `issuedAt`, `paidAt`        | Date        |                                                                              |
 
-**Index** : `{ reference: 1 }` unique, `{ cardexId: 1, issuedAt: -1 }`, `{ status: 1, dueDate: 1 }` (débiteurs/relances).
+**Index** : `{ reference: 1 }` unique, `{ cardexId: 1, issuedAt: -1 }`, `{ status: 1, dueDate: 1 }` (débiteurs/relances), `{ quoteId: 1 }` (devis-derived).
 
 ### `payments` — règlements (§4.6)
 

@@ -587,6 +587,24 @@ export {
 } from "./billing-transfer.js";
 
 export {
+  BillingLineKindSchema,
+  QuoteAcceptedByKindSchema,
+  QuoteDepositPercentSchema,
+  QuoteLinePriceSourceSchema,
+  QuotePaymentMethodSchema,
+  QuoteProspectBillingAddressSchema,
+  QuoteProspectSchema,
+  QuoteStatusSchema,
+  type BillingLineKind,
+  type QuoteAcceptedByKind,
+  type QuoteLinePriceSource,
+  type QuotePaymentMethod,
+  type QuoteProspect,
+  type QuoteProspectBillingAddress,
+  type QuoteStatus,
+} from "./billing-quotes.js";
+
+export {
   PlanningBuildingOptionSchema,
   PlanningCalendarReservationSchema,
   PlanningCalendarResponseSchema,
@@ -737,6 +755,7 @@ export {
 export {
   CLIENT_ACCOUNT_AUTH_ERROR_CODES,
   CLIENT_ACCOUNT_LOCKED_USER_MESSAGE,
+  CLIENT_ACCOUNT_PENDING_ACTIVATION_USER_MESSAGE,
   CLIENT_ACCOUNT_STAFF_ERROR_CODES,
   CLIENT_ACCOUNT_STAFF_ERROR_MESSAGES,
   ClientAccountRoleSchema,
