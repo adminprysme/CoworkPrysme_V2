@@ -5,10 +5,12 @@ import { InvoicePdfModule } from "../invoice-pdf/invoice-pdf.module.js";
 import { MailModule } from "../mail/mail.module.js";
 import { BillingController } from "./billing.controller.js";
 import { BillingService } from "./billing.service.js";
+import { QuotesController } from "./quotes.controller.js";
+import { QuotesService } from "./quotes.service.js";
 
 @Module({
   imports: [AuthModule, MailModule, InvoicePdfModule],
-  controllers: [BillingController],
-  providers: [BillingService],
+  controllers: [BillingController, QuotesController],
+  providers: [BillingService, QuotesService],
 })
 export class BillingModule {}

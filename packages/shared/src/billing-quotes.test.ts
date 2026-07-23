@@ -9,6 +9,10 @@ import {
   QuoteSendProspectSchema,
   QuoteStatusSchema,
   resolveQuoteAcceptTokenExpiresAt,
+  StaffCreateQuoteRequestSchema,
+  StaffQuoteLineInputSchema,
+  StaffQuoteListQuerySchema,
+  StaffUpdateQuoteRequestSchema,
 } from "./billing-quotes.js";
 
 describe("billing-quotes schemas", () => {
@@ -74,5 +78,52 @@ describe("billing-quotes schemas", () => {
   it("mirrors billing line kinds", () => {
     expect(BillingLineKindSchema.options).toContain("space");
     expect(BillingLineKindSchema.options).toContain("service");
+  });
+
+  it("StaffCreateQuoteRequestSchema accepts draft with prospect and empty lines", () => {
+    const parsed = StaffCreateQuoteRequestSchema.parse({
+      prospect: { email: "a@example.com" },
+      validUntil: "2026-08-01T00:00:00.000Z",
+    });
+    expect(parsed.lines).toEqual([]);
+    expect(parsed.depositPercent).toBe(0);
+  });
+
+  it("StaffQuoteLineInputSchema requires override reason when forced", () => {
+    expect(() =>
+      StaffQuoteLineInputSchema.parse({
+        lineId: "l1",
+        kind: "space",
+        label: "FOCUS",
+        calculatedUnitPriceHT: 10000,
+        qty: 1,
+        vatRate: 20,
+        priceSource: "forced",
+        forcedUnitPriceHT: 9000,
+      }),
+    ).toThrow();
+    expect(
+      StaffQuoteLineInputSchema.parse({
+        lineId: "l1",
+        kind: "space",
+        label: "FOCUS",
+        calculatedUnitPriceHT: 10000,
+        qty: 1,
+        vatRate: 20,
+        priceSource: "forced",
+        forcedUnitPriceHT: 9000,
+        priceOverrideReason: "Geste commercial",
+      }),
+    ).toMatchObject({ priceSource: "forced", forcedUnitPriceHT: 9000 });
+  });
+
+  it("StaffUpdateQuoteRequestSchema and list query coerce pagination", () => {
+    expect(StaffUpdateQuoteRequestSchema.parse({ internalNote: "note" })).toEqual({
+      internalNote: "note",
+    });
+    expect(StaffQuoteListQuerySchema.parse({ page: "2", pageSize: "10" })).toMatchObject({
+      page: 2,
+      pageSize: 10,
+    });
   });
 });
