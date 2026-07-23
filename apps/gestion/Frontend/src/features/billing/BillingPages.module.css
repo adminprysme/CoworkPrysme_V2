@@ -1,0 +1,208 @@
+.page {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 56rem;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+}
+
+.lead {
+  margin: 0.35rem 0 0;
+  max-width: 52ch;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.input,
+.select,
+.textarea {
+  min-width: 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.input {
+  flex: 1 1 12rem;
+}
+
+.select {
+  flex: 0 1 10rem;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.primaryButton {
+  background: var(--color-primary, var(--color-accent, #c45c26));
+  color: #fff;
+}
+
+.secondaryButton {
+  background: var(--color-surface-muted, #eee);
+  color: var(--color-text);
+}
+
+.dangerButton {
+  background: color-mix(in srgb, var(--color-danger, #b42318) 14%, var(--color-surface));
+  color: var(--color-danger, #b42318);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger, #b42318);
+}
+
+.success {
+  margin: 0;
+  color: var(--color-success, #067647);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.table th,
+.table td {
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--color-surface-muted, #eee);
+}
+
+.badgeDraft {
+  background: color-mix(in srgb, #64748b 16%, var(--color-surface));
+}
+
+.badgeSent {
+  background: color-mix(in srgb, #2563eb 16%, var(--color-surface));
+  color: #1d4ed8;
+}
+
+.badgeAccepted {
+  background: color-mix(in srgb, var(--color-success, #067647) 16%, var(--color-surface));
+  color: var(--color-success, #067647);
+}
+
+.badgeRefused,
+.badgeExpired {
+  background: color-mix(in srgb, var(--color-danger, #b42318) 12%, var(--color-surface));
+  color: var(--color-danger, #b42318);
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.hintNote {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-muted, #eee) 55%, var(--color-surface));
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}

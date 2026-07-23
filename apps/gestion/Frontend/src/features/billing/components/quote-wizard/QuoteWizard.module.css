@@ -1,0 +1,159 @@
+.shell {
+  display: grid;
+  gap: 1.1rem;
+  max-width: 56rem;
+}
+
+.header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+}
+
+.lead {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.step {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.stepActive {
+  border-color: var(--color-primary, var(--color-accent, #c45c26));
+  color: var(--color-text);
+  background: color-mix(
+    in srgb,
+    var(--color-primary, var(--color-accent, #c45c26)) 12%,
+    var(--color-surface)
+  );
+}
+
+.stepDone {
+  color: var(--color-text);
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footerRight {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.slotCard {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-surface-muted, #eee) 35%, var(--color-surface));
+}
+
+.slotHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.serviceList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.serviceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.recapGrid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.recapRow {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.ok {
+  color: var(--color-success, #067647);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ko {
+  color: var(--color-danger, #b42318);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.lineTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.lineTable th,
+.lineTable td {
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.checkboxLabel {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
