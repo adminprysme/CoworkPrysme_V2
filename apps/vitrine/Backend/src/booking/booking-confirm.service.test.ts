@@ -21,6 +21,7 @@ vi.mock("@coworkprysme/db", () => ({
   EmailAlreadyRegisteredError: class EmailAlreadyRegisteredError extends Error {},
   InvalidCredentialsError: class InvalidCredentialsError extends Error {},
   AccountLockedError: class AccountLockedError extends Error {},
+  AccountPendingActivationError: class AccountPendingActivationError extends Error {},
   LockMismatchError: class LockMismatchError extends Error {},
   LockNotAvailableError: class LockNotAvailableError extends Error {},
   ReservationOverlapError: class ReservationOverlapError extends Error {},

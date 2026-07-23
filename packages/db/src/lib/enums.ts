@@ -96,6 +96,15 @@ export type ClientAccountInvitationStatus = (typeof CLIENT_ACCOUNT_INVITATION_ST
 /** Default invite lifetime (7 days). Enforced at read/accept — no periodic sweep in v1. */
 export const CLIENT_ACCOUNT_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * Staff-accept bootstrap — "set your password" token lifetime (7 days).
+ * Distinct collection from collaborator invitations.
+ */
+export const CLIENT_ACCOUNT_ACTIVATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export const CLIENT_ACCOUNT_ACTIVATION_STATUSES = ["pending", "consumed", "revoked"] as const;
+export type ClientAccountActivationStatus = (typeof CLIENT_ACCOUNT_ACTIVATION_STATUSES)[number];
+
 export const RETENTION_STATUSES = ["active", "pending_anonymization", "anonymized"] as const;
 export type RetentionStatus = (typeof RETENTION_STATUSES)[number];
 

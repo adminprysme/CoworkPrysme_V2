@@ -21,6 +21,11 @@ export interface CreateClientAccountInput {
   marketingCommunicationsAccepted?: boolean;
   /** Set when attaching to an existing cardex (invite member flow). */
   cardexId?: Types.ObjectId;
+  /**
+   * Defaults to `"active"`. Use `"pending_activation"` for devis staff-accept
+   * bootstrap (sentinel password — login rejected until activation).
+   */
+  status?: "active" | "pending_activation";
   now: Date;
   session: ClientSession;
 }
@@ -64,7 +69,7 @@ export async function createClientAccount(
             accepted: input.marketingCommunicationsAccepted === true,
             ...(input.marketingCommunicationsAccepted === true ? { acceptedAt: input.now } : {}),
           },
-          status: "active",
+          status: input.status ?? "active",
           role: input.role,
           ...(input.cardexId ? { cardexId: input.cardexId } : {}),
         },

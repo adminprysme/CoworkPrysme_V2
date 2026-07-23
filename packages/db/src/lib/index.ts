@@ -19,6 +19,7 @@ export {
 export {
   isDuplicateKeyError,
   AccountLockedError,
+  AccountPendingActivationError,
   EmailAlreadyRegisteredError,
   InvalidCredentialsError,
   InvoiceNotFoundError,

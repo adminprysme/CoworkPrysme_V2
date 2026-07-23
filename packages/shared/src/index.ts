@@ -605,6 +605,25 @@ export {
 } from "./billing-quotes.js";
 
 export {
+  CLIENT_ACCOUNT_ACTIVATION_ERROR_CODES,
+  PublicAccountActivationAcceptRequestSchema,
+  PublicAccountActivationAcceptResponseSchema,
+  PublicAccountActivationPreviewSchema,
+  PublicQuoteAcceptPreviewSchema,
+  PublicQuoteAcceptRegisterRequestSchema,
+  PublicQuoteAcceptRegisterResponseSchema,
+  QUOTE_ACCEPT_ERROR_CODES,
+  type ClientAccountActivationErrorCode,
+  type PublicAccountActivationAcceptRequest,
+  type PublicAccountActivationAcceptResponse,
+  type PublicAccountActivationPreview,
+  type PublicQuoteAcceptPreview,
+  type PublicQuoteAcceptRegisterRequest,
+  type PublicQuoteAcceptRegisterResponse,
+  type QuoteAcceptErrorCode,
+} from "./quote-accept.js";
+
+export {
   PlanningBuildingOptionSchema,
   PlanningCalendarReservationSchema,
   PlanningCalendarResponseSchema,

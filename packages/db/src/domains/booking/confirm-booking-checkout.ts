@@ -11,6 +11,7 @@ import {
 import { getInvoiceModel } from "../billing/invoice.schema.js";
 import {
   AccountLockedError,
+  AccountPendingActivationError,
   InvalidCredentialsError,
   LockMismatchError,
   LockNotAvailableError,
@@ -150,6 +151,9 @@ async function resolveClientAccount(
 
     if (!existing) {
       throw new InvalidCredentialsError();
+    }
+    if (existing.status === "pending_activation") {
+      throw new AccountPendingActivationError();
     }
     if (existing.status === "locked") {
       throw new AccountLockedError();
@@ -406,6 +410,7 @@ export async function confirmBookingCheckout(
 /**
  * Verifies client credentials without creating a session.
  * @throws {AccountLockedError} when the account exists and status is locked
+ * @throws {AccountPendingActivationError} when status is pending_activation
  */
 export async function verifyClientAccountCredentials(
   email: string,
@@ -418,6 +423,9 @@ export async function verifyClientAccountCredentials(
 
   if (!account) {
     return false;
+  }
+  if (account.status === "pending_activation") {
+    throw new AccountPendingActivationError();
   }
   if (account.status === "locked") {
     throw new AccountLockedError();

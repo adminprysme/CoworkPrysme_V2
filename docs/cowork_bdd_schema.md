@@ -202,6 +202,24 @@ Document technique (1 par `spaceId`) touché dans la **transaction** `acquireLoc
 
 Historique complet des lock/unlock/transfert de propriété : `auditLogs` (pas de sous-collection).
 
+### `clientAccountActivations` — token « définir MDP » (staff-accept devis)
+
+Distinct des invitations collaborateur (`clientAccountInvitations`). Secret dédié `CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET` (jamais réutiliser invite / accept devis / session).
+
+| Champ                      | Type                      | Note                                          |
+| -------------------------- | ------------------------- | --------------------------------------------- |
+| `clientAccountId`          | ObjectId → clientAccounts | compte `pending_activation`                   |
+| `email`                    | String                    | dénormalisé (preview)                         |
+| `tokenHash`                | String                    | SHA-256(token + ":" + secret) — jamais le raw |
+| `status`                   | Enum                      | `pending` / `consumed` / `revoked`            |
+| `expiresAt`                | Date                      | TTL défaut 7 jours                            |
+| `quoteId`                  | ObjectId → quotes         | devis déclencheur (optionnel)                 |
+| `issuedByStaffProfileId`   | ObjectId → staffProfiles  | optionnel                                     |
+| `consumedAt` / `revokedAt` | Date                      |                                               |
+| `lastSentAt`               | Date                      |                                               |
+
+**Index** : `{ tokenHash: 1 }` unique ; `{ clientAccountId: 1 }` unique partial `status: pending` ; `{ status: 1, expiresAt: 1 }`.
+
 ### `cardex` — fiche client, source de vérité (§4.5)
 
 | Champ                    | Type                       | Note                                                                                                                                                                                                                                |

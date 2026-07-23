@@ -163,6 +163,10 @@ export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
     BOOKING_PAYMENT_TOKEN_SECRET: z.string().min(32),
     /** Same pepper as gestion-api — hashes client collaborator invite tokens (≥32). */
     CLIENT_INVITE_TOKEN_SECRET: z.string().min(32),
+    /** Pepper for devis accept-token hashes (≥32). Same value as gestion-api. */
+    QUOTE_ACCEPT_TOKEN_SECRET: z.string().min(32),
+    /** Pepper for staff-accept password-activation tokens (≥32). Same as gestion-api. */
+    CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: z.string().min(32),
   });
 
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
@@ -196,6 +200,10 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
       SESSION_TTL_HOURS: z.coerce.number().int().positive().default(4),
       /** Pepper for hashing client collaborator invite tokens (≥32 chars). */
       CLIENT_INVITE_TOKEN_SECRET: z.string().min(32),
+      /** Pepper for devis accept-token hashes (≥32). Same value as vitrine-api. */
+      QUOTE_ACCEPT_TOKEN_SECRET: z.string().min(32),
+      /** Pepper for staff-accept password-activation tokens (≥32). Same as vitrine-api. */
+      CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: z.string().min(32),
       COOKIE_SECURE: z
         .enum(["true", "false"])
         .default(isProduction(env) ? "true" : "false")
@@ -325,6 +333,8 @@ export function parseVitrineApiEnv(env: NodeJS.ProcessEnv = process.env): Vitrin
     UPLOADS_DIR: env.UPLOADS_DIR,
     BOOKING_PAYMENT_TOKEN_SECRET: env.BOOKING_PAYMENT_TOKEN_SECRET,
     CLIENT_INVITE_TOKEN_SECRET: env.CLIENT_INVITE_TOKEN_SECRET,
+    QUOTE_ACCEPT_TOKEN_SECRET: env.QUOTE_ACCEPT_TOKEN_SECRET,
+    CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: env.CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET,
   });
 
   if (!result.success) {
@@ -350,6 +360,8 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     SESSION_SECRET: env.SESSION_SECRET,
     SESSION_TTL_HOURS: env.SESSION_TTL_HOURS,
     CLIENT_INVITE_TOKEN_SECRET: env.CLIENT_INVITE_TOKEN_SECRET,
+    QUOTE_ACCEPT_TOKEN_SECRET: env.QUOTE_ACCEPT_TOKEN_SECRET,
+    CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: env.CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET,
     COOKIE_SECURE: env.COOKIE_SECURE,
     COOKIE_SAME_SITE: env.COOKIE_SAME_SITE,
     CENTRALE_API_URL: env.CENTRALE_API_URL,

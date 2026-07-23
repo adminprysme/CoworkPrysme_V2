@@ -65,6 +65,18 @@ export class AccountLockedError extends Error {
   }
 }
 
+/**
+ * Thrown when a client account exists but password is not set yet
+ * (status pending_activation — devis staff-accept bootstrap).
+ * NEVER collapse with AccountLockedError.
+ */
+export class AccountPendingActivationError extends Error {
+  constructor(message = "Client account is pending activation") {
+    super(message);
+    this.name = "AccountPendingActivationError";
+  }
+}
+
 /** Thrown when a new account email is already registered. */
 export class EmailAlreadyRegisteredError extends Error {
   constructor(message = "An account with this email already exists") {

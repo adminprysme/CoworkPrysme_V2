@@ -65,3 +65,31 @@ export {
   type ApplyStripeCardRefundInput,
   type ApplyStripeCardRefundResult,
 } from "./apply-stripe-card-refund.js";
+export {
+  hashQuoteAcceptToken,
+  isQuoteAcceptTokenFormat,
+  issueQuoteAcceptToken,
+  quoteAcceptTokenMatchesHash,
+  type IssuedQuoteAcceptToken,
+} from "./quote-accept-token.js";
+export {
+  attachQuoteAcceptToken,
+  getQuoteByAcceptToken,
+  quoteAcceptNeedsRegistration,
+  QuoteAcceptLookupError,
+  type AttachQuoteAcceptTokenInput,
+  type AttachQuoteAcceptTokenResult,
+  type QuoteAcceptLookupErrorCode,
+} from "./quote-accept-lookup.js";
+export {
+  bootstrapQuoteClientFromProspect,
+  resolveProspectIdentity,
+  QuoteBootstrapError,
+  type BootstrapQuoteClientFromProspectInput,
+  type BootstrapQuoteClientFromProspectResult,
+} from "./bootstrap-quote-client.js";
+export {
+  registerClientAccountForQuoteAccept,
+  type RegisterClientAccountForQuoteAcceptInput,
+  type RegisterClientAccountForQuoteAcceptResult,
+} from "./register-for-quote-accept.js";

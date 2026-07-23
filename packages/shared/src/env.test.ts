@@ -187,6 +187,8 @@ describe("parseServerEnv", () => {
       ALLOWED_ORIGIN: "http://localhost:3002,http://localhost:8002",
       SESSION_SECRET: "x".repeat(32),
       CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
+      QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+      CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: "a".repeat(32),
     });
 
     expect(env.ALLOWED_ORIGIN).toEqual(["http://localhost:3002", "http://localhost:8002"]);
@@ -200,6 +202,8 @@ describe("parseServerEnv", () => {
         ALLOWED_ORIGIN: "*",
         SESSION_SECRET: "x".repeat(32),
         CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
+        QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+        CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: "a".repeat(32),
       }),
     ).toThrow(GENERIC_ENV_ERROR);
   });
@@ -212,6 +216,8 @@ describe("parseServerEnv", () => {
       AUTH_MODE: "local",
       SESSION_SECRET: "x".repeat(32),
       CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
+      QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+      CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: "a".repeat(32),
     });
 
     expect(env.AUTH_MODE).toBe("local");
@@ -225,6 +231,8 @@ describe("parseServerEnv", () => {
         ALLOWED_ORIGIN: "http://localhost:3002",
         SESSION_SECRET: "x".repeat(32),
         CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
+        QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+        CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: "a".repeat(32),
         QONTO_CLIENT_ID: "client-id",
       }),
     ).toThrow(GENERIC_ENV_ERROR);
@@ -237,6 +245,8 @@ describe("parseServerEnv", () => {
       ALLOWED_ORIGIN: "http://localhost:3002",
       SESSION_SECRET: "x".repeat(32),
       CLIENT_INVITE_TOKEN_SECRET: "y".repeat(32),
+      QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+      CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: "a".repeat(32),
       QONTO_CLIENT_ID: "client-id",
       QONTO_CLIENT_SECRET: "client-secret",
       QONTO_STAGING_TOKEN: "staging-token",

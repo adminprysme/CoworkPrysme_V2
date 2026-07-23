@@ -13,6 +13,36 @@ export {
   type ClientAccountInvitationModel,
 } from "./client-account-invitation.schema.js";
 export {
+  getClientAccountActivationModel,
+  registerClientAccountActivationModel,
+  type ClientAccountActivation,
+  type ClientAccountActivationDocument,
+  type ClientAccountActivationModel,
+} from "./client-account-activation.schema.js";
+export {
+  ClientAccountActivationError,
+  type ClientAccountActivationErrorCode,
+} from "./client-account-activation-errors.js";
+export {
+  activationTokenMatchesHash,
+  hashClientAccountActivationToken,
+  isClientAccountActivationTokenFormat,
+  issueClientAccountActivationToken,
+  type IssuedClientAccountActivationToken,
+} from "./activation-token.js";
+export {
+  issueClientAccountActivation,
+  type IssueClientAccountActivationInput,
+  type IssueClientAccountActivationResult,
+} from "./issue-client-account-activation.js";
+export {
+  consumeClientAccountActivation,
+  getPendingActivationByRawToken,
+  maskActivationEmail,
+  type ConsumeClientAccountActivationInput,
+  type ConsumeClientAccountActivationResult,
+} from "./consume-client-account-activation.js";
+export {
   CLIENT_ACCOUNT_BCRYPT_ROUNDS,
   createClientAccount,
   normalizeClientEmail,

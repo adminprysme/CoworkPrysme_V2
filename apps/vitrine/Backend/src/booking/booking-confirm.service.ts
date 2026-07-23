@@ -10,6 +10,7 @@ import {
 import type { Service, Space } from "@coworkprysme/db";
 import {
   AccountLockedError,
+  AccountPendingActivationError,
   confirmBookingCheckout,
   connectMongo,
   EmailAlreadyRegisteredError,
@@ -24,6 +25,7 @@ import {
   BOOKING_CONFIRM_ERROR_CODES,
   BookingConfirmResponseSchema,
   CLIENT_ACCOUNT_LOCKED_USER_MESSAGE,
+  CLIENT_ACCOUNT_PENDING_ACTIVATION_USER_MESSAGE,
   computeBankTransferExpiresAt,
   isBankTransferFullyEligible,
   PRIVACY_POLICY_VERSION,
@@ -165,6 +167,12 @@ export class BookingConfirmService {
       throw new UnauthorizedException({
         code: BOOKING_CONFIRM_ERROR_CODES.INVALID_CREDENTIALS,
         message: "Email ou mot de passe incorrect",
+      });
+    }
+    if (error instanceof AccountPendingActivationError) {
+      throw new ForbiddenException({
+        code: BOOKING_CONFIRM_ERROR_CODES.ACCOUNT_PENDING_ACTIVATION,
+        message: CLIENT_ACCOUNT_PENDING_ACTIVATION_USER_MESSAGE,
       });
     }
     if (error instanceof AccountLockedError) {

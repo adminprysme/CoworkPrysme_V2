@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import {
   AccountLockedError,
+  AccountPendingActivationError,
   clientAccountEmailExists,
   verifyClientAccountCredentials,
 } from "@coworkprysme/db";
@@ -9,6 +10,7 @@ import {
   BookingCheckEmailResponseSchema,
   BookingVerifyAccountResponseSchema,
   CLIENT_ACCOUNT_LOCKED_USER_MESSAGE,
+  CLIENT_ACCOUNT_PENDING_ACTIVATION_USER_MESSAGE,
   type BookingCheckEmailRequest,
   type BookingVerifyAccountRequest,
 } from "@coworkprysme/shared";
@@ -31,6 +33,12 @@ export class BookingAccountService {
       }
       return BookingVerifyAccountResponseSchema.parse({ valid: true });
     } catch (error) {
+      if (error instanceof AccountPendingActivationError) {
+        throw new ForbiddenException({
+          code: BOOKING_CONFIRM_ERROR_CODES.ACCOUNT_PENDING_ACTIVATION,
+          message: CLIENT_ACCOUNT_PENDING_ACTIVATION_USER_MESSAGE,
+        });
+      }
       if (error instanceof AccountLockedError) {
         throw new ForbiddenException({
           code: BOOKING_CONFIRM_ERROR_CODES.ACCOUNT_LOCKED,
