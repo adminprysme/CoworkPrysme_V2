@@ -22,7 +22,10 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [ssoPending, setSsoPending] = useState(false);
+  // Show fullscreen transition on first paint when returning from Centrale.
+  const [ssoPending, setSsoPending] = useState(
+    () => AUTH_MODE === "sso" && Boolean(searchParams.get("sso_token")),
+  );
   const [ssoAuthSucceeded, setSsoAuthSucceeded] = useState(false);
   const [ssoUserName, setSsoUserName] = useState<string | undefined>();
   const ssoMeRef = useRef<AuthMeResponse | null>(null);
@@ -40,6 +43,8 @@ export function LoginPage() {
     if (!me) {
       return;
     }
+    // setUser only after animation — earlier would let PublicOnly eject /login
+    // if sso_token were already cleared; keep token until this point.
     setUser(me);
     setSearchParams({}, { replace: true });
     navigate("/dashboard", { replace: true });
@@ -71,6 +76,7 @@ export function LoginPage() {
         ssoMeRef.current = me;
         setSsoUserName(me.profile.displayName);
         setSsoAuthSucceeded(true);
+        // Do NOT setUser here — PublicOnly would unmount the transition.
       })
       .catch((error: unknown) => {
         setError(

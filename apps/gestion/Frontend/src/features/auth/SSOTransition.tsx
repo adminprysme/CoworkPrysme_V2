@@ -13,56 +13,68 @@ const SSO_STEPS = [
   { text: "Bienvenue !", progress: 100 },
 ] as const;
 
-const MAX_STEP_WITHOUT_AUTH = SSO_STEPS.length - 2;
-const STEP_DURATION_MS = 600;
-const COMPLETE_HOLD_MS = 800;
+/** Per-step dwell so 0→last is always visible (~3.5–4s total with hold). */
+const STEP_DURATION_MS = 700;
+const COMPLETE_HOLD_MS = 900;
+const LAST_STEP_INDEX = SSO_STEPS.length - 1;
 
 type SSOTransitionProps = {
   onComplete: () => void;
   userName?: string;
-  /** When true, animation may finish on the welcome step and call onComplete. */
+  /** Auth finished successfully — required before onComplete, not for advancing steps. */
   authSucceeded: boolean;
 };
 
 export function SSOTransition({ onComplete, userName, authSucceeded }: SSOTransitionProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
+  const [animationDone, setAnimationDone] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const completionFiredRef = useRef(false);
 
+  // Always advance through every step on a fixed timeline — never skip for fast auth.
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev < MAX_STEP_WITHOUT_AUTH) {
-          return prev + 1;
-        }
-        return prev;
-      });
-    }, STEP_DURATION_MS);
+    const timers: number[] = [];
 
-    return () => window.clearInterval(timer);
+    for (let step = 1; step <= LAST_STEP_INDEX; step += 1) {
+      timers.push(
+        window.setTimeout(() => {
+          setCurrentStep(step);
+          if (step === LAST_STEP_INDEX) {
+            setAnimationDone(true);
+          }
+        }, step * STEP_DURATION_MS),
+      );
+    }
+
+    return () => {
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
+    };
   }, []);
 
+  // Navigate only after full animation + hold, and only once auth has succeeded.
   useEffect(() => {
-    if (!authSucceeded || isComplete) {
-      return;
-    }
-    if (currentStep < MAX_STEP_WITHOUT_AUTH) {
+    if (!animationDone || !authSucceeded || completionFiredRef.current) {
       return;
     }
 
-    setCurrentStep(SSO_STEPS.length - 1);
-    setIsComplete(true);
     const timeout = window.setTimeout(() => {
+      if (completionFiredRef.current) {
+        return;
+      }
+      completionFiredRef.current = true;
       onCompleteRef.current();
     }, COMPLETE_HOLD_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [authSucceeded, currentStep, isComplete]);
+  }, [animationDone, authSucceeded]);
 
+  const isWelcome = currentStep === LAST_STEP_INDEX;
   const currentProgress = SSO_STEPS[currentStep]?.progress ?? 0;
   const currentText =
-    isComplete && userName ? `Bienvenue ${userName} !` : (SSO_STEPS[currentStep]?.text ?? "");
+    isWelcome && userName ? `Bienvenue ${userName} !` : (SSO_STEPS[currentStep]?.text ?? "");
 
   return (
     <div className={styles.container} role="status" aria-live="polite">
@@ -85,14 +97,14 @@ export function SSOTransition({ onComplete, userName, authSucceeded }: SSOTransi
         </div>
 
         <div className={styles.status}>
-          {isComplete ? (
+          {isWelcome ? (
             <div className={styles.checkWrapper}>
               <IconCheck className={styles.checkIcon} stroke={3} aria-hidden="true" />
             </div>
           ) : (
             <div className={styles.spinner} aria-hidden="true" />
           )}
-          <span className={`${styles.statusText} ${isComplete ? styles.statusTextSuccess : ""}`}>
+          <span className={`${styles.statusText} ${isWelcome ? styles.statusTextSuccess : ""}`}>
             {currentText}
           </span>
         </div>
