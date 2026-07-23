@@ -45,6 +45,7 @@ describe("BillingPermissionGuard", () => {
 
 describe("BillingController transfers permission", () => {
   const TRANSFER_ROUTES: Array<{ methodName: string; httpMethod: RequestMethod; path: string }> = [
+    { methodName: "searchClients", httpMethod: RequestMethod.GET, path: "clients/search" },
     { methodName: "listTransfers", httpMethod: RequestMethod.GET, path: "transfers" },
     { methodName: "lookup", httpMethod: RequestMethod.GET, path: "transfers/lookup" },
     {

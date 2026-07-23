@@ -9,6 +9,7 @@ import {
   QuoteSendProspectSchema,
   QuoteStatusSchema,
   resolveQuoteAcceptTokenExpiresAt,
+  StaffBillingClientSearchQuerySchema,
   StaffCreateQuoteRequestSchema,
   StaffQuoteLineInputSchema,
   StaffQuoteListQuerySchema,
@@ -53,13 +54,72 @@ describe("billing-quotes schemas", () => {
         firstName: "Alice",
         lastName: "Martin",
       }),
-    ).toMatchObject({ firstName: "Alice", lastName: "Martin" });
+    ).toMatchObject({
+      firstName: "Alice",
+      lastName: "Martin",
+      displayName: "Alice Martin",
+    });
     expect(
       QuoteSendProspectSchema.parse({
         email: "a@example.com",
         displayName: "Alice Martin",
       }),
     ).toMatchObject({ displayName: "Alice Martin" });
+  });
+
+  it("derives displayName from first+last and does not require a separate field", () => {
+    const parsed = QuoteProspectSchema.parse({
+      email: "a@example.com",
+      firstName: "Ada",
+      lastName: "Lovelace",
+    });
+    expect(parsed.displayName).toBe("Ada Lovelace");
+    expect(parsed).not.toHaveProperty("displayName", "");
+  });
+
+  it("validates particulier vs professionnel send flows", () => {
+    expect(
+      QuoteSendProspectSchema.parse({
+        email: "p@example.com",
+        clientKind: "individual",
+        firstName: "Jean",
+        lastName: "Dupont",
+        billingAddress: { street: "1 rue A", zip: "69001", city: "Lyon", country: "FR" },
+      }),
+    ).toMatchObject({ clientKind: "individual", displayName: "Jean Dupont" });
+
+    expect(() =>
+      QuoteSendProspectSchema.parse({
+        email: "p@example.com",
+        clientKind: "company",
+        firstName: "Jean",
+        lastName: "Dupont",
+        companyName: "ACME",
+      }),
+    ).toThrow(/SIRET/);
+
+    expect(
+      QuoteSendProspectSchema.parse({
+        email: "p@example.com",
+        clientKind: "company",
+        firstName: "Jean",
+        lastName: "Dupont",
+        companyName: "ACME",
+        siret: "88209583900016",
+        vatNumber: "FR71882095839",
+        billingAddress: { street: "1 rue A", zip: "69001", city: "Lyon", country: "FR" },
+      }),
+    ).toMatchObject({
+      clientKind: "company",
+      companyName: "ACME",
+      siret: "88209583900016",
+      displayName: "Jean Dupont",
+    });
+  });
+
+  it("StaffBillingClientSearchQuerySchema requires min 2 chars", () => {
+    expect(() => StaffBillingClientSearchQuerySchema.parse({ q: "a" })).toThrow();
+    expect(StaffBillingClientSearchQuerySchema.parse({ q: "  al " })).toEqual({ q: "al" });
   });
 
   it("resolveQuoteAcceptTokenExpiresAt = min(validUntil, now+30d)", () => {

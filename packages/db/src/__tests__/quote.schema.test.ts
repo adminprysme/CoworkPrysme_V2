@@ -258,3 +258,31 @@ describe("clientAccount pending_activation status", () => {
     void connection.close();
   });
 });
+
+describe("quote.schema prospect company fields", () => {
+  it("accepts clientKind / siret / vatNumber on prospect", () => {
+    const Quote = registerQuoteModel(mongoose.connection);
+    const doc = new Quote(
+      minimalQuoteInput({
+        prospect: {
+          email: "pro@example.com",
+          firstName: "Ada",
+          lastName: "Lovelace",
+          clientKind: "company",
+          companyName: "CG DEVELOPPEMENT",
+          siret: "88209583900016",
+          vatNumber: "FR71882095839",
+          billingAddress: {
+            street: "38 route de Brignais",
+            zip: "69630",
+            city: "Chaponost",
+            country: "FR",
+          },
+        },
+      }),
+    );
+    expect(doc.validateSync()).toBeUndefined();
+    expect(doc.prospect?.siret).toBe("88209583900016");
+    expect(doc.prospect?.clientKind).toBe("company");
+  });
+});

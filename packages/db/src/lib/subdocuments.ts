@@ -341,9 +341,14 @@ export interface QuoteProspect {
   email: string;
   firstName?: string;
   lastName?: string;
+  /** Derived from firstName+lastName for new clients; kept for legacy / send fallback. */
   displayName?: string;
   phone?: string;
+  /** Aligns with booking: individual → Cardex.address; company → Cardex.company. */
+  clientKind?: "individual" | "company";
   companyName?: string;
+  siret?: string;
+  vatNumber?: string;
   billingAddress?: Address;
 }
 
@@ -354,7 +359,10 @@ export const quoteProspectSchema = new Schema<QuoteProspect>(
     lastName: { type: String, trim: true },
     displayName: { type: String, trim: true },
     phone: { type: String, trim: true },
+    clientKind: { type: String, enum: ["individual", "company"] },
     companyName: { type: String, trim: true },
+    siret: { type: String, trim: true },
+    vatNumber: { type: String, trim: true },
     billingAddress: { type: addressSchema },
   },
   { _id: false },

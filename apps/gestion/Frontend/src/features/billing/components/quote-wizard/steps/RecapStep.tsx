@@ -41,18 +41,28 @@ export function RecapStep({
           <strong>{state.reference ?? lastSaved?.reference ?? "— (brouillon non créé)"}</strong>
         </p>
         <p className={styles.recapRow}>
-          <span>Prospect</span>
+          <span>Client</span>
           <strong>
-            {[prospect.firstName, prospect.lastName].filter(Boolean).join(" ") ||
-              prospect.displayName ||
-              prospect.email ||
-              "—"}
+            {state.cardexId && state.clientAccountId
+              ? "Client existant (dossier lié)"
+              : [prospect.firstName, prospect.lastName].filter(Boolean).join(" ") ||
+                prospect.displayName ||
+                prospect.email ||
+                "—"}
           </strong>
         </p>
         <p className={styles.recapRow}>
           <span>Email</span>
-          <strong>{prospect.email || "—"}</strong>
+          <strong>
+            {state.cardexId && !prospect.email ? "(compte lié)" : prospect.email || "—"}
+          </strong>
         </p>
+        {prospect.clientKind === "company" && prospect.companyName ? (
+          <p className={styles.recapRow}>
+            <span>Société</span>
+            <strong>{prospect.companyName}</strong>
+          </p>
+        ) : null}
         <p className={styles.recapRow}>
           <span>Créneaux</span>
           <strong>{state.spaces.length}</strong>

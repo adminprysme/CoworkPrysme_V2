@@ -31,6 +31,7 @@ import {
   prospectForApi,
   QUOTE_WIZARD_STEPS,
   toDatetimeLocalValue,
+  validateClientStep,
   type QuoteWizardState,
   type WizardSpaceSlot,
 } from "../lib/quote-wizard-state.js";
@@ -328,8 +329,13 @@ export function QuoteWizardPage() {
     setBusy(true);
     try {
       if (stepIndex === 0) {
-        if (!state.prospect.email.trim()) {
-          throw new Error("L’email prospect est requis.");
+        const clientError = validateClientStep({
+          cardexId: state.cardexId,
+          clientAccountId: state.clientAccountId,
+          prospect: state.prospect,
+        });
+        if (clientError) {
+          throw new Error(clientError);
         }
         await ensureDraftSaved();
       } else if (stepIndex === 3 || stepIndex === 4) {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { BookingClientKindSchema } from "./booking-confirm.js";
 import { SpaceDurationClassSchema } from "./spaces.js";
 
 /** Mirrors packages/db QUOTE_STATUSES (keep in sync). */
@@ -42,21 +43,35 @@ export const QuoteProspectBillingAddressSchema = z.object({
 export type QuoteProspectBillingAddress = z.infer<typeof QuoteProspectBillingAddressSchema>;
 
 /** Prospect / clientDraft identity before cardex (draft may be email-only). */
-export const QuoteProspectSchema = z.object({
-  email: z.string().trim().email().toLowerCase(),
-  firstName: optionalTrimmed,
-  lastName: optionalTrimmed,
-  displayName: optionalTrimmed,
-  phone: optionalTrimmed,
-  companyName: optionalTrimmed,
-  billingAddress: QuoteProspectBillingAddressSchema.optional(),
-});
+export const QuoteProspectSchema = z
+  .object({
+    email: z.string().trim().email().toLowerCase(),
+    firstName: optionalTrimmed,
+    lastName: optionalTrimmed,
+    displayName: optionalTrimmed,
+    phone: optionalTrimmed,
+    clientKind: BookingClientKindSchema.optional(),
+    companyName: optionalTrimmed,
+    siret: optionalTrimmed,
+    vatNumber: optionalTrimmed,
+    billingAddress: QuoteProspectBillingAddressSchema.optional(),
+  })
+  .transform((prospect) => {
+    if (prospect.displayName || !(prospect.firstName && prospect.lastName)) {
+      return prospect;
+    }
+    return {
+      ...prospect,
+      displayName: `${prospect.firstName} ${prospect.lastName}`.trim(),
+    };
+  });
 export type QuoteProspect = z.infer<typeof QuoteProspectSchema>;
 
 /**
  * Prospect required to **send** a quote without cardex (LOCKED product a):
  * email + `(firstName AND lastName) OR displayName` — not email alone.
  * Aligns with `resolveProspectIdentity` (packages/db bootstrap).
+ * Company kind also requires legalName + SIRET.
  */
 export const QuoteSendProspectSchema = QuoteProspectSchema.superRefine((prospect, context) => {
   const hasNames = Boolean(prospect.firstName && prospect.lastName);
@@ -69,8 +84,55 @@ export const QuoteSendProspectSchema = QuoteProspectSchema.superRefine((prospect
         "Le prospect doit avoir un prénom et un nom, ou un nom d'affichage, pour l'envoi du devis.",
     });
   }
+
+  const isCompany = prospect.clientKind === "company";
+  if (isCompany && !prospect.companyName?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["companyName"],
+      message: "La raison sociale est requise pour un prospect professionnel.",
+    });
+  }
+  if (prospect.siret) {
+    const digits = prospect.siret.replaceAll(/\D/g, "");
+    if (!/^\d{14}$/.test(digits)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["siret"],
+        message: "Le SIRET doit contenir exactement 14 chiffres.",
+      });
+    }
+  }
+  if (isCompany && !prospect.siret) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["siret"],
+      message: "Le SIRET est requis pour un prospect professionnel.",
+    });
+  }
 });
 export type QuoteSendProspect = z.infer<typeof QuoteSendProspectSchema>;
+
+/** Staff search for existing cardex / client account (quote wizard). */
+export const StaffBillingClientSearchQuerySchema = z.object({
+  q: z.string().trim().min(2).max(200),
+});
+export type StaffBillingClientSearchQuery = z.infer<typeof StaffBillingClientSearchQuerySchema>;
+
+export const StaffBillingClientSearchItemSchema = z.object({
+  cardexId: z.string().regex(/^[a-f0-9]{24}$/i),
+  clientAccountId: z.string().regex(/^[a-f0-9]{24}$/i),
+  /** Display label with masked email (invitation-style). */
+  label: z.string().min(1),
+});
+export type StaffBillingClientSearchItem = z.infer<typeof StaffBillingClientSearchItemSchema>;
+
+export const StaffBillingClientSearchResponseSchema = z.object({
+  clients: z.array(StaffBillingClientSearchItemSchema),
+});
+export type StaffBillingClientSearchResponse = z.infer<
+  typeof StaffBillingClientSearchResponseSchema
+>;
 
 export const QuoteDepositPercentSchema = z.number().int().min(0).max(100);
 

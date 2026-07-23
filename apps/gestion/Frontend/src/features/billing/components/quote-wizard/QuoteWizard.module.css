@@ -247,6 +247,106 @@
   font-size: 0.92rem;
 }
 
+.clientSearchBlock,
+.clientNewBlock {
+  display: grid;
+  gap: 1rem;
+}
+
+.clientActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.selectedClient {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface-muted, color-mix(in srgb, var(--color-surface) 88%, var(--color-primary)));
+}
+
+.searchResults {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.searchResultBtn {
+  width: 100%;
+  text-align: left;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.searchResultBtn:hover {
+  border-color: var(--color-primary);
+}
+
+.kindToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.kindOption {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kindOptionSelected {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.companyBlock {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.siretRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.addressFieldset {
+  margin: 0;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.addressFieldset legend {
+  padding: 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 /* Tablet & mobile: fullscreen modal */
 @media (max-width: 1024px) {
   .overlay {
@@ -261,5 +361,9 @@
     max-height: none;
     border-radius: 0;
     border: 0;
+  }
+
+  .siretRow {
+    grid-template-columns: 1fr;
   }
 }

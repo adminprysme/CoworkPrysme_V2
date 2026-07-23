@@ -15,6 +15,8 @@ import {
   BankTransferTransfersResponseSchema,
   MarkBankTransferReceivedRequestSchema,
   MarkBankTransferReceivedResponseSchema,
+  StaffBillingClientSearchQuerySchema,
+  StaffBillingClientSearchResponseSchema,
 } from "@coworkprysme/shared";
 import type { Request } from "express";
 
@@ -22,6 +24,7 @@ import type { Request } from "express";
 import { BillingPermissionGuard } from "../auth/billing-permission.guard.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { StaffContextService } from "../auth/staff-context.service.js";
+import { BillingClientsService } from "./billing-clients.service.js";
 import { BillingService } from "./billing.service.js";
 
 @Controller("billing")
@@ -29,8 +32,19 @@ import { BillingService } from "./billing.service.js";
 export class BillingController {
   constructor(
     private readonly billing: BillingService,
+    private readonly billingClients: BillingClientsService,
     private readonly staffContext: StaffContextService,
   ) {}
+
+  @Get("clients/search")
+  async searchClients(@Query() query: unknown) {
+    const parsed = StaffBillingClientSearchQuerySchema.safeParse(query ?? {});
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Invalid query");
+    }
+    const payload = await this.billingClients.searchClients(parsed.data.q);
+    return StaffBillingClientSearchResponseSchema.parse(payload);
+  }
 
   @Get("transfers")
   async listTransfers(@Query() query: unknown) {

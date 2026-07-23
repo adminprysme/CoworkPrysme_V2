@@ -1,4 +1,5 @@
 import type {
+  StaffBillingClientSearchResponse,
   StaffCreateQuoteRequest,
   StaffDeleteQuoteResponse,
   StaffQuote,
@@ -88,6 +89,11 @@ export function sendQuote(id: string): Promise<StaffSendQuoteResponse> {
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+export function searchBillingClients(q: string): Promise<StaffBillingClientSearchResponse> {
+  const params = new URLSearchParams({ q });
+  return quotesFetch<StaffBillingClientSearchResponse>(`/billing/clients/search?${params}`);
 }
 
 export function refuseQuote(id: string): Promise<StaffQuote> {

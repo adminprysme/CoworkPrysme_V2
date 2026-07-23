@@ -70,9 +70,8 @@ export function createDefaultProspect(): QuoteProspect {
     email: "",
     firstName: "",
     lastName: "",
-    displayName: "",
     phone: "",
-    companyName: "",
+    clientKind: "individual",
   };
 }
 
@@ -218,16 +217,76 @@ export function buildQuoteLines(input: {
   return lines;
 }
 
+export function deriveProspectDisplayName(prospect: QuoteProspect): string | undefined {
+  const first = prospect.firstName?.trim();
+  const last = prospect.lastName?.trim();
+  if (first && last) return `${first} ${last}`;
+  const legacy = prospect.displayName?.trim();
+  return legacy || undefined;
+}
+
 export function prospectForApi(prospect: QuoteProspect): QuoteProspect | undefined {
   const email = prospect.email.trim().toLowerCase();
   if (!email) return undefined;
+  const firstName = prospect.firstName?.trim();
+  const lastName = prospect.lastName?.trim();
+  const displayName = deriveProspectDisplayName(prospect);
+  const address = prospect.billingAddress;
+  const hasAddress = Boolean(
+    address?.street?.trim() && address.zip?.trim() && address.city?.trim(),
+  );
+  const siretDigits = prospect.siret?.replaceAll(/\D/g, "") || undefined;
   return {
     email,
-    ...(prospect.firstName?.trim() ? { firstName: prospect.firstName.trim() } : {}),
-    ...(prospect.lastName?.trim() ? { lastName: prospect.lastName.trim() } : {}),
-    ...(prospect.displayName?.trim() ? { displayName: prospect.displayName.trim() } : {}),
+    ...(firstName ? { firstName } : {}),
+    ...(lastName ? { lastName } : {}),
+    ...(displayName ? { displayName } : {}),
     ...(prospect.phone?.trim() ? { phone: prospect.phone.trim() } : {}),
+    ...(prospect.clientKind ? { clientKind: prospect.clientKind } : {}),
     ...(prospect.companyName?.trim() ? { companyName: prospect.companyName.trim() } : {}),
-    ...(prospect.billingAddress ? { billingAddress: prospect.billingAddress } : {}),
+    ...(siretDigits ? { siret: siretDigits } : {}),
+    ...(prospect.vatNumber?.trim() ? { vatNumber: prospect.vatNumber.trim() } : {}),
+    ...(hasAddress && address
+      ? {
+          billingAddress: {
+            street: address.street.trim(),
+            zip: address.zip.trim(),
+            city: address.city.trim(),
+            country: (address.country?.trim() || "FR").toUpperCase(),
+            ...(address.accessInfo?.trim() ? { accessInfo: address.accessInfo.trim() } : {}),
+          },
+        }
+      : {}),
   };
+}
+
+/** Client step gate before advancing / saving. */
+export function validateClientStep(input: {
+  cardexId: string;
+  clientAccountId: string;
+  prospect: QuoteProspect;
+}): string | null {
+  if (input.cardexId && input.clientAccountId) {
+    return null;
+  }
+  if (!input.prospect.email.trim()) {
+    return "L’email client est requis.";
+  }
+  if (!input.prospect.firstName?.trim() || !input.prospect.lastName?.trim()) {
+    return "Le prénom et le nom sont requis.";
+  }
+  const address = input.prospect.billingAddress;
+  if (!address?.street?.trim() || !address.zip?.trim() || !address.city?.trim()) {
+    return "L’adresse de facturation est requise.";
+  }
+  if (input.prospect.clientKind === "company") {
+    if (!input.prospect.companyName?.trim()) {
+      return "La raison sociale est requise pour un professionnel.";
+    }
+    const siret = input.prospect.siret?.replaceAll(/\D/g, "") ?? "";
+    if (!/^\d{14}$/.test(siret)) {
+      return "Le SIRET (14 chiffres) est requis pour un professionnel.";
+    }
+  }
+  return null;
 }

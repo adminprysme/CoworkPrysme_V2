@@ -617,6 +617,9 @@ export {
   StaffDeleteQuoteResponseSchema,
   StaffQuoteLineInputSchema,
   StaffQuoteLineSchema,
+  StaffBillingClientSearchItemSchema,
+  StaffBillingClientSearchQuerySchema,
+  StaffBillingClientSearchResponseSchema,
   StaffQuoteListItemSchema,
   StaffQuoteListQuerySchema,
   StaffQuoteListResponseSchema,
@@ -635,6 +638,9 @@ export {
   type QuoteProspectBillingAddress,
   type QuoteSendProspect,
   type QuoteStatus,
+  type StaffBillingClientSearchItem,
+  type StaffBillingClientSearchQuery,
+  type StaffBillingClientSearchResponse,
   type StaffCreateQuoteRequest,
   type StaffDeleteQuoteResponse,
   type StaffQuote,
@@ -648,6 +654,25 @@ export {
   type StaffSendQuoteResponse,
   type StaffUpdateQuoteRequest,
 } from "./billing-quotes.js";
+
+export {
+  COMPANY_LOOKUP_TIMEOUT_MS,
+  COMPANY_LOOKUP_URL,
+  computeFrenchVatFromSiren,
+  computeFrenchVatFromSiret,
+  isValidSiretDigits,
+  lookupCompanyBySiret,
+  mapCompanyLookupHit,
+  mapCompanyLookupResponse,
+  mapEstablishmentAddress,
+  normalizeSiretDigits,
+  type CompanyLookupAddress,
+  type CompanyLookupEstablishment,
+  type CompanyLookupHit,
+  type CompanyLookupOutcome,
+  type CompanyLookupResponse,
+  type CompanyLookupResult,
+} from "./company-lookup.js";
 
 export {
   BILLING_QUOTE_LOCKS_ERROR_CODES,

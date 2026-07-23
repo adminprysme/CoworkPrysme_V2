@@ -111,19 +111,22 @@ export async function bootstrapQuoteClientFromProspect(
     throw error;
   }
 
+  const isCompany = prospect.clientKind === "company" || Boolean(prospect.companyName?.trim());
+  const siretDigits = prospect.siret?.replaceAll(/\D/g, "") || undefined;
+
   const Cardex = await getCardexModel();
   const [cardex] = await Cardex.create(
     [
       {
         clientAccountId: createdAccountId,
         identity,
-        ...(prospect.billingAddress && !prospect.companyName
-          ? { address: prospect.billingAddress }
-          : {}),
-        ...(prospect.companyName
+        ...(!isCompany && prospect.billingAddress ? { address: prospect.billingAddress } : {}),
+        ...(isCompany && prospect.companyName
           ? {
               company: {
                 legalName: prospect.companyName,
+                ...(siretDigits ? { siret: siretDigits } : {}),
+                ...(prospect.vatNumber?.trim() ? { vatNumber: prospect.vatNumber.trim() } : {}),
                 ...(prospect.billingAddress ? { billingAddress: prospect.billingAddress } : {}),
               },
             }
