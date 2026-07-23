@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import type {
   BuildingResponse,
@@ -139,6 +139,29 @@ export function QuoteWizardPage() {
       }),
     [state.spaces, state.services, state.overrides, spaceCatalog, serviceCatalog],
   );
+
+  const closeModal = useCallback(() => {
+    if (busy || sending) return;
+    navigate("/billing/quotes");
+  }, [busy, navigate, sending]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closeModal]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -440,135 +463,150 @@ export function QuoteWizardPage() {
   }
 
   const step = QUOTE_WIZARD_STEPS[stepIndex]!;
-
-  if (loading) {
-    return <p className={pageStyles.muted}>Chargement du devis…</p>;
-  }
+  const title = state.reference ? `Devis ${state.reference}` : "Nouveau devis";
 
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <p className={pageStyles.muted}>
-          <Link to="/billing/quotes">← Devis</Link>
-        </p>
-        <h1 className={styles.title}>
-          {state.reference ? `Devis ${state.reference}` : "Nouveau devis"}
-        </h1>
-        <p className={styles.lead}>
-          Wizard 6 étapes — client prospect, multi-espaces avec locks, services, tarifs, conditions,
-          envoi.
-        </p>
-      </header>
+    <div className={styles.overlay} role="presentation" onClick={closeModal}>
+      <div
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quote-wizard-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.dialogAccent} aria-hidden="true" />
 
-      <div className={styles.steps} role="tablist" aria-label="Étapes du devis">
-        {QUOTE_WIZARD_STEPS.map((item, index) => (
+        <header className={styles.modalHeader}>
+          <div className={styles.modalHeaderMain}>
+            <h2 id="quote-wizard-title" className={styles.modalTitle}>
+              {title}
+            </h2>
+          </div>
           <button
-            key={item.id}
             type="button"
-            role="tab"
-            aria-selected={index === stepIndex}
-            className={`${styles.step} ${index === stepIndex ? styles.stepActive : ""} ${
-              index < stepIndex ? styles.stepDone : ""
-            }`}
-            onClick={() => setStepIndex(index)}
+            className={styles.closeBtn}
+            onClick={closeModal}
+            aria-label="Fermer"
+            disabled={busy || sending}
           >
-            {index + 1}. {item.label}
+            ×
           </button>
-        ))}
-      </div>
+        </header>
 
-      {error ? <p className={pageStyles.error}>{error}</p> : null}
-      {info ? <p className={pageStyles.success}>{info}</p> : null}
-
-      {step.id === "client" ? (
-        <ClientStep
-          prospect={state.prospect}
-          cardexId={state.cardexId}
-          clientAccountId={state.clientAccountId}
-          onChange={(next) =>
-            patchState({
-              prospect: next.prospect,
-              cardexId: next.cardexId,
-              clientAccountId: next.clientAccountId,
-            })
-          }
-        />
-      ) : null}
-
-      {step.id === "spaces" ? (
-        <SpacesStep
-          slots={state.spaces}
-          buildings={buildings}
-          spacesByBuilding={spacesByBuilding}
-          locksExpiresAt={state.locksExpiresAt}
-          busy={busy}
-          onChange={(spaces) => patchState({ spaces })}
-          onCheckAvailability={() => void handleCheckAvailability()}
-          onAcquireLocks={() => void handleAcquireLocks()}
-        />
-      ) : null}
-
-      {step.id === "services" ? (
-        <ServicesStep
-          catalog={services}
-          selected={state.services}
-          onChange={(next) => patchState({ services: next })}
-        />
-      ) : null}
-
-      {step.id === "pricing" ? (
-        <PricingStep
-          lines={lines}
-          depositPercent={state.depositPercent}
-          overrides={state.overrides}
-          onDepositChange={(depositPercent) => patchState({ depositPercent })}
-          onOverridesChange={(overrides) => patchState({ overrides })}
-        />
-      ) : null}
-
-      {step.id === "conditions" ? (
-        <ConditionsStep
-          paymentMethodPreferred={state.paymentMethodPreferred}
-          paymentSituation={state.paymentSituation}
-          validUntilLocal={state.validUntilLocal}
-          internalNote={state.internalNote}
-          publicConditions={state.publicConditions}
-          paymentTermsLabel={state.paymentTermsLabel}
-          onChange={(patch) => patchState(patch)}
-        />
-      ) : null}
-
-      {step.id === "recap" ? (
-        <RecapStep
-          state={state}
-          lines={lines}
-          lastSaved={lastSaved}
-          sending={sending}
-          onSaveDraft={() => void handleSaveDraft()}
-          onSend={() => void handleSend()}
-        />
-      ) : null}
-
-      <div className={styles.footer}>
-        <button
-          type="button"
-          className={pageStyles.secondaryButton}
-          disabled={stepIndex === 0 || busy}
-          onClick={() => setStepIndex((prev) => Math.max(0, prev - 1))}
-        >
-          Précédent
-        </button>
-        <div className={styles.footerRight}>
-          {step.id !== "recap" ? (
+        <div className={styles.steps} role="tablist" aria-label="Étapes du devis">
+          {QUOTE_WIZARD_STEPS.map((item, index) => (
             <button
+              key={item.id}
               type="button"
-              className={pageStyles.primaryButton}
-              disabled={busy}
-              onClick={() => void handleNext()}
+              role="tab"
+              aria-selected={index === stepIndex}
+              className={`${styles.step} ${index === stepIndex ? styles.stepActive : ""} ${
+                index < stepIndex ? styles.stepDone : ""
+              }`}
+              onClick={() => setStepIndex(index)}
             >
-              {busy ? "…" : "Suivant"}
+              {index + 1}. {item.label}
             </button>
+          ))}
+        </div>
+
+        <div className={styles.modalBody}>
+          {loading ? <p className={pageStyles.muted}>Chargement du devis…</p> : null}
+
+          {!loading && error ? <p className={pageStyles.error}>{error}</p> : null}
+          {!loading && info ? <p className={pageStyles.success}>{info}</p> : null}
+
+          {!loading && step.id === "client" ? (
+            <ClientStep
+              prospect={state.prospect}
+              cardexId={state.cardexId}
+              clientAccountId={state.clientAccountId}
+              onChange={(next) =>
+                patchState({
+                  prospect: next.prospect,
+                  cardexId: next.cardexId,
+                  clientAccountId: next.clientAccountId,
+                })
+              }
+            />
           ) : null}
+
+          {!loading && step.id === "spaces" ? (
+            <SpacesStep
+              slots={state.spaces}
+              buildings={buildings}
+              spacesByBuilding={spacesByBuilding}
+              locksExpiresAt={state.locksExpiresAt}
+              busy={busy}
+              onChange={(spaces) => patchState({ spaces })}
+              onCheckAvailability={() => void handleCheckAvailability()}
+              onAcquireLocks={() => void handleAcquireLocks()}
+            />
+          ) : null}
+
+          {!loading && step.id === "services" ? (
+            <ServicesStep
+              catalog={services}
+              selected={state.services}
+              onChange={(next) => patchState({ services: next })}
+            />
+          ) : null}
+
+          {!loading && step.id === "pricing" ? (
+            <PricingStep
+              lines={lines}
+              depositPercent={state.depositPercent}
+              overrides={state.overrides}
+              onDepositChange={(depositPercent) => patchState({ depositPercent })}
+              onOverridesChange={(overrides) => patchState({ overrides })}
+            />
+          ) : null}
+
+          {!loading && step.id === "conditions" ? (
+            <ConditionsStep
+              paymentMethodPreferred={state.paymentMethodPreferred}
+              paymentSituation={state.paymentSituation}
+              validUntilLocal={state.validUntilLocal}
+              internalNote={state.internalNote}
+              publicConditions={state.publicConditions}
+              paymentTermsLabel={state.paymentTermsLabel}
+              onChange={(patch) => patchState(patch)}
+            />
+          ) : null}
+
+          {!loading && step.id === "recap" ? (
+            <RecapStep
+              state={state}
+              lines={lines}
+              lastSaved={lastSaved}
+              sending={sending}
+              onSaveDraft={() => void handleSaveDraft()}
+              onSend={() => void handleSend()}
+            />
+          ) : null}
+        </div>
+
+        <div className={styles.footer}>
+          <button
+            type="button"
+            className={pageStyles.secondaryButton}
+            disabled={stepIndex === 0 || busy || loading}
+            onClick={() => setStepIndex((prev) => Math.max(0, prev - 1))}
+          >
+            Précédent
+          </button>
+          <div className={styles.footerRight}>
+            {step.id !== "recap" ? (
+              <button
+                type="button"
+                className={pageStyles.primaryButton}
+                disabled={busy || loading}
+                onClick={() => void handleNext()}
+              >
+                {busy ? "…" : "Suivant"}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
