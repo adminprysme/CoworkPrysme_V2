@@ -1,10 +1,17 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { AUTH_MODE, CENTRALE_HOME_URL, loginLocal, loginSso } from "../../lib/api.js";
+import {
+  AUTH_MODE,
+  CENTRALE_HOME_URL,
+  loginLocal,
+  loginSso,
+  type AuthMeResponse,
+} from "../../lib/api.js";
 import { useAuth } from "../../app/AuthProvider.js";
 import { ThemeToggle } from "../../components/ThemeToggle.js";
+import { SSOTransition } from "./SSOTransition.js";
 import styles from "./LoginPage.module.css";
 
 export function LoginPage() {
@@ -16,12 +23,26 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ssoPending, setSsoPending] = useState(false);
+  const [ssoAuthSucceeded, setSsoAuthSucceeded] = useState(false);
+  const [ssoUserName, setSsoUserName] = useState<string | undefined>();
+  const ssoMeRef = useRef<AuthMeResponse | null>(null);
+  const ssoAttemptedTokenRef = useRef<string | null>(null);
 
   function handleCentraleLogin() {
     if (!CENTRALE_HOME_URL) {
       return;
     }
     window.location.href = CENTRALE_HOME_URL;
+  }
+
+  function handleSsoTransitionComplete() {
+    const me = ssoMeRef.current;
+    if (!me) {
+      return;
+    }
+    setUser(me);
+    setSearchParams({}, { replace: true });
+    navigate("/dashboard", { replace: true });
   }
 
   useEffect(() => {
@@ -34,24 +55,33 @@ export function LoginPage() {
       return;
     }
 
+    if (ssoAttemptedTokenRef.current === token) {
+      return;
+    }
+    ssoAttemptedTokenRef.current = token;
+
     setSsoPending(true);
+    setSsoAuthSucceeded(false);
+    setSsoUserName(undefined);
+    ssoMeRef.current = null;
     setError(null);
 
     void loginSso(token)
       .then((me) => {
-        setUser(me);
-        setSearchParams({});
-        navigate("/dashboard", { replace: true });
+        ssoMeRef.current = me;
+        setSsoUserName(me.profile.displayName);
+        setSsoAuthSucceeded(true);
       })
       .catch((error: unknown) => {
         setError(
           error instanceof Error ? error.message : "Session expirée, reconnectez-vous via Centrale",
         );
-      })
-      .finally(() => {
         setSsoPending(false);
+        setSsoAuthSucceeded(false);
+        ssoMeRef.current = null;
+        setSearchParams({}, { replace: true });
       });
-  }, [navigate, searchParams, setSearchParams, setUser]);
+  }, [searchParams, setSearchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,6 +96,16 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (AUTH_MODE === "sso" && ssoPending) {
+    return (
+      <SSOTransition
+        authSucceeded={ssoAuthSucceeded}
+        userName={ssoUserName}
+        onComplete={handleSsoTransitionComplete}
+      />
+    );
   }
 
   return (
@@ -116,9 +156,7 @@ export function LoginPage() {
           </form>
         ) : (
           <div className={styles.ssoBox}>
-            {ssoPending ? (
-              <p>Connexion en cours…</p>
-            ) : error ? (
+            {error ? (
               <p className={styles.error}>{error}</p>
             ) : (
               <p>Connectez-vous via Centrale Application.</p>
@@ -129,7 +167,7 @@ export function LoginPage() {
             <button
               className={styles.button}
               type="button"
-              disabled={ssoPending || !CENTRALE_HOME_URL}
+              disabled={!CENTRALE_HOME_URL}
               onClick={handleCentraleLogin}
             >
               Se connecter via Centrale
