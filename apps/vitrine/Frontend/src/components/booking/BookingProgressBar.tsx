@@ -1,4 +1,4 @@
-import styles from "./BookingFloatingSummary.module.css";
+import styles from "./BookingProgressBar.module.css";
 
 export type BookingProgressStepId = "space" | "services" | "account" | "summary" | "payment";
 

@@ -4,6 +4,7 @@ import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SITE, SITE_URL } from "@/config/site";
+import { getDefaultCatalogBuildingSlug } from "@/lib/get-catalog-content";
 import { getSiteContact } from "@/lib/get-building-info";
 
 import "./globals.css";
@@ -42,15 +43,18 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const contact = await getSiteContact();
+  const [contact, defaultBuildingSlug] = await Promise.all([
+    getSiteContact(),
+    getDefaultCatalogBuildingSlug(),
+  ]);
 
   return (
     <html lang="fr" className={`${displayFont.variable} ${bodyFont.variable}`}>
       <body>
         <div className="siteShell">
-          <SiteHeader />
+          <SiteHeader defaultBuildingSlug={defaultBuildingSlug} />
           <main className="siteMain">{children}</main>
-          <SiteFooter contact={contact} />
+          <SiteFooter contact={contact} defaultBuildingSlug={defaultBuildingSlug} />
         </div>
       </body>
     </html>

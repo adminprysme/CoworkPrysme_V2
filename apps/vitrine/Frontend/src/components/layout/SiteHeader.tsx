@@ -6,11 +6,19 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { NavLink } from "@/components/ui/NavLink";
 import { Container } from "@/components/ui/Container";
 import { CLIENT_PORTAL_URL, MAIN_NAV } from "@/config/site";
+import { isNavItemActive, resolveNavHref } from "@/lib/catalog-nav";
+
+import { NavigationProgress } from "./NavigationProgress";
 import styles from "./SiteHeader.module.css";
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  defaultBuildingSlug?: string | null;
+}
+
+export function SiteHeader({ defaultBuildingSlug = null }: SiteHeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -25,8 +33,15 @@ export function SiteHeader() {
     };
   }, [menuOpen]);
 
+  const navItems = MAIN_NAV.map((item) => ({
+    ...item,
+    href: resolveNavHref(item.href, defaultBuildingSlug),
+  }));
+
   return (
     <header className={styles.header}>
+      <NavigationProgress />
+
       <Container className={styles.headerContainer}>
         <div className={styles.inner}>
           <Link href="/" className={styles.logoLink} aria-label="Cowork Prysme — Accueil">
@@ -41,18 +56,20 @@ export function SiteHeader() {
           </Link>
 
           <nav className={styles.navDesktop} aria-label="Navigation principale">
-            {MAIN_NAV.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            {navItems.map((item) => {
+              const active = isNavItemActive(pathname, item.href);
               return (
-                <Link
+                <NavLink
                   key={item.href}
                   href={item.href}
-                  className={[styles.navLink, active ? styles.navLinkActive : ""]
-                    .filter(Boolean)
-                    .join(" ")}
+                  prefetch
+                  className={styles.navLink}
+                  activeClassName={styles.navLinkActive}
+                  pendingClassName={styles.navLinkPending}
+                  isActive={active}
                 >
                   {item.label}
-                </Link>
+                </NavLink>
               );
             })}
           </nav>
@@ -66,7 +83,7 @@ export function SiteHeader() {
             >
               Se connecter
             </Button>
-            <Button href="/contact" variant="primary" size="sm" className={styles.actionButton}>
+            <Button href="/reservation" variant="primary" size="sm" className={styles.actionButton}>
               Réserver
             </Button>
           </div>
@@ -93,17 +110,28 @@ export function SiteHeader() {
           .join(" ")}
       >
         <nav className={styles.mobileNav} aria-label="Navigation mobile">
-          {MAIN_NAV.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.mobileNavLink}>
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const active = isNavItemActive(pathname, item.href);
+            return (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                prefetch
+                className={styles.mobileNavLink}
+                activeClassName={styles.mobileNavLinkActive}
+                pendingClassName={styles.mobileNavLinkPending}
+                isActive={active}
+              >
+                {item.label}
+              </NavLink>
+            );
+          })}
         </nav>
         <div className={styles.mobileActions}>
           <Button href={CLIENT_PORTAL_URL} variant="secondary" fullWidth>
             Créer un compte / Se connecter
           </Button>
-          <Button href="/contact" variant="primary" fullWidth>
+          <Button href="/reservation" variant="primary" fullWidth>
             Réserver
           </Button>
         </div>

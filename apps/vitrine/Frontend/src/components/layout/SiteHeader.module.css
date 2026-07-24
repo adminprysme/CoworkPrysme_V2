@@ -71,6 +71,10 @@
   background: var(--v-color-brand-muted);
 }
 
+.navLinkPending {
+  opacity: 0.65;
+}
+
 .actions {
   display: none;
   align-items: center;
@@ -167,12 +171,24 @@
 }
 
 .mobileNavLink {
+  display: block;
   padding: 0.85rem 1rem;
   border-radius: var(--v-radius-md);
   background: var(--v-color-surface);
   border: 1px solid var(--v-color-border);
   font-weight: 600;
   color: var(--v-color-ink);
+  transition: opacity var(--v-duration-fast) var(--v-ease-out);
+}
+
+.mobileNavLinkActive {
+  border-color: var(--v-color-brand-soft);
+  background: var(--v-color-brand-muted);
+  color: var(--v-color-brand-hover);
+}
+
+.mobileNavLinkPending {
+  opacity: 0.65;
 }
 
 .mobileActions {
