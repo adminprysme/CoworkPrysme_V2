@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { AboutGroupAffiliation } from "@/components/about/AboutGroupAffiliation";
@@ -11,7 +12,11 @@ import { ABOUT_PAGE } from "@/config/about-page";
 
 import styles from "./AboutPageContent.module.css";
 
-export function AboutPageContent() {
+interface AboutPageContentProps {
+  placeImage: string | null;
+}
+
+export function AboutPageContent({ placeImage }: AboutPageContentProps) {
   const { vision, distinguishers, place, cta, relatedLinks } = ABOUT_PAGE;
 
   return (
@@ -67,12 +72,24 @@ export function AboutPageContent() {
             </ScrollReveal>
 
             <ScrollReveal delay={100}>
-              <div className={styles.imagePlaceholder} aria-label={place.imageAlt}>
-                <div className={styles.imagePlaceholderInner}>
-                  <p className={styles.imagePlaceholderLabel}>{place.imageCaption}</p>
-                  <p className={styles.imagePlaceholderText}>Bâtiment A1</p>
+              {placeImage ? (
+                <div className={styles.placeImageWrap}>
+                  <Image
+                    src={placeImage}
+                    alt={place.imageAlt}
+                    fill
+                    sizes="(max-width: 900px) 100vw, 45vw"
+                    className={styles.placeImage}
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className={styles.imagePlaceholder} aria-label={place.imageAlt}>
+                  <div className={styles.imagePlaceholderInner}>
+                    <p className={styles.imagePlaceholderLabel}>{place.imageCaption}</p>
+                    <p className={styles.imagePlaceholderText}>Bâtiment A1</p>
+                  </div>
+                </div>
+              )}
             </ScrollReveal>
           </div>
         </Container>

@@ -47,6 +47,19 @@
   color: var(--v-color-brand);
 }
 
+.placeImageWrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--v-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--v-color-border);
+}
+
+.placeImage {
+  object-fit: cover;
+  object-position: center 42%;
+}
+
 .imagePlaceholder {
   position: relative;
   aspect-ratio: 4 / 3;

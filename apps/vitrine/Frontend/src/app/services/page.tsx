@@ -12,5 +12,10 @@ export const metadata = createPageMetadata({
 export default async function ServicesPage() {
   const servicesContent = await getServicesContent();
 
-  return <ServicesPageContent featuredSpaces={servicesContent.featuredSpaces} />;
+  return (
+    <ServicesPageContent
+      serviceImages={servicesContent.serviceImages}
+      featuredSpaces={servicesContent.featuredSpaces}
+    />
+  );
 }

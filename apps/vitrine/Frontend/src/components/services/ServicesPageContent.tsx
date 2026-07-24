@@ -6,15 +6,18 @@ import { Container } from "@/components/ui/Container";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Section, SectionHeading } from "@/components/ui/SectionHeading";
 import { SERVICES_PAGE } from "@/config/services-page";
-import type { ServicesFeaturedSpace } from "@coworkprysme/shared";
+import type { ServicesFeaturedSpace, VitrineServiceImages } from "@coworkprysme/shared";
 import serviceCardStyles from "@/components/home/ServicesPreviewSection.module.css";
 import styles from "./ServicesPageContent.module.css";
 
+const SERVICE_IMAGE_KEYS = ["roomService", "afterwork", "conciergerie"] as const;
+
 interface ServicesPageContentProps {
+  serviceImages: VitrineServiceImages;
   featuredSpaces: ServicesFeaturedSpace[];
 }
 
-export function ServicesPageContent({ featuredSpaces }: ServicesPageContentProps) {
+export function ServicesPageContent({ serviceImages, featuredSpaces }: ServicesPageContentProps) {
   const { services, spacesPreview } = SERVICES_PAGE;
 
   return (
@@ -24,25 +27,30 @@ export function ServicesPageContent({ featuredSpaces }: ServicesPageContentProps
       <Section>
         <Container>
           <div className={serviceCardStyles.grid}>
-            {services.map((service, index) => (
-              <ScrollReveal key={service.id} delay={index * 80}>
-                <article className={serviceCardStyles.card}>
-                  <div className={serviceCardStyles.imageWrap}>
-                    <Image
-                      src={service.imageFallback}
-                      alt=""
-                      fill
-                      sizes="(max-width: 960px) 100vw, 33vw"
-                      className={serviceCardStyles.image}
-                    />
-                  </div>
-                  <div className={serviceCardStyles.body}>
-                    <h2 className={serviceCardStyles.title}>{service.title}</h2>
-                    <p className={serviceCardStyles.text}>{service.description}</p>
-                  </div>
-                </article>
-              </ScrollReveal>
-            ))}
+            {services.map((service, index) => {
+              const imageKey = SERVICE_IMAGE_KEYS[index];
+              const image = imageKey ? serviceImages[imageKey] : service.imageFallback;
+
+              return (
+                <ScrollReveal key={service.id} delay={index * 80}>
+                  <article className={serviceCardStyles.card}>
+                    <div className={serviceCardStyles.imageWrap}>
+                      <Image
+                        src={image ?? service.imageFallback}
+                        alt=""
+                        fill
+                        sizes="(max-width: 960px) 100vw, 33vw"
+                        className={serviceCardStyles.image}
+                      />
+                    </div>
+                    <div className={serviceCardStyles.body}>
+                      <h2 className={serviceCardStyles.title}>{service.title}</h2>
+                      <p className={serviceCardStyles.text}>{service.description}</p>
+                    </div>
+                  </article>
+                </ScrollReveal>
+              );
+            })}
           </div>
         </Container>
       </Section>
