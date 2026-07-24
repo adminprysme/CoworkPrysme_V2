@@ -10,8 +10,8 @@ import { LocalBusinessJsonLd } from "./LocalBusinessJsonLd";
 import { SeoLandingFooter } from "./SeoLandingFooter";
 import layout from "./seo-landing-layouts.module.css";
 
-const IMAGE =
-  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80";
+const IMAGE = "/images/seo/coworking-jean-mace-exterieur.jpg";
+const IMAGE_ALT = "Façade du Gerland Technopark — CoworkPrysme, Lyon 7";
 
 interface Props {
   page: SeoLandingPageConfig;
@@ -42,8 +42,14 @@ export function JeanMacePageContent({ page }: Props) {
               <p className={layout.bodyText}>{sectionB.body}</p>
             </ScrollReveal>
             <ScrollReveal delay={100}>
-              <div className={layout.imageWrap}>
-                <Image src={IMAGE} alt="" fill sizes="(max-width: 900px) 100vw, 45vw" />
+              <div className={`${layout.imageWrap} ${layout.imageWrapLandscape}`}>
+                <Image
+                  src={IMAGE}
+                  alt={IMAGE_ALT}
+                  fill
+                  sizes="(max-width: 900px) 100vw, 45vw"
+                  className={layout.coverPhoto}
+                />
               </div>
             </ScrollReveal>
           </div>

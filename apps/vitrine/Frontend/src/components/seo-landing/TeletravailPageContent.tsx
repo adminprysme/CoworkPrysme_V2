@@ -9,9 +9,12 @@ import type { SeoLandingPageConfig } from "@/config/seo-landing-pages";
 import { LocalBusinessJsonLd } from "./LocalBusinessJsonLd";
 import { SeoLandingFooter } from "./SeoLandingFooter";
 import layout from "./seo-landing-layouts.module.css";
+import styles from "./TeletravailPageContent.module.css";
 
-const IMAGE =
-  "https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=900&q=80";
+const IMAGE = "/images/seo/bureau-teletravail.jpg";
+const IMAGE_ALT = "Professionnel au téléphone dans un espace de travail — CoworkPrysme, Lyon 7";
+const IMAGE_WIDTH = 681;
+const IMAGE_HEIGHT = 1024;
 
 interface Props {
   page: SeoLandingPageConfig;
@@ -27,15 +30,23 @@ export function TeletravailPageContent({ page }: Props) {
 
       <Section>
         <Container>
-          <div className={layout.splitGrid}>
+          <div className={styles.heroSplit}>
             <ScrollReveal>
-              <div className={layout.imageWrapTall}>
-                <Image src={IMAGE} alt="" fill sizes="(max-width: 900px) 100vw, 45vw" />
-              </div>
+              <figure className={styles.photoFrame}>
+                <Image
+                  src={IMAGE}
+                  alt={IMAGE_ALT}
+                  width={IMAGE_WIDTH}
+                  height={IMAGE_HEIGHT}
+                  className={styles.photo}
+                  sizes="(max-width: 900px) min(100vw, 20rem), 22rem"
+                  priority
+                />
+              </figure>
             </ScrollReveal>
             <ScrollReveal delay={80}>
-              <SectionHeading title={changes.title} />
-              <div className={layout.contrastBlock}>
+              <div className={styles.textCol}>
+                <SectionHeading title={changes.title} />
                 <p className={layout.bodyText}>{changes.body}</p>
               </div>
             </ScrollReveal>

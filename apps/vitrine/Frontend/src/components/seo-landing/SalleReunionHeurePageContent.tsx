@@ -18,8 +18,8 @@ const EQUIPMENT = [
   "Paperboard sur demande",
 ];
 
-const IMAGE =
-  "https://images.unsplash.com/photo-1431540015161-0bf868a2d407?auto=format&fit=crop&w=900&q=80";
+const IMAGE = "/images/seo/salle-reunion-reservation.webp";
+const IMAGE_ALT = "Salle de réunion équipée — CoworkPrysme, Lyon 7";
 
 interface Props {
   page: SeoLandingPageConfig;
@@ -37,8 +37,14 @@ export function SalleReunionHeurePageContent({ page }: Props) {
         <Container>
           <div className={layout.splitGridReverse}>
             <ScrollReveal delay={80}>
-              <div className={layout.imageWrap}>
-                <Image src={IMAGE} alt="" fill sizes="(max-width: 900px) 100vw, 45vw" />
+              <div className={`${layout.imageWrap} ${layout.imageWrapWide}`}>
+                <Image
+                  src={IMAGE}
+                  alt={IMAGE_ALT}
+                  fill
+                  sizes="(max-width: 900px) 100vw, 45vw"
+                  className={layout.coverPhotoMeeting}
+                />
               </div>
             </ScrollReveal>
             <ScrollReveal>

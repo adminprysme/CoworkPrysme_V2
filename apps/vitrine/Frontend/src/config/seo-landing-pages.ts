@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/config/site";
+
 export interface SeoLandingSection {
   title: string;
   body: string;
@@ -24,15 +26,12 @@ export interface SeoLandingPageConfig {
 }
 
 const OG = {
-  quartier:
-    "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&h=630&q=80",
+  quartier: `${SITE_URL}/images/seo/coworking-jean-mace-exterieur.jpg`,
   flex: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&h=630&q=80",
-  reunion:
-    "https://images.unsplash.com/photo-1431540015161-0bf868a2d407?auto=format&fit=crop&w=1200&h=630&q=80",
+  reunion: `${SITE_URL}/images/seo/salle-reunion-reservation.webp`,
   freelance:
     "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&h=630&q=80",
-  teletravail:
-    "https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=1200&h=630&q=80",
+  teletravail: `${SITE_URL}/images/seo/bureau-teletravail.jpg`,
   domiciliation:
     "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&h=630&q=80",
   startup:

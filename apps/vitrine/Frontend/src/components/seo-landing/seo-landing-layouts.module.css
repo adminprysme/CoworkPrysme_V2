@@ -26,6 +26,24 @@
   border: 1px solid var(--v-color-border);
 }
 
+.imageWrapLandscape {
+  aspect-ratio: 1024 / 729;
+}
+
+.imageWrapWide {
+  aspect-ratio: 16 / 9;
+}
+
+.coverPhoto {
+  object-fit: cover;
+  object-position: center 42%;
+}
+
+.coverPhotoMeeting {
+  object-fit: cover;
+  object-position: center center;
+}
+
 .imageWrapTall {
   composes: imageWrap;
   aspect-ratio: 3 / 4;
