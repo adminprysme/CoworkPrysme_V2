@@ -71,7 +71,7 @@ export function PolitiqueConfidentialiteContent() {
           <LegalList
             items={[
               "Identifiants de connexion (email, mot de passe chiffré)",
-              "Adresse IP",
+              "Adresse IP (voir aussi § 5 pour la distinction entre IP de connexion et IP d'acceptation de devis)",
               "Logs de connexion et d'activité",
               "Type de navigateur et appareil utilisé",
             ]}
@@ -98,6 +98,58 @@ export function PolitiqueConfidentialiteContent() {
             prestataire de paiement Stripe et ne sont jamais stockées sur nos serveurs.
           </LegalParagraph>
         </LegalSubSection>
+        <LegalSubSection title="3.5 Données relatives aux devis">
+          <LegalParagraph>
+            Lorsque vous demandez ou recevez un devis, nous pouvons collecter :
+          </LegalParagraph>
+          <LegalList
+            items={[
+              "Identité et coordonnées du prospect (nom, prénom, email, téléphone)",
+              "Informations professionnelles le cas échéant (raison sociale, SIRET, adresse de facturation)",
+              "Contenu du devis (prestations, montants, conditions)",
+              "Données liées à l'acceptation du devis, notamment l'horodatage de l'acceptation et l'adresse IP capturée à ce moment (preuve d'acceptation contractuelle — voir § 5)",
+              "Le cas échéant, les données nécessaires à la création d'un compte utilisateur si vous n'en disposez pas encore",
+            ]}
+          />
+        </LegalSubSection>
+        <LegalSubSection title="3.6 Documents associés à votre dossier (cardex)">
+          <LegalParagraph>
+            Dans le cadre de la gestion de votre dossier client, des documents peuvent être déposés
+            par notre personnel :
+          </LegalParagraph>
+          <LegalList
+            items={[
+              "Contrats : visibles par le client dans son espace",
+              "Autres documents (pièces internes, par exemple éléments de type RIB ou pièce d'identité) : conservés pour le suivi administratif, non visibles par le client",
+            ]}
+          />
+        </LegalSubSection>
+        <LegalSubSection title="3.7 Invitation de collaborateurs">
+          <LegalParagraph>
+            Lorsqu&apos;un propriétaire de compte invite un collaborateur à rejoindre le dossier
+            d&apos;une société :
+          </LegalParagraph>
+          <LegalList
+            items={[
+              "Adresse email du collaborateur invité",
+              "Rôle associé au compte (propriétaire ou collaborateur)",
+              "Données liées à l'acceptation de l'invitation (création ou rattachement de compte)",
+            ]}
+          />
+        </LegalSubSection>
+        <LegalSubSection title="3.8 Statut du compte (désactivation)">
+          <LegalParagraph>
+            Un compte peut être désactivé par notre personnel (par exemple départ d&apos;un
+            collaborateur). Dans ce cas, nous conservons notamment :
+          </LegalParagraph>
+          <LegalList
+            items={[
+              "L'état de désactivation du compte",
+              "La date de désactivation et, le cas échéant, un motif",
+              "Les informations permettant une réactivation ultérieure par le personnel habilité",
+            ]}
+          />
+        </LegalSubSection>
       </LegalSection>
 
       <LegalSection id="finalites" title="4. Finalités du traitement">
@@ -109,7 +161,27 @@ export function PolitiqueConfidentialiteContent() {
           rows={[
             ["Gestion de votre compte utilisateur", "Exécution du contrat"],
             ["Traitement des réservations d'espaces", "Exécution du contrat"],
+            [
+              "Établissement, envoi et acceptation des devis (y compris preuve d'acceptation)",
+              "Exécution du contrat / Obligation légale",
+            ],
+            [
+              "Invitation et gestion des collaborateurs rattachés à un compte société",
+              "Exécution du contrat / Intérêt légitime",
+            ],
+            [
+              "Désactivation ou réactivation d'un compte par le personnel habilité",
+              "Exécution du contrat / Intérêt légitime",
+            ],
+            [
+              "Conservation et mise à disposition des documents de dossier (contrats visibles client ; pièces internes non visibles client)",
+              "Exécution du contrat / Obligation légale",
+            ],
             ["Facturation et paiement", "Exécution du contrat / Obligation légale"],
+            [
+              "Mise à disposition d'un lien de paiement sécurisé par carte et d'un QR code sur facture (règlement des devis acceptés), envoyés par email et/ou affichés sur la facture",
+              "Exécution du contrat",
+            ],
             ["Service client et support", "Exécution du contrat / Intérêt légitime"],
             ["Envoi de communications commerciales", "Consentement"],
             ["Amélioration de nos services", "Intérêt légitime"],
@@ -124,9 +196,10 @@ export function PolitiqueConfidentialiteContent() {
         </LegalParagraph>
         <LegalList
           items={[
-            "Données de compte : Pendant toute la durée de la relation contractuelle, puis 3 ans après la dernière activité",
+            "Données de compte : pendant toute la durée de la relation contractuelle, puis 3 ans après la dernière activité",
             "Données de facturation : 10 ans (obligation légale comptable)",
-            "Logs de connexion : 1 an",
+            "Adresse IP capturée lors de l'acceptation d'un devis (preuve d'acceptation contractuelle, horodatée et rattachée au devis / document commercial) : 10 ans, alignée sur la durée de conservation de la facturation",
+            "Adresse IP de connexion et logs techniques classiques : 1 an",
             "Cookies : 13 mois maximum",
             "Demandes de support : 3 ans après la clôture du ticket",
           ]}

@@ -1,4 +1,4 @@
-export const LEGAL_LAST_UPDATED = new Date("2026-07-09T12:00:00+02:00");
+export const LEGAL_LAST_UPDATED = new Date("2026-07-24T12:00:00+02:00");
 
 export function formatLegalLastUpdated(date: Date = LEGAL_LAST_UPDATED): string {
   return date.toLocaleDateString("fr-FR", {
