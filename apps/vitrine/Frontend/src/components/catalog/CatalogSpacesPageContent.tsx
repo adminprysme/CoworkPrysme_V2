@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import type { CatalogPageConfig } from "@/config/catalog-pages";
 import { SITE } from "@/config/site";
+import { resolveRelatedLinkHref } from "@/lib/catalog-nav";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 
@@ -134,7 +135,11 @@ export function CatalogSpacesPageContent({
               Voir tous les tarifs →
             </Link>
             {config.relatedLinks.map((link) => (
-              <Link key={link.href} href={link.href} className={styles.footerLink}>
+              <Link
+                key={link.href}
+                href={resolveRelatedLinkHref(link.href, building.slug)}
+                className={styles.footerLink}
+              >
                 {link.label} →
               </Link>
             ))}

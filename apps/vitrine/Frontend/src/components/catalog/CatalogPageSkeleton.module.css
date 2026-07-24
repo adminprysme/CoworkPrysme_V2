@@ -1,0 +1,83 @@
+@keyframes catalogSkeletonPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.selector,
+.line,
+.heroImage,
+.card {
+  border-radius: var(--v-radius-md);
+  background: var(--v-color-surface-muted);
+  animation: catalogSkeletonPulse 1.2s ease-in-out infinite;
+}
+
+.selector {
+  width: min(100%, 28rem);
+  height: 2.5rem;
+  margin-bottom: var(--v-space-8);
+}
+
+.hero {
+  display: grid;
+  gap: var(--v-space-8);
+  margin-bottom: var(--v-space-10);
+}
+
+.heroCopy {
+  display: grid;
+  gap: var(--v-space-3);
+}
+
+.line {
+  height: 1rem;
+}
+
+.lineShort {
+  width: 8rem;
+}
+
+.lineTitle {
+  width: min(100%, 22rem);
+  height: 2.25rem;
+}
+
+.lineMedium {
+  width: min(100%, 30rem);
+}
+
+.lineLong {
+  width: min(100%, 40rem);
+  margin-bottom: var(--v-space-8);
+}
+
+.heroImage {
+  width: 100%;
+  min-height: 14rem;
+}
+
+.grid {
+  display: grid;
+  gap: var(--v-space-4);
+}
+
+.card {
+  min-height: 12rem;
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

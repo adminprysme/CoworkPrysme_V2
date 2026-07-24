@@ -3,16 +3,17 @@ import type {
   CatalogTariffsContent,
   SpaceType,
 } from "@coworkprysme/shared";
-import { SPACE_DURATION_CLASSES, formatCentsAsEuroString } from "@coworkprysme/shared";
 import Image from "next/image";
 import Link from "next/link";
 
 import type { CatalogPageConfig } from "@/config/catalog-pages";
 import { SITE } from "@/config/site";
+import { resolveRelatedLinkHref } from "@/lib/catalog-nav";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 
 import { CatalogBuildingSelector } from "./CatalogBuildingSelector";
+import { CatalogTariffSpaceAccordion } from "./CatalogTariffSpaceAccordion";
 import styles from "./catalog.module.css";
 
 interface CatalogTariffsPageContentProps {
@@ -37,70 +38,11 @@ const TARIFF_COLUMNS: Array<{
   },
 ];
 
-const DURATION_ORDER = Object.fromEntries(
-  SPACE_DURATION_CLASSES.map((durationClass, index) => [durationClass, index]),
-) as Record<(typeof SPACE_DURATION_CLASSES)[number], number>;
-
 function groupsForType(
   groups: CatalogTariffSpaceGroup[],
   type: SpaceType,
 ): CatalogTariffSpaceGroup[] {
   return groups.filter((group) => group.type === type);
-}
-
-function sortTariffLines<T extends { durationClass: (typeof SPACE_DURATION_CLASSES)[number] }>(
-  lines: T[],
-): T[] {
-  return [...lines].sort(
-    (left, right) => DURATION_ORDER[left.durationClass] - DURATION_ORDER[right.durationClass],
-  );
-}
-
-function lowestPriceCents(lines: CatalogTariffSpaceGroup["lines"]): number | null {
-  if (lines.length === 0) {
-    return null;
-  }
-  return Math.min(...lines.map((line) => line.priceHTCents));
-}
-
-interface TariffSpaceCardProps {
-  group: CatalogTariffSpaceGroup;
-}
-
-function TariffSpaceCard({ group }: TariffSpaceCardProps) {
-  const lines = sortTariffLines(group.lines);
-  const bestPrice = lowestPriceCents(lines);
-
-  return (
-    <article className={styles.tariffsSpaceCard}>
-      <h3 className={styles.tariffsSpaceTitle}>{group.spaceName}</h3>
-
-      {lines.length === 0 ? (
-        <p className={styles.tariffsSpaceEmpty}>Tarif sur demande</p>
-      ) : (
-        <ul className={styles.tariffsPriceList}>
-          {lines.map((line) => {
-            const isBestPrice = bestPrice !== null && line.priceHTCents === bestPrice;
-            return (
-              <li
-                key={line.durationClass}
-                className={`${styles.tariffsPriceRow}${isBestPrice ? ` ${styles.tariffsPriceRowHighlight}` : ""}`}
-              >
-                <span className={styles.tariffsDuration}>{line.label}</span>
-                <span className={styles.tariffsPriceBlock}>
-                  <span className={styles.tariffsAmount}>
-                    {formatCentsAsEuroString(line.priceHTCents)}
-                    <span className={styles.tariffsAmountSuffix}> € HT</span>
-                  </span>
-                  <span className={styles.tariffsVat}>{line.vatRate} % TVA</span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </article>
-  );
 }
 
 interface TariffColumnProps {
@@ -124,16 +66,30 @@ function TariffColumn({
       {groups.length === 0 ? (
         <div className={styles.tariffsColumnEmpty}>
           <p>{emptyMessage}</p>
-          <Link href="/contact" className={styles.tariffsColumnEmptyLink}>
-            Nous contacter →
+          <Link href="/reservation" className={styles.tariffsColumnEmptyLink}>
+            Voir toutes les salles en réservation →
+          </Link>
+          <Link href="/contact" className={styles.tariffsColumnEmptyLinkSecondary}>
+            Nous contacter
           </Link>
         </div>
       ) : (
-        <div className={styles.tariffsColumnCards}>
-          {groups.map((group) => (
-            <TariffSpaceCard key={group.spaceId} group={group} />
-          ))}
-        </div>
+        <>
+          <div className={styles.tariffsColumnCards}>
+            {groups.map((group, index) => (
+              <CatalogTariffSpaceAccordion
+                key={group.spaceId}
+                group={group}
+                defaultOpen={index === 0}
+              />
+            ))}
+          </div>
+          <p className={styles.tariffsColumnFootnote}>
+            <Link href="/reservation" className={styles.tariffsReservationLink}>
+              Voir tous les espaces et tarifs en réservation →
+            </Link>
+          </p>
+        </>
       )}
     </section>
   );
@@ -156,7 +112,7 @@ export function CatalogTariffsPageContent({ config, content }: CatalogTariffsPag
         <div className={styles.hero}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{config.heroEyebrow}</p>
-            <h1 className={styles.title}>Tarifs — {building.name}</h1>
+            <h1 className={styles.title}>{building.name}</h1>
             <p className={styles.lead}>{building.tagline ?? intro}</p>
           </div>
 
@@ -186,8 +142,6 @@ export function CatalogTariffsPageContent({ config, content }: CatalogTariffsPag
           ))}
         </div>
 
-        <p className={styles.legalNote}>Tarifs HT, TVA applicable indiquée.</p>
-
         <div className={styles.cardActions}>
           <Button href="/reservation">Réserver</Button>
           <Button href="/contact" variant="secondary">
@@ -197,7 +151,11 @@ export function CatalogTariffsPageContent({ config, content }: CatalogTariffsPag
 
         <div className={styles.footerLinks}>
           {config.relatedLinks.map((link) => (
-            <Link key={link.href} href={link.href} className={styles.footerLink}>
+            <Link
+              key={link.href}
+              href={resolveRelatedLinkHref(link.href, building.slug)}
+              className={styles.footerLink}
+            >
               {link.label} →
             </Link>
           ))}

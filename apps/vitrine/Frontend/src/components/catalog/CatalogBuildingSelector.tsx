@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import type { CatalogBuildingSummary } from "@coworkprysme/shared";
 
@@ -17,29 +15,35 @@ export function CatalogBuildingSelector({
   currentSlug,
   basePath,
 }: CatalogBuildingSelectorProps) {
-  const router = useRouter();
-
   if (buildings.length <= 1) {
     return null;
   }
 
   return (
-    <div className={styles.selectorWrap}>
-      <label className={styles.selectorLabel} htmlFor="catalog-building-selector">
-        Choisir un site
-      </label>
-      <select
-        id="catalog-building-selector"
-        className={styles.selector}
-        value={currentSlug}
-        onChange={(event) => router.push(`${basePath}/${event.target.value}`)}
-      >
-        {buildings.map((building) => (
-          <option key={building.id} value={building.slug}>
-            {building.name} — {building.city}
-          </option>
-        ))}
-      </select>
-    </div>
+    <nav className={styles.selectorWrap} aria-label="Choisir un site">
+      <p className={styles.selectorLabel}>Choisir un site</p>
+      <div className={styles.selectorPills} role="list">
+        {buildings.map((building) => {
+          const href = `${basePath}/${building.slug}`;
+          const isActive = building.slug === currentSlug;
+
+          return (
+            <Link
+              key={building.id}
+              href={href}
+              prefetch
+              role="listitem"
+              className={[styles.selectorPill, isActive ? styles.selectorPillActive : ""]
+                .filter(Boolean)
+                .join(" ")}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <span className={styles.selectorPillName}>{building.name}</span>
+              <span className={styles.selectorPillCity}>{building.city}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
