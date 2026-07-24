@@ -117,62 +117,6 @@
 }
 
 /* —— Catalogue cards (Espaces / Services) —— */
-.periodBlock {
-  display: grid;
-  gap: 0.65rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--color-surface-muted) 45%, var(--color-surface));
-}
-
-.periodBlockHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem 0.75rem;
-}
-
-.periodBlockTitle {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.periodClearButton {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  padding: 0;
-}
-
-.periodClearButton:hover {
-  color: var(--color-text);
-}
-
-.periodBlockHint {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  line-height: 1.4;
-}
-
-.periodBlockFields {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(0, 1fr) minmax(8rem, 10rem);
-  align-items: start;
-}
-
 .catalogGridFiltering {
   opacity: 0.55;
   pointer-events: none;
@@ -184,18 +128,61 @@
 }
 
 .catalogFilters {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(0, 1fr) minmax(7rem, 9rem);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.7rem;
   align-items: end;
-}
-
-.catalogFiltersWithBuilding {
-  grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem) minmax(7rem, 9rem);
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface-muted) 55%, var(--color-surface));
 }
 
 .catalogFiltersSingle {
-  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.filterSearch {
+  flex: 1 1 13rem;
+  min-width: min(100%, 11rem);
+  max-width: 20rem;
+}
+
+.filterPeriod {
+  flex: 1 1 15rem;
+  min-width: min(100%, 13rem);
+  max-width: 22rem;
+}
+
+.filterParty,
+.filterCapacity {
+  flex: 0 1 6.75rem;
+  min-width: 5.75rem;
+}
+
+.filterBuilding {
+  flex: 0 1 10.5rem;
+  min-width: 8.5rem;
+}
+
+.filterClearButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0 0.15rem 0.55rem;
+  white-space: nowrap;
+  align-self: end;
+}
+
+.filterClearButton:hover {
+  color: var(--color-text);
 }
 
 .filterSearchField {
@@ -705,11 +692,13 @@
 }
 
 @media (max-width: 640px) {
-  .catalogFilters,
-  .catalogFiltersWithBuilding,
-  .catalogFiltersSingle,
-  .periodBlockFields {
-    grid-template-columns: 1fr;
+  .filterSearch,
+  .filterPeriod,
+  .filterParty,
+  .filterCapacity,
+  .filterBuilding {
+    flex: 1 1 100%;
+    max-width: none;
   }
 
   .catalogGrid,

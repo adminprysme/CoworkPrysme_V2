@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IconSearch } from "@tabler/icons-react";
 import type { BuildingResponse, SpaceResponse } from "@coworkprysme/shared";
 
 import { checkQuoteAvailability } from "../../../../../lib/billing-quotes-api.js";
@@ -10,9 +9,9 @@ import {
   isWizardSpaceSlotComplete,
   newSlotKey,
 } from "../../../lib/quote-wizard-state.js";
-import { QuoteDurationRangeField } from "../QuoteDurationRangeField.js";
 import { QuoteSpaceCard } from "../QuoteSpaceCard.js";
 import { SpaceDetailPanel } from "../SpaceDetailPanel.js";
+import { SpacesFiltersBar } from "../SpacesFiltersBar.js";
 import styles from "../QuoteWizard.module.css";
 
 const AVAILABILITY_CHUNK_SIZE = 20;
@@ -302,97 +301,29 @@ export function SpacesStep({
         Espaces
       </h2>
       <p className={pageStyles.muted}>
-        Indiquez la période et le nombre de personnes pour filtrer les espaces disponibles, puis
-        sélectionnez. Vous pouvez encore ajuster chaque espace dans le panneau.
+        Filtrez par période et personnes pour ne voir que les espaces disponibles, puis
+        sélectionnez. Chaque espace reste ajustable dans le panneau.
       </p>
 
-      <div className={styles.periodBlock} data-period-block="true">
-        <div className={styles.periodBlockHeader}>
-          <h3 className={styles.periodBlockTitle}>Période &amp; personnes</h3>
-          {periodStartLocal || periodEndLocal ? (
-            <button type="button" className={styles.periodClearButton} onClick={clearPeriod}>
-              Effacer
-            </button>
-          ) : null}
-        </div>
-        <p className={styles.periodBlockHint}>
-          Une fois la période renseignée, la grille n’affiche que les espaces libres et assez
-          grands. Sans période, tous les espaces restent visibles (à compléter au panneau).
-        </p>
-        <div className={styles.periodBlockFields}>
-          <QuoteDurationRangeField
-            label="Période"
-            startLocal={periodStartLocal}
-            endLocal={periodEndLocal}
-            onChange={(next) => {
-              setPeriodStartLocal(next.startLocal);
-              setPeriodEndLocal(next.endLocal);
-            }}
-          />
-          <label className={pageStyles.label}>
-            Nombre de personnes
-            <input
-              className={pageStyles.input}
-              type="number"
-              min={1}
-              max={500}
-              value={periodPartySize}
-              onChange={(event) => setPeriodPartySize(Math.max(1, Number(event.target.value) || 1))}
-            />
-          </label>
-        </div>
-      </div>
-
-      <div
-        className={[
-          styles.catalogFilters,
-          showBuildingFilter ? styles.catalogFiltersWithBuilding : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <label className={`${pageStyles.label} ${styles.filterSearch}`}>
-          Rechercher
-          <span className={styles.filterSearchField}>
-            <IconSearch size={16} stroke={1.75} aria-hidden="true" />
-            <input
-              className={pageStyles.input}
-              type="search"
-              placeholder="Nom ou bâtiment…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </span>
-        </label>
-        {showBuildingFilter ? (
-          <label className={pageStyles.label}>
-            Bâtiment
-            <select
-              className={pageStyles.input}
-              value={buildingFilter}
-              onChange={(event) => setBuildingFilter(event.target.value)}
-            >
-              <option value="">Tous</option>
-              {buildingsInCatalog.map((building) => (
-                <option key={building.id} value={building.id}>
-                  {building.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <label className={pageStyles.label}>
-          Capacité min.
-          <input
-            className={pageStyles.input}
-            type="number"
-            min={0}
-            placeholder="0"
-            value={minCapacity || ""}
-            onChange={(event) => setMinCapacity(Math.max(0, Number(event.target.value) || 0))}
-          />
-        </label>
-      </div>
+      <SpacesFiltersBar
+        search={search}
+        onSearchChange={setSearch}
+        periodStartLocal={periodStartLocal}
+        periodEndLocal={periodEndLocal}
+        onPeriodChange={(next) => {
+          setPeriodStartLocal(next.startLocal);
+          setPeriodEndLocal(next.endLocal);
+        }}
+        periodPartySize={periodPartySize}
+        onPeriodPartySizeChange={setPeriodPartySize}
+        onClearPeriod={clearPeriod}
+        showBuildingFilter={showBuildingFilter}
+        buildings={buildingsInCatalog}
+        buildingFilter={buildingFilter}
+        onBuildingFilterChange={setBuildingFilter}
+        minCapacity={minCapacity}
+        onMinCapacityChange={setMinCapacity}
+      />
 
       {incompleteCount > 0 ? (
         <p className={styles.serviceIncompleteHint}>
