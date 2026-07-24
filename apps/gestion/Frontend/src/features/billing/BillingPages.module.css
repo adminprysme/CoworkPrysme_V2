@@ -214,7 +214,8 @@
 .dialog {
   width: min(40rem, 100%);
   max-height: min(88vh, 52rem);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: 14px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -222,7 +223,7 @@
 }
 
 .dialogWide {
-  width: min(48rem, 100%);
+  width: min(36rem, 100%);
 }
 
 .dialogHeader {
@@ -232,23 +233,32 @@
   gap: 1rem;
   padding: 1.1rem 1.25rem 0.85rem;
   border-bottom: 1px solid var(--color-border);
+  min-width: 0;
 }
 
 .dialogTitle {
   margin: 0;
   font-size: 1.15rem;
+  overflow-wrap: anywhere;
 }
 
 .dialogSubtitle {
-  margin: 0.3rem 0 0;
+  margin: 0.35rem 0 0;
   color: var(--color-text-muted);
   font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
 .dialogBody {
   display: grid;
-  gap: 1.1rem;
+  gap: 0.95rem;
   padding: 1.1rem 1.25rem;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .dialogFooter {
@@ -262,12 +272,17 @@
 
 .detailSection {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface-muted, #eee) 28%, var(--color-surface));
 }
 
 .detailSectionTitle {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -276,19 +291,59 @@
 
 .detailGrid {
   display: grid;
-  gap: 0.55rem 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.65rem 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.detailItem {
+  min-width: 0;
 }
 
 .detailItem dt {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--color-text-muted);
 }
 
 .detailItem dd {
-  margin: 0.15rem 0 0;
+  margin: 0.2rem 0 0;
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.amountCards {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.amountCard {
+  min-width: 0;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm, none);
+}
+
+.amountCardLabel {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.amountCardValue {
+  margin: 0.3rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
 }
 
 .detailList {
@@ -296,14 +351,59 @@
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.55rem;
+  gap: 0.65rem;
+  min-width: 0;
 }
 
 .detailListItem {
-  padding: 0.65rem 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--color-surface-muted, #eee) 35%, var(--color-surface));
+  background: var(--color-surface);
+}
+
+.detailListItem strong {
+  overflow-wrap: anywhere;
+}
+
+.detailListMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.metaChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
+}
+
+.reservationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 560px) {
+  .amountCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .confirmBox {

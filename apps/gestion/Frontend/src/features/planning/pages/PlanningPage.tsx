@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 import type {
   PlanningBuildingOption,
   PlanningCalendarReservation,
@@ -60,6 +61,7 @@ import styles from "./PlanningPage.module.css";
 const SPLIT_DESKTOP_MQ = "(min-width: 1025px)";
 
 export function PlanningPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<PlanningViewMode>("week");
   const [anchor, setAnchor] = useState(() => new Date());
   const [buildingId, setBuildingId] = useState<string | "all">("all");
@@ -351,6 +353,17 @@ export function PlanningPage() {
     setSelectedReservationId(reservationId);
     setContextMenu(null);
   }
+
+  // Deep-link from Facturation (and elsewhere): /planning?reservation=<id>
+  useEffect(() => {
+    const fromQuery = searchParams.get("reservation")?.trim();
+    if (!fromQuery || !/^[a-f0-9]{24}$/i.test(fromQuery)) return;
+    openReservation(fromQuery, "summary");
+    const next = new URLSearchParams(searchParams);
+    next.delete("reservation");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once per query id
+  }, [searchParams, setSearchParams]);
 
   function openSpaceHistory(spaceId: string) {
     clearReservationHover();

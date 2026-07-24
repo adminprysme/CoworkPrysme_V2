@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   parseEuroInputToCents,
@@ -15,6 +16,7 @@ import {
   listBillingInvoices,
   markBillingInvoicePaid,
 } from "../../../lib/billing-api.js";
+import { RESERVATION_STATUS_LABELS } from "../../planning/planning-ui.js";
 import { BillingStats } from "../components/BillingStats.js";
 import styles from "../BillingPages.module.css";
 
@@ -116,6 +118,7 @@ function CheckIcon() {
 }
 
 export function InvoicesListPage() {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<StaffBillingInvoiceListItem[]>([]);
   const [summary, setSummary] = useState<StaffBillingInvoiceListSummary>(EMPTY_SUMMARY);
   const [q, setQ] = useState("");
@@ -416,11 +419,18 @@ export function InvoicesListPage() {
                 <h2 id="invoice-detail-title" className={styles.dialogTitle}>
                   {detail?.reference ?? "Détail facture"}
                 </h2>
-                <p className={styles.dialogSubtitle}>
-                  {detail
-                    ? `${statusBadgeLabel(detail.status)} · ${formatEuroFromCents(detail.totals.ttc)} TTC`
-                    : "Chargement…"}
-                </p>
+                <div className={styles.dialogSubtitle}>
+                  {detail ? (
+                    <>
+                      <span className={styles.statusChip} data-status={detail.status}>
+                        {statusBadgeLabel(detail.status)}
+                      </span>
+                      <span>{formatEuroFromCents(detail.totals.ttc)} TTC</span>
+                    </>
+                  ) : (
+                    <span>Chargement…</span>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -457,37 +467,31 @@ export function InvoicesListPage() {
                         <dt>Devis</dt>
                         <dd>{detail.quote?.reference ?? "—"}</dd>
                       </div>
-                    </dl>
-                  </section>
-
-                  <section className={styles.detailSection}>
-                    <h3 className={styles.detailSectionTitle}>Montants</h3>
-                    <dl className={styles.detailGrid}>
-                      <div className={styles.detailItem}>
-                        <dt>HT</dt>
-                        <dd>{formatEuroFromCents(detail.totals.ht)}</dd>
-                      </div>
-                      <div className={styles.detailItem}>
-                        <dt>TVA</dt>
-                        <dd>{formatEuroFromCents(detail.totals.vat)}</dd>
-                      </div>
-                      <div className={styles.detailItem}>
-                        <dt>TTC</dt>
-                        <dd>{formatEuroFromCents(detail.totals.ttc)}</dd>
-                      </div>
-                      <div className={styles.detailItem}>
-                        <dt>Payé</dt>
-                        <dd>{formatEuroFromCents(detail.totals.paidTotal)}</dd>
-                      </div>
-                      <div className={styles.detailItem}>
-                        <dt>Solde</dt>
-                        <dd>{formatEuroFromCents(detail.totals.balanceDue)}</dd>
-                      </div>
                       <div className={styles.detailItem}>
                         <dt>Émise le</dt>
                         <dd>{formatDate(detail.issuedAt ?? detail.createdAt)}</dd>
                       </div>
                     </dl>
+                  </section>
+
+                  <section className={styles.detailSection}>
+                    <h3 className={styles.detailSectionTitle}>Montants</h3>
+                    <div className={styles.amountCards}>
+                      {(
+                        [
+                          ["HT", detail.totals.ht],
+                          ["TVA", detail.totals.vat],
+                          ["TTC", detail.totals.ttc],
+                          ["Payé", detail.totals.paidTotal],
+                          ["Solde", detail.totals.balanceDue],
+                        ] as const
+                      ).map(([label, cents]) => (
+                        <div key={label} className={styles.amountCard}>
+                          <p className={styles.amountCardLabel}>{label}</p>
+                          <p className={styles.amountCardValue}>{formatEuroFromCents(cents)}</p>
+                        </div>
+                      ))}
+                    </div>
                   </section>
 
                   <section className={styles.detailSection}>
@@ -499,12 +503,31 @@ export function InvoicesListPage() {
                         {detail.reservations.map((reservation) => (
                           <li key={reservation.id} className={styles.detailListItem}>
                             <strong>{reservation.spaceName}</strong>
-                            <div className={styles.muted}>
-                              {reservation.reference} · {reservation.status}
+                            <div className={styles.detailListMeta}>
+                              <span className={styles.muted}>{reservation.reference}</span>
+                              <span className={styles.metaChip}>
+                                {RESERVATION_STATUS_LABELS[reservation.status] ??
+                                  reservation.status}
+                              </span>
                             </div>
                             <div className={styles.muted}>
                               {formatDateTime(reservation.startAt)} →{" "}
                               {formatDateTime(reservation.endAt)}
+                            </div>
+                            <div className={styles.reservationActions}>
+                              <button
+                                type="button"
+                                className={styles.secondaryButton}
+                                onClick={() => {
+                                  setDetail(null);
+                                  setDetailError(null);
+                                  navigate(
+                                    `/planning?reservation=${encodeURIComponent(reservation.id)}`,
+                                  );
+                                }}
+                              >
+                                Ouvrir la réservation
+                              </button>
                             </div>
                           </li>
                         ))}
