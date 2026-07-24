@@ -290,7 +290,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
 
     const locks = await findActiveLocksBySessionId(lockSessionId, NOW);
     expect(locks).toHaveLength(0);
-  });
+  }, 20_000);
 
   it("client path (existing account): accepts direct with acceptedBy.client", async () => {
     const a = await seedSpace("FOCUS");

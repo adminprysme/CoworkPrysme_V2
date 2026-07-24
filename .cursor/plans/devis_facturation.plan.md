@@ -43,10 +43,10 @@ todos:
     status: completed
   - id: c9-stripe-link
     content: "Slice 9: quotePaymentLinks + /payer-devis + QR PDF + email + webhook quoteId"
-    status: pending
+    status: completed
   - id: c10-e2e
     content: "Slice 10: E2E (send sans cardex, accept unifié, bootstrap staff, paiement lien)"
-    status: pending
+    status: completed
 isProject: false
 ---
 
