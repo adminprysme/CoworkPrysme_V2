@@ -508,6 +508,7 @@ export function QuoteWizardPage() {
             spacesByBuilding={spacesByBuilding}
             locksExpiresAt={state.locksExpiresAt}
             checkingAvailability={checkingAvailability}
+            quoteDraftId={state.quoteId}
             onChange={(spaces) => patchState({ spaces })}
           />
         ) : null}
