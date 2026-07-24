@@ -3,6 +3,7 @@ import { IconBuilding, IconDoor, IconUsers } from "@tabler/icons-react";
 import type { BuildingResponse, SpaceResponse, SpaceType } from "@coworkprysme/shared";
 
 import { spacePrimaryPhotoUrl } from "../../../../pages/components/vitrine-catalog-photos.js";
+import { isWizardSpaceSlotComplete } from "../../lib/quote-wizard-state.js";
 import pageStyles from "../../BillingPages.module.css";
 import { QuoteDurationRangeField } from "./QuoteDurationRangeField.js";
 import styles from "./QuoteWizard.module.css";
@@ -41,6 +42,17 @@ export function SpaceDetailPanel({
   const photoUrl = spacePrimaryPhotoUrl(space.photos);
   const [imgFailed, setImgFailed] = useState(false);
   const showPhoto = Boolean(photoUrl) && !imgFailed;
+  const complete = isWizardSpaceSlotComplete({
+    key: space.id,
+    buildingId: space.buildingId,
+    spaceId: space.id,
+    spaceName: space.name,
+    startLocal,
+    endLocal,
+    partySize,
+    available,
+    availabilityReason,
+  });
 
   return (
     <aside className={styles.detailPanel} aria-label={`Configuration — ${space.name}`}>
@@ -111,6 +123,18 @@ export function SpaceDetailPanel({
           availabilityReason={availabilityReason}
           checking={checkingAvailability}
         />
+
+        {!complete ? (
+          <p className={styles.serviceIncompleteHint}>
+            {!startLocal.trim() || !endLocal.trim()
+              ? "Renseignez la durée pour finaliser la sélection."
+              : available === false
+                ? "Choisissez un créneau disponible pour finaliser la sélection."
+                : checkingAvailability
+                  ? "Vérification de la disponibilité en cours…"
+                  : "Complétez la durée, le nombre de personnes et la disponibilité."}
+          </p>
+        ) : null}
       </div>
     </aside>
   );

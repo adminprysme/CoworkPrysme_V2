@@ -4,7 +4,7 @@ import type { BuildingResponse, SpaceResponse } from "@coworkprysme/shared";
 
 import pageStyles from "../../../BillingPages.module.css";
 import type { WizardSpaceSlot } from "../../../lib/quote-wizard-state.js";
-import { newSlotKey } from "../../../lib/quote-wizard-state.js";
+import { isWizardSpaceSlotComplete, newSlotKey } from "../../../lib/quote-wizard-state.js";
 import { QuoteSpaceCard } from "../QuoteSpaceCard.js";
 import { SpaceDetailPanel } from "../SpaceDetailPanel.js";
 import styles from "../QuoteWizard.module.css";
@@ -143,6 +143,8 @@ export function SpacesStep({
     );
   }
 
+  const incompleteCount = slots.filter((slot) => !isWizardSpaceSlotComplete(slot)).length;
+
   return (
     <section className={styles.panel} aria-labelledby="quote-spaces-title">
       <h2 id="quote-spaces-title" className={styles.panelTitle}>
@@ -204,6 +206,13 @@ export function SpacesStep({
         </label>
       </div>
 
+      {incompleteCount > 0 ? (
+        <p className={styles.serviceIncompleteHint}>
+          {incompleteCount} espace{incompleteCount > 1 ? "s" : ""} à compléter (durée, personnes ou
+          disponibilité).
+        </p>
+      ) : null}
+
       {slots.length > 1 ? (
         <div className={styles.selectedChips} aria-label="Espaces sélectionnés">
           {slots.map((slot) => (
@@ -239,6 +248,7 @@ export function SpacesStep({
                     building={building}
                     selected={Boolean(slot)}
                     focused={focusedSpaceId === space.id}
+                    complete={slot ? isWizardSpaceSlotComplete(slot) : true}
                     onSelect={() => selectSpace(space)}
                     onDeselect={() => deselectSpace(space.id)}
                     onFocus={() => setFocusedSpaceId(space.id)}

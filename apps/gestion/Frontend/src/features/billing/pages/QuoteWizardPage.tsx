@@ -27,6 +27,7 @@ import {
   buildQuoteLines,
   createInitialWizardState,
   fromDatetimeLocalValue,
+  isWizardSpaceSlotComplete,
   prospectForApi,
   QUOTE_WIZARD_STEPS,
   toDatetimeLocalValue,
@@ -376,6 +377,14 @@ export function QuoteWizardPage() {
           throw new Error(clientError);
         }
         await ensureDraftSaved();
+      } else if (QUOTE_WIZARD_STEPS[stepIndex]?.id === "spaces") {
+        for (const slot of state.spaces) {
+          if (!isWizardSpaceSlotComplete(slot)) {
+            throw new Error(
+              `Complétez la configuration de « ${slot.spaceName || "l’espace"} » (durée et disponibilité) avant de continuer.`,
+            );
+          }
+        }
       } else if (QUOTE_WIZARD_STEPS[stepIndex]?.id === "services") {
         for (const pick of state.services) {
           const service = serviceCatalog.get(pick.serviceId);

@@ -264,6 +264,17 @@ export function prospectForApi(prospect: QuoteProspect): QuoteProspect | undefin
   };
 }
 
+/** Selected space is ready when duration is set and availability check passed. */
+export function isWizardSpaceSlotComplete(slot: WizardSpaceSlot): boolean {
+  if (!slot.spaceId || !slot.startLocal.trim() || !slot.endLocal.trim()) return false;
+  const startAt = fromDatetimeLocalValue(slot.startLocal);
+  const endAt = fromDatetimeLocalValue(slot.endLocal);
+  if (!startAt || !endAt) return false;
+  if (new Date(endAt).getTime() <= new Date(startAt).getTime()) return false;
+  if (!Number.isFinite(slot.partySize) || slot.partySize < 1) return false;
+  return slot.available === true;
+}
+
 /** Client step gate before advancing / saving. */
 export function validateClientStep(input: {
   cardexId: string;

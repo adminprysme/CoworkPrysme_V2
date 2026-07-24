@@ -22,6 +22,8 @@ type QuoteSpaceCardProps = {
   building: BuildingResponse | undefined;
   selected: boolean;
   focused?: boolean;
+  /** When selected: duration + availability ready (mirrors Services `data-complete`). */
+  complete?: boolean;
   onSelect: () => void;
   onDeselect: () => void;
   onFocus: () => void;
@@ -47,6 +49,7 @@ export function QuoteSpaceCard({
   building,
   selected,
   focused = false,
+  complete = true,
   onSelect,
   onDeselect,
   onFocus,
@@ -78,6 +81,7 @@ export function QuoteSpaceCard({
       data-space-type={space.type}
       data-selected={selected ? "true" : "false"}
       data-focused={focused ? "true" : "false"}
+      data-complete={complete ? "true" : "false"}
       onClick={onCardClick}
     >
       <div className={styles.catalogMedia}>
@@ -98,7 +102,9 @@ export function QuoteSpaceCard({
             <span>{TYPE_FALLBACK_LABEL[space.type]}</span>
           </div>
         )}
-        {selected ? <span className={styles.selectedBadge}>Sélectionné</span> : null}
+        {selected ? (
+          <span className={styles.selectedBadge}>{complete ? "Sélectionné" : "À compléter"}</span>
+        ) : null}
       </div>
 
       <div className={styles.catalogBody}>
