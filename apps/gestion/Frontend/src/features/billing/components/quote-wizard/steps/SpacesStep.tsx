@@ -51,7 +51,6 @@ export function SpacesStep({
   onChange,
 }: SpacesStepProps) {
   const [search, setSearch] = useState("");
-  const [minCapacity, setMinCapacity] = useState(0);
   const [buildingFilter, setBuildingFilter] = useState("");
   const [focusedSpaceId, setFocusedSpaceId] = useState<string | null>(null);
 
@@ -187,7 +186,6 @@ export function SpacesStep({
     const q = search.trim().toLowerCase();
     return catalog.filter(({ space, building }) => {
       if (buildingFilter && building?.id !== buildingFilter) return false;
-      if (minCapacity > 0 && space.capacity < minCapacity) return false;
       if (periodReady) {
         if (space.capacity < periodPartySize) return false;
         // While loading first result, hide nothing yet by availability (capacity already applied).
@@ -198,15 +196,7 @@ export function SpacesStep({
       const haystack = `${space.name} ${building?.name ?? ""}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [
-    availableSpaceIds,
-    buildingFilter,
-    catalog,
-    minCapacity,
-    periodPartySize,
-    periodReady,
-    search,
-  ]);
+  }, [availableSpaceIds, buildingFilter, catalog, periodPartySize, periodReady, search]);
 
   const filteredIds = useMemo(() => new Set(filtered.map((entry) => entry.space.id)), [filtered]);
 
@@ -321,8 +311,6 @@ export function SpacesStep({
         buildings={buildingsInCatalog}
         buildingFilter={buildingFilter}
         onBuildingFilterChange={setBuildingFilter}
-        minCapacity={minCapacity}
-        onMinCapacityChange={setMinCapacity}
       />
 
       {incompleteCount > 0 ? (

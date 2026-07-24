@@ -154,8 +154,7 @@
   max-width: 22rem;
 }
 
-.filterParty,
-.filterCapacity {
+.filterParty {
   flex: 0 1 6.75rem;
   min-width: 5.75rem;
 }
@@ -695,7 +694,6 @@
   .filterSearch,
   .filterPeriod,
   .filterParty,
-  .filterCapacity,
   .filterBuilding {
     flex: 1 1 100%;
     max-width: none;

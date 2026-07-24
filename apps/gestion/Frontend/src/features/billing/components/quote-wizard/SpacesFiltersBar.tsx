@@ -18,8 +18,6 @@ type SpacesFiltersBarProps = {
   buildings: BuildingResponse[];
   buildingFilter: string;
   onBuildingFilterChange: (value: string) => void;
-  minCapacity: number;
-  onMinCapacityChange: (value: number) => void;
 };
 
 export function SpacesFiltersBar({
@@ -35,8 +33,6 @@ export function SpacesFiltersBar({
   buildings,
   buildingFilter,
   onBuildingFilterChange,
-  minCapacity,
-  onMinCapacityChange,
 }: SpacesFiltersBarProps) {
   const hasPeriod = Boolean(periodStartLocal || periodEndLocal);
 
@@ -102,18 +98,6 @@ export function SpacesFiltersBar({
           </select>
         </label>
       ) : null}
-
-      <label className={`${pageStyles.label} ${styles.filterCapacity}`}>
-        Capacité min.
-        <input
-          className={pageStyles.input}
-          type="number"
-          min={0}
-          placeholder="0"
-          value={minCapacity || ""}
-          onChange={(event) => onMinCapacityChange(Math.max(0, Number(event.target.value) || 0))}
-        />
-      </label>
 
       {hasPeriod ? (
         <button type="button" className={styles.filterClearButton} onClick={onClearPeriod}>
