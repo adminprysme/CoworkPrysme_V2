@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
 import {
   PublicQuoteAcceptConfirmLoginRequestSchema,
   PublicQuoteAcceptConfirmRequestSchema,
@@ -11,7 +11,7 @@ import { QuotesAcceptService } from "./quotes-accept.service.js";
 
 @Controller("quotes/accept")
 export class QuotesAcceptController {
-  constructor(private readonly quotesAccept: QuotesAcceptService) {}
+  constructor(@Inject(QuotesAcceptService) private readonly quotesAccept: QuotesAcceptService) {}
 
   @Get(":token")
   async preview(@Param("token") token: string) {

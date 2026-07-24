@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Query } from "@nestjs/common";
 import {
   CreateQuotePaymentIntentRequestSchema,
   CreateQuotePaymentIntentResponseSchema,
@@ -18,7 +18,7 @@ import { QuotePaymentService } from "./quote-payment.service.js";
  */
 @Controller("quotes/payments")
 export class QuotePaymentController {
-  constructor(private readonly quotePayment: QuotePaymentService) {}
+  constructor(@Inject(QuotePaymentService) private readonly quotePayment: QuotePaymentService) {}
 
   @Get("preview")
   async preview(@Query() query: Record<string, unknown>) {

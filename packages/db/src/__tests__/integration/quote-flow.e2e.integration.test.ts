@@ -1,11 +1,15 @@
 /**
- * #10 — Devis / Facturation E2E final (domain integration).
+ * #10 — Devis flow E2E (domain integration).
  *
- * Chains the real domain functions used by gestion + vitrine APIs:
- * create draft → send (token) → accept → payment link → Stripe apply →
- * confirm ALL Option-A reservations ; staff bootstrap → activation → login.
+ * Full chain via real domain functions + MongoMemoryReplSet (`setup.ts`):
+ *   a) multi-espace create → send → client_register accept → pay → confirm N
+ *   b) staff-accept bootstrap → activation → login
+ *   c) expired / forbidden transitions inside this same create→send chain
  *
- * No Nest mocks — MongoMemoryReplSet + transactional paths.
+ * Cross-invoice / cross-quote 404 (PAYMENT_LINK_NOT_FOUND) is covered by
+ * `quote-payment-link.integration.test.ts` — not re-asserted here to avoid
+ * duplication; this file only redeems with the matching invoiceId on the
+ * happy path.
  */
 import { Types } from "mongoose";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -30,7 +34,6 @@ import {
   registerQuotePaymentLinkModel,
   type AcceptQuoteError,
   type QuoteAcceptLookupError,
-  type QuotePaymentLinkLookupError,
 } from "../../domains/billing/index.js";
 import {
   consumeClientAccountActivation,
@@ -253,7 +256,7 @@ async function sendDraftQuote(quoteId: Types.ObjectId) {
   return { quote: updated, rawToken: token.rawToken, expiresAt: token.expiresAt };
 }
 
-describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
+describe("E2E #10 — quote-flow (domain chain)", () => {
   beforeAll(async () => {
     const uri = await startIntegrationMongo();
     await configureIntegrationEnv(uri);
@@ -281,7 +284,7 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
     await stopIntegrationMongo();
   });
 
-  it("1) multi-espace: draft → send sans cardex → accept client (nouveau compte) → acompte → résas confirmed", async () => {
+  it("a) multi-espace: create → send → accept client_register → pay → all résas confirmed", async () => {
     const a = await seedSpace("FOCUS");
     const b = await seedSpace("OPEN");
     const { quote, pricing } = await createDraftQuote({ a, b });
@@ -343,19 +346,7 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
     expect(acceptedQuote?.depositVatBreakdown?.length).toBeGreaterThan(0);
     expect(acceptedQuote?.depositAmountTTC).toBe(pricing.depositAmountTTC);
 
-    // Cross-invoice redeem → uniform not-found (point 7).
-    const otherInvoiceId = new Types.ObjectId();
-    await expect(
-      redeemQuotePaymentLink({
-        rawToken: accepted.paymentLink!.rawToken,
-        invoiceId: otherInvoiceId,
-        tokenSecret: PAYMENT_SECRET,
-      }),
-    ).rejects.toMatchObject({
-      name: "QuotePaymentLinkLookupError",
-      code: "PAYMENT_LINK_NOT_FOUND",
-    } satisfies Partial<QuotePaymentLinkLookupError>);
-
+    // Matching redeem only — cross-invoice 404 lives in quote-payment-link.integration.test.ts
     const redeemed = await redeemQuotePaymentLink({
       rawToken: accepted.paymentLink!.rawToken,
       invoiceId: accepted.invoiceId,
@@ -411,7 +402,7 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
     ).resolves.toBe(true);
   }, 30_000);
 
-  it("2) staff-accept oral: bootstrap pending_activation → activation MDP → connexion", async () => {
+  it("b) staff-accept: bootstrap pending_activation → activation → verifyCredentials", async () => {
     const a = await seedSpace("FOCUS");
     const b = await seedSpace("OPEN");
     const { quote } = await createDraftQuote({
@@ -479,11 +470,11 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
     ).resolves.toBe(false);
   }, 30_000);
 
-  it("3) gardes E2E: devis expiré, transitions interdites, cross-quote/invoice 404", async () => {
+  it("c) create→send chain: devis expiré + transitions interdites (not isolated unit)", async () => {
     const a = await seedSpace("FOCUS");
     const b = await seedSpace("OPEN");
 
-    // --- Expired validUntil while still "sent"
+    // Expired validUntil after full create → send (same chain as happy path)
     const { quote: expiredQuote } = await createDraftQuote({
       a,
       b,
@@ -515,7 +506,7 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
     const stillSent = await Quote.findById(expiredQuote._id).lean().exec();
     expect(stillSent?.status).toBe("sent");
 
-    // --- Forbidden: accept draft (not sent)
+    // Forbidden: accept before send (still draft)
     const { quote: draftOnly } = await createDraftQuote({
       a,
       b,
@@ -534,54 +525,33 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
       }),
     ).rejects.toMatchObject({ code: "QUOTE_INVALID_STATUS" });
 
-    // --- Hard delete draft (domain invariant mirrored by QuotesService.deleteDraft)
+    // Hard delete draft (QuotesService.deleteDraft domain invariant)
     await draftOnly.deleteOne();
-    const gone = await Quote.findById(draftOnly._id).lean().exec();
-    expect(gone).toBeNull();
+    expect(await Quote.findById(draftOnly._id).lean().exec()).toBeNull();
 
-    // --- Accept token unknown / wrong secret → uniform not-found
+    // Unknown accept token → uniform not-found
     await expect(getQuoteByAcceptToken("a".repeat(64), ACCEPT_SECRET, NOW)).rejects.toMatchObject({
       name: "QuoteAcceptLookupError",
       code: "QUOTE_ACCEPT_NOT_FOUND",
     } satisfies Partial<QuoteAcceptLookupError>);
 
-    // --- Happy path enough to mint a payment link, then cross-invoice 404
+    // Double-accept forbidden after a full create → send → accept
     const { quote: payQuote } = await createDraftQuote({
       a,
       b,
-      email: "e2e.crosspay@example.com",
+      email: "e2e.double@example.com",
     });
     await sendDraftQuote(payQuote._id);
-    const accepted = await acceptQuote({
+    await acceptQuote({
       quoteId: payQuote._id,
       actor: {
         kind: "client_register",
-        password: "CrossPayPass1!",
+        password: "DoublePass1!",
         privacyPolicyVersion: "2026-07-01",
       },
       now: NOW,
       paymentLinkTokenSecret: PAYMENT_SECRET,
     });
-    expect(accepted.paymentLink).toBeTruthy();
-
-    await expect(
-      redeemQuotePaymentLink({
-        rawToken: accepted.paymentLink!.rawToken,
-        invoiceId: new Types.ObjectId(),
-        tokenSecret: PAYMENT_SECRET,
-      }),
-    ).rejects.toMatchObject({ code: "PAYMENT_LINK_NOT_FOUND" });
-
-    // Wrong token secret / garbage → same not-found (no oracle).
-    await expect(
-      redeemQuotePaymentLink({
-        rawToken: "b".repeat(64),
-        invoiceId: accepted.invoiceId,
-        tokenSecret: PAYMENT_SECRET,
-      }),
-    ).rejects.toMatchObject({ code: "PAYMENT_LINK_NOT_FOUND" });
-
-    // Double-accept forbidden.
     await expect(
       acceptQuote({
         quoteId: payQuote._id,
@@ -595,4 +565,11 @@ describe("E2E #10 — Devis / Facturation (full domain chain)", () => {
       }),
     ).rejects.toMatchObject({ code: "QUOTE_INVALID_STATUS" });
   }, 30_000);
+
+  /**
+   * d) Cross-invoice / cross-quote 404 — see
+   * `quote-payment-link.integration.test.ts`
+   * ("rejects cross-invoice redeem with uniform PAYMENT_LINK_NOT_FOUND").
+   * HTTP surface covered by vitrine QuotePaymentController Nest tests.
+   */
 });

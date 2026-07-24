@@ -65,17 +65,17 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 | **7** | PDF devis (`@coworkprysme/invoice-pdf` template distinct) + email d’envoi avec PJ ; exclusion `internalNote` | **Clos** — `cc2b4e8` ; preuves `%PDF` + tests exclusion note + `attachments` définis |
 | **8** | `acceptQuote` unifié (`packages/db`) — staff + client ; bootstrap `pending_activation` en txn ; rollback / dispo / `validUntil` / dual-path / `acceptedBy` | **Clos** — `c417da8` + preuves renforcées `f1a3273` |
 | **9** | Stripe payment link + QR facture + webhook `quoteId` + pages vitrine `/accepter-devis`, `/activer-compte`, `/payer-devis` | **Clos** — `8753be3` + fix UX paiement `28f9e72` ; preuves nominales **validées visuellement par l’utilisateur** |
-| **10** | E2E final | **Clos** — `quote-billing-e2e.integration.test.ts` + suite monorepo + `pnpm build` |
+| **10** | E2E final | **Clos** — `quote-flow.e2e.integration.test.ts` + Nest HTTP 404 + `pnpm test` / `pnpm build` |
 
 ### #10 — détail (clos)
 
-- **Livré** : E2E domaine MongoMemoryReplSet chaînant les fonctions réelles (pas de mocks Nest) dans `packages/db/src/__tests__/integration/quote-billing-e2e.integration.test.ts`.
-  1. Multi-espaces A+A1 : draft (override + deposit 30% + TVA acompte) → send sans cardex (token) → accept `client_register` → payment link acompte → `applyStripeCardPayment` → confirm **2** résas → link `consumed` → login OK.
-  2. Staff-accept oral : bootstrap `pending_activation` + cardex → `AccountPendingActivationError` au login → `consumeClientAccountActivation` → login OK.
-  3. Gardes : `QUOTE_EXPIRED`, `QUOTE_INVALID_STATUS` (draft / double-accept), hard delete draft, cross-invoice / token inconnu → `PAYMENT_LINK_NOT_FOUND` / `QUOTE_ACCEPT_NOT_FOUND`.
-- **Suite monorepo** (exécutée) : shared 217, db 152, invoice-pdf 12, gestion-api 129, vitrine-api 88, vitrine-web 26 — **tous passés** ; gestion-web sans script `test`.
-- **`pnpm build`** : 7/7 packages OK (après clean `dist` gestion-api — race ENOTEMPTY connue hors métier).
-- Timeout vitest db : `testTimeout: 15_000` + `maxWorkers: 4` pour limiter flakes MongoMemory sous contention.
+- **Livré** : E2E domaine MongoMemoryReplSet dans `packages/db/src/__tests__/integration/quote-flow.e2e.integration.test.ts` (`setup.ts`).
+  1. Multi-espaces A+A1 : create → send (`attachQuoteAcceptToken`) → `acceptQuote(client_register)` → payment link acompte → `applyStripeCardPayment` → confirm **N** résas → `consumeQuotePaymentLink` → toutes `confirmed`.
+  2. Staff-accept : bootstrap cardex + `pending_activation` → `consumeClientAccountActivation` → `verifyClientAccountCredentials` OK.
+  3. Gardes dans la **même** chaîne create→send : `QUOTE_EXPIRED`, `QUOTE_INVALID_STATUS`, hard delete draft, double-accept.
+  4. Cross-invoice 404 : **référencé** (pas dupliqué) via `quote-payment-link.integration.test.ts` + HTTP Nest `GET /quotes/payments/preview` → 404 ; accept `GET /quotes/accept/:token` → 404.
+- **Racine** : `"test": "turbo run test"` + task turbo `test` (`dependsOn: ^build`, `cache: false`).
+- Timeout vitest db : `testTimeout: 15_000` + `maxWorkers: 4`.
 
 ### #9 — détail (clos)
 
@@ -119,7 +119,7 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 
 - Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`
 - Shared / env : `packages/shared/src/billing-quotes.ts`, `company-lookup.ts`, `env.ts` (`GestionApiEnvSchema` / vitrine)
-- DB : `packages/db/src/domains/billing/quote.schema.ts`, `accept-quote.ts`, `quote-accept-token`, bootstrap / payment-link schemas ; E2E `#10` : `packages/db/src/__tests__/integration/quote-billing-e2e.integration.test.ts`
+- DB : `packages/db/src/domains/billing/quote.schema.ts`, `accept-quote.ts`, `quote-accept-token`, bootstrap / payment-link schemas ; E2E `#10` : `packages/db/src/__tests__/integration/quote-flow.e2e.integration.test.ts`
 - PDF : `packages/invoice-pdf` (`templates/quote.html.ts`, QR facture)
 - API gestion : `apps/gestion/Backend/src/billing/quotes.*`, locks, clients search
 - API vitrine : `quotes-accept/*`, paiement devis / webhook branche `quoteId`
