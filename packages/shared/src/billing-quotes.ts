@@ -298,12 +298,17 @@ export const StaffQuoteSchema = z.object({
       kind: QuoteAcceptedByKindSchema,
       clientAccountId: z.string().optional(),
       staffProfileId: z.string().optional(),
+      /** Client self-service accept only (IPv4/IPv6). */
+      ipAddress: z.string().trim().min(1).max(45).optional(),
     })
     .optional(),
   createdByStaffProfileId: z.string().optional(),
   acceptTokenExpiresAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  /** Populated by staff GET / list enrichment (prospect or cardex). */
+  clientLabel: z.string().optional(),
+  companyLegalName: z.string().nullable().optional(),
 });
 export type StaffQuote = z.infer<typeof StaffQuoteSchema>;
 
@@ -322,6 +327,11 @@ export const StaffQuoteListItemSchema = StaffQuoteSchema.pick({
   sentAt: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  /** Contact display (prospect name or cardex identity). */
+  clientLabel: z.string(),
+  /** Company first in UI — prospect.companyName or cardex.company.legalName. */
+  companyLegalName: z.string().nullable(),
 });
 export type StaffQuoteListItem = z.infer<typeof StaffQuoteListItemSchema>;
 

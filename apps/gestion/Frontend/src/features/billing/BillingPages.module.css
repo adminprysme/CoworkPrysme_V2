@@ -169,7 +169,16 @@
 .iconActions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.35rem;
+}
+
+/** Keep Actions compact; icons flush to the right edge of the table. */
+.actionsCol {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
 }
 
 .iconButton {
@@ -196,6 +205,14 @@
   cursor: not-allowed;
 }
 
+.iconButtonDanger {
+  color: var(--color-danger, #b42318);
+}
+
+.iconButtonDanger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger, #b42318) 10%, var(--color-surface));
+}
+
 .iconButton svg {
   width: 1.05rem;
   height: 1.05rem;
@@ -207,7 +224,10 @@
   z-index: 80;
   display: grid;
   place-items: center;
-  padding: 1.25rem;
+  padding: max(0.75rem, env(safe-area-inset-top, 0px))
+    max(0.75rem, env(safe-area-inset-right, 0px))
+    max(0.75rem, env(safe-area-inset-bottom, 0px))
+    max(0.75rem, env(safe-area-inset-left, 0px));
   background: color-mix(in srgb, #0f172a 42%, transparent);
 }
 
@@ -215,7 +235,8 @@
   display: flex;
   flex-direction: column;
   width: min(40rem, 100%);
-  max-height: min(88vh, 52rem);
+  max-width: 100%;
+  max-height: min(88dvh, 52rem);
   overflow: hidden;
   border-radius: 14px;
   border: 1px solid var(--color-border);
@@ -223,8 +244,11 @@
   box-shadow: 0 18px 48px color-mix(in srgb, #0f172a 22%, transparent);
 }
 
+/** Detail invoice modal: fixed frame so tabs don't resize the dialog. */
 .dialogWide {
   width: min(36rem, 100%);
+  height: min(38rem, calc(100dvh - 1.5rem));
+  max-height: min(38rem, calc(100dvh - 1.5rem));
 }
 
 .dialogHeader {
@@ -295,14 +319,37 @@
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
+  align-content: start;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.dialogBody::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dialogBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialogBody::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.dialogBody::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-border));
 }
 
 .detailTabPanel {
   display: grid;
   gap: 0.95rem;
   min-width: 0;
+  width: 100%;
 }
 
 .dialogFooter {
@@ -441,12 +488,29 @@
 }
 
 @media (max-width: 560px) {
+  .dialogHeader {
+    padding: 0.95rem 1rem 0.75rem;
+  }
+
+  .dialogBody {
+    padding: 0.95rem 1rem;
+  }
+
+  .tabs {
+    padding: 0.4rem 0.5rem;
+  }
+
   .amountCards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .detailGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dialogWide {
+    height: calc(100dvh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
   }
 }
 
@@ -524,6 +588,50 @@
   border-color: color-mix(in srgb, #f87171 45%, var(--color-border));
   background: color-mix(in srgb, #f87171 14%, var(--color-surface));
   color: color-mix(in srgb, #f87171 45%, var(--color-text));
+}
+
+.statusChip[data-status="draft"] {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted, #eee);
+  color: var(--color-text-muted);
+}
+
+.statusChip[data-status="sent"] {
+  border-color: color-mix(in srgb, #5b8fc4 50%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 16%, var(--color-surface));
+  color: color-mix(in srgb, #5b8fc4 42%, var(--color-text));
+}
+
+.statusChip[data-status="accepted"] {
+  border-color: color-mix(in srgb, #34d399 50%, var(--color-border));
+  background: color-mix(in srgb, #34d399 16%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.statusChip[data-status="refused"],
+.statusChip[data-status="expired"] {
+  border-color: color-mix(in srgb, #f87171 45%, var(--color-border));
+  background: color-mix(in srgb, #f87171 14%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 45%, var(--color-text));
+}
+
+.detailConditionsBlock {
+  margin-top: 0.75rem;
+  min-width: 0;
+}
+
+.detailConditionsLabel {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.detailConditionsText {
+  margin: 0.25rem 0 0;
+  font-weight: 500;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
 .badgeDraft {

@@ -194,9 +194,28 @@ export class QuotesService {
       QuoteModel.countDocuments(filter).exec(),
     ]);
 
+    const cardexIdSet = [
+      ...new Set(
+        rows
+          .map((row) => (row.cardexId ? String(row.cardexId) : null))
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const Cardex = await getCardexModel();
+    const cardexRows =
+      cardexIdSet.length > 0
+        ? await Cardex.find({ _id: { $in: cardexIdSet } })
+            .select({ identity: 1, company: 1 })
+            .lean()
+            .exec()
+        : [];
+    const cardexById = new Map(cardexRows.map((row) => [String(row._id), row]));
+
     return StaffQuoteListResponseSchema.parse({
       quotes: rows.map((row) => {
         const mapped = this.mapQuote(row as Quote & { _id: Types.ObjectId });
+        const cardex = mapped.cardexId ? cardexById.get(mapped.cardexId) : undefined;
+        const { clientLabel, companyLegalName } = this.resolveClientDisplay(mapped, cardex);
         return {
           id: mapped.id,
           reference: mapped.reference,
@@ -216,6 +235,8 @@ export class QuotesService {
           ...(mapped.sentAt ? { sentAt: mapped.sentAt } : {}),
           createdAt: mapped.createdAt,
           updatedAt: mapped.updatedAt,
+          clientLabel,
+          companyLegalName,
         };
       }),
       total,
@@ -226,7 +247,20 @@ export class QuotesService {
 
   async getById(id: string): Promise<StaffQuote> {
     const quote = await this.loadQuote(id);
-    return this.mapQuote(quote);
+    const mapped = this.mapQuote(quote);
+    let cardex: {
+      identity?: { firstName?: string; lastName?: string };
+      company?: { legalName?: string };
+    } | null = null;
+    if (mapped.cardexId) {
+      const Cardex = await getCardexModel();
+      cardex = await Cardex.findById(mapped.cardexId)
+        .select({ identity: 1, company: 1 })
+        .lean()
+        .exec();
+    }
+    const display = this.resolveClientDisplay(mapped, cardex);
+    return { ...mapped, ...display };
   }
 
   async update(
@@ -825,6 +859,30 @@ export class QuotesService {
     }));
   }
 
+  private resolveClientDisplay(
+    quote: StaffQuote,
+    cardex?: {
+      identity?: { firstName?: string; lastName?: string };
+      company?: { legalName?: string };
+    } | null,
+  ): { clientLabel: string; companyLegalName: string | null } {
+    const prospect = quote.prospect;
+    const fromProspect =
+      prospect?.displayName?.trim() ||
+      [prospect?.firstName, prospect?.lastName]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(" ");
+    const fromCardex = [cardex?.identity?.firstName, cardex?.identity?.lastName]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(" ");
+    const clientLabel = fromProspect || fromCardex || prospect?.email?.trim() || "—";
+    const companyLegalName =
+      prospect?.companyName?.trim() || cardex?.company?.legalName?.trim() || null;
+    return { clientLabel, companyLegalName };
+  }
+
   private mapQuote(doc: Quote & { _id: Types.ObjectId }): StaffQuote {
     return StaffQuoteSchema.parse({
       id: String(doc._id),
@@ -893,6 +951,7 @@ export class QuotesService {
               ...(doc.acceptedBy.staffProfileId
                 ? { staffProfileId: String(doc.acceptedBy.staffProfileId) }
                 : {}),
+              ...(doc.acceptedBy.ipAddress ? { ipAddress: doc.acceptedBy.ipAddress } : {}),
             },
           }
         : {}),

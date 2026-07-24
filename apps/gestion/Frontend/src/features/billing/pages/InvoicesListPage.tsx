@@ -326,7 +326,7 @@ export function InvoicesListPage() {
                 <th>Total TTC</th>
                 <th>Solde</th>
                 <th>Émise le</th>
-                <th>Actions</th>
+                <th className={styles.actionsCol}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -359,7 +359,7 @@ export function InvoicesListPage() {
                     <td>{formatEuroFromCents(invoice.totals.ttc)}</td>
                     <td>{formatEuroFromCents(invoice.totals.balanceDue)}</td>
                     <td>{formatDate(invoice.issuedAt ?? invoice.createdAt)}</td>
-                    <td>
+                    <td className={styles.actionsCol}>
                       <div className={styles.iconActions}>
                         <button
                           type="button"

@@ -65,6 +65,10 @@ export function getQuote(id: string): Promise<StaffQuote> {
   return quotesFetch<StaffQuote>(`/billing/quotes/${encodeURIComponent(id)}`);
 }
 
+export function quotePdfUrl(id: string): string {
+  return `${API_URL}/billing/quotes/${encodeURIComponent(id)}/pdf`;
+}
+
 export function createQuote(input: StaffCreateQuoteRequest): Promise<StaffQuote> {
   return quotesFetch<StaffQuote>("/billing/quotes", {
     method: "POST",
