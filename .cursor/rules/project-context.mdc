@@ -96,7 +96,7 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 
 ### Git (vérifié juste avant ce commit de doc)
 
-- `master` = `origin/master` = **`c19ab25`** (`feat(billing): expose global invoices list and PDF under BillingPermissionGuard`).
+- `master` = `origin/master` = **`e4ed3c9`** (`feat(billing): manual mark-paid, invoice detail, and Factures actions UI`).
 - Working tree : propre hors untracked `tmp/` et `apps/gestion/Frontend/tmp-billing-screenshots/`.
 - Commits Devis / Facturation récents (extrait, poussés) : `c19ab25` Factures list+PDF → `92b7536` #10 align → `1cc4c37` #10 first E2E → `80cb995` docs #9 → `28f9e72` fix confirm loop → `8753be3` #9.
 
