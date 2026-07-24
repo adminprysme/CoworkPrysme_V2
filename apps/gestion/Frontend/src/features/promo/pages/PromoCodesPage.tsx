@@ -61,9 +61,6 @@ export function PromoCodesPage() {
       <header className={styles.header}>
         <div>
           <h1>Codes promo</h1>
-          <p className={styles.subtitle}>
-            Remises publiques pour le tunnel de réservation vitrine (Phase 2).
-          </p>
         </div>
         <button
           type="button"

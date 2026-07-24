@@ -8,7 +8,10 @@
 }
 
 .sectionCompact {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .header {
@@ -16,6 +19,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .header h3 {
@@ -25,10 +29,13 @@
 }
 
 .hint,
-.dropLabel {
+.dropLabel,
+.overlayHint {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 0.72rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .content {
@@ -37,47 +44,109 @@
 }
 
 .contentCompact {
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 0.65rem;
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
-.previewWrap {
-  display: grid;
-  gap: 0.35rem;
-  width: 5.5rem;
-}
-
-.preview {
-  display: block;
-  width: 5.5rem;
-  height: 4.1rem;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-}
-
-.dropzone {
-  display: grid;
-  gap: 0.35rem;
-  justify-items: start;
-  padding: 0.75rem;
-  border: 1px dashed var(--color-border);
+.photoArea {
+  position: relative;
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: 8.5rem;
+  border: 1px dashed color-mix(in srgb, #3b6fa8 28%, var(--color-border));
   border-radius: 10px;
-  background: var(--color-surface);
+  background:
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, #3b6fa8 10%, transparent), transparent 42%),
+    radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--color-secondary) 8%, transparent), transparent 38%),
+    var(--color-surface);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.dropzoneCompact {
-  min-height: 4.1rem;
-  align-content: center;
+.photoArea:hover:not(.photoAreaDisabled):not(.photoAreaHasPreview) {
+  border-color: color-mix(in srgb, #3b6fa8 45%, var(--color-border));
 }
 
-.dropzoneActive {
+.photoAreaActive {
   border-color: var(--color-secondary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-secondary) 35%, transparent);
 }
 
-.disabled {
-  opacity: 0.65;
+.photoAreaDisabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.photoAreaHasPreview {
+  border-style: solid;
+  border-color: var(--color-border);
+}
+
+.emptyState {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.85rem;
+}
+
+.uploadIcon {
+  width: 2rem;
+  height: 2rem;
+  color: color-mix(in srgb, #3b6fa8 55%, var(--color-text-muted));
+  opacity: 0.85;
+}
+
+.previewImage {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  background: color-mix(in srgb, var(--color-text) 0%, transparent);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.photoAreaHasPreview:hover .previewOverlay,
+.photoAreaHasPreview:focus-within .previewOverlay,
+.photoAreaActive.photoAreaHasPreview .previewOverlay {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-text) 52%, transparent);
+}
+
+.overlayHint {
+  color: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.overlayActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
 }
 
 .pickBtn,
@@ -85,14 +154,26 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: var(--color-surface);
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 0.65rem;
   font-size: 0.76rem;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.previewOverlay .pickBtn,
+.previewOverlay .removeBtn {
+  border-color: color-mix(in srgb, var(--color-surface) 35%, var(--color-border));
+  box-shadow: var(--shadow-sm);
 }
 
 .removeBtn {
   color: var(--color-danger);
-  justify-self: stretch;
+}
+
+.pickBtn:disabled,
+.removeBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .error {
@@ -102,17 +183,7 @@
 }
 
 @media (max-width: 560px) {
-  .contentCompact {
-    grid-template-columns: 1fr;
-  }
-
-  .previewWrap {
-    width: 100%;
-  }
-
-  .preview {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
+  .photoArea {
+    min-height: 7rem;
   }
 }

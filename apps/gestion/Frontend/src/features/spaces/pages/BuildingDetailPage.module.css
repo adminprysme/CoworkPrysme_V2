@@ -197,8 +197,17 @@
 }
 
 .saveFabBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  background: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+}
+
+.saveFabBtnBusy:disabled {
   opacity: 0.8;
   cursor: wait;
+  background: var(--color-primary);
 }
 
 .saveFabBtn:focus-visible {

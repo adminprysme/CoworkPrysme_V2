@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { deleteBuilding, fetchBuilding, updateBuilding } from "../../../lib/buildings-api.js";
@@ -15,6 +15,7 @@ import { BuildingForm } from "../components/BuildingForm.js";
 import { StatusToggle } from "../components/StatusToggle.js";
 import { BuildingSpacesTab } from "../components/BuildingSpacesTab.js";
 import { ArchivedSpacesDangerSection } from "../components/ArchivedSpacesDangerSection.js";
+import { getBuildingFormDirtySnapshot, isBuildingFormDirty } from "../utils/building-form-dirty.js";
 import { revokePhotoUrls } from "../utils/photos.js";
 import type { BuildingFormValues } from "../types.js";
 import { validateBuildingForm, type BuildingFormErrors } from "../utils/validation.js";
@@ -43,9 +44,15 @@ export function BuildingDetailPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmName, setConfirmName] = useState("");
+  const [baselineSnapshot, setBaselineSnapshot] = useState<string | null>(null);
   const photosRef = useRef<BuildingFormValues["photos"]>([]);
 
   photosRef.current = values?.photos ?? [];
+
+  const isDirty = useMemo(
+    () => (values ? isBuildingFormDirty(values, baselineSnapshot) : false),
+    [values, baselineSnapshot],
+  );
 
   useEffect(() => {
     if (!buildingId) {
@@ -55,14 +62,17 @@ export function BuildingDetailPage() {
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
+    setBaselineSnapshot(null);
 
     void fetchBuilding(buildingId)
       .then((response) => {
         if (cancelled) {
           return;
         }
+        const formValues = buildingResponseToFormValues(response);
         setBuildingName(response.name);
-        setValues(buildingResponseToFormValues(response));
+        setValues(formValues);
+        setBaselineSnapshot(getBuildingFormDirtySnapshot(formValues));
         setErrors({});
         setSaved(false);
         setConfirmName("");
@@ -72,6 +82,7 @@ export function BuildingDetailPage() {
         if (!cancelled) {
           setLoadError("Bâtiment introuvable.");
           setValues(null);
+          setBaselineSnapshot(null);
         }
       })
       .finally(() => {
@@ -131,11 +142,13 @@ export function BuildingDetailPage() {
         formValuesToCreateRequest(formValues),
       );
       const photos = await persistBuildingPhotos(currentBuildingId, formValues.photos);
-      setBuildingName(updated.name);
-      setValues({
+      const nextValues = {
         ...buildingResponseToFormValues(updated),
         photos,
-      });
+      };
+      setBuildingName(updated.name);
+      setValues(nextValues);
+      setBaselineSnapshot(getBuildingFormDirtySnapshot(nextValues));
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2500);
     } catch (error) {
@@ -255,8 +268,17 @@ export function BuildingDetailPage() {
                 ) : null}
                 <button
                   type="button"
-                  className={styles.saveFabBtn}
-                  disabled={saving}
+                  className={[styles.saveFabBtn, saving ? styles.saveFabBtnBusy : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                  disabled={saving || !isDirty}
+                  title={
+                    saving
+                      ? "Enregistrement en cours…"
+                      : isDirty
+                        ? "Enregistrer les modifications"
+                        : "Aucune modification à enregistrer"
+                  }
                   onClick={() => void handleSave()}
                 >
                   {saving ? "Enregistrement…" : "Enregistrer"}

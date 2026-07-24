@@ -49,10 +49,16 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.65rem;
+  min-width: 0;
 }
 
 .title {
   margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 1.02rem;
   font-weight: 600;
@@ -77,8 +83,9 @@
 }
 
 .statusScheduled {
-  color: #4338ca;
-  background: color-mix(in srgb, #6366f1 16%, transparent);
+  color: color-mix(in srgb, #7c3aed 72%, var(--color-text));
+  background: color-mix(in srgb, #8b5cf6 32%, var(--color-surface-muted));
+  border: 1px solid color-mix(in srgb, #7c3aed 38%, var(--color-border));
 }
 
 .statusExpired {

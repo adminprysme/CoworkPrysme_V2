@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { DiscountCodeResponse, ServicePromoEligibility } from "@coworkprysme/shared";
 
+import { StatusToggle } from "../../spaces/components/StatusToggle.js";
 import {
   createEmptyPromoCodeFormValues,
   discountCodeResponseToFormValues,
@@ -51,6 +52,30 @@ export function PromoCodeFormPanel({
     onClose();
   }, [onClose, submitting]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !submitting) {
+        handleClose();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, submitting, handleClose]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -86,25 +111,43 @@ export function PromoCodeFormPanel({
       >
         <div className={styles.dialogAccent} aria-hidden="true" />
         <header className={styles.header}>
-          <div>
+          <div className={styles.headerMain}>
             <h2 id="promo-form-title">
               {editing ? "Modifier le code promo" : "Nouveau code promo"}
             </h2>
-            <p className={styles.subtitle}>Codes publics vitrine (kind: promo).</p>
+            <div className={styles.headerActions}>
+              <StatusToggle
+                value={values.status === "active" ? "active" : "inactive"}
+                onChange={(status) =>
+                  setValues((current) => ({
+                    ...current,
+                    status: status === "active" ? "active" : "disabled",
+                  }))
+                }
+                ariaLabel="Statut du code promo"
+              />
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={handleClose}
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            className={styles.closeBtn}
-            onClick={handleClose}
-            aria-label="Fermer"
-          >
-            ×
-          </button>
         </header>
 
-        <form className={styles.body} onSubmit={handleSubmit}>
-          <PromoCodeForm values={values} errors={errors} services={services} onChange={setValues} />
-          {submitError ? <p className={styles.submitError}>{submitError}</p> : null}
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <div className={styles.formContent}>
+            <PromoCodeForm
+              values={values}
+              errors={errors}
+              services={services}
+              onChange={setValues}
+            />
+            {submitError ? <p className={styles.submitError}>{submitError}</p> : null}
+          </div>
           <footer className={styles.footer}>
             <button
               type="button"

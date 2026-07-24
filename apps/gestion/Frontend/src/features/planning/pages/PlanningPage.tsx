@@ -459,9 +459,6 @@ export function PlanningPage() {
         <header className={styles.header}>
           <div className={styles.headerIntro}>
             <h1>Planning</h1>
-            <p className={styles.subtitle}>
-              Vue d&apos;ensemble des réservations, disponibilités et occupation en temps réel.
-            </p>
           </div>
           <div className={styles.kpiStrip}>
             <PlanningOccupancyStats occupancy={occupancy} loading={occupancyLoading} />

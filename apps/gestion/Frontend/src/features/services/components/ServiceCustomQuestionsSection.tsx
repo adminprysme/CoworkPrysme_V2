@@ -135,9 +135,7 @@ export function ServiceCustomQuestionsSection({
         </button>
       </div>
 
-      {questions.length === 0 ? (
-        <p className={styles.empty}>Aucune question configurée pour ce service.</p>
-      ) : (
+      {questions.length > 0 ? (
         <ol className={styles.list}>
           {questions.map((question, index) => {
             const selectOptions = question.type === "select" ? (question.options ?? []) : [];
@@ -260,7 +258,7 @@ export function ServiceCustomQuestionsSection({
             );
           })}
         </ol>
-      )}
+      ) : null}
     </section>
   );
 }

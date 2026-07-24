@@ -13,6 +13,7 @@ import {
   uploadServicePhoto,
 } from "../../../lib/services-api.js";
 import { ServiceCard } from "../components/ServiceCard.js";
+import { ServiceDeleteDialog } from "../components/ServiceDeleteDialog.js";
 import { ServiceFormPanel } from "../components/ServiceFormPanel.js";
 import {
   serviceFormValuesToCreateRequest,
@@ -28,6 +29,9 @@ export function ServicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceResponse | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<ServiceResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -92,12 +96,22 @@ export function ServicesPage() {
     await loadServices();
   }
 
-  async function handleDelete(service: ServiceResponse) {
-    if (!window.confirm(`Supprimer le service « ${service.label} » ?`)) {
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) {
       return;
     }
-    await deleteService(service.id);
-    await loadServices();
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteService(deleteTarget.id);
+      setDeleteTarget(null);
+      await loadServices();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Suppression impossible");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const isAdmin = user?.profile.role === "admin";
@@ -107,9 +121,6 @@ export function ServicesPage() {
       <header className={styles.header}>
         <div>
           <h1>Services</h1>
-          <p className={styles.subtitle}>
-            Catalogue des prestations complémentaires (vitrine, facturation, post-master).
-          </p>
         </div>
         <button
           type="button"
@@ -141,7 +152,7 @@ export function ServicesPage() {
               setEditing(service);
               setFormOpen(true);
             }}
-            onDelete={isAdmin ? () => void handleDelete(service) : undefined}
+            onDelete={isAdmin ? () => setDeleteTarget(service) : undefined}
           />
         ))}
       </div>
@@ -151,6 +162,21 @@ export function ServicesPage() {
         editing={editing}
         onClose={() => setFormOpen(false)}
         onSubmit={handleSubmit}
+      />
+
+      <ServiceDeleteDialog
+        service={deleteTarget}
+        open={deleteTarget !== null}
+        submitting={deleting}
+        error={deleteError}
+        onClose={() => {
+          if (deleting) {
+            return;
+          }
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        onConfirm={() => void handleDeleteConfirm()}
       />
     </div>
   );

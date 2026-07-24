@@ -54,7 +54,9 @@ export function PromoCodeCard({ code, onEdit }: PromoCodeCardProps) {
       <button type="button" className={styles.card} onClick={onEdit}>
         <div className={styles.body}>
           <div className={styles.header}>
-            <h3 className={styles.title}>{code.code}</h3>
+            <h3 className={styles.title} title={code.code}>
+              {code.code}
+            </h3>
             <span className={[styles.statusBadge, STATUS_CLASS[code.displayStatus]].join(" ")}>
               {DISPLAY_STATUS_LABELS[code.displayStatus]}
             </span>

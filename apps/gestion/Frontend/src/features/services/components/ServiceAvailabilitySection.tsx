@@ -165,37 +165,45 @@ export function ServiceAvailabilitySection({
         <p className={styles.hint}>Seul un administrateur peut définir un service global.</p>
       )}
 
-      {!value.isGlobal ? (
+      {(isAdmin && !readOnly) || !value.isGlobal ? (
         <div className={styles.buildingsBlock}>
-          {loading ? <p className={styles.hint}>Chargement…</p> : null}
-          {!loading && buildings.length === 0 ? (
-            <p className={styles.hint}>Aucun bâtiment disponible.</p>
-          ) : null}
-          <div className={styles.chipGrid}>
-            {buildings.map((building) => {
-              const checked = value.buildingIds.includes(building.id);
-              const disabled = readOnly || building.frozen;
-              return (
-                <button
-                  key={building.id}
-                  type="button"
-                  className={[
-                    styles.chip,
-                    checked ? styles.chipChecked : "",
-                    disabled ? styles.chipDisabled : "",
-                    building.frozen ? styles.chipFrozen : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  disabled={disabled}
-                  title={building.frozen ? "Hors de votre périmètre" : undefined}
-                  onClick={() => toggleBuilding(building.id)}
-                >
-                  <span>{building.name}</span>
-                  {building.frozen ? <span className={styles.frozenMark}>⊘</span> : null}
-                </button>
-              );
-            })}
+          <div
+            className={[styles.chipGrid, value.isGlobal && isAdmin ? styles.chipGridGlobal : ""]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {value.isGlobal && isAdmin ? (
+              <p className={styles.globalPlaceholder}>Tous les bâtiments actifs</p>
+            ) : loading ? (
+              <p className={styles.hint}>Chargement…</p>
+            ) : buildings.length === 0 ? (
+              <p className={styles.hint}>Aucun bâtiment disponible.</p>
+            ) : (
+              buildings.map((building) => {
+                const checked = value.buildingIds.includes(building.id);
+                const disabled = readOnly || building.frozen;
+                return (
+                  <button
+                    key={building.id}
+                    type="button"
+                    className={[
+                      styles.chip,
+                      checked ? styles.chipChecked : "",
+                      disabled ? styles.chipDisabled : "",
+                      building.frozen ? styles.chipFrozen : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    disabled={disabled}
+                    title={building.frozen ? "Hors de votre périmètre" : undefined}
+                    onClick={() => toggleBuilding(building.id)}
+                  >
+                    <span>{building.name}</span>
+                    {building.frozen ? <span className={styles.frozenMark}>⊘</span> : null}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
       ) : null}

@@ -113,6 +113,30 @@ export function ServiceFormPanel({ open, editing, onClose, onSubmit }: ServiceFo
     onClose();
   }, [onClose, submitting]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !submitting) {
+        handleClose();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, submitting, handleClose]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open || !user) {
     return null;
   }
@@ -173,15 +197,12 @@ export function ServiceFormPanel({ open, editing, onClose, onSubmit }: ServiceFo
               {liveEditing ? "Modifier le service" : "Nouveau service"}
             </h2>
             <div className={styles.headerActions}>
-              <div className={styles.statusWrap}>
-                <span className={styles.statusLabel}>Statut</span>
-                <StatusToggle
-                  value={values.status}
-                  disabled={contentReadOnly}
-                  onChange={(status) => setValues((current) => ({ ...current, status }))}
-                  ariaLabel="Statut du service"
-                />
-              </div>
+              <StatusToggle
+                value={values.status}
+                disabled={contentReadOnly}
+                onChange={(status) => setValues((current) => ({ ...current, status }))}
+                ariaLabel="Statut du service"
+              />
               <button
                 type="button"
                 className={styles.closeBtn}
@@ -228,9 +249,18 @@ export function ServiceFormPanel({ open, editing, onClose, onSubmit }: ServiceFo
           </div>
         </header>
 
-        <form className={styles.body} onSubmit={handleSubmit}>
-          {activeTab === "informations" ? (
-            <div className={styles.tabPanel} role="tabpanel">
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <div className={styles.tabContent}>
+            <div
+              className={[
+                styles.tabPanel,
+                activeTab !== "informations" ? styles.tabPanelHidden : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              role="tabpanel"
+              aria-hidden={activeTab !== "informations"}
+            >
               <ServiceForm
                 values={values}
                 errors={errors}
@@ -286,23 +316,29 @@ export function ServiceFormPanel({ open, editing, onClose, onSubmit }: ServiceFo
                 <p className={styles.fieldError}>{errors.buildingIds}</p>
               ) : null}
             </div>
-          ) : null}
 
-          {activeTab === "questions" && !questionsReadOnly ? (
-            <div className={styles.tabPanel} role="tabpanel">
-              <ServiceCustomQuestionsSection
-                questions={values.customQuestions}
-                errors={errors.customQuestionByIndex ?? {}}
-                optionErrors={errors.customQuestionOptionsByIndex ?? {}}
-                onChange={(customQuestions) =>
-                  setValues((current) => ({ ...current, customQuestions }))
-                }
-              />
-              {errors.customQuestions ? (
-                <p className={styles.fieldError}>{errors.customQuestions}</p>
-              ) : null}
-            </div>
-          ) : null}
+            {!questionsReadOnly ? (
+              <div
+                className={[styles.tabPanel, activeTab !== "questions" ? styles.tabPanelHidden : ""]
+                  .filter(Boolean)
+                  .join(" ")}
+                role="tabpanel"
+                aria-hidden={activeTab !== "questions"}
+              >
+                <ServiceCustomQuestionsSection
+                  questions={values.customQuestions}
+                  errors={errors.customQuestionByIndex ?? {}}
+                  optionErrors={errors.customQuestionOptionsByIndex ?? {}}
+                  onChange={(customQuestions) =>
+                    setValues((current) => ({ ...current, customQuestions }))
+                  }
+                />
+                {errors.customQuestions ? (
+                  <p className={styles.fieldError}>{errors.customQuestions}</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
 
           {submitError ? <p className={styles.submitError}>{submitError}</p> : null}
           <footer className={styles.footer}>
