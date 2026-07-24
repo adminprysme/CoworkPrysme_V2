@@ -5,9 +5,9 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { Section, SectionHeading } from "@/components/ui/SectionHeading";
 import { CONTACT_PAGE } from "@/config/contact-page";
 import type { PublicBuildingInfo } from "@coworkprysme/shared";
-import { DEFAULT_VITRINE_MARQUEE_TEXT } from "@coworkprysme/shared";
+import { DEFAULT_VITRINE_MARQUEE_TEXT, buildGoogleMapsDirectionsUrl } from "@coworkprysme/shared";
+import { ContactDirectionsPanel } from "./ContactDirectionsPanel";
 import { ContactMapBlock } from "./ContactMapBlock";
-import { TransportIcon } from "./TransportIcon";
 import styles from "./ContactPageContent.module.css";
 
 interface ContactPageContentProps {
@@ -15,6 +15,12 @@ interface ContactPageContentProps {
 }
 
 export function ContactPageContent({ building }: ContactPageContentProps) {
+  const directionsUrl = buildGoogleMapsDirectionsUrl({
+    lat: building.coordinates.lat,
+    lng: building.coordinates.lng,
+    address: building.address.full,
+  });
+
   return (
     <>
       <PageIntro title={CONTACT_PAGE.title} />
@@ -88,108 +94,47 @@ export function ContactPageContent({ building }: ContactPageContentProps) {
         </Container>
       </Section>
 
-      <Section muted>
+      <Section>
         <Container>
           <ScrollReveal>
-            <article className={styles.iconCard}>
-              <div className={styles.iconWrap}>
-                <TransportIcon type="parking" />
-              </div>
-              <div>
-                <h2 className={styles.cardTitle}>{CONTACT_PAGE.parking.title}</h2>
-                <p className={styles.cardText}>{CONTACT_PAGE.parking.places}</p>
-                <p className={styles.cardHighlight}>{CONTACT_PAGE.parking.rate}</p>
-              </div>
+            <article className={styles.accessPanel}>
+              <SectionHeading
+                eyebrow={CONTACT_PAGE.buildingAccess.eyebrow}
+                title={CONTACT_PAGE.buildingAccess.title}
+                className={styles.accessHeading}
+              />
+              <ol className={styles.accessSteps}>
+                {CONTACT_PAGE.buildingAccess.steps.map((step, index) => (
+                  <li key={step.label} className={styles.accessStep}>
+                    <div className={styles.accessStepMeta}>
+                      <span className={styles.accessStepNumber} aria-hidden="true">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <h3 className={styles.accessStepLabel}>{step.label}</h3>
+                    </div>
+                    <p className={styles.accessStepText}>
+                      {step.description}
+                      {step.highlight ? (
+                        <>
+                          {" "}
+                          <span className={styles.accessHighlight}>{step.highlight}</span>
+                          {"."}
+                        </>
+                      ) : null}
+                    </p>
+                  </li>
+                ))}
+              </ol>
             </article>
           </ScrollReveal>
         </Container>
       </Section>
 
-      <Section>
-        <Container>
-          <ScrollReveal>
-            <SectionHeading title={CONTACT_PAGE.buildingAccess.title} />
-            <ol className={styles.stepsList}>
-              {CONTACT_PAGE.buildingAccess.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </ScrollReveal>
-        </Container>
-      </Section>
-
       <Section muted>
         <Container>
           <ScrollReveal>
-            <SectionHeading title={CONTACT_PAGE.publicTransport.title} />
+            <ContactDirectionsPanel address={building.address.full} directionsUrl={directionsUrl} />
           </ScrollReveal>
-          <ul className={styles.transportList}>
-            {CONTACT_PAGE.publicTransport.lines.map((line, index) => (
-              <ScrollReveal key={line.label} delay={index * 60}>
-                <li className={styles.transportItem}>
-                  <div className={styles.iconWrap}>
-                    <TransportIcon type={line.icon} />
-                  </div>
-                  <div className={styles.transportBody}>
-                    <h3 className={styles.transportLabel}>{line.label}</h3>
-                    {line.href ? (
-                      <a
-                        href={line.href}
-                        className={styles.transportLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {line.detail}
-                      </a>
-                    ) : (
-                      <p className={styles.transportDetail}>{line.detail}</p>
-                    )}
-                    {line.note ? <span className={styles.transportBadge}>{line.note}</span> : null}
-                  </div>
-                </li>
-              </ScrollReveal>
-            ))}
-          </ul>
-        </Container>
-      </Section>
-
-      <Section>
-        <Container>
-          <div className={styles.splitGrid}>
-            <ScrollReveal>
-              <article className={styles.iconCard}>
-                <div className={styles.iconWrap}>
-                  <TransportIcon type="bike" />
-                </div>
-                <div>
-                  <h2 className={styles.cardTitle}>{CONTACT_PAGE.bikeWalk.title}</h2>
-                  <p className={styles.cardText}>{CONTACT_PAGE.bikeWalk.description}</p>
-                  <a
-                    href={CONTACT_PAGE.bikeWalk.href}
-                    className={styles.inlineLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {CONTACT_PAGE.bikeWalk.linkLabel}
-                  </a>
-                </div>
-              </article>
-            </ScrollReveal>
-
-            <ScrollReveal delay={80}>
-              <article className={styles.iconCard}>
-                <div className={styles.iconWrap}>
-                  <TransportIcon type="car" />
-                </div>
-                <div>
-                  <h2 className={styles.cardTitle}>{CONTACT_PAGE.car.title}</h2>
-                  <p className={styles.cardText}>{building.address.full}</p>
-                  <p className={styles.cardText}>{CONTACT_PAGE.car.chargingNearby}</p>
-                  <p className={styles.cardMuted}>{CONTACT_PAGE.car.onSiteCharging}</p>
-                </div>
-              </article>
-            </ScrollReveal>
-          </div>
         </Container>
       </Section>
     </>
