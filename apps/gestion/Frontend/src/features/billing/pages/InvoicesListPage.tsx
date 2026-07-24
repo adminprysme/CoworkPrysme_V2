@@ -130,6 +130,7 @@ export function InvoicesListPage() {
   const [detail, setDetail] = useState<StaffBillingInvoiceDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<"summary" | "reservation" | "history">("summary");
 
   const [markTarget, setMarkTarget] = useState<StaffBillingInvoiceListItem | null>(null);
   const [amountInput, setAmountInput] = useState("");
@@ -191,6 +192,7 @@ export function InvoicesListPage() {
   const openDetail = useCallback(async (invoiceId: string) => {
     setDetail(null);
     setDetailError(null);
+    setDetailTab("summary");
     setDetailLoading(true);
     try {
       const payload = await fetchBillingInvoiceDetail(invoiceId);
@@ -443,11 +445,60 @@ export function InvoicesListPage() {
                 Fermer
               </button>
             </header>
+            <div className={styles.tabs} role="tablist" aria-label="Sections facture">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={detailTab === "summary"}
+                className={detailTab === "summary" ? styles.tabActive : styles.tab}
+                onClick={() => setDetailTab("summary")}
+              >
+                Résumé
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={detailTab === "reservation"}
+                className={detailTab === "reservation" ? styles.tabActive : styles.tab}
+                onClick={() => setDetailTab("reservation")}
+              >
+                Réservation
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={detailTab === "history"}
+                className={detailTab === "history" ? styles.tabActive : styles.tab}
+                onClick={() => setDetailTab("history")}
+              >
+                Historique
+              </button>
+            </div>
             <div className={styles.dialogBody}>
               {detailLoading ? <p className={styles.muted}>Chargement du détail…</p> : null}
               {detailError ? <p className={styles.error}>{detailError}</p> : null}
-              {detail ? (
-                <>
+              {detail && detailTab === "summary" ? (
+                <div className={styles.detailTabPanel}>
+                  <section className={styles.detailSection}>
+                    <h3 className={styles.detailSectionTitle}>Montants</h3>
+                    <div className={styles.amountCards}>
+                      {(
+                        [
+                          ["HT", detail.totals.ht],
+                          ["TVA", detail.totals.vat],
+                          ["TTC", detail.totals.ttc],
+                          ["Payé", detail.totals.paidTotal],
+                          ["Solde", detail.totals.balanceDue],
+                        ] as const
+                      ).map(([label, cents]) => (
+                        <div key={label} className={styles.amountCard}>
+                          <p className={styles.amountCardLabel}>{label}</p>
+                          <p className={styles.amountCardValue}>{formatEuroFromCents(cents)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
                   <section className={styles.detailSection}>
                     <h3 className={styles.detailSectionTitle}>Client</h3>
                     <dl className={styles.detailGrid}>
@@ -473,27 +524,11 @@ export function InvoicesListPage() {
                       </div>
                     </dl>
                   </section>
+                </div>
+              ) : null}
 
-                  <section className={styles.detailSection}>
-                    <h3 className={styles.detailSectionTitle}>Montants</h3>
-                    <div className={styles.amountCards}>
-                      {(
-                        [
-                          ["HT", detail.totals.ht],
-                          ["TVA", detail.totals.vat],
-                          ["TTC", detail.totals.ttc],
-                          ["Payé", detail.totals.paidTotal],
-                          ["Solde", detail.totals.balanceDue],
-                        ] as const
-                      ).map(([label, cents]) => (
-                        <div key={label} className={styles.amountCard}>
-                          <p className={styles.amountCardLabel}>{label}</p>
-                          <p className={styles.amountCardValue}>{formatEuroFromCents(cents)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
+              {detail && detailTab === "reservation" ? (
+                <div className={styles.detailTabPanel}>
                   <section className={styles.detailSection}>
                     <h3 className={styles.detailSectionTitle}>Réservations</h3>
                     {detail.reservations.length === 0 ? (
@@ -535,6 +570,27 @@ export function InvoicesListPage() {
                     )}
                   </section>
 
+                  {detail.lines.length > 0 ? (
+                    <section className={styles.detailSection}>
+                      <h3 className={styles.detailSectionTitle}>Lignes</h3>
+                      <ul className={styles.detailList}>
+                        {detail.lines.map((line, index) => (
+                          <li key={`${line.label}-${index}`} className={styles.detailListItem}>
+                            <strong>{line.label}</strong>
+                            <div className={styles.muted}>
+                              {line.kind} · qty {line.qty} · {formatEuroFromCents(line.totalTTC)}{" "}
+                              TTC
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {detail && detailTab === "history" ? (
+                <div className={styles.detailTabPanel}>
                   <section className={styles.detailSection}>
                     <h3 className={styles.detailSectionTitle}>Paiements</h3>
                     {detail.payments.length === 0 ? (
@@ -556,24 +612,7 @@ export function InvoicesListPage() {
                       </ul>
                     )}
                   </section>
-
-                  {detail.lines.length > 0 ? (
-                    <section className={styles.detailSection}>
-                      <h3 className={styles.detailSectionTitle}>Lignes</h3>
-                      <ul className={styles.detailList}>
-                        {detail.lines.map((line, index) => (
-                          <li key={`${line.label}-${index}`} className={styles.detailListItem}>
-                            <strong>{line.label}</strong>
-                            <div className={styles.muted}>
-                              {line.kind} · qty {line.qty} · {formatEuroFromCents(line.totalTTC)}{" "}
-                              TTC
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ) : null}
-                </>
+                </div>
               ) : null}
             </div>
           </div>
