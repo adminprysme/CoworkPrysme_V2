@@ -20,6 +20,12 @@ const STATUS_LABELS: Record<StaffInvoiceStatus, string> = {
   cancelled: "Annulée",
 };
 
+function statusBadgeLabel(status: StaffInvoiceStatus): string {
+  // Badge shows payment situation; document type stays "proforma" elsewhere.
+  if (status === "proforma") return "Non payée";
+  return STATUS_LABELS[status];
+}
+
 const PAYMENT_METHOD_LABELS: Record<StaffPaymentMethod, string> = {
   card: "Carte",
   transfer: "Virement",
@@ -197,7 +203,7 @@ export function InvoicesListPage() {
                   </td>
                   <td>
                     <span className={styles.statusChip} data-status={invoice.status}>
-                      {STATUS_LABELS[invoice.status]}
+                      {statusBadgeLabel(invoice.status)}
                     </span>
                   </td>
                   <td>{paymentMethodsLabel(invoice.paymentMethods)}</td>
