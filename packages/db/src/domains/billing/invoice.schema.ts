@@ -68,6 +68,7 @@ invoiceSchema.index({ reference: 1 }, { unique: true });
 invoiceSchema.index({ cardexId: 1, issuedAt: -1 });
 invoiceSchema.index({ status: 1, dueDate: 1 });
 invoiceSchema.index({ quoteId: 1 });
+invoiceSchema.index({ issuedAt: -1 });
 
 export type InvoiceModel = Model<Invoice>;
 

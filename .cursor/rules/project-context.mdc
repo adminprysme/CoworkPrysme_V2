@@ -90,7 +90,7 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 ### UI Facturation (gestion-web) — partiel
 
 - **Virements + Devis** : retouches esthétiques livrées (bandeau titre Facturation, cartes, mini-stats / KPI, wizard Devis en **page pleine** `/billing/quotes/new` + `:quoteId`, plus modal 920×720).
-- **Onglet Factures** (3ᵉ) : inventaire + design partiellement cadrés ; **`GET /billing/invoices` + PDF sous `BillingPermissionGuard` PAS encore implémentés / pas poussés** — prompt préparé, en attente.
+- **Onglet Factures** (3ᵉ) : liste cross-cardex — `GET /billing/invoices` + `GET /billing/invoices/:invoiceId/pdf` (`BillingPermissionGuard`) ; query `q` / `status` / `paymentMethod` / `issuedFrom` / `issuedTo` ; réponse paginée + `summary` (KPI globaux filtrés) ; index `Invoice.issuedAt` ; UI `InvoicesListPage`.
 - **Wizard Devis — Espaces** : grille cartes + photos `/media/spaces/…`, fallbacks par type ; filtre intégré recherche / période / personnes (plus « Capacité min. ») ; panneau détail fixe ; filtre dispo auto quand période renseignée.
 - **Wizard Devis — Services** : grille + panneau détail + recherche + questions obligatoires livrés en code ; **preuve visuelle photos catalogue Services non confirmée** comme pour Espaces.
 
@@ -167,7 +167,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 
 - Ne **pas** `git push` / ne pas changer la branche Git checkoutée sur le VPS sauf demande explicite (règle utilisateur) — sauf quand l’utilisateur demande explicitement un push (ex. livraisons Devis).
 - Tarif **weekly @ 90000 HT** sur FOCUS : activé pour les preuves Planning / booking — **décision produit** de le garder ou le désactiver (ne pas retirer sans validation).
-- **Onglet Factures** `/billing` : API liste cross-cardex + UI — pas encore implémentés (prompt en attente) — **hors roadmap Devis #1–#10**.
+- **Onglet Factures** `/billing` : liste + filtres + PDF billing-guard + KPI `summary` livrés.
 - **Services wizard** : confirmer preuve visuelle photos catalogue si exigée comme pour Espaces.
 - **Stash `wip-before-phase-a-quotes-ui`** : chantier UX vitrine séparé, jamais repris — à traiter consciemment plus tard.
 

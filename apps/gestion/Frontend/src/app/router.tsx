@@ -14,7 +14,7 @@ import { ServicesPage } from "../features/services/pages/ServicesPage.js";
 import { PromoLayout } from "../features/promo/PromoLayout.js";
 import { PromoCodesPage } from "../features/promo/pages/PromoCodesPage.js";
 import { BillingLayout } from "../features/billing/BillingLayout.js";
-import { InvoicesPlaceholderPage } from "../features/billing/pages/InvoicesPlaceholderPage.js";
+import { InvoicesListPage } from "../features/billing/pages/InvoicesListPage.js";
 import { MarkTransferReceivedPage } from "../features/billing/pages/MarkTransferReceivedPage.js";
 import { QuotesListPage } from "../features/billing/pages/QuotesListPage.js";
 import { QuoteWizardPage } from "../features/billing/pages/QuoteWizardPage.js";
@@ -69,7 +69,7 @@ export function AppRouter() {
                   <Route path="quotes" element={<QuotesListPage />} />
                   <Route path="quotes/new" element={<QuoteWizardPage />} />
                   <Route path="quotes/:quoteId" element={<QuoteWizardPage />} />
-                  <Route path="invoices" element={<InvoicesPlaceholderPage />} />
+                  <Route path="invoices" element={<InvoicesListPage />} />
                 </Route>
                 <Route path="/planning" element={<PlanningLayout />}>
                   <Route index element={<PlanningPage />} />

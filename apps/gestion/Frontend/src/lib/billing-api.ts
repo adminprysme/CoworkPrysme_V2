@@ -3,6 +3,8 @@ import type {
   BankTransferTransfersResponse,
   MarkBankTransferReceivedRequest,
   MarkBankTransferReceivedResponse,
+  StaffBillingInvoiceListQuery,
+  StaffBillingInvoiceListResponse,
 } from "@coworkprysme/shared";
 
 import { API_URL } from "./api.js";
@@ -34,6 +36,24 @@ async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export function listBillingInvoices(
+  query: StaffBillingInvoiceListQuery = { page: 1, pageSize: 50 },
+): Promise<StaffBillingInvoiceListResponse> {
+  const qs = new URLSearchParams();
+  if (query.q) qs.set("q", query.q);
+  if (query.status) qs.set("status", query.status);
+  if (query.paymentMethod) qs.set("paymentMethod", query.paymentMethod);
+  if (query.issuedFrom) qs.set("issuedFrom", query.issuedFrom);
+  if (query.issuedTo) qs.set("issuedTo", query.issuedTo);
+  qs.set("page", String(query.page));
+  qs.set("pageSize", String(query.pageSize));
+  return billingFetch<StaffBillingInvoiceListResponse>(`/billing/invoices?${qs}`);
+}
+
+export function billingInvoicePdfUrl(invoiceId: string): string {
+  return `${API_URL}/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`;
 }
 
 export function listBankTransfers(validatedDays?: number): Promise<BankTransferTransfersResponse> {
