@@ -7,7 +7,13 @@ import {
 } from "./cardex-invoices-staff.js";
 
 /** Mirrors packages/db PAYMENT_METHODS (keep in sync). */
-export const StaffPaymentMethodSchema = z.enum(["card", "transfer", "direct_debit", "cash"]);
+export const StaffPaymentMethodSchema = z.enum([
+  "card",
+  "transfer",
+  "direct_debit",
+  "cash",
+  "manual",
+]);
 export type StaffPaymentMethod = z.infer<typeof StaffPaymentMethodSchema>;
 
 export const StaffBillingInvoiceListItemSchema = z.object({

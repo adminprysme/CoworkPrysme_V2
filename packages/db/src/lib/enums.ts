@@ -178,7 +178,7 @@ export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 export const PAYMENT_KINDS = ["deposit", "balance", "full", "refund"] as const;
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];
 
-export const PAYMENT_METHODS = ["card", "transfer", "direct_debit", "cash"] as const;
+export const PAYMENT_METHODS = ["card", "transfer", "direct_debit", "cash", "manual"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const RECONCILIATION_STATUSES = ["pending", "matched", "failed"] as const;

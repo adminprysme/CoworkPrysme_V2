@@ -90,7 +90,7 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 ### UI Facturation (gestion-web) — partiel
 
 - **Virements + Devis** : retouches esthétiques livrées (bandeau titre Facturation, cartes, mini-stats / KPI, wizard Devis en **page pleine** `/billing/quotes/new` + `:quoteId`, plus modal 920×720).
-- **Onglet Factures** (3ᵉ) : liste cross-cardex — `GET /billing/invoices` + `GET /billing/invoices/:invoiceId/pdf` (`BillingPermissionGuard`) ; query `q` / `status` / `paymentMethod` / `issuedFrom` / `issuedTo` ; réponse paginée + `summary` (KPI globaux filtrés) ; index `Invoice.issuedAt` ; UI `InvoicesListPage`.
+- **Onglet Factures** (3ᵉ) : liste + filtres + PDF + KPI `summary` ; **mark-paid manuel** (`POST …/mark-paid`, `method: manual`, helper `applyStaffPayment`) ; **détail riche** (`GET …/detail`) ; UI Actions (œil / PDF / coche) + hiérarchie client entreprise.
 - **Wizard Devis — Espaces** : grille cartes + photos `/media/spaces/…`, fallbacks par type ; filtre intégré recherche / période / personnes (plus « Capacité min. ») ; panneau détail fixe ; filtre dispo auto quand période renseignée.
 - **Wizard Devis — Services** : grille + panneau détail + recherche + questions obligatoires livrés en code ; **preuve visuelle photos catalogue Services non confirmée** comme pour Espaces.
 

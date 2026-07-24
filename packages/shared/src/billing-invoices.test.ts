@@ -52,6 +52,12 @@ describe("StaffBillingInvoiceListResponseSchema", () => {
 
 describe("StaffPaymentMethodSchema", () => {
   it("mirrors Payment.method enum", () => {
-    expect(StaffPaymentMethodSchema.options).toEqual(["card", "transfer", "direct_debit", "cash"]);
+    expect(StaffPaymentMethodSchema.options).toEqual([
+      "card",
+      "transfer",
+      "direct_debit",
+      "cash",
+      "manual",
+    ]);
   });
 });

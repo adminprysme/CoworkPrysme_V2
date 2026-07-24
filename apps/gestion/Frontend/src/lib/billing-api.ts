@@ -3,8 +3,11 @@ import type {
   BankTransferTransfersResponse,
   MarkBankTransferReceivedRequest,
   MarkBankTransferReceivedResponse,
+  StaffBillingInvoiceDetailResponse,
   StaffBillingInvoiceListQuery,
   StaffBillingInvoiceListResponse,
+  StaffMarkInvoicePaidRequest,
+  StaffMarkInvoicePaidResponse,
 } from "@coworkprysme/shared";
 
 import { API_URL } from "./api.js";
@@ -50,6 +53,27 @@ export function listBillingInvoices(
   qs.set("page", String(query.page));
   qs.set("pageSize", String(query.pageSize));
   return billingFetch<StaffBillingInvoiceListResponse>(`/billing/invoices?${qs}`);
+}
+
+export function fetchBillingInvoiceDetail(
+  invoiceId: string,
+): Promise<StaffBillingInvoiceDetailResponse> {
+  return billingFetch<StaffBillingInvoiceDetailResponse>(
+    `/billing/invoices/${encodeURIComponent(invoiceId)}/detail`,
+  );
+}
+
+export function markBillingInvoicePaid(
+  invoiceId: string,
+  body: StaffMarkInvoicePaidRequest,
+): Promise<StaffMarkInvoicePaidResponse> {
+  return billingFetch<StaffMarkInvoicePaidResponse>(
+    `/billing/invoices/${encodeURIComponent(invoiceId)}/mark-paid`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 export function billingInvoicePdfUrl(invoiceId: string): string {

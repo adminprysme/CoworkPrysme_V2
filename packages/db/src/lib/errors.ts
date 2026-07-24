@@ -109,6 +109,21 @@ export class StripePaymentAmountMismatchError extends Error {
   }
 }
 
+/**
+ * Thrown when a staff payment amount exceeds the remaining invoice balanceDue.
+ */
+export class PaymentAmountExceedsBalanceError extends Error {
+  readonly amountReceived: number;
+  readonly balanceDue: number;
+
+  constructor(amountReceived: number, balanceDue: number) {
+    super(`Payment amount ${amountReceived} exceeds invoice balanceDue ${balanceDue}`);
+    this.name = "PaymentAmountExceedsBalanceError";
+    this.amountReceived = amountReceived;
+    this.balanceDue = balanceDue;
+  }
+}
+
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
     typeof error === "object" &&

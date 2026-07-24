@@ -48,9 +48,19 @@ describe("BillingController transfers permission", () => {
     { methodName: "searchClients", httpMethod: RequestMethod.GET, path: "clients/search" },
     { methodName: "listInvoices", httpMethod: RequestMethod.GET, path: "invoices" },
     {
+      methodName: "getInvoiceDetail",
+      httpMethod: RequestMethod.GET,
+      path: "invoices/:invoiceId/detail",
+    },
+    {
       methodName: "downloadInvoicePdf",
       httpMethod: RequestMethod.GET,
       path: "invoices/:invoiceId/pdf",
+    },
+    {
+      methodName: "markInvoicePaid",
+      httpMethod: RequestMethod.POST,
+      path: "invoices/:invoiceId/mark-paid",
     },
     { methodName: "listTransfers", httpMethod: RequestMethod.GET, path: "transfers" },
     { methodName: "lookup", httpMethod: RequestMethod.GET, path: "transfers/lookup" },

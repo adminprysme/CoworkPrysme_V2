@@ -20,6 +20,8 @@ export interface Payment {
   amount: number;
   reconciliation: ReconciliationInfo;
   receivedAt: Date;
+  /** Staff who recorded a manual / transfer mark-received payment. */
+  markedByStaffProfileId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +38,7 @@ const paymentSchema = new Schema<Payment>(
     amount: centsField({ min: 0 }),
     reconciliation: { type: reconciliationSchema, required: true },
     receivedAt: { type: Date, required: true },
+    markedByStaffProfileId: { type: Schema.Types.ObjectId, ref: "StaffProfile", required: false },
   },
   { ...TIMESTAMP_OPTIONS, collection: "payments" },
 );

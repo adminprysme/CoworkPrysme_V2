@@ -7,6 +7,8 @@ const {
   getClientAccountModelMock,
   getPaymentModelMock,
   getReservationModelMock,
+  getQuoteModelMock,
+  applyStaffPaymentMock,
 } = vi.hoisted(() => ({
   connectMongoMock: vi.fn(),
   getInvoiceModelMock: vi.fn(),
@@ -14,6 +16,8 @@ const {
   getClientAccountModelMock: vi.fn(),
   getPaymentModelMock: vi.fn(),
   getReservationModelMock: vi.fn(),
+  getQuoteModelMock: vi.fn(),
+  applyStaffPaymentMock: vi.fn(),
 }));
 
 vi.mock("@coworkprysme/db", () => ({
@@ -23,9 +27,28 @@ vi.mock("@coworkprysme/db", () => ({
   getClientAccountModel: getClientAccountModelMock,
   getPaymentModel: getPaymentModelMock,
   getReservationModel: getReservationModelMock,
+  getQuoteModel: getQuoteModelMock,
+  applyStaffPayment: applyStaffPaymentMock,
+  InvoiceNotFoundError: class InvoiceNotFoundError extends Error {
+    constructor() {
+      super("Invoice not found");
+      this.name = "InvoiceNotFoundError";
+    }
+  },
+  PaymentAmountExceedsBalanceError: class PaymentAmountExceedsBalanceError extends Error {
+    amountReceived: number;
+    balanceDue: number;
+    constructor(amountReceived: number, balanceDue: number) {
+      super("exceeds");
+      this.name = "PaymentAmountExceedsBalanceError";
+      this.amountReceived = amountReceived;
+      this.balanceDue = balanceDue;
+    }
+  },
 }));
 
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { PaymentAmountExceedsBalanceError } from "@coworkprysme/db";
 
 import { BillingInvoicesService } from "./billing-invoices.service.js";
 
@@ -230,5 +253,182 @@ describe("BillingInvoicesService.preparePdf", () => {
     expect(invoicePdf.generatePdfForInvoiceReference).toHaveBeenCalledWith("PF-2026-00006");
     expect(prepared.filename).toBe("proforma-PF-2026-00006.pdf");
     expect(prepared.pdf.toString("utf8")).toContain("%PDF");
+  });
+});
+
+describe("BillingInvoicesService.markPaid", () => {
+  const invoicePdf = { generatePdfForInvoiceReference: vi.fn() };
+  const invoiceId = "6a632b8d2a0ff8165b8cf9f5";
+  const staffId = "dddddddddddddddddddddddd";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    connectMongoMock.mockResolvedValue(undefined);
+  });
+
+  it("delegates to applyStaffPayment with method manual + staff id", async () => {
+    applyStaffPaymentMock.mockResolvedValue({
+      applied: true,
+      invoice: {
+        _id: invoiceId,
+        reference: "PF-2026-00006",
+        status: "paid",
+        type: "proforma",
+        totals: {
+          ht: 25500,
+          vat: 5100,
+          ttc: 30600,
+          discountTotal: 0,
+          paidTotal: 30600,
+          balanceDue: 0,
+        },
+        paidAt: new Date("2026-07-24T12:00:00.000Z"),
+      },
+      payment: {
+        _id: "eeeeeeeeeeeeeeeeeeeeeeee",
+        amount: 21420,
+        method: "manual",
+        receivedAt: new Date("2026-07-24T12:00:00.000Z"),
+        reconciliation: { status: "matched", manualNote: "chèque" },
+      },
+    });
+
+    const service = new BillingInvoicesService(invoicePdf as never);
+    const result = await service.markPaid(
+      invoiceId,
+      { amountReceived: 21420, note: "chèque" },
+      staffId,
+    );
+
+    expect(applyStaffPaymentMock).toHaveBeenCalledWith({
+      invoiceId,
+      amountReceived: 21420,
+      method: "manual",
+      markedByStaffProfileId: staffId,
+      manualNote: "chèque",
+    });
+    expect(result.applied).toBe(true);
+    expect(result.invoice.status).toBe("paid");
+    expect(result.payment?.manualNote).toBe("chèque");
+  });
+
+  it("maps PaymentAmountExceedsBalanceError to 400", async () => {
+    applyStaffPaymentMock.mockRejectedValue(new PaymentAmountExceedsBalanceError(99999, 100));
+    const service = new BillingInvoicesService(invoicePdf as never);
+    await expect(
+      service.markPaid(invoiceId, { amountReceived: 99999 }, staffId),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe("BillingInvoicesService.getDetail", () => {
+  const invoicePdf = { generatePdfForInvoiceReference: vi.fn() };
+  const invoiceId = "6a632b8d2a0ff8165b8cf9f5";
+  const cardexId = "6a632b8d2a0ff8165b8cf9f2";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    connectMongoMock.mockResolvedValue(undefined);
+  });
+
+  it("404 when invoice missing", async () => {
+    getInvoiceModelMock.mockResolvedValue({
+      findById: vi.fn().mockReturnValue(leanChain(null)),
+    });
+    const service = new BillingInvoicesService(invoicePdf as never);
+    await expect(service.getDetail(invoiceId)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("assembles quote, reservations, payments and cardex", async () => {
+    getInvoiceModelMock.mockResolvedValue({
+      findById: vi.fn().mockReturnValue(
+        leanChain({
+          _id: invoiceId,
+          reference: "PF-2026-00006",
+          type: "proforma",
+          status: "partially_paid",
+          cardexId,
+          quoteId: "ffffffffffffffffffffffff",
+          reservationId: "111111111111111111111111",
+          lines: [
+            {
+              label: "FOCUS",
+              kind: "space",
+              qty: 1,
+              totalHT: 25500,
+              totalVAT: 5100,
+              totalTTC: 30600,
+            },
+          ],
+          totals: {
+            ht: 25500,
+            vat: 5100,
+            ttc: 30600,
+            discountTotal: 0,
+            paidTotal: 9180,
+            balanceDue: 21420,
+          },
+          issuedAt: new Date("2026-07-24T09:08:28.528Z"),
+          createdAt: new Date("2026-07-24T09:08:29.730Z"),
+        }),
+      ),
+    });
+    getCardexModelMock.mockResolvedValue({
+      findById: vi.fn().mockReturnValue(
+        leanChain({
+          identity: { firstName: "Alice", lastName: "Screenshot" },
+          company: { legalName: "ACME SAS" },
+        }),
+      ),
+    });
+    getClientAccountModelMock.mockResolvedValue({
+      find: vi.fn().mockReturnValue(leanChain([{ email: "alice@example.com" }])),
+    });
+    getPaymentModelMock.mockResolvedValue({
+      find: vi.fn().mockReturnValue(
+        leanChain([
+          {
+            _id: "222222222222222222222222",
+            amount: 9180,
+            method: "card",
+            kind: "deposit",
+            receivedAt: new Date("2026-07-24T09:10:00.000Z"),
+            reconciliation: { status: "matched" },
+          },
+        ]),
+      ),
+    });
+    getReservationModelMock.mockResolvedValue({
+      find: vi.fn().mockReturnValue(
+        leanChain([
+          {
+            _id: "111111111111111111111111",
+            reference: "RES-1",
+            status: "confirmed",
+            startAt: new Date("2026-08-01T08:00:00.000Z"),
+            endAt: new Date("2026-08-01T18:00:00.000Z"),
+            spaceId: "333333333333333333333333",
+            spaceSnapshot: { name: "FOCUS" },
+          },
+        ]),
+      ),
+    });
+    getQuoteModelMock.mockResolvedValue({
+      findById: vi.fn().mockReturnValue(
+        leanChain({
+          _id: "ffffffffffffffffffffffff",
+          reference: "DEV-1",
+          status: "accepted",
+        }),
+      ),
+    });
+
+    const service = new BillingInvoicesService(invoicePdf as never);
+    const detail = await service.getDetail(invoiceId);
+    expect(detail.reference).toBe("PF-2026-00006");
+    expect(detail.companyLegalName).toBe("ACME SAS");
+    expect(detail.quote?.reference).toBe("DEV-1");
+    expect(detail.reservations[0]?.spaceName).toBe("FOCUS");
+    expect(detail.payments[0]?.amount).toBe(9180);
   });
 });

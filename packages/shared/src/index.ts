@@ -977,3 +977,15 @@ export {
   type StaffBillingInvoiceListSummary,
   type StaffPaymentMethod,
 } from "./billing-invoices.js";
+export {
+  StaffBillingInvoiceDetailPaymentSchema,
+  StaffBillingInvoiceDetailReservationSchema,
+  StaffBillingInvoiceDetailResponseSchema,
+  StaffMarkInvoicePaidRequestSchema,
+  StaffMarkInvoicePaidResponseSchema,
+  type StaffBillingInvoiceDetailPayment,
+  type StaffBillingInvoiceDetailReservation,
+  type StaffBillingInvoiceDetailResponse,
+  type StaffMarkInvoicePaidRequest,
+  type StaffMarkInvoicePaidResponse,
+} from "./billing-invoice-actions.js";

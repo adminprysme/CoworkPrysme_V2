@@ -1,21 +1,30 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
+  applyStaffPayment,
   connectMongo,
   getCardexModel,
   getClientAccountModel,
   getInvoiceModel,
   getPaymentModel,
+  getQuoteModel,
   getReservationModel,
+  InvoiceNotFoundError,
+  PaymentAmountExceedsBalanceError,
   type Invoice,
 } from "@coworkprysme/db";
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
 import {
+  StaffBillingInvoiceDetailResponseSchema,
   StaffBillingInvoiceListItemSchema,
   StaffBillingInvoiceListResponseSchema,
+  StaffMarkInvoicePaidResponseSchema,
+  type StaffBillingInvoiceDetailResponse,
   type StaffBillingInvoiceListItem,
   type StaffBillingInvoiceListQuery,
   type StaffBillingInvoiceListResponse,
+  type StaffMarkInvoicePaidRequest,
+  type StaffMarkInvoicePaidResponse,
   type StaffPaymentMethod,
 } from "@coworkprysme/shared";
 import type { Types } from "mongoose";
@@ -115,6 +124,195 @@ export class BillingInvoicesService {
       filename,
       reference: invoice.reference,
     };
+  }
+
+  async getDetail(invoiceId: string): Promise<StaffBillingInvoiceDetailResponse> {
+    await connectMongo();
+    if (!OBJECT_ID_PATTERN.test(invoiceId)) {
+      throw new BadRequestException({
+        code: "INVALID_ID",
+        message: "invoiceId invalide",
+      });
+    }
+
+    const Invoice = await getInvoiceModel();
+    const invoice = await Invoice.findById(invoiceId).lean().exec();
+    if (!invoice) {
+      throw new NotFoundException({
+        code: "INVOICE_NOT_FOUND",
+        message: "Facture introuvable",
+      });
+    }
+
+    const cardexId = String(invoice.cardexId);
+    const reservationIdSet = new Set<string>();
+    if (invoice.reservationId) reservationIdSet.add(String(invoice.reservationId));
+    for (const id of invoice.reservationIds ?? []) {
+      reservationIdSet.add(String(id));
+    }
+
+    const [Cardex, ClientAccount, Payment, Reservation, Quote] = await Promise.all([
+      getCardexModel(),
+      getClientAccountModel(),
+      getPaymentModel(),
+      getReservationModel(),
+      getQuoteModel(),
+    ]);
+
+    const [cardex, accounts, payments, reservations, quote] = await Promise.all([
+      Cardex.findById(cardexId).select({ identity: 1, company: 1 }).lean().exec(),
+      ClientAccount.find({ cardexId }).select({ email: 1 }).lean().exec(),
+      Payment.find({ invoiceId: invoice._id })
+        .sort({ receivedAt: -1, createdAt: -1 })
+        .lean()
+        .exec(),
+      reservationIdSet.size > 0
+        ? Reservation.find({ _id: { $in: [...reservationIdSet] } })
+            .select({
+              reference: 1,
+              status: 1,
+              startAt: 1,
+              endAt: 1,
+              spaceId: 1,
+              spaceSnapshot: 1,
+            })
+            .lean()
+            .exec()
+        : Promise.resolve([]),
+      invoice.quoteId
+        ? Quote.findById(invoice.quoteId).select({ reference: 1, status: 1 }).lean().exec()
+        : Promise.resolve(null),
+    ]);
+
+    const first = cardex?.identity?.firstName?.trim() ?? "";
+    const last = cardex?.identity?.lastName?.trim() ?? "";
+    const clientLabel = [first, last].filter(Boolean).join(" ") || "—";
+    const companyLegalName = cardex?.company?.legalName?.trim() || null;
+    const emails = [...new Set(accounts.map((row) => row.email))].sort();
+
+    return StaffBillingInvoiceDetailResponseSchema.parse({
+      id: String(invoice._id),
+      reference: invoice.reference,
+      type: invoice.type,
+      status: invoice.status,
+      totals: {
+        ht: invoice.totals.ht,
+        vat: invoice.totals.vat,
+        ttc: invoice.totals.ttc,
+        discountTotal: invoice.totals.discountTotal,
+        paidTotal: invoice.totals.paidTotal,
+        balanceDue: invoice.totals.balanceDue,
+      },
+      ...(invoice.issuedAt ? { issuedAt: toIso(invoice.issuedAt) } : {}),
+      ...(invoice.paidAt ? { paidAt: toIso(invoice.paidAt) } : {}),
+      ...(invoice.dueDate ? { dueDate: toIso(invoice.dueDate) } : {}),
+      createdAt: toIso(invoice.createdAt)!,
+      cardexId,
+      clientLabel,
+      companyLegalName,
+      emails,
+      quote: quote
+        ? {
+            id: String(quote._id),
+            reference: quote.reference,
+            status: quote.status,
+          }
+        : null,
+      lines: (invoice.lines ?? []).map((line) => ({
+        label: line.label,
+        kind: line.kind,
+        qty: line.qty,
+        totalHT: line.totalHT,
+        totalVAT: line.totalVAT,
+        totalTTC: line.totalTTC,
+      })),
+      reservations: reservations.map((row) => ({
+        id: String(row._id),
+        reference: row.reference,
+        status: row.status,
+        startAt: toIso(row.startAt)!,
+        endAt: toIso(row.endAt)!,
+        spaceName: row.spaceSnapshot?.name?.trim() || "—",
+        spaceId: row.spaceId ? String(row.spaceId) : null,
+      })),
+      payments: payments.map((row) => ({
+        id: String(row._id),
+        amount: row.amount,
+        method: row.method,
+        kind: row.kind,
+        receivedAt: toIso(row.receivedAt)!,
+        manualNote: row.reconciliation?.manualNote?.trim() || null,
+        markedByStaffProfileId: row.markedByStaffProfileId
+          ? String(row.markedByStaffProfileId)
+          : null,
+      })),
+    });
+  }
+
+  async markPaid(
+    invoiceId: string,
+    body: StaffMarkInvoicePaidRequest,
+    staffProfileId: string,
+  ): Promise<StaffMarkInvoicePaidResponse> {
+    await connectMongo();
+    if (!OBJECT_ID_PATTERN.test(invoiceId)) {
+      throw new BadRequestException({
+        code: "INVALID_ID",
+        message: "invoiceId invalide",
+      });
+    }
+
+    try {
+      const result = await applyStaffPayment({
+        invoiceId,
+        amountReceived: body.amountReceived,
+        method: "manual",
+        markedByStaffProfileId: staffProfileId,
+        ...(body.note?.trim() ? { manualNote: body.note.trim() } : {}),
+      });
+
+      return StaffMarkInvoicePaidResponseSchema.parse({
+        applied: result.applied,
+        invoice: {
+          id: String(result.invoice._id),
+          reference: result.invoice.reference,
+          status: result.invoice.status,
+          type: result.invoice.type,
+          totals: {
+            ht: result.invoice.totals.ht,
+            vat: result.invoice.totals.vat,
+            ttc: result.invoice.totals.ttc,
+            discountTotal: result.invoice.totals.discountTotal,
+            paidTotal: result.invoice.totals.paidTotal,
+            balanceDue: result.invoice.totals.balanceDue,
+          },
+          ...(result.invoice.paidAt ? { paidAt: toIso(result.invoice.paidAt) } : {}),
+        },
+        payment: result.payment
+          ? {
+              id: String(result.payment._id),
+              amount: result.payment.amount,
+              method: result.payment.method,
+              receivedAt: toIso(result.payment.receivedAt)!,
+              manualNote: result.payment.reconciliation?.manualNote?.trim() || null,
+            }
+          : null,
+      });
+    } catch (error) {
+      if (error instanceof InvoiceNotFoundError) {
+        throw new NotFoundException({
+          code: "INVOICE_NOT_FOUND",
+          message: "Facture introuvable",
+        });
+      }
+      if (error instanceof PaymentAmountExceedsBalanceError) {
+        throw new BadRequestException({
+          code: "AMOUNT_EXCEEDS_BALANCE",
+          message: `Le montant dépasse le solde dû (${(error.balanceDue / 100).toFixed(2)} €).`,
+        });
+      }
+      throw error;
+    }
   }
 
   private async buildFilter(query: StaffBillingInvoiceListQuery): Promise<InvoiceFilter> {

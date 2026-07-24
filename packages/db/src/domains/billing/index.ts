@@ -47,6 +47,12 @@ export {
   type ApplyBankTransferPaymentResult,
 } from "./apply-bank-transfer-payment.js";
 export {
+  applyStaffPayment,
+  type ApplyStaffPaymentInput,
+  type ApplyStaffPaymentResult,
+  type StaffAppliedPaymentMethod,
+} from "./apply-staff-payment.js";
+export {
   computePaymentRefundCaps,
   type PaymentRefundCapRow,
   type PaymentRefundCaps,

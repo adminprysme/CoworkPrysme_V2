@@ -18,8 +18,11 @@ import {
   MarkBankTransferReceivedResponseSchema,
   StaffBillingClientSearchQuerySchema,
   StaffBillingClientSearchResponseSchema,
+  StaffBillingInvoiceDetailResponseSchema,
   StaffBillingInvoiceListQuerySchema,
   StaffBillingInvoiceListResponseSchema,
+  StaffMarkInvoicePaidRequestSchema,
+  StaffMarkInvoicePaidResponseSchema,
 } from "@coworkprysme/shared";
 import type { Request, Response } from "express";
 
@@ -70,6 +73,12 @@ export class BillingController {
     return StaffBillingInvoiceListResponseSchema.parse(payload);
   }
 
+  @Get("invoices/:invoiceId/detail")
+  async getInvoiceDetail(@Param("invoiceId") invoiceId: string) {
+    const payload = await this.billingInvoices.getDetail(invoiceId);
+    return StaffBillingInvoiceDetailResponseSchema.parse(payload);
+  }
+
   @Get("invoices/:invoiceId/pdf")
   async downloadInvoicePdf(
     @Param("invoiceId") invoiceId: string,
@@ -82,6 +91,25 @@ export class BillingController {
     response.setHeader("X-Content-Type-Options", "nosniff");
     response.setHeader("Cache-Control", "private, no-store");
     response.end(prepared.pdf);
+  }
+
+  @Post("invoices/:invoiceId/mark-paid")
+  async markInvoicePaid(
+    @Param("invoiceId") invoiceId: string,
+    @Body() body: unknown,
+    @Req() request: Request,
+  ) {
+    const parsed = StaffMarkInvoicePaidRequestSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues[0]?.message ?? "Invalid payload");
+    }
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    const payload = await this.billingInvoices.markPaid(
+      invoiceId,
+      parsed.data,
+      profile._id.toString(),
+    );
+    return StaffMarkInvoicePaidResponseSchema.parse(payload);
   }
 
   @Get("transfers")

@@ -30,6 +30,7 @@ export {
   SlotLockConflictError,
   SlotUnavailableError,
   StripePaymentAmountMismatchError,
+  PaymentAmountExceedsBalanceError,
 } from "./errors.js";
 export {
   getReferenceSequenceModel,
