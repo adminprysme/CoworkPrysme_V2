@@ -329,6 +329,39 @@
   gap: var(--v-space-4);
 }
 
+.paymentProcessing {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--v-radius-md);
+  background: color-mix(in srgb, var(--v-color-brand, #c58369) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--v-color-brand, #c58369) 28%, #fff);
+}
+
+.paymentSpinner {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--v-color-brand, #c58369) 35%, #fff);
+  border-top-color: var(--v-color-brand, #c58369);
+  border-radius: 50%;
+  animation: paymentSpin 0.7s linear infinite;
+}
+
+.paymentProcessingText {
+  margin: 0;
+  color: #2a2522;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+@keyframes paymentSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .successNotice {
   margin: 0;
   padding: var(--v-space-3);

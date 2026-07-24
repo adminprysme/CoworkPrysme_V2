@@ -5,40 +5,52 @@
 }
 
 .title {
-  font-family: var(--font-display, Georgia, serif);
+  font-family: var(--v-font-display, Georgia, serif);
   font-size: 1.75rem;
   font-weight: 600;
   margin: 0 0 1.25rem;
-  color: #2a2522;
+  color: var(--v-color-ink);
 }
 
 .card {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding: var(--v-space-5);
+  border: 1px solid var(--v-color-border);
+  border-radius: var(--v-radius-lg);
+  background: var(--v-color-surface);
+}
+
+.card > p {
+  color: var(--v-color-text);
+  margin: 0;
 }
 
 .amount {
   font-size: 1.75rem;
   font-weight: 700;
   margin: 0;
-  color: #2a2522;
+  color: var(--v-color-ink);
+  letter-spacing: -0.01em;
 }
 
 .muted {
-  color: #6b6560;
+  color: var(--v-color-ink-soft);
   font-size: 0.95rem;
   margin: 0;
+  line-height: 1.45;
 }
 
 .error {
-  color: #b42318;
+  color: #f97066;
   margin: 0.5rem 0 0;
 }
 
 .success {
-  color: #027a48;
+  color: #6ce9a6;
   margin: 0.5rem 0 0;
+  font-weight: 600;
 }
 
 .primary {
@@ -47,8 +59,8 @@
   padding: 0.7rem 1.25rem;
   border: none;
   border-radius: 8px;
-  background: #c58369;
-  color: #fff;
+  background: var(--v-color-brand);
+  color: var(--v-color-text-on-brand);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -61,4 +73,36 @@
 
 .elements {
   margin-top: 1rem;
+}
+
+.processing {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--v-color-brand) 16%, var(--v-color-surface));
+  border: 1px solid color-mix(in srgb, var(--v-color-brand) 40%, var(--v-color-border));
+}
+
+.processing p {
+  margin: 0;
+  color: var(--v-color-ink);
+  font-weight: 600;
+}
+
+.spinner {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--v-color-brand) 35%, transparent);
+  border-top-color: var(--v-color-brand);
+  border-radius: 50%;
+  animation: quotePaySpin 0.7s linear infinite;
+}
+
+@keyframes quotePaySpin {
+  to {
+    transform: rotate(360deg);
+  }
 }

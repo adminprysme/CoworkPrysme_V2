@@ -46,6 +46,7 @@ export function QuotePayPageContent() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [intentLoading, setIntentLoading] = useState(false);
+  const [awaitingWebhook, setAwaitingWebhook] = useState(false);
 
   const viewStatus: PageStatus = !token || !invoiceId ? "not_found" : status;
 
@@ -107,6 +108,8 @@ export function QuotePayPageContent() {
 
   async function pollUntilPaid() {
     if (!token || !invoiceId) return;
+    setAwaitingWebhook(true);
+    setFormError(null);
     for (let i = 0; i < 12; i += 1) {
       try {
         const st = await fetchQuotePaymentStatus(token, invoiceId);
@@ -115,6 +118,7 @@ export function QuotePayPageContent() {
           st.paymentState === "partially_paid" ||
           st.linkStatus === "consumed"
         ) {
+          setAwaitingWebhook(false);
           setStatus("success");
           return;
         }
@@ -123,6 +127,8 @@ export function QuotePayPageContent() {
       }
       await new Promise((r) => setTimeout(r, 1500));
     }
+    // Card confirm already succeeded; webhook may still be lagging locally.
+    setAwaitingWebhook(false);
     setStatus("success");
   }
 
@@ -185,12 +191,19 @@ export function QuotePayPageContent() {
 
             {viewStatus === "paying" && clientSecret ? (
               <div className={styles.elements}>
-                <BookingCardPaymentForm
-                  clientSecret={clientSecret}
-                  returnUrl={returnUrl}
-                  onSubmitted={() => void pollUntilPaid()}
-                  onError={(message) => setFormError(message)}
-                />
+                {awaitingWebhook ? (
+                  <div className={styles.processing} role="status" aria-live="polite">
+                    <span className={styles.spinner} aria-hidden />
+                    <p>Traitement du paiement en cours…</p>
+                  </div>
+                ) : (
+                  <BookingCardPaymentForm
+                    clientSecret={clientSecret}
+                    returnUrl={returnUrl}
+                    onSubmitted={() => void pollUntilPaid()}
+                    onError={(message) => setFormError(message)}
+                  />
+                )}
               </div>
             ) : null}
 
