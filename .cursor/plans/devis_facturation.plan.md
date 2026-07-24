@@ -40,7 +40,7 @@ todos:
     status: pending
   - id: c8-accept
     content: "Slice 8: AcceptQuoteService → N Reservation + 1 Invoice A1 (client + staff paths)"
-    status: pending
+    status: completed
   - id: c9-stripe-link
     content: "Slice 9: quotePaymentLinks + /payer-devis + QR PDF + email + webhook quoteId"
     status: pending

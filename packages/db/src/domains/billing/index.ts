@@ -97,3 +97,11 @@ export {
   type RegisterClientAccountForQuoteAcceptInput,
   type RegisterClientAccountForQuoteAcceptResult,
 } from "./register-for-quote-accept.js";
+export {
+  acceptQuote,
+  AcceptQuoteError,
+  type AcceptQuoteActor,
+  type AcceptQuoteErrorCode,
+  type AcceptQuoteInput,
+  type AcceptQuoteResult,
+} from "./accept-quote.js";

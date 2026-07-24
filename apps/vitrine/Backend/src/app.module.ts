@@ -11,6 +11,7 @@ import { HomeContentModule } from "./home-content/home-content.module.js";
 import { InvoicePdfModule } from "./invoice-pdf/invoice-pdf.module.js";
 import { InvitationsModule } from "./invitations/invitations.module.js";
 import { MediaModule } from "./media/media.module.js";
+import { QuotesAcceptModule } from "./quotes-accept/quotes-accept.module.js";
 import { ServicesContentModule } from "./services-content/services-content.module.js";
 import { SiteContactModule } from "./site-contact/site-contact.module.js";
 import { StripeModule } from "./stripe/stripe.module.js";
@@ -31,6 +32,7 @@ import { StripeModule } from "./stripe/stripe.module.js";
     StripeModule,
     InvoicePdfModule,
     InvitationsModule,
+    QuotesAcceptModule,
   ],
 })
 export class AppModule {}

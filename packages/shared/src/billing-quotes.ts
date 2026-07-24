@@ -154,6 +154,9 @@ export const BILLING_QUOTES_ERROR_CODES = {
   QUOTE_PROSPECT_INCOMPLETE: "QUOTE_PROSPECT_INCOMPLETE",
   QUOTE_NO_LINES: "QUOTE_NO_LINES",
   QUOTE_VALID_UNTIL_PAST: "QUOTE_VALID_UNTIL_PAST",
+  QUOTE_EXPIRED: "QUOTE_EXPIRED",
+  QUOTE_SLOT_UNAVAILABLE: "QUOTE_SLOT_UNAVAILABLE",
+  QUOTE_NO_SPACE_LINES: "QUOTE_NO_SPACE_LINES",
   VALIDATION_ERROR: "VALIDATION_ERROR",
   INVALID_ID: "INVALID_ID",
 } as const;
@@ -169,6 +172,9 @@ export const BILLING_QUOTES_ERROR_MESSAGES = {
     "Le prospect doit avoir un prénom et un nom, ou un nom d'affichage, pour l'envoi du devis.",
   QUOTE_NO_LINES: "Le devis doit contenir au moins une ligne pour être envoyé.",
   QUOTE_VALID_UNTIL_PAST: "La date de validité du devis est déjà dépassée.",
+  QUOTE_EXPIRED: "Ce devis a expiré.",
+  QUOTE_SLOT_UNAVAILABLE: "Un ou plusieurs créneaux ne sont plus disponibles.",
+  QUOTE_NO_SPACE_LINES: "Le devis doit contenir au moins une ligne espace pour être accepté.",
   INVALID_ID: "Identifiant invalide.",
 } as const;
 
@@ -287,6 +293,13 @@ export const StaffQuoteSchema = z.object({
   acceptedAt: z.string().datetime().optional(),
   refusedAt: z.string().datetime().optional(),
   expiredAt: z.string().datetime().optional(),
+  acceptedBy: z
+    .object({
+      kind: QuoteAcceptedByKindSchema,
+      clientAccountId: z.string().optional(),
+      staffProfileId: z.string().optional(),
+    })
+    .optional(),
   createdByStaffProfileId: z.string().optional(),
   acceptTokenExpiresAt: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
@@ -369,6 +382,19 @@ export const StaffSendQuoteResponseSchema = z.object({
   acceptUrl: z.string().url().optional(),
 });
 export type StaffSendQuoteResponse = z.infer<typeof StaffSendQuoteResponseSchema>;
+
+/** Staff oral accept — same AcceptQuoteService as client path. */
+export const StaffAcceptQuoteResponseSchema = z.object({
+  quote: StaffQuoteSchema,
+  reservationIds: z.array(z.string().min(1)).min(1),
+  invoiceId: z.string().min(1),
+  invoiceReference: z.string().min(1),
+  cardexId: z.string().min(1),
+  clientAccountId: z.string().min(1),
+  bootstrapped: z.boolean(),
+  activationEmailSent: z.boolean().optional(),
+});
+export type StaffAcceptQuoteResponse = z.infer<typeof StaffAcceptQuoteResponseSchema>;
 
 export const StaffDeleteQuoteResponseSchema = z.object({
   ok: z.literal(true),

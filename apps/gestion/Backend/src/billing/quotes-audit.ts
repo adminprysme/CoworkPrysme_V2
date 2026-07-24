@@ -6,12 +6,13 @@ import type { Types } from "mongoose";
  */
 export async function writeQuoteAudit(input: {
   profile: StaffProfileDocument;
-  action: "quote.deleted" | "quote.sent" | "quote.refused" | "quote.expired";
+  action: "quote.deleted" | "quote.sent" | "quote.refused" | "quote.expired" | "quote.accepted";
   quoteId: Types.ObjectId | string;
   reference?: string;
   statusBefore?: string;
   statusAfter?: string | null;
   at?: Date;
+  extraDiff?: Record<string, { before: unknown; after: unknown }>;
 }): Promise<{ auditId: string }> {
   const AuditLog = await getAuditLogModel();
   const created = await AuditLog.create({
@@ -30,6 +31,7 @@ export async function writeQuoteAudit(input: {
             },
           }
         : {}),
+      ...(input.extraDiff ?? {}),
     },
     at: input.at ?? new Date(),
   });

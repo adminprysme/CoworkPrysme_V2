@@ -10,6 +10,9 @@ export const QUOTE_ACCEPT_ERROR_CODES = {
   QUOTE_ACCEPT_EXPIRED: "QUOTE_ACCEPT_EXPIRED",
   QUOTE_ACCEPT_INVALID_STATUS: "QUOTE_ACCEPT_INVALID_STATUS",
   QUOTE_ACCEPT_EMAIL_REGISTERED: "QUOTE_ACCEPT_EMAIL_REGISTERED",
+  QUOTE_ACCEPT_SLOT_UNAVAILABLE: "QUOTE_ACCEPT_SLOT_UNAVAILABLE",
+  QUOTE_ACCEPT_ACCOUNT_REQUIRED: "QUOTE_ACCEPT_ACCOUNT_REQUIRED",
+  QUOTE_ACCEPT_ACCOUNT_INVALID: "QUOTE_ACCEPT_ACCOUNT_INVALID",
   VALIDATION_ERROR: "VALIDATION_ERROR",
 } as const;
 
@@ -84,6 +87,64 @@ export const PublicQuoteAcceptRegisterResponseSchema = z.object({
 });
 export type PublicQuoteAcceptRegisterResponse = z.infer<
   typeof PublicQuoteAcceptRegisterResponseSchema
+>;
+
+/**
+ * POST /quotes/accept/:token/confirm — final accept via unified AcceptQuoteService.
+ * Provide either `clientAccountId` (existing) or register credentials (create-then-accept).
+ */
+export const PublicQuoteAcceptConfirmRequestSchema = z
+  .object({
+    clientAccountId: z
+      .string()
+      .regex(/^[a-f0-9]{24}$/i)
+      .optional(),
+    password: z.string().min(8).optional(),
+    privacyPolicyAccepted: z.boolean().optional(),
+    marketingCommunicationsAccepted: z.boolean().optional(),
+    cgvAccepted: z.literal(true).optional(),
+  })
+  .superRefine((value, context) => {
+    const hasAccount = Boolean(value.clientAccountId);
+    const hasRegister = Boolean(value.password);
+    if (hasAccount === hasRegister) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Indiquez soit clientAccountId (compte existant), soit password (création à la volée).",
+      });
+    }
+    if (hasRegister) {
+      if (!value.privacyPolicyAccepted) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["privacyPolicyAccepted"],
+          message: "Le consentement à la politique de confidentialité est obligatoire",
+        });
+      }
+      if (value.cgvAccepted !== true) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cgvAccepted"],
+          message: "L'acceptation des CGV est obligatoire",
+        });
+      }
+    }
+  });
+export type PublicQuoteAcceptConfirmRequest = z.infer<typeof PublicQuoteAcceptConfirmRequestSchema>;
+
+export const PublicQuoteAcceptConfirmResponseSchema = z.object({
+  quoteId: z.string().min(1),
+  reference: z.string().min(1),
+  reservationIds: z.array(z.string().min(1)).min(1),
+  invoiceId: z.string().min(1),
+  invoiceReference: z.string().min(1),
+  cardexId: z.string().min(1),
+  clientAccountId: z.string().min(1),
+  status: z.literal("accepted"),
+});
+export type PublicQuoteAcceptConfirmResponse = z.infer<
+  typeof PublicQuoteAcceptConfirmResponseSchema
 >;
 
 /** GET activation token preview (staff-accept set-password). */

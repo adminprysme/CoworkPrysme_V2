@@ -154,6 +154,12 @@ export class QuotesController {
     return this.quotes.send(profile, id);
   }
 
+  @Post(":id/accept")
+  async accept(@Req() request: Request, @Param("id") id: string) {
+    const profile = await this.staffContext.requireProfileFromRequest(request);
+    return this.quotes.accept(profile, id);
+  }
+
   @Post(":id/refuse")
   async refuse(@Req() request: Request, @Param("id") id: string) {
     const profile = await this.staffContext.requireProfileFromRequest(request);

@@ -1,4 +1,5 @@
 import type {
+  StaffAcceptQuoteResponse,
   StaffBillingClientSearchResponse,
   StaffCreateQuoteRequest,
   StaffDeleteQuoteResponse,
@@ -110,8 +111,15 @@ export function expireQuote(id: string): Promise<StaffQuote> {
   });
 }
 
-/** Staff accept lives in #8 (AcceptQuoteService). Endpoint not shipped yet. */
-export const STAFF_QUOTE_ACCEPT_AVAILABLE = false;
+/** Staff accept — unified AcceptQuoteService (#8). */
+export const STAFF_QUOTE_ACCEPT_AVAILABLE = true;
+
+export function acceptQuote(id: string): Promise<StaffAcceptQuoteResponse> {
+  return quotesFetch<StaffAcceptQuoteResponse>(`/billing/quotes/${encodeURIComponent(id)}/accept`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
 
 export function checkQuoteAvailability(
   input: StaffQuoteAvailabilityCheckRequest,

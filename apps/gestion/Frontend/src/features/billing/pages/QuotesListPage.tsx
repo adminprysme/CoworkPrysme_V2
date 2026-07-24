@@ -4,11 +4,11 @@ import { Link } from "react-router-dom";
 import type { QuoteStatus, StaffQuoteListItem } from "@coworkprysme/shared";
 
 import {
+  acceptQuote,
   deleteQuoteDraft,
   expireQuote,
   listQuotes,
   refuseQuote,
-  STAFF_QUOTE_ACCEPT_AVAILABLE,
 } from "../../../lib/billing-quotes-api.js";
 import { BillingStats } from "../components/BillingStats.js";
 import styles from "../BillingPages.module.css";
@@ -247,12 +247,9 @@ export function QuotesListPage() {
                             <button
                               type="button"
                               className={styles.primaryButton}
-                              disabled={!STAFF_QUOTE_ACCEPT_AVAILABLE || busy}
-                              title={
-                                STAFF_QUOTE_ACCEPT_AVAILABLE
-                                  ? "Marquer le devis comme accepté"
-                                  : "Disponible après AcceptQuote (#8)"
-                              }
+                              disabled={busy}
+                              title="Marquer le devis comme accepté"
+                              onClick={() => void runAction(quote.id, () => acceptQuote(quote.id))}
                             >
                               Devis accepté
                             </button>
@@ -275,11 +272,6 @@ export function QuotesListPage() {
                           </>
                         ) : null}
                       </div>
-                      {quote.status === "sent" && !STAFF_QUOTE_ACCEPT_AVAILABLE ? (
-                        <p className={styles.hintNote} style={{ marginTop: "0.45rem" }}>
-                          Acceptation staff désactivée jusqu’au chantier #8.
-                        </p>
-                      ) : null}
                     </td>
                   </tr>
                 );

@@ -7,7 +7,10 @@ import {
 } from "@nestjs/common";
 import {
   assertReplicaSetForTransactions,
+  acceptQuote,
+  AcceptQuoteError,
   attachQuoteAcceptToken,
+  buildStaffQuoteLockSessionId,
   connectMongo,
   getAuditLogModel,
   getCardexModel,
@@ -29,11 +32,13 @@ import {
   BILLING_QUOTES_ERROR_CODES,
   BILLING_QUOTES_ERROR_MESSAGES,
   QuoteSendProspectSchema,
+  StaffAcceptQuoteResponseSchema,
   StaffDeleteQuoteResponseSchema,
   StaffQuoteListResponseSchema,
   StaffQuoteSchema,
   StaffSendQuoteResponseSchema,
   recomputeQuotePricing,
+  type StaffAcceptQuoteResponse,
   type StaffCreateQuoteRequest,
   type StaffQuote,
   type StaffQuoteLineInput,
@@ -41,6 +46,10 @@ import {
   type StaffQuoteListResponse,
   type StaffSendQuoteResponse,
   type StaffUpdateQuoteRequest,
+  emailDetailRow,
+  escapeEmailHtml,
+  renderCoworkEmailLayout,
+  resolvePublicSiteUrl,
 } from "@coworkprysme/shared";
 import { parseGestionApiEnv } from "@coworkprysme/shared/server";
 import type { Types } from "mongoose";
@@ -525,6 +534,177 @@ export class QuotesService {
     return this.mapQuote(quote);
   }
 
+  /**
+   * Staff oral « Devis accepté » — calls the same domain `acceptQuote` as the
+   * vitrine client path (§5.1.4).
+   */
+  async accept(profile: StaffProfileDocument, id: string): Promise<StaffAcceptQuoteResponse> {
+    await connectMongo();
+    const quote = await this.loadQuote(id);
+    if (quote.status !== "sent") {
+      throw new ConflictException({
+        code: BILLING_QUOTES_ERROR_CODES.QUOTE_INVALID_STATUS,
+        message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_INVALID_STATUS,
+      });
+    }
+
+    const env = parseGestionApiEnv();
+    const lockSessionId = buildStaffQuoteLockSessionId(String(profile._id), String(quote._id));
+
+    let result: Awaited<ReturnType<typeof acceptQuote>>;
+    try {
+      result = await acceptQuote({
+        quoteId: quote._id,
+        actor: {
+          kind: "staff",
+          staffProfileId: profile._id,
+          activationTokenSecret: env.CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET,
+        },
+        lockSessionId,
+      });
+    } catch (error) {
+      this.rethrowAcceptError(error);
+    }
+
+    let activationEmailSent = false;
+    if (result.activation && result.bootstrapped) {
+      const recipient =
+        quote.prospect?.email?.trim().toLowerCase() ??
+        (await this.resolveRecipientEmail(await this.loadQuote(id)));
+      if (recipient) {
+        const activationUrl = `${this.publicSiteBaseUrl()}/activer-compte?token=${result.activation.rawToken}`;
+        const mailResult = await this.mail.sendMail({
+          to: recipient,
+          subject: `Définir votre mot de passe — devis ${result.reference}`,
+          html: this.renderActivationEmailHtml({
+            reference: result.reference,
+            activationUrl,
+          }),
+        });
+        activationEmailSent = mailDeliveryFromResult(mailResult).emailSent;
+      }
+    }
+
+    await writeQuoteAudit({
+      profile,
+      action: "quote.accepted",
+      quoteId: result.quoteId,
+      reference: result.reference,
+      statusBefore: "sent",
+      statusAfter: "accepted",
+      extraDiff: {
+        acceptedBy: { before: null, after: "staff" },
+        reservationIds: {
+          before: [],
+          after: result.reservationIds.map(String),
+        },
+        invoiceReference: { before: null, after: result.invoiceReference },
+        bootstrapped: { before: false, after: result.bootstrapped },
+      },
+    });
+
+    const accepted = await this.loadQuote(id);
+    return StaffAcceptQuoteResponseSchema.parse({
+      quote: this.mapQuote(accepted),
+      reservationIds: result.reservationIds.map(String),
+      invoiceId: String(result.invoiceId),
+      invoiceReference: result.invoiceReference,
+      cardexId: String(result.cardexId),
+      clientAccountId: String(result.clientAccountId),
+      bootstrapped: result.bootstrapped,
+      activationEmailSent,
+    });
+  }
+
+  private rethrowAcceptError(error: unknown): never {
+    if (error instanceof AcceptQuoteError) {
+      const map: Record<
+        AcceptQuoteError["code"],
+        { status: "conflict" | "bad" | "notfound"; code: string; message: string }
+      > = {
+        QUOTE_NOT_FOUND: {
+          status: "notfound",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_NOT_FOUND,
+          message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_NOT_FOUND,
+        },
+        QUOTE_INVALID_STATUS: {
+          status: "conflict",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_INVALID_STATUS,
+          message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_INVALID_STATUS,
+        },
+        QUOTE_EXPIRED: {
+          status: "conflict",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_EXPIRED,
+          message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_EXPIRED,
+        },
+        QUOTE_NO_SPACE_LINES: {
+          status: "bad",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_NO_SPACE_LINES,
+          message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_NO_SPACE_LINES,
+        },
+        SLOT_UNAVAILABLE: {
+          status: "conflict",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_SLOT_UNAVAILABLE,
+          message: error.message || BILLING_QUOTES_ERROR_MESSAGES.QUOTE_SLOT_UNAVAILABLE,
+        },
+        PROSPECT_REQUIRED: {
+          status: "bad",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_PROSPECT_INCOMPLETE,
+          message: error.message,
+        },
+        PROSPECT_IDENTITY_INCOMPLETE: {
+          status: "bad",
+          code: BILLING_QUOTES_ERROR_CODES.QUOTE_PROSPECT_INCOMPLETE,
+          message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_PROSPECT_INCOMPLETE,
+        },
+        ACCOUNT_REQUIRED: {
+          status: "bad",
+          code: BILLING_QUOTES_ERROR_CODES.VALIDATION_ERROR,
+          message: error.message,
+        },
+        ACCOUNT_INVALID: {
+          status: "bad",
+          code: BILLING_QUOTES_ERROR_CODES.VALIDATION_ERROR,
+          message: error.message,
+        },
+        ACCOUNT_ALREADY_EXISTS: {
+          status: "conflict",
+          code: BILLING_QUOTES_ERROR_CODES.VALIDATION_ERROR,
+          message: error.message,
+        },
+        SPACE_NOT_FOUND: {
+          status: "bad",
+          code: BILLING_QUOTES_ERROR_CODES.VALIDATION_ERROR,
+          message: error.message,
+        },
+      };
+      const mapped = map[error.code];
+      const body = { code: mapped.code, message: mapped.message };
+      if (mapped.status === "notfound") throw new NotFoundException(body);
+      if (mapped.status === "bad") throw new BadRequestException(body);
+      throw new ConflictException(body);
+    }
+    throw error;
+  }
+
+  private renderActivationEmailHtml(input: { reference: string; activationUrl: string }): string {
+    const siteUrl = resolvePublicSiteUrl();
+    const ref = escapeEmailHtml(input.reference);
+    const url = escapeEmailHtml(input.activationUrl);
+    const body = `
+      <p style="margin-top:0;">Votre devis <strong>${ref}</strong> a été accepté.</p>
+      <p>Pour accéder à votre espace client, définissez votre mot de passe&nbsp;:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0 8px;">
+        ${emailDetailRow("Lien d'activation", `<a href="${url}">${url}</a>`, { last: true })}
+      </table>
+      <p style="margin:16px 0 0;font-size:13px;color:#555;">
+        Tant que le mot de passe n'est pas défini, la connexion reste bloquée
+        (compte en attente d'activation).
+      </p>
+    `;
+    return renderCoworkEmailLayout("Définir votre mot de passe", body, siteUrl);
+  }
+
   private async loadQuote(id: string): Promise<QuoteDocument> {
     const quoteId = assertObjectId(id, "quoteId");
     const QuoteModel = await getQuoteModel();
@@ -687,6 +867,19 @@ export class QuotesService {
       ...(doc.acceptedAt ? { acceptedAt: toIso(doc.acceptedAt) } : {}),
       ...(doc.refusedAt ? { refusedAt: toIso(doc.refusedAt) } : {}),
       ...(doc.expiredAt ? { expiredAt: toIso(doc.expiredAt) } : {}),
+      ...(doc.acceptedBy
+        ? {
+            acceptedBy: {
+              kind: doc.acceptedBy.kind,
+              ...(doc.acceptedBy.clientAccountId
+                ? { clientAccountId: String(doc.acceptedBy.clientAccountId) }
+                : {}),
+              ...(doc.acceptedBy.staffProfileId
+                ? { staffProfileId: String(doc.acceptedBy.staffProfileId) }
+                : {}),
+            },
+          }
+        : {}),
       ...(doc.createdByStaffProfileId
         ? { createdByStaffProfileId: String(doc.createdByStaffProfileId) }
         : {}),

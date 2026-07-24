@@ -1,0 +1,43 @@
+import { BadRequestException, Body, Controller, Get, Param, Post } from "@nestjs/common";
+import {
+  PublicQuoteAcceptConfirmRequestSchema,
+  PublicQuoteAcceptRegisterRequestSchema,
+  QUOTE_ACCEPT_ERROR_CODES,
+} from "@coworkprysme/shared";
+
+/* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { QuotesAcceptService } from "./quotes-accept.service.js";
+
+@Controller("quotes/accept")
+export class QuotesAcceptController {
+  constructor(private readonly quotesAccept: QuotesAcceptService) {}
+
+  @Get(":token")
+  async preview(@Param("token") token: string) {
+    return this.quotesAccept.preview(token);
+  }
+
+  @Post(":token/register")
+  async register(@Param("token") token: string, @Body() body: unknown) {
+    const parsed = PublicQuoteAcceptRegisterRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: QUOTE_ACCEPT_ERROR_CODES.VALIDATION_ERROR,
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quotesAccept.register(token, parsed.data);
+  }
+
+  @Post(":token/confirm")
+  async confirm(@Param("token") token: string, @Body() body: unknown) {
+    const parsed = PublicQuoteAcceptConfirmRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: QUOTE_ACCEPT_ERROR_CODES.VALIDATION_ERROR,
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quotesAccept.confirm(token, parsed.data);
+  }
+}
