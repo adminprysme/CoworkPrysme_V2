@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { loadInvoiceIssuerConfig } from "@coworkprysme/invoice-pdf";
 import { initVitrineApiEnv } from "@coworkprysme/shared/server";
 
@@ -19,7 +20,9 @@ async function bootstrap() {
     new Logger("Bootstrap").log(`Invoice issuer ready: ${issuer.legalName} (${issuer.siret})`);
   }
   // rawBody required for Stripe webhook signature verification (POST /stripe/webhook).
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  // One hop: Coolify reverse proxy — req.ip = client, not Docker proxy.
+  app.set("trust proxy", 1);
   app.useGlobalFilters(new ZodValidationExceptionFilter());
   configureCors(app, env.ALLOWED_ORIGIN);
   const port = getPort();

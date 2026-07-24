@@ -170,6 +170,7 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - **Onglet Factures** `/billing` : liste + filtres + PDF billing-guard + KPI `summary` livrés.
 - **Services wizard** : confirmer preuve visuelle photos catalogue si exigée comme pour Espaces.
 - **Stash `wip-before-phase-a-quotes-ui`** : chantier UX vitrine séparé, jamais repris — à traiter consciemment plus tard.
+- **TODO produit RGPD — politique de confidentialité (IP acceptation devis)** : l’IP capturée à l’acceptation client (`Quote.acceptedBy.ipAddress`, chemins `confirm` / `confirm-login` uniquement) est une **donnée personnelle** (jurisprudence Cour de cassation). Sa collecte doit être mentionnée dans la politique de confidentialité du site (déjà identifiée comme obligatoire dans le CDC d’origine, **jamais rédigée** dans ce projet) avec finalité claire (« preuve d’acceptation contractuelle ») et durée de conservation alignée sur les factures (**10 ans**), pas une durée de log technique (6 mois). Chantier doc légale distinct — hors code.
 
 ### Points de vigilance permanents (déploiement)
 

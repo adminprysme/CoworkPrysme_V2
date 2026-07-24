@@ -160,6 +160,7 @@ export class QuotesAcceptService {
   async confirm(
     rawToken: string,
     body: PublicQuoteAcceptConfirmRequest,
+    options?: { ipAddress?: string },
   ): Promise<PublicQuoteAcceptConfirmResponse> {
     const quote = await this.loadSentQuote(rawToken);
 
@@ -190,6 +191,7 @@ export class QuotesAcceptService {
         quoteId: quote._id,
         actor,
         paymentLinkTokenSecret: this.paymentLinkTokenSecret(),
+        ...(options?.ipAddress ? { ipAddress: options.ipAddress } : {}),
       });
     } catch (error) {
       this.rethrowAcceptError(error);
@@ -225,6 +227,7 @@ export class QuotesAcceptService {
   async confirmExistingWithPassword(
     rawToken: string,
     input: { email: string; password: string },
+    options?: { ipAddress?: string },
   ): Promise<PublicQuoteAcceptConfirmResponse> {
     await this.loadSentQuote(rawToken);
     try {
@@ -270,7 +273,7 @@ export class QuotesAcceptService {
       });
     }
 
-    return this.confirm(rawToken, { clientAccountId: String(account._id) });
+    return this.confirm(rawToken, { clientAccountId: String(account._id) }, options);
   }
 
   private async loadSentQuote(rawToken: string) {

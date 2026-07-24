@@ -85,6 +85,11 @@ export interface AcceptQuoteInput {
    */
   paymentLinkTokenSecret?: string;
   /**
+   * Client self-service only — remote IP captured at confirm / confirm-login.
+   * Never set on staff accept. Omitted when undetermined (accept still succeeds).
+   */
+  ipAddress?: string;
+  /**
    * Test/proof hook: throw inside the transaction after the named step to verify
    * rollback leaves no bastard state. Never enable in production.
    */
@@ -204,6 +209,11 @@ async function acceptQuoteInTransaction(
     session,
   );
 
+  const acceptedByWithIp =
+    acceptedBy.kind === "client" && input.ipAddress
+      ? { ...acceptedBy, ipAddress: input.ipAddress }
+      : acceptedBy;
+
   const spaceContexts = await loadSpaceContexts(spaceLines, session);
 
   // Re-check availability AT accept time (not only wizard).
@@ -223,7 +233,7 @@ async function acceptQuoteInTransaction(
       $set: {
         status: "accepted",
         acceptedAt: now,
-        acceptedBy,
+        acceptedBy: acceptedByWithIp,
         cardexId,
         clientAccountId,
       },
@@ -415,7 +425,7 @@ async function acceptQuoteInTransaction(
     invoiceReference,
     cardexId,
     clientAccountId,
-    acceptedBy,
+    acceptedBy: acceptedByWithIp,
     bootstrapped,
     ...(activation ? { activation } : {}),
     ...(paymentLink ? { paymentLink } : {}),

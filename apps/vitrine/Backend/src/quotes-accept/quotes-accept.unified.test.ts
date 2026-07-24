@@ -139,6 +139,29 @@ describe("QuotesAcceptService client dual path", () => {
     });
   });
 
+  it("confirm forwards optional client ipAddress into acceptQuote", async () => {
+    await service.confirm(
+      TOKEN,
+      { clientAccountId: String(CLIENT_ACCOUNT_ID) },
+      { ipAddress: "203.0.113.40" },
+    );
+
+    expect(acceptQuoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quoteId: QUOTE_ID,
+        ipAddress: "203.0.113.40",
+        actor: expect.objectContaining({ kind: "client" }),
+      }),
+    );
+  });
+
+  it("confirm omits ipAddress when undetermined (accept still runs)", async () => {
+    await service.confirm(TOKEN, { clientAccountId: String(CLIENT_ACCOUNT_ID) }, {});
+
+    const arg = acceptQuoteMock.mock.calls[0]![0] as Record<string, unknown>;
+    expect(arg).not.toHaveProperty("ipAddress");
+  });
+
   it("no account: confirm with client password creates via client_register then accepts", async () => {
     const password = "ChosenPass9!";
     acceptQuoteMock.mockResolvedValue(

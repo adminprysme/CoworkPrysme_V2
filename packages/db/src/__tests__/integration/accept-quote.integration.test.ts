@@ -239,6 +239,8 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
       now: NOW,
       lockSessionId,
       paymentLinkTokenSecret: "p".repeat(32),
+      // Even if somehow passed, staff path must not persist client IP semantics.
+      ipAddress: "203.0.113.1",
     });
 
     expect(result.bootstrapped).toBe(true);
@@ -248,6 +250,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
       kind: "staff",
       staffProfileId,
     });
+    expect(result.acceptedBy).not.toHaveProperty("ipAddress");
 
     const ClientAccount = await getClientAccountModel();
     const account = await ClientAccount.findById(result.clientAccountId).lean().exec();
@@ -287,6 +290,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
     );
     expect(accepted?.acceptedBy?.kind).toBe("staff");
     expect(String(accepted?.acceptedBy?.staffProfileId)).toBe(String(staffProfileId));
+    expect(accepted?.acceptedBy).not.toHaveProperty("ipAddress");
 
     const locks = await findActiveLocksBySessionId(lockSessionId, NOW);
     expect(locks).toHaveLength(0);
@@ -349,6 +353,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
       actor: { kind: "client", clientAccountId: clientAccountId! },
       now: NOW,
       paymentLinkTokenSecret: "p".repeat(32),
+      ipAddress: "203.0.113.77",
     });
 
     expect(result.bootstrapped).toBe(false);
@@ -356,6 +361,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
     expect(result.acceptedBy).toEqual({
       kind: "client",
       clientAccountId: clientAccountId!,
+      ipAddress: "203.0.113.77",
     });
     expect(result.reservationIds).toHaveLength(1);
 
@@ -367,6 +373,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
     const accepted = await Quote.findById(quote._id).lean().exec();
     expect(accepted?.acceptedBy?.kind).toBe("client");
     expect(String(accepted?.acceptedBy?.clientAccountId)).toBe(String(clientAccountId!));
+    expect(accepted?.acceptedBy?.ipAddress).toBe("203.0.113.77");
   });
 
   it("client path (no account): creates active account with chosen password then accepts", async () => {

@@ -372,6 +372,8 @@ export interface QuoteAcceptedBy {
   kind: "client" | "staff";
   clientAccountId?: Types.ObjectId;
   staffProfileId?: Types.ObjectId;
+  /** Client self-service accept only — IPv4/IPv6 (preuve contractuelle). */
+  ipAddress?: string;
 }
 
 export const quoteAcceptedBySchema = new Schema<QuoteAcceptedBy>(
@@ -379,6 +381,7 @@ export const quoteAcceptedBySchema = new Schema<QuoteAcceptedBy>(
     kind: { type: String, enum: ["client", "staff"], required: true },
     clientAccountId: { type: Schema.Types.ObjectId, ref: "ClientAccount", required: false },
     staffProfileId: { type: Schema.Types.ObjectId, ref: "StaffProfile", required: false },
+    ipAddress: { type: String, trim: true, maxlength: 45, required: false },
   },
   { _id: false },
 );
