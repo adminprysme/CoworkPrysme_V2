@@ -30,5 +30,22 @@ export {
   renderInvoiceProformaHtml,
 } from "./templates/invoice-proforma.html.js";
 
+export type {
+  QuotePdfLineView,
+  QuotePdfPaymentMethod,
+  QuotePdfVatLineView,
+  QuotePdfViewModel,
+} from "./quote-pdf.types.js";
+
+export {
+  buildQuotePdfClientView,
+  buildQuotePdfLineViews,
+  buildQuotePdfViewModel,
+  type QuotePdfSourceCardex,
+  type QuotePdfSourceQuote,
+} from "./quote-pdf.mapper.js";
+
+export { QUOTE_PDF_VALIDITY_NOTICE, renderQuotePdfHtml } from "./templates/quote.html.js";
+
 export { InvoicePdfService } from "./invoice-pdf.service.js";
 export { InvoicePdfModule } from "./invoice-pdf.module.js";

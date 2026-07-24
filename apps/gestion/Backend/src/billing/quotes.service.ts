@@ -19,6 +19,13 @@ import {
   type StaffProfileDocument,
 } from "@coworkprysme/db";
 import {
+  buildQuotePdfViewModel,
+  loadInvoiceIssuerConfig,
+  loadInvoiceLogoDataUri,
+  loadInvoicePdfBankRib,
+} from "@coworkprysme/invoice-pdf";
+import type { QuotePdfSourceCardex } from "@coworkprysme/invoice-pdf";
+import {
   BILLING_QUOTES_ERROR_CODES,
   BILLING_QUOTES_ERROR_MESSAGES,
   QuoteSendProspectSchema,
@@ -39,6 +46,7 @@ import { parseGestionApiEnv } from "@coworkprysme/shared/server";
 import type { Types } from "mongoose";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
 import {
   MailService,
   emailDeliveryAuditDiff,
@@ -73,7 +81,10 @@ function clearableId(value: string | null | undefined): string | undefined {
 export class QuotesService {
   private readonly logger = new Logger(QuotesService.name);
 
-  constructor(private readonly mail: MailService) {}
+  constructor(
+    private readonly mail: MailService,
+    private readonly invoicePdf: InvoicePdfService,
+  ) {}
 
   async create(profile: StaffProfileDocument, input: StaffCreateQuoteRequest): Promise<StaffQuote> {
     const mongooseInstance = await connectMongo();
@@ -374,15 +385,38 @@ export class QuotesService {
     const acceptUrl = `${this.publicSiteBaseUrl()}/accepter-devis?token=${tokenResult.rawToken}`;
     let emailSent = false;
 
+    const { pdf, html: quotePdfHtml } = await this.renderQuotePdfAttachment(refreshed, acceptUrl);
+
     if (recipientEmail) {
+      const emailHtml = this.renderSendEmailHtml({
+        reference: refreshed.reference,
+        acceptUrl,
+        validUntil: refreshed.validUntil,
+      });
+      // Defence in depth: staff-only note must never leak to client channels.
+      if (refreshed.internalNote) {
+        if (
+          emailHtml.includes(refreshed.internalNote) ||
+          quotePdfHtml.includes(refreshed.internalNote)
+        ) {
+          throw new BadRequestException({
+            code: "INTERNAL_NOTE_LEAK",
+            message: "La note interne ne peut pas être exposée au client.",
+          });
+        }
+      }
+
       const mailResult = await this.mail.sendMail({
         to: recipientEmail,
         subject: `Votre devis ${refreshed.reference}`,
-        html: this.renderSendEmailHtml({
-          reference: refreshed.reference,
-          acceptUrl,
-          validUntil: refreshed.validUntil,
-        }),
+        html: emailHtml,
+        attachments: [
+          {
+            filename: `${refreshed.reference}.pdf`,
+            content: pdf,
+            contentType: "application/pdf",
+          },
+        ],
       });
       const delivery = mailDeliveryFromResult(mailResult);
       emailSent = delivery.emailSent;
@@ -418,6 +452,29 @@ export class QuotesService {
       emailSent,
       acceptUrl,
     });
+  }
+
+  async downloadPdf(
+    id: string,
+  ): Promise<{ pdf: Buffer; filename: string; contentType: "application/pdf" }> {
+    await connectMongo();
+    const quote = await this.loadQuote(id);
+    if (quote.status === "draft") {
+      throw new ConflictException({
+        code: BILLING_QUOTES_ERROR_CODES.QUOTE_INVALID_STATUS,
+        message: BILLING_QUOTES_ERROR_MESSAGES.QUOTE_INVALID_STATUS,
+      });
+    }
+    const acceptUrl = quote.acceptTokenExpiresAt
+      ? `${this.publicSiteBaseUrl()}/accepter-devis`
+      : `${this.publicSiteBaseUrl()}/accepter-devis`;
+    // Staff download after send: token raw is not re-emitted; link without token still points to accept page.
+    const { pdf } = await this.renderQuotePdfAttachment(quote, acceptUrl);
+    return {
+      pdf,
+      filename: `${quote.reference}.pdf`,
+      contentType: "application/pdf",
+    };
   }
 
   async refuse(profile: StaffProfileDocument, id: string): Promise<StaffQuote> {
@@ -671,6 +728,75 @@ export class QuotesService {
     return null;
   }
 
+  private async renderQuotePdfAttachment(
+    quote: QuoteDocument,
+    acceptUrl: string,
+  ): Promise<{ pdf: Buffer; html: string }> {
+    const issuer = loadInvoiceIssuerConfig();
+    if (!issuer) {
+      throw new BadRequestException({
+        code: "INVOICE_ISSUER_NOT_CONFIGURED",
+        message:
+          "Identité émetteur incomplete — renseignez les variables INVOICE_ISSUER_* dans l’environnement",
+      });
+    }
+
+    let cardex: QuotePdfSourceCardex | null = null;
+
+    if (quote.cardexId) {
+      const Cardex = await getCardexModel();
+      const doc = await Cardex.findById(quote.cardexId).lean().exec();
+      if (doc) {
+        cardex = {
+          identity: doc.identity,
+          address: doc.address,
+          company: doc.company,
+        };
+      }
+    }
+
+    const model = buildQuotePdfViewModel({
+      quote: {
+        reference: quote.reference,
+        issuedAt: quote.sentAt ?? quote.createdAt,
+        validUntil: quote.validUntil,
+        lines: (quote.lines ?? []).map((line) => ({
+          label: line.label,
+          kind: line.kind,
+          qty: line.qty,
+          unitPriceHT: line.unitPriceHT,
+          vatRate: line.vatRate,
+          discount: line.discount,
+          totalHT: line.totalHT,
+          startAt: line.startAt,
+          endAt: line.endAt,
+        })),
+        vatBreakdown: quote.vatBreakdown ?? [],
+        totals: {
+          ht: quote.totals.ht,
+          vat: quote.totals.vat,
+          ttc: quote.totals.ttc,
+          discountTotal: quote.totals.discountTotal ?? 0,
+        },
+        depositPercent: quote.depositPercent,
+        depositAmountTTC: quote.depositAmountTTC,
+        paymentMethodPreferred: quote.paymentMethodPreferred,
+        paymentTermsLabel: quote.paymentTermsLabel,
+        publicConditions: quote.publicConditions,
+        // Passed only so mapper can prove it ignores it — never mapped to view model.
+        internalNote: quote.internalNote,
+        prospect: quote.prospect,
+      },
+      issuer,
+      logoDataUri: loadInvoiceLogoDataUri(),
+      acceptUrl,
+      cardex,
+      bankRib: quote.paymentMethodPreferred === "bank_transfer" ? loadInvoicePdfBankRib() : null,
+    });
+
+    return this.invoicePdf.generatePdfForQuoteViewModel(model);
+  }
+
   private publicSiteBaseUrl(): string {
     const fromEnv = process.env.PUBLIC_SITE_URL?.trim() || process.env.NEXT_PUBLIC_SITE_URL?.trim();
     if (fromEnv) return fromEnv.replace(/\/$/, "");
@@ -687,7 +813,7 @@ export class QuotesService {
     });
     return [
       `<p>Bonjour,</p>`,
-      `<p>Votre devis <strong>${input.reference}</strong> est disponible.</p>`,
+      `<p>Votre devis <strong>${input.reference}</strong> est disponible (PDF en pièce jointe).</p>`,
       `<p>Valable jusqu'au ${validUntilLabel}.</p>`,
       `<p><a href="${input.acceptUrl}">Accepter le devis</a></p>`,
       `<p>Cordialement,<br/>Cowork Prysme</p>`,

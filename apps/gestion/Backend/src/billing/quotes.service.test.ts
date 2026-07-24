@@ -38,11 +38,29 @@ vi.mock("@coworkprysme/shared/server", () => ({
   parseGestionApiEnv: parseGestionApiEnvMock,
 }));
 
+vi.mock("@coworkprysme/invoice-pdf", () => ({
+  buildQuotePdfViewModel: vi.fn((input: { quote: { reference: string }; acceptUrl: string }) => ({
+    documentKindLabel: "DEVIS",
+    quoteReference: input.quote.reference,
+    acceptUrl: input.acceptUrl,
+  })),
+  loadInvoiceIssuerConfig: vi.fn(() => ({
+    legalName: "CG Développement",
+    addressLine1: "1 rue Test",
+    siret: "123",
+  })),
+  loadInvoiceLogoDataUri: vi.fn(() => ""),
+  loadInvoicePdfBankRib: vi.fn(() => null),
+  InvoicePdfService: vi.fn(),
+}));
+
 import { QuotesService } from "./quotes.service.js";
 import type { MailService } from "../mail/mail.service.js";
+import type { InvoicePdfService } from "@coworkprysme/invoice-pdf";
 
 const STAFF_ID = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const QUOTE_ID = "bbbbbbbbbbbbbbbbbbbbbbbb";
+const STAFF_ONLY_NOTE = "SECRET_INTERNAL_NOTE_NEVER_ON_CLIENT_xyz789";
 
 function staffProfile() {
   return { _id: STAFF_ID, permissions: { billing: true } } as never;
@@ -100,6 +118,7 @@ function baseQuoteDoc(overrides: Record<string, unknown> = {}) {
 describe("QuotesService", () => {
   let service: QuotesService;
   let mail: MailService;
+  let invoicePdf: InvoicePdfService;
   let auditCreate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -124,7 +143,10 @@ describe("QuotesService", () => {
     auditCreate = vi.fn().mockResolvedValue({ _id: "audit1" });
     getAuditLogModelMock.mockResolvedValue({ create: auditCreate });
     getCardexModelMock.mockResolvedValue({
-      findById: () => ({ select: () => ({ lean: () => ({ exec: async () => null }) }) }),
+      findById: () => ({
+        select: () => ({ lean: () => ({ exec: async () => null }) }),
+        lean: () => ({ exec: async () => null }),
+      }),
     });
     getClientAccountModelMock.mockResolvedValue({
       findById: () => ({ select: () => ({ lean: () => ({ exec: async () => null }) }) }),
@@ -133,7 +155,14 @@ describe("QuotesService", () => {
     mail = {
       sendMail: vi.fn().mockResolvedValue({ dryRun: true }),
     } as unknown as MailService;
-    service = new QuotesService(mail);
+    invoicePdf = {
+      generatePdfForQuoteViewModel: vi.fn().mockResolvedValue({
+        pdf: Buffer.from("%PDF-1.4 mock-quote-pdf"),
+        html: "<html>devis sans note</html>",
+        model: { documentKindLabel: "DEVIS" },
+      }),
+    } as unknown as InvoicePdfService;
+    service = new QuotesService(mail, invoicePdf);
   });
 
   describe("create", () => {
@@ -272,9 +301,17 @@ describe("QuotesService", () => {
   });
 
   describe("send / refuse / expire / delete draft", () => {
-    it("sends draft → sent with accept token and email (prospect first+last, no cardex)", async () => {
-      const draft = baseQuoteDoc({ status: "draft", cardexId: undefined });
-      const sent = baseQuoteDoc({ status: "draft", cardexId: undefined });
+    it("sends draft → sent with accept token, PDF attachment, and no internalNote leak", async () => {
+      const draft = baseQuoteDoc({
+        status: "draft",
+        cardexId: undefined,
+        internalNote: STAFF_ONLY_NOTE,
+      });
+      const sent = baseQuoteDoc({
+        status: "draft",
+        cardexId: undefined,
+        internalNote: STAFF_ONLY_NOTE,
+      });
       let call = 0;
       getQuoteModelMock.mockResolvedValue({
         findById: () => ({
@@ -290,20 +327,28 @@ describe("QuotesService", () => {
       expect(attachQuoteAcceptTokenMock).toHaveBeenCalled();
       expect(sent.status).toBe("sent");
       expect(sent.save).toHaveBeenCalled();
+      expect(invoicePdf.generatePdfForQuoteViewModel).toHaveBeenCalled();
       expect(mail.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "prospect@example.com",
           subject: expect.stringContaining("DEV-2026-00001"),
           html: expect.stringContaining("Accepter le devis"),
+          attachments: expect.any(Array),
         }),
       );
       const mailCall = (mail.sendMail as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
         html: string;
-        attachments?: unknown;
+        attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
       };
       expect(mailCall.html).toContain("/accepter-devis?token=");
       expect(mailCall.html).toContain("a".repeat(64));
-      expect(mailCall.attachments).toBeUndefined();
+      expect(mailCall.html).not.toContain(STAFF_ONLY_NOTE);
+      expect(mailCall.attachments).toBeDefined();
+      expect(mailCall.attachments).toHaveLength(1);
+      expect(mailCall.attachments?.[0]?.filename).toBe("DEV-2026-00001.pdf");
+      expect(mailCall.attachments?.[0]?.contentType).toBe("application/pdf");
+      expect(mailCall.attachments?.[0]?.content.subarray(0, 4).toString("utf8")).toBe("%PDF");
+      expect(mailCall.attachments?.[0]?.content.includes(Buffer.from(STAFF_ONLY_NOTE))).toBe(false);
       expect(result.emailSent).toBe(true);
       expect(result.quote.status).toBe("sent");
       expect(result.acceptUrl).toContain("/accepter-devis?token=");

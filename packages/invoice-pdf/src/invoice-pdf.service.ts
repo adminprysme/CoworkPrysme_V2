@@ -18,7 +18,9 @@ import { loadInvoiceIssuerConfig } from "./invoice-issuer.config.js";
 import { loadInvoiceLogoDataUri } from "./invoice-pdf.logo.js";
 import { buildInvoicePdfViewModel } from "./invoice-pdf.mapper.js";
 import type { InvoicePdfViewModel } from "./invoice-pdf.types.js";
+import type { QuotePdfViewModel } from "./quote-pdf.types.js";
 import { renderInvoiceProformaHtml } from "./templates/invoice-proforma.html.js";
+import { renderQuotePdfHtml } from "./templates/quote.html.js";
 
 /**
  * Proforma PDF generation.
@@ -43,6 +45,17 @@ export class InvoicePdfService {
     html: string;
   }> {
     const { html, model } = await this.renderHtmlForInvoiceReference(reference);
+    const pdf = await this.htmlToPdf(html);
+    return { pdf, model, html };
+  }
+
+  /** Devis PDF from a prepared view model (no DB load — caller maps Quote → model). */
+  async generatePdfForQuoteViewModel(model: QuotePdfViewModel): Promise<{
+    pdf: Buffer;
+    model: QuotePdfViewModel;
+    html: string;
+  }> {
+    const html = renderQuotePdfHtml(model);
     const pdf = await this.htmlToPdf(html);
     return { pdf, model, html };
   }

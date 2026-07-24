@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -19,7 +20,7 @@ import {
   StaffQuoteLocksSessionRequestSchema,
   StaffUpdateQuoteRequestSchema,
 } from "@coworkprysme/shared";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
 import { BillingPermissionGuard } from "../auth/billing-permission.guard.js";
@@ -113,6 +114,14 @@ export class QuotesController {
       });
     }
     return this.quoteLocks.release(profile, parsed.data);
+  }
+
+  @Get(":id/pdf")
+  async downloadPdf(@Param("id") id: string, @Res({ passthrough: false }) response: Response) {
+    const { pdf, filename, contentType } = await this.quotes.downloadPdf(id);
+    response.setHeader("Content-Type", contentType);
+    response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    response.send(pdf);
   }
 
   @Get(":id")
