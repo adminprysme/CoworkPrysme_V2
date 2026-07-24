@@ -386,13 +386,23 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
     });
 
     expect(result.bootstrapped).toBe(false);
-    expect(result.acceptedBy.kind).toBe("client");
+    expect(result.acceptedBy).toEqual({
+      kind: "client",
+      clientAccountId: result.clientAccountId,
+    });
+    expect(result.acceptedBy).not.toHaveProperty("staffProfileId");
 
     const ClientAccount = await getClientAccountModel();
     const account = await ClientAccount.findById(result.clientAccountId).lean().exec();
     expect(account?.status).toBe("active");
     expect(account?.email).toBe("prospect@example.com");
     expect(account?.cardexId).toBeTruthy();
+
+    const Quote = await getQuoteModel();
+    const accepted = await Quote.findById(quote._id).lean().exec();
+    expect(accepted?.acceptedBy?.kind).toBe("client");
+    expect(String(accepted?.acceptedBy?.clientAccountId)).toBe(String(result.clientAccountId));
+    expect(accepted?.acceptedBy).not.toHaveProperty("staffProfileId");
 
     const Reservation = await getReservationModel();
     const reservations = await Reservation.find({ quoteId: quote._id }).lean().exec();
