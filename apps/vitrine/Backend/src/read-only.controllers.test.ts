@@ -93,6 +93,22 @@ describe("vitrine-api read-only controllers", () => {
         expect(source).toMatch(/@Get\(":token"\)/);
         expect(source).toMatch(/@Post\(":token\/register"\)/);
         expect(source).toMatch(/@Post\(":token\/confirm"\)/);
+        expect(source).toMatch(/@Post\(":token\/confirm-login"\)/);
+        expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
+        continue;
+      }
+
+      if (relative.endsWith("account-activation/account-activation.controller.ts")) {
+        expect(source).toMatch(/@Get\(":token"\)/);
+        expect(source).toMatch(/@Post\(":token"\)/);
+        expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
+        continue;
+      }
+
+      if (relative.endsWith("quotes-payment/quote-payment.controller.ts")) {
+        expect(source).toMatch(/@Get\("preview"\)/);
+        expect(source).toMatch(/@Post\("intent"\)/);
+        expect(source).toMatch(/@Get\("status"\)/);
         expect(source).not.toMatch(/@(Put|Patch|Delete)\(/);
         continue;
       }

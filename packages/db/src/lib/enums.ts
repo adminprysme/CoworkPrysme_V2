@@ -152,6 +152,13 @@ export type QuoteLinePriceSource = (typeof QUOTE_LINE_PRICE_SOURCES)[number];
 export const QUOTE_ACCEPTED_BY_KINDS = ["client", "staff"] as const;
 export type QuoteAcceptedByKind = (typeof QUOTE_ACCEPTED_BY_KINDS)[number];
 
+/**
+ * Lifecycle of a devis Stripe payment link (`quotePaymentLinks`).
+ * Expiry aligns with Quote.validUntil (LOCKED #6) — not the booking 45 min hold.
+ */
+export const QUOTE_PAYMENT_LINK_STATUSES = ["active", "consumed", "revoked", "expired"] as const;
+export type QuotePaymentLinkStatus = (typeof QUOTE_PAYMENT_LINK_STATUSES)[number];
+
 export const INVOICE_TYPES = ["proforma", "final"] as const;
 export type InvoiceType = (typeof INVOICE_TYPES)[number];
 

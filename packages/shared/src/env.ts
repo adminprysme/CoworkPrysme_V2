@@ -167,6 +167,12 @@ export const VitrineApiEnvSchema = (env: NodeJS.ProcessEnv) =>
     QUOTE_ACCEPT_TOKEN_SECRET: z.string().min(32),
     /** Pepper for staff-accept password-activation tokens (≥32). Same as gestion-api. */
     CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: z.string().min(32),
+    /**
+     * Pepper for devis Stripe payment-link token hashes (≥32).
+     * Dedicated — never reuse SESSION / BOOKING_PAYMENT / CLIENT_INVITE /
+     * QUOTE_ACCEPT / CLIENT_ACCOUNT_ACTIVATION. Same value as gestion-api.
+     */
+    QUOTE_PAYMENT_LINK_TOKEN_SECRET: z.string().min(32),
   });
 
 export type VitrineApiEnv = z.infer<ReturnType<typeof VitrineApiEnvSchema>>;
@@ -204,6 +210,12 @@ export const GestionApiEnvSchema = (env: NodeJS.ProcessEnv) =>
       QUOTE_ACCEPT_TOKEN_SECRET: z.string().min(32),
       /** Pepper for staff-accept password-activation tokens (≥32). Same as vitrine-api. */
       CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: z.string().min(32),
+      /**
+       * Pepper for devis Stripe payment-link token hashes (≥32).
+       * Dedicated — never reuse SESSION / BOOKING_PAYMENT / CLIENT_INVITE /
+       * QUOTE_ACCEPT / CLIENT_ACCOUNT_ACTIVATION. Same value as vitrine-api.
+       */
+      QUOTE_PAYMENT_LINK_TOKEN_SECRET: z.string().min(32),
       COOKIE_SECURE: z
         .enum(["true", "false"])
         .default(isProduction(env) ? "true" : "false")
@@ -335,6 +347,7 @@ export function parseVitrineApiEnv(env: NodeJS.ProcessEnv = process.env): Vitrin
     CLIENT_INVITE_TOKEN_SECRET: env.CLIENT_INVITE_TOKEN_SECRET,
     QUOTE_ACCEPT_TOKEN_SECRET: env.QUOTE_ACCEPT_TOKEN_SECRET,
     CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: env.CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET,
+    QUOTE_PAYMENT_LINK_TOKEN_SECRET: env.QUOTE_PAYMENT_LINK_TOKEN_SECRET,
   });
 
   if (!result.success) {
@@ -362,6 +375,7 @@ export function parseGestionApiEnv(env: NodeJS.ProcessEnv = process.env): Gestio
     CLIENT_INVITE_TOKEN_SECRET: env.CLIENT_INVITE_TOKEN_SECRET,
     QUOTE_ACCEPT_TOKEN_SECRET: env.QUOTE_ACCEPT_TOKEN_SECRET,
     CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: env.CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET,
+    QUOTE_PAYMENT_LINK_TOKEN_SECRET: env.QUOTE_PAYMENT_LINK_TOKEN_SECRET,
     COOKIE_SECURE: env.COOKIE_SECURE,
     COOKIE_SAME_SITE: env.COOKIE_SAME_SITE,
     CENTRALE_API_URL: env.CENTRALE_API_URL,

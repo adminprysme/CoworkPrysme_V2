@@ -30,6 +30,7 @@ import { createStripeClient, loadStripeConfig } from "./stripe.config.js";
 import { assertBookingPaymentAccessToken } from "./booking-payment-token.js";
 /* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI needs runtime class reference */
 import { BookingEmailsService } from "../booking/booking-emails.service.js";
+import { QuotePaymentService } from "../quotes-payment/quote-payment.service.js";
 
 /** @deprecated Prefer BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS from shared — kept for local imports. */
 export const BOOKING_PAYMENT_INTENT_TTL_MS = BOOKING_PAYMENT_ACCESS_TOKEN_TTL_MS;
@@ -44,7 +45,10 @@ export class BookingPaymentService {
   private stripe: Stripe | null = null;
   private webhookSecret: string | null = null;
 
-  constructor(private readonly bookingEmails: BookingEmailsService) {}
+  constructor(
+    private readonly bookingEmails: BookingEmailsService,
+    private readonly quotePayment: QuotePaymentService,
+  ) {}
 
   private ensureStripe(): Stripe {
     if (this.stripe && this.webhookSecret) {
@@ -281,6 +285,13 @@ export class BookingPaymentService {
   }
 
   private async onPaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<void> {
+    // Quote payment-link path (metadata.quoteId) — Option A full group confirm.
+    // Without quoteId → EXACT current booking path (no interference).
+    const handledAsQuote = await this.quotePayment.handlePaymentIntentSucceeded(pi);
+    if (handledAsQuote) {
+      return;
+    }
+
     const invoiceId = pi.metadata?.invoiceId?.trim();
     if (!invoiceId) {
       this.logger.error(`payment_intent.succeeded ${pi.id} missing metadata.invoiceId`);

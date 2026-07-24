@@ -138,7 +138,15 @@ describe("Stripe booking payment", () => {
     const bookingEmails = {
       sendEmailsAfterCardPayment: sendEmailsAfterCardPaymentMock,
     } as unknown as BookingEmailsService;
-    service = new BookingPaymentService(bookingEmails);
+    const quotePayment = {
+      handlePaymentIntentSucceeded: vi.fn().mockResolvedValue(false),
+    };
+    service = new BookingPaymentService(bookingEmails, quotePayment as never);
+    // Expose for assertion in anti-booking / quote branch tests
+    Object.defineProperty(service, "quotePayment", {
+      value: quotePayment,
+      writable: true,
+    });
     mockInvoicePair(4800);
   });
 
@@ -201,6 +209,91 @@ describe("Stripe booking payment", () => {
       reservationId: RESERVATION_ID,
       invoiceReference: "PF-2026-00042",
     });
+  });
+
+  it("without metadata.quoteId follows exact booking path (point 5 anti-booking)", async () => {
+    const quotePayment = (
+      service as unknown as {
+        quotePayment: { handlePaymentIntentSucceeded: ReturnType<typeof vi.fn> };
+      }
+    ).quotePayment;
+    // Ensure quote handler returns false (no quoteId handled)
+    quotePayment.handlePaymentIntentSucceeded.mockResolvedValue(false);
+
+    applyStripeCardPaymentMock.mockResolvedValue({
+      applied: true,
+      invoice: {
+        type: "proforma",
+        status: "paid",
+        reference: "PF-2026-00042",
+        totals: { paidTotal: 4800, balanceDue: 0 },
+        reservationId: { toString: () => RESERVATION_ID },
+      },
+      payment: { method: "card" },
+    });
+    confirmReservationAfterCardPaymentMock.mockResolvedValue({
+      transitioned: true,
+      reservation: { status: "confirmed", reference: "RES-2026-00042" },
+    });
+
+    await service.handleWebhookEvent({
+      id: "evt_booking_no_quote",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_booking_only",
+          amount: 4800,
+          amount_received: 4800,
+          metadata: {
+            invoiceId: INVOICE_ID,
+            reservationId: RESERVATION_ID,
+            // deliberately NO quoteId
+          },
+        },
+      },
+    } as never);
+
+    expect(quotePayment.handlePaymentIntentSucceeded).toHaveBeenCalled();
+    expect(applyStripeCardPaymentMock).toHaveBeenCalledWith({
+      stripePaymentIntentId: "pi_booking_only",
+      invoiceId: INVOICE_ID,
+      amountReceived: 4800,
+    });
+    expect(applyStripeCardPaymentMock.mock.calls[0]![0]).not.toHaveProperty("expectedAmountCents");
+    expect(confirmReservationAfterCardPaymentMock).toHaveBeenCalledTimes(1);
+    expect(sendEmailsAfterCardPaymentMock).toHaveBeenCalled();
+  });
+
+  it("with metadata.quoteId delegates to quote payment handler and skips booking path (point 4)", async () => {
+    const quotePayment = (
+      service as unknown as {
+        quotePayment: { handlePaymentIntentSucceeded: ReturnType<typeof vi.fn> };
+      }
+    ).quotePayment;
+    quotePayment.handlePaymentIntentSucceeded.mockResolvedValue(true);
+
+    await service.handleWebhookEvent({
+      id: "evt_quote_pay",
+      type: "payment_intent.succeeded",
+      data: {
+        object: {
+          id: "pi_quote",
+          amount: 3600,
+          amount_received: 3600,
+          metadata: {
+            invoiceId: INVOICE_ID,
+            quoteId: "507f1f77bcf86cd799439099",
+            paymentLinkId: "507f1f77bcf86cd799439098",
+            reservationId: RESERVATION_ID,
+          },
+        },
+      },
+    } as never);
+
+    expect(quotePayment.handlePaymentIntentSucceeded).toHaveBeenCalled();
+    expect(applyStripeCardPaymentMock).not.toHaveBeenCalled();
+    expect(confirmReservationAfterCardPaymentMock).not.toHaveBeenCalled();
+    expect(sendEmailsAfterCardPaymentMock).not.toHaveBeenCalled();
   });
 
   it("does not send emails when payment_intent.succeeded is an idempotent replay", async () => {

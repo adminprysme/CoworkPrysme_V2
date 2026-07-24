@@ -105,3 +105,29 @@ export {
   type AcceptQuoteInput,
   type AcceptQuoteResult,
 } from "./accept-quote.js";
+export { resolveQuotePaymentLinkAmountCents } from "./quote-payment-link-amount.js";
+export {
+  hashQuotePaymentLinkToken,
+  isQuotePaymentLinkTokenFormat,
+  issueQuotePaymentLinkToken,
+  quotePaymentLinkTokenMatchesHash,
+  type IssuedQuotePaymentLinkToken,
+} from "./quote-payment-link-token.js";
+export {
+  getQuotePaymentLinkModel,
+  registerQuotePaymentLinkModel,
+  type QuotePaymentLink,
+  type QuotePaymentLinkDocument,
+  type QuotePaymentLinkModel,
+} from "./quote-payment-link.schema.js";
+export {
+  consumeQuotePaymentLink,
+  createQuotePaymentLink,
+  redeemQuotePaymentLink,
+  QuotePaymentLinkLookupError,
+  type ConsumeQuotePaymentLinkInput,
+  type CreateQuotePaymentLinkInput,
+  type CreateQuotePaymentLinkResult,
+  type QuotePaymentLinkLookupErrorCode,
+  type RedeemQuotePaymentLinkInput,
+} from "./quote-payment-link.js";

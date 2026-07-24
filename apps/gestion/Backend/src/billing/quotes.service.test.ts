@@ -134,6 +134,8 @@ describe("QuotesService", () => {
     nextReferenceMock.mockResolvedValue("DEV-2026-00042");
     parseGestionApiEnvMock.mockReturnValue({
       QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+      QUOTE_PAYMENT_LINK_TOKEN_SECRET: "p".repeat(32),
+      CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET: "a".repeat(32),
     });
     attachQuoteAcceptTokenMock.mockResolvedValue({
       rawToken: "a".repeat(64),

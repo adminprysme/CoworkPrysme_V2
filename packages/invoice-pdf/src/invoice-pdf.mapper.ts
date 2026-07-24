@@ -148,12 +148,17 @@ export function buildInvoicePdfViewModel(input: {
   paymentMethod?: string | null;
   awaitingPaymentMethod?: string | null;
   bankRib?: InvoicePdfBankRibView | null;
+  /** Quote payment URL — when set, caller should also supply paymentQrDataUri. */
+  paymentUrl?: string | null;
+  paymentQrDataUri?: string | null;
 }): InvoicePdfViewModel {
   const issuedAt = asDate(input.invoice.issuedAt, new Date());
   const paymentMethod = resolveInvoicePdfPaymentMethod({
     paymentMethod: input.paymentMethod,
     awaitingPaymentMethod: input.awaitingPaymentMethod,
   });
+  const paymentUrl = input.paymentUrl?.trim() || undefined;
+  const paymentQrDataUri = paymentUrl ? input.paymentQrDataUri?.trim() || undefined : undefined;
 
   return {
     documentKindLabel: "PROFORMA",
@@ -186,6 +191,8 @@ export function buildInvoicePdfViewModel(input: {
     paymentMethod,
     paymentStatus: resolveInvoicePdfPaymentStatus(input.invoice),
     bankRib: paymentMethod === "bank_transfer" ? (input.bankRib ?? null) : null,
+    ...(paymentUrl ? { paymentUrl } : {}),
+    ...(paymentQrDataUri ? { paymentQrDataUri } : {}),
     logoDataUri: input.logoDataUri,
   };
 }

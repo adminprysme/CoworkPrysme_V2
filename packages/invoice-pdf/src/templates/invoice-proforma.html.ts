@@ -106,6 +106,21 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
         </div>`
       : "";
 
+  // QR only when paymentUrl is provided (quote-derived invoice) — never on classic booking invoices.
+  const paymentQrBlock =
+    model.paymentUrl && model.paymentQrDataUri
+      ? `<div class="payment-qr" data-payment-qr="true">
+          <div class="section-title">Payer en ligne</div>
+          <div class="qr-grid">
+            <img src="${escapeHtml(model.paymentQrDataUri)}" alt="QR code de paiement" width="120" height="120" />
+            <div>
+              <p>Scannez ce QR code ou ouvrez le lien pour régler par carte&nbsp;:</p>
+              <p><a href="${escapeHtml(model.paymentUrl)}">${escapeHtml(model.paymentUrl)}</a></p>
+            </div>
+          </div>
+        </div>`
+      : "";
+
   const contactBits = [model.issuer.email, model.issuer.phone].filter(Boolean).join(" · ");
 
   return `<!DOCTYPE html>
@@ -413,6 +428,15 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
       margin-top: 4px;
     }
     .rib-ref { margin: 8px 0 0; font-size: 9pt; color: #444; }
+    .payment-qr { margin-top: 10px; }
+    .qr-grid {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-top: 4px;
+    }
+    .qr-grid img { flex: 0 0 auto; }
+    .qr-grid a { word-break: break-all; font-size: 8.5pt; color: #1a1a1a; }
     .legal {
       margin-top: 12px;
       padding-top: 8px;
@@ -535,6 +559,7 @@ export function renderInvoiceProformaHtml(model: InvoicePdfViewModel): string {
         <div><span class="muted">Statut</span><br><strong>${escapeHtml(paymentStatusLabel(model.paymentStatus))}</strong></div>
       </div>
       ${bankBlock}
+      ${paymentQrBlock}
     </section>
 
     <footer class="legal">

@@ -12,6 +12,11 @@ export interface ApplyStripeCardPaymentInput {
   /** Amount actually received (cents), from Stripe PaymentIntent — never from the client. */
   amountReceived: number;
   receivedAt?: Date;
+  /**
+   * When set (quote payment-link / deposit), allow settlement of exactly this amount
+   * even if it is less than balanceDue. Booking path omits this → full settlement only.
+   */
+  expectedAmountCents?: number;
 }
 
 export interface ApplyStripeCardPaymentResult {
@@ -24,6 +29,9 @@ export interface ApplyStripeCardPaymentResult {
 /**
  * Apply a Stripe card payment to a proforma invoice.
  * Updates paidTotal / balanceDue / status only — never changes invoice.type (stays "proforma").
+ *
+ * Default: full settlement only (`amountReceived === balanceDue`).
+ * Quote deposit path: pass `expectedAmountCents` matching the payment-link snapshot.
  */
 export async function applyStripeCardPayment(
   input: ApplyStripeCardPaymentInput,
@@ -34,6 +42,12 @@ export async function applyStripeCardPayment(
   }
   if (!Number.isInteger(input.amountReceived) || input.amountReceived <= 0) {
     throw new Error("amountReceived must be a positive integer (cents)");
+  }
+  if (
+    input.expectedAmountCents !== undefined &&
+    (!Number.isInteger(input.expectedAmountCents) || input.expectedAmountCents <= 0)
+  ) {
+    throw new Error("expectedAmountCents must be a positive integer (cents)");
   }
 
   await connectMongo();
@@ -91,18 +105,34 @@ async function applyStripeCardPaymentInSession(
     throw new InvoiceNotFoundError();
   }
 
-  // Full settlement only — no silent partial card payments.
-  if (input.amountReceived !== invoice.totals.balanceDue) {
-    throw new StripePaymentAmountMismatchError(input.amountReceived, invoice.totals.balanceDue);
+  const balanceDue = invoice.totals.balanceDue;
+  const expected = input.expectedAmountCents;
+
+  // Booking / full path: amount must equal balanceDue.
+  // Quote deposit path: amount must equal expectedAmountCents (may be < balanceDue).
+  if (expected !== undefined) {
+    if (input.amountReceived !== expected) {
+      throw new StripePaymentAmountMismatchError(input.amountReceived, expected);
+    }
+    if (input.amountReceived > balanceDue) {
+      throw new StripePaymentAmountMismatchError(input.amountReceived, balanceDue);
+    }
+  } else if (input.amountReceived !== balanceDue) {
+    throw new StripePaymentAmountMismatchError(input.amountReceived, balanceDue);
   }
 
   // Permanent rule for Phase 4a: card payment never flips type to "final".
   const invoiceType = invoice.type;
 
   const nextPaidTotal = invoice.totals.paidTotal + input.amountReceived;
-  const nextBalanceDue = 0;
-  const nextStatus = "paid" as const;
-  const kind = invoice.totals.paidTotal === 0 ? ("full" as const) : ("balance" as const);
+  const nextBalanceDue = Math.max(0, invoice.totals.ttc - nextPaidTotal);
+  const nextStatus = nextBalanceDue === 0 ? ("paid" as const) : ("partially_paid" as const);
+  const kind =
+    nextBalanceDue === 0 && invoice.totals.paidTotal === 0
+      ? ("full" as const)
+      : invoice.totals.paidTotal === 0 && nextBalanceDue > 0
+        ? ("deposit" as const)
+        : ("balance" as const);
 
   const created = await deps.Payment.create(
     [
@@ -131,7 +161,9 @@ async function applyStripeCardPaymentInSession(
   invoice.totals.balanceDue = nextBalanceDue;
   invoice.status = nextStatus;
   invoice.type = invoiceType; // explicitly preserve (must stay "proforma" in Phase 4a)
-  invoice.paidAt = input.receivedAt;
+  if (nextBalanceDue === 0) {
+    invoice.paidAt = input.receivedAt;
+  }
   await invoice.save({ session: deps.session });
 
   return { applied: true, invoice, payment };

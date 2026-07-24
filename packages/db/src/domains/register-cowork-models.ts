@@ -13,6 +13,7 @@ import {
   registerQontoOAuthCredentialModel,
   registerQontoTransferCandidateModel,
   registerQuoteModel,
+  registerQuotePaymentLinkModel,
 } from "./billing/index.js";
 import {
   registerNotificationModel,
@@ -60,6 +61,7 @@ export function registerAllCoworkModels(connection: Connection): void {
   registerServiceModel(connection);
   registerDiscountCodeModel(connection);
   registerQuoteModel(connection);
+  registerQuotePaymentLinkModel(connection);
   registerInvoiceModel(connection);
   registerPaymentModel(connection);
   registerQontoOAuthCredentialModel(connection);
@@ -91,6 +93,7 @@ export const COWORK_COLLECTION_NAMES = [
   "services",
   "discountCodes",
   "quotes",
+  "quotePaymentLinks",
   "invoices",
   "payments",
   "qontoOAuthCredentials",

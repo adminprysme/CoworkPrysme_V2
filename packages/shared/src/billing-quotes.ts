@@ -393,6 +393,9 @@ export const StaffAcceptQuoteResponseSchema = z.object({
   clientAccountId: z.string().min(1),
   bootstrapped: z.boolean(),
   activationEmailSent: z.boolean().optional(),
+  /** Present when card payment-link was issued at accept. */
+  paymentUrl: z.string().url().optional(),
+  paymentEmailSent: z.boolean().optional(),
 });
 export type StaffAcceptQuoteResponse = z.infer<typeof StaffAcceptQuoteResponseSchema>;
 

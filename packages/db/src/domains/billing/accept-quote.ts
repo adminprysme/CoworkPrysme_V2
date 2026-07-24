@@ -24,6 +24,7 @@ import {
 } from "./bootstrap-quote-client.js";
 import { getInvoiceModel } from "./invoice.schema.js";
 import { getQuoteModel, type Quote } from "./quote.schema.js";
+import { createQuotePaymentLink } from "./quote-payment-link.js";
 import { registerClientAccountForQuoteAccept } from "./register-for-quote-accept.js";
 
 export type AcceptQuoteErrorCode =
@@ -79,6 +80,11 @@ export interface AcceptQuoteInput {
    */
   lockSessionId?: string;
   /**
+   * Pepper for quote payment-link token hashes. Required when
+   * `paymentMethodPreferred === "card"` so a link is created in the same txn.
+   */
+  paymentLinkTokenSecret?: string;
+  /**
    * Test/proof hook: throw inside the transaction after the named step to verify
    * rollback leaves no bastard state. Never enable in production.
    */
@@ -101,6 +107,16 @@ export interface AcceptQuoteResult {
     rawToken: string;
     expiresAt: Date;
     activationId: Types.ObjectId;
+  };
+  /**
+   * Present when paymentMethodPreferred === "card" and a payment link was issued
+   * in the accept transaction.
+   */
+  paymentLink?: {
+    paymentLinkId: Types.ObjectId;
+    rawToken: string;
+    amountDueCents: number;
+    expiresAt: Date;
   };
 }
 
@@ -360,6 +376,37 @@ async function acceptQuoteInTransaction(
     { session },
   ).exec();
 
+  let paymentLink: AcceptQuoteResult["paymentLink"];
+  if (quote.paymentMethodPreferred === "card") {
+    if (!input.paymentLinkTokenSecret || input.paymentLinkTokenSecret.length < 32) {
+      throw new Error(
+        "paymentLinkTokenSecret (≥32) is required when accepting a card-preferred quote",
+      );
+    }
+    const createdLink = await createQuotePaymentLink({
+      quote: {
+        _id: quote._id,
+        depositPercent: quote.depositPercent,
+        depositAmountTTC: quote.depositAmountTTC,
+        totals: quote.totals,
+        validUntil: quote.validUntil,
+        cardexId,
+      },
+      invoiceId: invoice._id,
+      reservationIds,
+      cardexId,
+      tokenSecret: input.paymentLinkTokenSecret,
+      session,
+      now,
+    });
+    paymentLink = {
+      paymentLinkId: createdLink.paymentLinkId,
+      rawToken: createdLink.rawToken,
+      amountDueCents: createdLink.amountDueCents,
+      expiresAt: createdLink.expiresAt,
+    };
+  }
+
   return {
     quoteId: quote._id,
     reference: quote.reference,
@@ -371,6 +418,7 @@ async function acceptQuoteInTransaction(
     acceptedBy,
     bootstrapped,
     ...(activation ? { activation } : {}),
+    ...(paymentLink ? { paymentLink } : {}),
   };
 }
 

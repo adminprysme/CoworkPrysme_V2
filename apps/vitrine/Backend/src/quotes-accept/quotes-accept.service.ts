@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   GoneException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import {
@@ -30,6 +31,7 @@ import {
   PublicQuoteAcceptPreviewSchema,
   PublicQuoteAcceptRegisterResponseSchema,
   QUOTE_ACCEPT_ERROR_CODES,
+  escapeEmailHtml,
   type PublicQuoteAcceptConfirmRequest,
   type PublicQuoteAcceptConfirmResponse,
   type PublicQuoteAcceptPreview,
@@ -39,14 +41,35 @@ import {
 import { parseVitrineApiEnv } from "@coworkprysme/shared/server";
 import { Types } from "mongoose";
 
+/* eslint-disable @typescript-eslint/consistent-type-imports -- NestJS DI requires runtime class references */
+import { InvoicePdfService } from "@coworkprysme/invoice-pdf";
+import { MailService, mailDeliveryFromResult } from "../mail/mail.service.js";
+
 /**
  * Public quote-accept surface — thin adapter over the shared domain `acceptQuote`.
  * Staff gestion path uses the exact same function (no parallel implementation).
  */
 @Injectable()
 export class QuotesAcceptService {
+  private readonly logger = new Logger(QuotesAcceptService.name);
+
+  constructor(
+    private readonly mail: MailService,
+    private readonly invoicePdf: InvoicePdfService,
+  ) {}
+
   private acceptTokenSecret(): string {
     return parseVitrineApiEnv().QUOTE_ACCEPT_TOKEN_SECRET;
+  }
+
+  private paymentLinkTokenSecret(): string {
+    return parseVitrineApiEnv().QUOTE_PAYMENT_LINK_TOKEN_SECRET;
+  }
+
+  private publicSiteBaseUrl(): string {
+    const fromEnv = process.env.PUBLIC_SITE_URL?.trim() || process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    if (fromEnv) return fromEnv.replace(/\/$/, "");
+    return "http://localhost:3001";
   }
 
   async preview(rawToken: string): Promise<PublicQuoteAcceptPreview> {
@@ -166,9 +189,23 @@ export class QuotesAcceptService {
       result = await acceptQuote({
         quoteId: quote._id,
         actor,
+        paymentLinkTokenSecret: this.paymentLinkTokenSecret(),
       });
     } catch (error) {
       this.rethrowAcceptError(error);
+    }
+
+    let paymentUrl: string | undefined;
+    if (result.paymentLink) {
+      paymentUrl = `${this.publicSiteBaseUrl()}/payer-devis?token=${result.paymentLink.rawToken}&invoiceId=${String(result.invoiceId)}`;
+      await this.sendQuotePaymentLinkEmail({
+        reference: result.reference,
+        recipientEmail: quote.prospect?.email,
+        invoiceReference: result.invoiceReference,
+        paymentUrl,
+        amountDueCents: result.paymentLink.amountDueCents,
+        expiresAt: result.paymentLink.expiresAt,
+      });
     }
 
     return PublicQuoteAcceptConfirmResponseSchema.parse({
@@ -180,6 +217,7 @@ export class QuotesAcceptService {
       cardexId: String(result.cardexId),
       clientAccountId: String(result.clientAccountId),
       status: "accepted",
+      ...(paymentUrl ? { paymentUrl } : {}),
     });
   }
 
@@ -268,6 +306,55 @@ export class QuotesAcceptService {
       throw new BadRequestException(body);
     }
     throw error;
+  }
+
+  private async sendQuotePaymentLinkEmail(input: {
+    reference: string;
+    recipientEmail?: string;
+    invoiceReference: string;
+    paymentUrl: string;
+    amountDueCents: number;
+    expiresAt: Date;
+  }): Promise<void> {
+    const recipient = input.recipientEmail?.trim().toLowerCase();
+    if (!recipient) {
+      this.logger.warn(`quote accept payment email skipped — no recipient for ${input.reference}`);
+      return;
+    }
+    try {
+      const { pdf } = await this.invoicePdf.generatePdfForInvoiceReference(input.invoiceReference, {
+        paymentUrl: input.paymentUrl,
+      });
+      const amountLabel = (input.amountDueCents / 100).toLocaleString("fr-FR", {
+        style: "currency",
+        currency: "EUR",
+      });
+      const expiresLabel = input.expiresAt.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+      const mailResult = await this.mail.sendMail({
+        to: recipient,
+        subject: `Payer votre réservation — devis ${input.reference}`,
+        html: [
+          `<p>Bonjour,</p>`,
+          `<p>Votre devis <strong>${escapeEmailHtml(input.reference)}</strong> a été accepté.</p>`,
+          `<p>Montant à régler&nbsp;: <strong>${escapeEmailHtml(amountLabel)}</strong> (valable jusqu'au ${escapeEmailHtml(expiresLabel)}).</p>`,
+          `<p><a href="${escapeEmailHtml(input.paymentUrl)}">Payer par carte</a></p>`,
+          `<p>La facture proforma (avec QR code) est jointe.</p>`,
+          `<p>Cordialement,<br/>Cowork Prysme</p>`,
+        ].join("\n"),
+        attachments: [
+          {
+            filename: `${input.invoiceReference}.pdf`,
+            content: pdf,
+            contentType: "application/pdf",
+          },
+        ],
+      });
+      void mailDeliveryFromResult(mailResult);
+    } catch (error) {
+      this.logger.error(
+        `quote accept payment email failed for ${input.reference}: ${String(error)}`,
+      );
+    }
   }
 }
 

@@ -142,9 +142,20 @@ export const PublicQuoteAcceptConfirmResponseSchema = z.object({
   cardexId: z.string().min(1),
   clientAccountId: z.string().min(1),
   status: z.literal("accepted"),
+  /** Present when card payment-link was issued at accept. */
+  paymentUrl: z.string().url().optional(),
 });
 export type PublicQuoteAcceptConfirmResponse = z.infer<
   typeof PublicQuoteAcceptConfirmResponseSchema
+>;
+
+/** POST /quotes/accept/:token/confirm-login — existing account email+password then accept. */
+export const PublicQuoteAcceptConfirmLoginRequestSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1, "Mot de passe requis"),
+});
+export type PublicQuoteAcceptConfirmLoginRequest = z.infer<
+  typeof PublicQuoteAcceptConfirmLoginRequestSchema
 >;
 
 /** GET activation token preview (staff-accept set-password). */

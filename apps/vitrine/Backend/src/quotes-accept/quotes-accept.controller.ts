@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, Post } from "@nestjs/common";
 import {
+  PublicQuoteAcceptConfirmLoginRequestSchema,
   PublicQuoteAcceptConfirmRequestSchema,
   PublicQuoteAcceptRegisterRequestSchema,
   QUOTE_ACCEPT_ERROR_CODES,
@@ -39,5 +40,18 @@ export class QuotesAcceptController {
       });
     }
     return this.quotesAccept.confirm(token, parsed.data);
+  }
+
+  /** Existing account: email + password → accept (needsRegistration=false). */
+  @Post(":token/confirm-login")
+  async confirmLogin(@Param("token") token: string, @Body() body: unknown) {
+    const parsed = PublicQuoteAcceptConfirmLoginRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: QUOTE_ACCEPT_ERROR_CODES.VALIDATION_ERROR,
+        message: parsed.error.issues[0]?.message ?? "Payload invalide",
+      });
+    }
+    return this.quotesAccept.confirmExistingWithPassword(token, parsed.data);
   }
 }

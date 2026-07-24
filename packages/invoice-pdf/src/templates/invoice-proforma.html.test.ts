@@ -265,4 +265,84 @@ describe("invoice PDF template", () => {
     expect(model.lines[1]?.qtyOrPeriodLabel).toBe("2");
     expect(html).toContain(INVOICE_LATE_PAYMENT_LEGAL_NOTICE.replaceAll("'", "&#39;"));
   });
+
+  it("embeds payment QR only when paymentUrl is provided (point 6 — quote invoice)", () => {
+    const paymentUrl =
+      "http://localhost:3001/payer-devis?token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&invoiceId=507f1f77bcf86cd799439012";
+    const model = buildInvoicePdfViewModel({
+      invoice: {
+        reference: "PF-2026-00099",
+        type: "proforma",
+        status: "proforma",
+        issuedAt: new Date("2026-07-24T10:00:00.000Z"),
+        lines: [
+          {
+            label: "FOCUS",
+            kind: "space",
+            qty: 1,
+            unitPriceHT: 10000,
+            vatRate: 20,
+            discount: 0,
+            totalHT: 10000,
+          },
+        ],
+        vatBreakdown: [{ rate: 20, baseHT: 10000, vat: 2000 }],
+        totals: { ht: 10000, vat: 2000, ttc: 12000, discountTotal: 0, balanceDue: 12000 },
+      },
+      cardex: {
+        identity: { firstName: "Alice", lastName: "Martin" },
+      },
+      issuer,
+      logoDataUri: "data:image/png;base64,aaa",
+      paymentMethod: "card",
+      awaitingPaymentMethod: "card",
+      paymentUrl,
+      paymentQrDataUri: "data:image/png;base64,qrplaceholder",
+    });
+
+    const html = renderInvoiceProformaHtml(model);
+    expect(html).toContain('data-payment-qr="true"');
+    expect(html).toContain("/payer-devis?token=");
+    expect(html).toContain("invoiceId=507f1f77bcf86cd799439012");
+    expect(html).toContain("data:image/png;base64,qrplaceholder");
+    expect(html).toContain("Payer en ligne");
+  });
+
+  it("never embeds payment QR on classic booking invoices without paymentUrl (point 6)", () => {
+    const model = buildInvoicePdfViewModel({
+      invoice: {
+        reference: "PF-2026-00022",
+        type: "proforma",
+        status: "proforma",
+        issuedAt: new Date("2026-07-17T14:43:30.522Z"),
+        lines: [
+          {
+            label: "FOCUS",
+            kind: "space",
+            qty: 1,
+            unitPriceHT: 2000,
+            vatRate: 20,
+            discount: 0,
+            totalHT: 2000,
+          },
+        ],
+        vatBreakdown: [{ rate: 20, baseHT: 2000, vat: 400 }],
+        totals: { ht: 2000, vat: 400, ttc: 2400, discountTotal: 0, balanceDue: 2400 },
+      },
+      cardex: {
+        identity: { firstName: "E2E", lastName: "Listen" },
+      },
+      issuer,
+      logoDataUri: "data:image/png;base64,aaa",
+      paymentMethod: "card",
+      awaitingPaymentMethod: "card",
+    });
+
+    const html = renderInvoiceProformaHtml(model);
+    expect(html).not.toContain("data-payment-qr");
+    expect(html).not.toContain("Payer en ligne");
+    expect(html).not.toContain("/payer-devis");
+    expect(model.paymentUrl).toBeUndefined();
+    expect(model.paymentQrDataUri).toBeUndefined();
+  });
 });

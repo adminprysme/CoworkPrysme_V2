@@ -12,6 +12,8 @@ import { InvoicePdfModule } from "./invoice-pdf/invoice-pdf.module.js";
 import { InvitationsModule } from "./invitations/invitations.module.js";
 import { MediaModule } from "./media/media.module.js";
 import { QuotesAcceptModule } from "./quotes-accept/quotes-accept.module.js";
+import { QuotesPaymentModule } from "./quotes-payment/quotes-payment.module.js";
+import { AccountActivationModule } from "./account-activation/account-activation.module.js";
 import { ServicesContentModule } from "./services-content/services-content.module.js";
 import { SiteContactModule } from "./site-contact/site-contact.module.js";
 import { StripeModule } from "./stripe/stripe.module.js";
@@ -29,10 +31,12 @@ import { StripeModule } from "./stripe/stripe.module.js";
     DiscountCodesModule,
     ServicesContentModule,
     SiteContactModule,
+    QuotesPaymentModule,
     StripeModule,
     InvoicePdfModule,
     InvitationsModule,
     QuotesAcceptModule,
+    AccountActivationModule,
   ],
 })
 export class AppModule {}

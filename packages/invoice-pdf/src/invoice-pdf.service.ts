@@ -17,6 +17,7 @@ import { loadInvoicePdfBankRib } from "./invoice-pdf.bank-rib.js";
 import { loadInvoiceIssuerConfig } from "./invoice-issuer.config.js";
 import { loadInvoiceLogoDataUri } from "./invoice-pdf.logo.js";
 import { buildInvoicePdfViewModel } from "./invoice-pdf.mapper.js";
+import { buildPaymentQrDataUri } from "./invoice-pdf.qr.js";
 import type { InvoicePdfViewModel } from "./invoice-pdf.types.js";
 import type { QuotePdfViewModel } from "./quote-pdf.types.js";
 import { renderInvoiceProformaHtml } from "./templates/invoice-proforma.html.js";
@@ -31,20 +32,26 @@ export class InvoicePdfService {
   private readonly logger = new Logger(InvoicePdfService.name);
   private browserPromise: Promise<Browser> | null = null;
 
-  async renderHtmlForInvoiceReference(reference: string): Promise<{
+  async renderHtmlForInvoiceReference(
+    reference: string,
+    options?: { paymentUrl?: string },
+  ): Promise<{
     html: string;
     model: InvoicePdfViewModel;
   }> {
-    const model = await this.buildViewModel(reference);
+    const model = await this.buildViewModel(reference, options);
     return { html: renderInvoiceProformaHtml(model), model };
   }
 
-  async generatePdfForInvoiceReference(reference: string): Promise<{
+  async generatePdfForInvoiceReference(
+    reference: string,
+    options?: { paymentUrl?: string },
+  ): Promise<{
     pdf: Buffer;
     model: InvoicePdfViewModel;
     html: string;
   }> {
-    const { html, model } = await this.renderHtmlForInvoiceReference(reference);
+    const { html, model } = await this.renderHtmlForInvoiceReference(reference, options);
     const pdf = await this.htmlToPdf(html);
     return { pdf, model, html };
   }
@@ -95,7 +102,10 @@ export class InvoicePdfService {
     }
   }
 
-  private async buildViewModel(reference: string): Promise<InvoicePdfViewModel> {
+  private async buildViewModel(
+    reference: string,
+    options?: { paymentUrl?: string },
+  ): Promise<InvoicePdfViewModel> {
     const issuer = loadInvoiceIssuerConfig();
     if (!issuer) {
       throw new ServiceUnavailableException({
@@ -149,6 +159,9 @@ export class InvoicePdfService {
       .exec();
     const paymentMethod = payment?.method;
 
+    const paymentUrl = options?.paymentUrl?.trim() || undefined;
+    const paymentQrDataUri = paymentUrl ? await buildPaymentQrDataUri(paymentUrl) : undefined;
+
     return buildInvoicePdfViewModel({
       invoice: {
         reference: invoice.reference,
@@ -174,6 +187,8 @@ export class InvoicePdfService {
       paymentMethod,
       awaitingPaymentMethod,
       bankRib: loadInvoicePdfBankRib(),
+      ...(paymentUrl ? { paymentUrl } : {}),
+      ...(paymentQrDataUri ? { paymentQrDataUri } : {}),
     });
   }
 

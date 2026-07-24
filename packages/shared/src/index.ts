@@ -725,6 +725,7 @@ export {
   PublicAccountActivationPreviewSchema,
   PublicQuoteAcceptConfirmRequestSchema,
   PublicQuoteAcceptConfirmResponseSchema,
+  PublicQuoteAcceptConfirmLoginRequestSchema,
   PublicQuoteAcceptPreviewSchema,
   PublicQuoteAcceptRegisterRequestSchema,
   PublicQuoteAcceptRegisterResponseSchema,
@@ -733,6 +734,7 @@ export {
   type PublicAccountActivationAcceptRequest,
   type PublicAccountActivationAcceptResponse,
   type PublicAccountActivationPreview,
+  type PublicQuoteAcceptConfirmLoginRequest,
   type PublicQuoteAcceptConfirmRequest,
   type PublicQuoteAcceptConfirmResponse,
   type PublicQuoteAcceptPreview,
@@ -740,6 +742,23 @@ export {
   type PublicQuoteAcceptRegisterResponse,
   type QuoteAcceptErrorCode,
 } from "./quote-accept.js";
+
+export {
+  CreateQuotePaymentIntentRequestSchema,
+  CreateQuotePaymentIntentResponseSchema,
+  QUOTE_PAYMENT_LINK_ERROR_CODES,
+  QuotePaymentLinkPreviewQuerySchema,
+  QuotePaymentLinkPreviewSchema,
+  QuotePaymentStatusQuerySchema,
+  QuotePaymentStatusResponseSchema,
+  type CreateQuotePaymentIntentRequest,
+  type CreateQuotePaymentIntentResponse,
+  type QuotePaymentLinkErrorCode,
+  type QuotePaymentLinkPreview,
+  type QuotePaymentLinkPreviewQuery,
+  type QuotePaymentStatusQuery,
+  type QuotePaymentStatusResponse,
+} from "./quote-payment-link.js";
 
 export {
   PlanningBuildingOptionSchema,

@@ -58,5 +58,12 @@ export interface InvoicePdfViewModel {
   paymentMethod: InvoicePdfPaymentMethod;
   paymentStatus: InvoicePdfPaymentStatus;
   bankRib?: InvoicePdfBankRibView | null;
+  /**
+   * Quote-derived invoice payment URL (/payer-devis). When set, PDF embeds QR.
+   * Classic booking invoices omit this — never show QR.
+   */
+  paymentUrl?: string;
+  /** PNG data-URL for paymentUrl QR (generated server-side via `qrcode`). */
+  paymentQrDataUri?: string;
   logoDataUri: string;
 }

@@ -238,6 +238,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
       },
       now: NOW,
       lockSessionId,
+      paymentLinkTokenSecret: "p".repeat(32),
     });
 
     expect(result.bootstrapped).toBe(true);
@@ -347,6 +348,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
       quoteId: quote._id,
       actor: { kind: "client", clientAccountId: clientAccountId! },
       now: NOW,
+      paymentLinkTokenSecret: "p".repeat(32),
     });
 
     expect(result.bootstrapped).toBe(false);
@@ -383,6 +385,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
         marketingCommunicationsAccepted: false,
       },
       now: NOW,
+      paymentLinkTokenSecret: "p".repeat(32),
     });
 
     expect(result.bootstrapped).toBe(false);
@@ -432,6 +435,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
           activationTokenSecret: ACTIVATION_SECRET,
         },
         now: NOW,
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toMatchObject({
       name: "AcceptQuoteError",
@@ -464,6 +468,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
           privacyPolicyVersion: "2026-07-01",
         },
         now: NOW,
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toMatchObject({ code: "QUOTE_EXPIRED" });
 
@@ -507,6 +512,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
           activationTokenSecret: ACTIVATION_SECRET,
         },
         now: NOW,
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toMatchObject({
       name: "AcceptQuoteError",
@@ -542,6 +548,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
         },
         now: NOW,
         simulateFailureAfter: "quote_accepted",
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toThrow(/SIMULATED_ACCEPT_FAILURE_AFTER_QUOTE_ACCEPTED/);
 
@@ -577,6 +584,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
         },
         now: NOW,
         simulateFailureAfter: "reservations_created",
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toThrow(/SIMULATED_ACCEPT_FAILURE_AFTER_RESERVATIONS/);
 
@@ -607,6 +615,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
         },
         now: NOW,
         simulateFailureAfter: "invoice_created",
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toThrow(/SIMULATED_ACCEPT_FAILURE_AFTER_INVOICE/);
 
@@ -638,6 +647,7 @@ describe("integration: acceptQuote (unified AcceptQuoteService)", () => {
           activationTokenSecret: ACTIVATION_SECRET,
         },
         now: NOW,
+        paymentLinkTokenSecret: "p".repeat(32),
       }),
     ).rejects.toBeInstanceOf(AcceptQuoteError);
   });

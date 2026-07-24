@@ -28,6 +28,7 @@ vi.mock("@coworkprysme/shared/server", async (importOriginal) => {
     ...actual,
     parseVitrineApiEnv: () => ({
       QUOTE_ACCEPT_TOKEN_SECRET: "q".repeat(32),
+      QUOTE_PAYMENT_LINK_TOKEN_SECRET: "p".repeat(32),
     }),
   };
 });
@@ -99,9 +100,17 @@ describe("QuotesAcceptService client dual path", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new QuotesAcceptService();
     getQuoteByAcceptTokenMock.mockResolvedValue(sentQuoteDoc());
     acceptQuoteMock.mockResolvedValue(acceptResult());
+    const mail = { sendMail: vi.fn().mockResolvedValue({ dryRun: true }) };
+    const invoicePdf = {
+      generatePdfForInvoiceReference: vi.fn().mockResolvedValue({
+        pdf: Buffer.from("pdf"),
+        model: {},
+        html: "",
+      }),
+    };
+    service = new QuotesAcceptService(mail as never, invoicePdf as never);
   });
 
   it("existing account: confirm with clientAccountId accepts direct (no account creation)", async () => {
@@ -117,6 +126,7 @@ describe("QuotesAcceptService client dual path", () => {
         kind: "client",
         clientAccountId: CLIENT_ACCOUNT_ID,
       },
+      paymentLinkTokenSecret: "p".repeat(32),
     });
     const actor = acceptQuoteMock.mock.calls[0]![0].actor;
     expect(actor.kind).toBe("client");
@@ -153,6 +163,7 @@ describe("QuotesAcceptService client dual path", () => {
         privacyPolicyVersion: PRIVACY_POLICY_VERSION,
         marketingCommunicationsAccepted: false,
       },
+      paymentLinkTokenSecret: "p".repeat(32),
     });
     const actor = acceptQuoteMock.mock.calls[0]![0].actor;
     expect(actor.kind).toBe("client_register");

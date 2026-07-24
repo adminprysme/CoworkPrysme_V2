@@ -561,6 +561,7 @@ export class QuotesService {
           activationTokenSecret: env.CLIENT_ACCOUNT_ACTIVATION_TOKEN_SECRET,
         },
         lockSessionId,
+        paymentLinkTokenSecret: env.QUOTE_PAYMENT_LINK_TOKEN_SECRET,
       });
     } catch (error) {
       this.rethrowAcceptError(error);
@@ -585,6 +586,19 @@ export class QuotesService {
       }
     }
 
+    let paymentUrl: string | undefined;
+    let paymentEmailSent = false;
+    if (result.paymentLink) {
+      paymentUrl = `${this.publicSiteBaseUrl()}/payer-devis?token=${result.paymentLink.rawToken}&invoiceId=${String(result.invoiceId)}`;
+      paymentEmailSent = await this.sendQuotePaymentLinkEmail({
+        quote,
+        invoiceReference: result.invoiceReference,
+        paymentUrl,
+        amountDueCents: result.paymentLink.amountDueCents,
+        expiresAt: result.paymentLink.expiresAt,
+      });
+    }
+
     await writeQuoteAudit({
       profile,
       action: "quote.accepted",
@@ -600,6 +614,7 @@ export class QuotesService {
         },
         invoiceReference: { before: null, after: result.invoiceReference },
         bootstrapped: { before: false, after: result.bootstrapped },
+        ...(paymentUrl ? { paymentLink: { before: null, after: "issued" } } : {}),
       },
     });
 
@@ -613,6 +628,7 @@ export class QuotesService {
       clientAccountId: String(result.clientAccountId),
       bootstrapped: result.bootstrapped,
       activationEmailSent,
+      ...(paymentUrl ? { paymentUrl, paymentEmailSent } : {}),
     });
   }
 
@@ -994,6 +1010,53 @@ export class QuotesService {
     const fromEnv = process.env.PUBLIC_SITE_URL?.trim() || process.env.NEXT_PUBLIC_SITE_URL?.trim();
     if (fromEnv) return fromEnv.replace(/\/$/, "");
     return "http://localhost:3001";
+  }
+
+  private async sendQuotePaymentLinkEmail(input: {
+    quote: QuoteDocument;
+    invoiceReference: string;
+    paymentUrl: string;
+    amountDueCents: number;
+    expiresAt: Date;
+  }): Promise<boolean> {
+    const recipient =
+      input.quote.prospect?.email?.trim().toLowerCase() ??
+      (await this.resolveRecipientEmail(input.quote));
+    if (!recipient) {
+      this.logger.warn(
+        `quote.accepted payment email skipped — no recipient for ${input.quote.reference}`,
+      );
+      return false;
+    }
+
+    const { pdf } = await this.invoicePdf.generatePdfForInvoiceReference(input.invoiceReference, {
+      paymentUrl: input.paymentUrl,
+    });
+    const amountLabel = (input.amountDueCents / 100).toLocaleString("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+    });
+    const expiresLabel = input.expiresAt.toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+    const mailResult = await this.mail.sendMail({
+      to: recipient,
+      subject: `Payer votre réservation — devis ${input.quote.reference}`,
+      html: [
+        `<p>Bonjour,</p>`,
+        `<p>Votre devis <strong>${escapeEmailHtml(input.quote.reference)}</strong> a été accepté.</p>`,
+        `<p>Montant à régler&nbsp;: <strong>${escapeEmailHtml(amountLabel)}</strong> (valable jusqu'au ${escapeEmailHtml(expiresLabel)}).</p>`,
+        `<p><a href="${escapeEmailHtml(input.paymentUrl)}">Payer par carte</a></p>`,
+        `<p>La facture proforma (avec QR code) est jointe.</p>`,
+        `<p>Cordialement,<br/>Cowork Prysme</p>`,
+      ].join("\n"),
+      attachments: [
+        {
+          filename: `${input.invoiceReference}.pdf`,
+          content: pdf,
+          contentType: "application/pdf",
+        },
+      ],
+    });
+    return mailDeliveryFromResult(mailResult).emailSent;
   }
 
   private renderSendEmailHtml(input: {

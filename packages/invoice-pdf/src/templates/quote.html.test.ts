@@ -114,4 +114,35 @@ describe("quote PDF template", () => {
     expect(html).not.toContain("internalNote");
     expect(JSON.stringify(model)).not.toContain(STAFF_ONLY_NOTE);
   });
+
+  it("never embeds payment QR on devis PDF (point 6 — invoice only)", () => {
+    const model = buildQuotePdfViewModel({
+      quote: {
+        reference: "DEV-2026-00101",
+        validUntil: new Date("2026-08-15T00:00:00.000Z"),
+        lines: [
+          {
+            label: "Bureau",
+            kind: "space",
+            qty: 1,
+            unitPriceHT: 1000,
+            vatRate: 20,
+            totalHT: 1000,
+          },
+        ],
+        vatBreakdown: [{ rate: 20, baseHT: 1000, vat: 200 }],
+        totals: { ht: 1000, vat: 200, ttc: 1200 },
+        prospect: { email: "a@b.c", displayName: "Client" },
+      },
+      issuer,
+      logoDataUri: "",
+      acceptUrl: "https://example.com/accepter-devis?token=tok",
+    });
+
+    const html = renderQuotePdfHtml(model);
+    expect(html).not.toContain("data-payment-qr");
+    expect(html).not.toContain("Payer en ligne");
+    expect(html).not.toContain("/payer-devis");
+    expect(html).toContain("/accepter-devis");
+  });
 });

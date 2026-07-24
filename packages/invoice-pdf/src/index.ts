@@ -13,6 +13,7 @@ export { loadInvoiceIssuerConfig } from "./invoice-issuer.config.js";
 
 export { loadInvoiceLogoDataUri, resolveInvoiceLogoPath } from "./invoice-pdf.logo.js";
 export { loadInvoicePdfBankRib } from "./invoice-pdf.bank-rib.js";
+export { buildPaymentQrDataUri } from "./invoice-pdf.qr.js";
 
 export {
   buildInvoicePdfClientView,
