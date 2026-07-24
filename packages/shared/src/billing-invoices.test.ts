@@ -32,7 +32,7 @@ describe("StaffBillingInvoiceListQuerySchema", () => {
   it("defaults pagination", () => {
     expect(StaffBillingInvoiceListQuerySchema.parse({})).toEqual({
       page: 1,
-      pageSize: 50,
+      pageSize: 25,
     });
   });
 });
