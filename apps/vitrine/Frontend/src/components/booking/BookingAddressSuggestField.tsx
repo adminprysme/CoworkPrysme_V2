@@ -125,7 +125,7 @@ export function BookingAddressSuggestField({
         />
       </label>
       <p className={styles.hint}>
-        Saisissez quelques caractères pour proposer une adresse (BAN).
+        Saisissez quelques caractères pour proposer une adresse.
         {zip || city ? ` · ${[zip, city].filter(Boolean).join(" ")}` : ""}
       </p>
       {loading ? <p className={styles.status}>Recherche d&apos;adresse…</p> : null}

@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { fetchBookingPrice } from "@/lib/booking-price-api";
 
+import { shouldPreservePriceOnPromoError } from "./booking-price-state";
+
 const DEBOUNCE_MS = 400;
 
 export function useBookingPrice(request: BookingPriceRequest | null) {
@@ -12,6 +14,7 @@ export function useBookingPrice(request: BookingPriceRequest | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestKeyRef = useRef<string>("");
+  const lastSuccessfulPriceRef = useRef<BookingPriceResponse | null>(null);
 
   useEffect(() => {
     if (!request) {
@@ -19,6 +22,7 @@ export function useBookingPrice(request: BookingPriceRequest | null) {
       setError(null);
       setLoading(false);
       requestKeyRef.current = "";
+      lastSuccessfulPriceRef.current = null;
       return;
     }
 
@@ -33,14 +37,23 @@ export function useBookingPrice(request: BookingPriceRequest | null) {
           if (requestKeyRef.current !== requestKey) {
             return;
           }
+          lastSuccessfulPriceRef.current = response;
           setPrice(response);
         })
         .catch((fetchError: unknown) => {
           if (requestKeyRef.current !== requestKey) {
             return;
           }
-          setPrice(null);
-          setError(fetchError instanceof Error ? fetchError.message : "Calcul impossible");
+
+          const message = fetchError instanceof Error ? fetchError.message : "Calcul impossible";
+
+          if (shouldPreservePriceOnPromoError(request, message) && lastSuccessfulPriceRef.current) {
+            setPrice(lastSuccessfulPriceRef.current);
+          } else {
+            setPrice(null);
+          }
+
+          setError(message);
         })
         .finally(() => {
           if (requestKeyRef.current === requestKey) {

@@ -397,7 +397,7 @@ export function BookingAccountStep({
                   />
                   {vatPrefillHint ? (
                     <span className={styles.fieldHint}>
-                      Numéro calculé à partir du SIREN — vérifiez avant validation.
+                      Numéro calculé à partir du SIREN, merci de vérifier avant validation.
                     </span>
                   ) : null}
                 </label>
