@@ -57,25 +57,25 @@ Audit ciblé (permissions, IDOR, scénarios combinés) sur l’ensemble du modul
 
 Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = onglets Facturation (`/billing`) — Virements | Devis | Factures.
 
-### Avancement sous-chantiers (état réel au 24/07/2026)
+### Avancement sous-chantiers (état réel au 24/07/2026 — #9 clos)
 
 | # | Sujet | État |
 |---|--------|------|
 | **1–6** | Schema Quote, tokens accept/activation, pricing/deposit TVA, CRUD `/billing/quotes`, locks wizard staff, wizard UI + liste | **Clos** — poussés `origin/master`, preuves validées |
 | **7** | PDF devis (`@coworkprysme/invoice-pdf` template distinct) + email d’envoi avec PJ ; exclusion `internalNote` | **Clos** — `cc2b4e8` ; preuves `%PDF` + tests exclusion note + `attachments` définis |
 | **8** | `acceptQuote` unifié (`packages/db`) — staff + client ; bootstrap `pending_activation` en txn ; rollback / dispo / `validUntil` / dual-path / `acceptedBy` | **Clos** — `c417da8` + preuves renforcées `f1a3273` |
-| **9** | Stripe payment link + QR facture + webhook `quoteId` + pages vitrine `/accepter-devis`, `/activer-compte`, `/payer-devis` | **Code livré et poussé** (`8753be3`) — **PAS ENCORE CLOS** |
+| **9** | Stripe payment link + QR facture + webhook `quoteId` + pages vitrine `/accepter-devis`, `/activer-compte`, `/payer-devis` | **Clos** — `8753be3` + fix UX paiement `28f9e72` ; preuves nominales **validées visuellement par l’utilisateur** |
 | **10** | E2E final | **Pas commencé** |
 
-### #9 — détail (ouvert)
+### #9 — détail (clos)
 
-- **Livré sur `origin/master` (`8753be3`)** : modèle `quotePaymentLinks`, montant acompte/TTC, page `/payer-devis` (Elements, pas Payment Links natifs), webhook branche `quoteId` (groupe Option A), QR sur PDF **facture** seulement, cross-invoice 404, expiry/consumed, `QUOTE_PAYMENT_LINK_TOKEN_SECRET` dans schémas Zod + Coolify gestion-api **et** vitrine-api (même valeur ≥32, distincte des autres secrets).
-- **Preuves UI** : les premières captures ne montraient que des cas d’erreur (no-token / invalid-token). Une campagne nominale a ensuite produit des fichiers locaux (non suivis Git) sous `tmp/billing-ui-screenshots/` :
-  - `accepter-devis-success-existing-account.png` / `accepter-devis-success-new-account.png`
-  - `activer-compte-success-form.png`
-  - `payer-devis-success-elements-loaded.png` (montant réel + Stripe Elements chargé)
-  - `payer-devis-success-paid.png` + `payer-devis-payment-proof.json` (PI test succeeded, webhook 201, link `consumed`, résa `confirmed` — fill Elements headless partiel, paiement via test PM / webhook signé)
-- **Avant clôture #9** : validation utilisateur de ces preuves nominales (et paiement test) — **prochaine action prioritairesi non encore validé**.
+- **Livré** (`8753be3` puis `28f9e72`) : modèle `quotePaymentLinks`, montant acompte/TTC, `/payer-devis` (Elements, pas Payment Links natifs), webhook branche `quoteId` (groupe Option A), QR sur PDF **facture** seulement, cross-invoice 404, expiry/consumed, `QUOTE_PAYMENT_LINK_TOKEN_SECRET` dans schémas Zod + Coolify gestion-api **et** vitrine-api.
+- **Preuves nominales validées par l’utilisateur** (navigateur local, vrais tokens) :
+  - `/accepter-devis` cas (a) compte existant + (b) sans compte (formulaire création)
+  - `/activer-compte` de bout en bout (définition MDP)
+  - `/payer-devis` montant réel + Stripe Elements + **paiement carte test** confirmé (webhook + DB : link `consumed`, réservation `confirmed`)
+- **Bug trouvé en validation** (`BookingCardPaymentForm`) : après `confirmPayment` réussi, le bouton « Payer maintenant » était **réactivé** pendant `pollUntilPaid` (~18 s sans feedback) → clics répétés → **7×** `POST …/payment_intents/{id}/confirm` en **400** (PI déjà confirmé) avant succès. **Corrigé** (`28f9e72`) : garde in-flight + bouton désactivé jusqu’à issue terminale + `retrievePaymentIntent` si déjà `succeeded` + spinner « Traitement du paiement en cours… ». Retest : **1 seul confirm HTTP 200**.
+- **Contraste `/payer-devis`** : texte lisible via tokens thème `--v-color-ink` / `--v-color-ink-soft` (même commit `28f9e72`).
 
 ### UI Facturation (gestion-web) — partiel
 
@@ -84,11 +84,11 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 - **Wizard Devis — Espaces** : grille cartes + photos `/media/spaces/…`, fallbacks par type ; filtre intégré recherche / période / personnes (plus « Capacité min. ») ; panneau détail fixe ; filtre dispo auto quand période renseignée.
 - **Wizard Devis — Services** : grille + panneau détail + recherche + questions obligatoires livrés en code ; **preuve visuelle photos catalogue Services non confirmée** comme pour Espaces.
 
-### Git (vérifié à l’écriture de cette note)
+### Git (vérifié juste avant ce commit de doc)
 
-- Branche : `master` = `origin/master` = **`8753be3`** (`feat(billing): quote payment link + accept/activation pages (#9)`).
+- Avant commit doc : `master` = `origin/master` = **`28f9e72`** (`fix(billing): stop /payer-devis Stripe confirm loop and show processing UX`).
 - Working tree : propre hors untracked `tmp/` et `apps/gestion/Frontend/tmp-billing-screenshots/`.
-- Commits Devis récents (extrait, tous poussés) : `8753be3` #9 → `f1a3273` preuves #8 → `c417da8` #8 → `cc2b4e8` #7 → filtres Espaces `34d1a69`/`615cff3`/`1af2356` → UI wizard `8f88baf`/`c56199c`/`fe07857`/`02dac94`/`e50cd8f`/`df8f315`.
+- Commits Devis récents (extrait, poussés) : `28f9e72` fix confirm loop → `18e9681` docs context → `8753be3` #9 → `f1a3273` / `c417da8` #8 → `cc2b4e8` #7 → filtres Espaces / UI wizard.
 
 ### Règles métier Devis — LOCKED (ne pas rouvrir)
 
@@ -151,12 +151,13 @@ Emails manage : ne pas afficher de montants non réellement appliqués. **PJ PDF
 - **Preuves `proof.json` de calcul** (helpers shared) ≠ preuve d’intégration HTTP des routes preview.
 - **Identité cardex vs owner** (Contacts) : voir Modules TERMINÉS — bug d’affichage préexistant corrigé (`2f80edb`).
 - **Playwright / singleton PDF** (`@coworkprysme/invoice-pdf`) : browser Chromium mis en cache dans un process Nest long-lived. Hot-reload ou fermeture externe → `Target page, context or browser has been closed`. Correctif : vérifier `browser.isConnected()` + retry après reset du singleton (`7e814c5`). Si un 500 PDF réapparaît ailleurs (manage PJ, listing factures), suspecter d’abord ce cache plutôt qu’une régression métier.
+- **`/payer-devis` double-soumission Stripe** (`28f9e72`) : bouton réactivé pendant poll post-confirm → boucle de `confirm` 400 ; garde in-flight + spinner + récupération PI déjà `succeeded`.
 
 ### Points encore ouverts (explicitement notés, ne pas inventer le reste du backlog)
 
 - Ne **pas** `git push` / ne pas changer la branche Git checkoutée sur le VPS sauf demande explicite (règle utilisateur) — sauf quand l’utilisateur demande explicitement un push (ex. livraisons Devis).
 - Tarif **weekly @ 90000 HT** sur FOCUS : activé pour les preuves Planning / booking — **décision produit** de le garder ou le désactiver (ne pas retirer sans validation).
-- **Devis #9** : valider preuves nominales UI + paiement test (fichiers `tmp/billing-ui-screenshots/*-success-*` + `payer-devis-payment-proof.json`) puis **clore #9** ; ensuite **#10 E2E**.
+- **Devis #10 E2E** final — pas commencé (après clôture #9).
 - **Onglet Factures** `/billing` : API liste cross-cardex + UI — pas encore implémentés (prompt en attente).
 - **Services wizard** : confirmer preuve visuelle photos catalogue si exigée comme pour Espaces.
 
