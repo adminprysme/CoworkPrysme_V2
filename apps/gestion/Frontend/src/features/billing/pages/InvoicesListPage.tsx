@@ -27,22 +27,6 @@ const PAYMENT_METHOD_LABELS: Record<StaffPaymentMethod, string> = {
   cash: "Espèces",
 };
 
-function badgeClass(status: StaffInvoiceStatus): string {
-  switch (status) {
-    case "paid":
-      return `${styles.badge} ${styles.badgeAccepted}`;
-    case "partially_paid":
-    case "issued":
-    case "proforma":
-      return `${styles.badge} ${styles.badgeSent}`;
-    case "overdue":
-    case "cancelled":
-      return `${styles.badge} ${styles.badgeRefused}`;
-    default:
-      return styles.badge ?? "";
-  }
-}
-
 function formatEuroFromCents(cents: number): string {
   return `${(cents / 100).toFixed(2).replace(".", ",")} €`;
 }
@@ -71,6 +55,7 @@ export function InvoicesListPage() {
   const [invoices, setInvoices] = useState<StaffBillingInvoiceListItem[]>([]);
   const [summary, setSummary] = useState<StaffBillingInvoiceListSummary>(EMPTY_SUMMARY);
   const [q, setQ] = useState("");
+  const [status, setStatus] = useState<StaffInvoiceStatus | "">("");
   const [paymentMethod, setPaymentMethod] = useState<StaffPaymentMethod | "">("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +66,7 @@ export function InvoicesListPage() {
     try {
       const result = await listBillingInvoices({
         ...(q.trim() ? { q: q.trim() } : {}),
+        ...(status ? { status } : {}),
         ...(paymentMethod ? { paymentMethod } : {}),
         page: 1,
         pageSize: 50,
@@ -94,7 +80,7 @@ export function InvoicesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, paymentMethod]);
+  }, [q, status, paymentMethod]);
 
   useEffect(() => {
     void load();
@@ -144,12 +130,25 @@ export function InvoicesListPage() {
           aria-label="Recherche factures"
         />
         <select
-          className={styles.select}
+          className={`${styles.select} ${styles.filterSelect}`}
+          value={status}
+          onChange={(event) => setStatus(event.target.value as StaffInvoiceStatus | "")}
+          aria-label="Filtrer par statut"
+        >
+          <option value="">Tous les statuts</option>
+          {(Object.keys(STATUS_LABELS) as StaffInvoiceStatus[]).map((key) => (
+            <option key={key} value={key}>
+              {STATUS_LABELS[key]}
+            </option>
+          ))}
+        </select>
+        <select
+          className={`${styles.select} ${styles.filterSelect}`}
           value={paymentMethod}
           onChange={(event) => setPaymentMethod(event.target.value as StaffPaymentMethod | "")}
           aria-label="Filtrer par moyen de paiement"
         >
-          <option value="">Tous les moyens de paiement</option>
+          <option value="">Moyen de paiement</option>
           {(Object.keys(PAYMENT_METHOD_LABELS) as StaffPaymentMethod[]).map((key) => (
             <option key={key} value={key}>
               {PAYMENT_METHOD_LABELS[key]}
@@ -197,7 +196,7 @@ export function InvoicesListPage() {
                     ) : null}
                   </td>
                   <td>
-                    <span className={badgeClass(invoice.status)}>
+                    <span className={styles.statusChip} data-status={invoice.status}>
                       {STATUS_LABELS[invoice.status]}
                     </span>
                   </td>

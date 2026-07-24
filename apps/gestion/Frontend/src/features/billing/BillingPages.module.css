@@ -52,6 +52,12 @@
   flex: 0 1 10rem;
 }
 
+/** Wider filter selects so option labels (paiement / statut) are not clipped. */
+.filterSelect {
+  flex: 0 1 14rem;
+  min-width: 13.5rem;
+}
+
 .textarea {
   width: 100%;
   min-height: 5rem;
@@ -162,6 +168,46 @@
   font-size: 0.78rem;
   font-weight: 700;
   background: var(--color-surface-muted, #eee);
+}
+
+/* Invoice status chips — same palette as Planning Documents (ReservationDocumentsPanel). */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.statusChip[data-status="paid"] {
+  border-color: color-mix(in srgb, #34d399 50%, var(--color-border));
+  background: color-mix(in srgb, #34d399 16%, var(--color-surface));
+  color: color-mix(in srgb, #34d399 40%, var(--color-text));
+}
+
+.statusChip[data-status="proforma"],
+.statusChip[data-status="issued"] {
+  border-color: color-mix(in srgb, #5b8fc4 50%, var(--color-border));
+  background: color-mix(in srgb, #5b8fc4 16%, var(--color-surface));
+  color: color-mix(in srgb, #5b8fc4 42%, var(--color-text));
+}
+
+.statusChip[data-status="partially_paid"] {
+  border-color: color-mix(in srgb, #f59e0b 50%, var(--color-border));
+  background: color-mix(in srgb, #f59e0b 16%, var(--color-surface));
+  color: color-mix(in srgb, #f59e0b 40%, var(--color-text));
+}
+
+.statusChip[data-status="overdue"],
+.statusChip[data-status="cancelled"] {
+  border-color: color-mix(in srgb, #f87171 45%, var(--color-border));
+  background: color-mix(in srgb, #f87171 14%, var(--color-surface));
+  color: color-mix(in srgb, #f87171 45%, var(--color-text));
 }
 
 .badgeDraft {
