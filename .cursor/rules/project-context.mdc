@@ -96,9 +96,9 @@ Plan : `docs/superpowers/plans/2026-07-23-devis-facturation.md`. Entrée UI = on
 
 ### Git (vérifié juste avant ce commit de doc)
 
-- `master` = `origin/master` = **`1cc4c37`** (`test(billing): close Devis #10 with full domain E2E chain`).
+- `master` = `origin/master` = **`92b7536`** (`test(billing): align #10 E2E on quote-flow + Nest HTTP + root pnpm test`).
 - Working tree : propre hors untracked `tmp/` et `apps/gestion/Frontend/tmp-billing-screenshots/`.
-- Commits Devis récents (extrait, poussés) : `1cc4c37` #10 E2E → `80cb995` docs #9 → `28f9e72` fix confirm loop → `8753be3` #9 → `f1a3273` / `c417da8` #8 → `cc2b4e8` #7.
+- Commits Devis récents (extrait, poussés) : `92b7536` #10 align → `1cc4c37` #10 first E2E → `80cb995` docs #9 → `28f9e72` fix confirm loop → `8753be3` #9.
 
 ### Règles métier Devis — LOCKED (ne pas rouvrir)
 
