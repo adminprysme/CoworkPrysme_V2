@@ -11,6 +11,8 @@ import {
 import { connectMongo, getSpaceModel, getVitrineContentModel } from "@coworkprysme/db";
 import type { Types } from "mongoose";
 
+import { mergeServicePublicImages } from "../home-content/home-content.controller.js";
+
 type SpaceLean = Space & { _id: Types.ObjectId };
 
 @Injectable()
@@ -24,10 +26,19 @@ export class ServicesContentService {
     await connectMongo();
     const VitrineContent = await getVitrineContentModel();
     const doc = await VitrineContent.findById(VITRINE_CONTENT_SINGLETON_ID).lean().exec();
+    const apiOrigin = this.getApiOrigin();
+    const serviceImages = mergeServicePublicImages(
+      doc?.serviceImages ?? {
+        roomService: null,
+        afterwork: null,
+        conciergerie: null,
+      },
+      apiOrigin,
+    );
     const featuredSpaceIds = doc?.featuredSpaceIds ?? [];
 
     if (featuredSpaceIds.length === 0) {
-      return { featuredSpaces: [] };
+      return { serviceImages, featuredSpaces: [] };
     }
 
     const Space = await getSpaceModel();
@@ -42,7 +53,6 @@ export class ServicesContentService {
       (spaces as SpaceLean[]).map((space) => [space._id.toString(), space]),
     );
 
-    const apiOrigin = this.getApiOrigin();
     const featuredSpaces = featuredSpaceIds
       .map((spaceId, index) => {
         const space = spaceById.get(spaceId);
@@ -53,11 +63,7 @@ export class ServicesContentService {
       })
       .filter((space): space is ServicesFeaturedSpace => space !== null);
 
-    if (featuredSpaces.length === 0) {
-      return { featuredSpaces: [] };
-    }
-
-    return { featuredSpaces };
+    return { serviceImages, featuredSpaces };
   }
 }
 

@@ -33,6 +33,23 @@ export function buildPublicImageUrl(
   return `${apiOrigin}${mediaPathFromVitrineStorageKey(storageKey)}`;
 }
 
+export function mergeServicePublicImages(
+  stored: {
+    roomService: string | null;
+    afterwork: string | null;
+    conciergerie: string | null;
+  },
+  apiOrigin: string,
+) {
+  const defaults = DEFAULT_HOME_PUBLIC_CONTENT.serviceImages;
+
+  return {
+    roomService: buildPublicImageUrl(stored.roomService, defaults.roomService!, apiOrigin),
+    afterwork: buildPublicImageUrl(stored.afterwork, defaults.afterwork!, apiOrigin),
+    conciergerie: buildPublicImageUrl(stored.conciergerie, defaults.conciergerie!, apiOrigin),
+  };
+}
+
 export function mergeHomePublicContent(
   stored: {
     heroImages: string[];
@@ -56,23 +73,7 @@ export function mergeHomePublicContent(
   return {
     heroImages,
     conceptImage: buildPublicImageUrl(stored.conceptImage, defaults.conceptImage!, apiOrigin),
-    serviceImages: {
-      roomService: buildPublicImageUrl(
-        stored.serviceImages.roomService,
-        defaults.serviceImages.roomService!,
-        apiOrigin,
-      ),
-      afterwork: buildPublicImageUrl(
-        stored.serviceImages.afterwork,
-        defaults.serviceImages.afterwork!,
-        apiOrigin,
-      ),
-      conciergerie: buildPublicImageUrl(
-        stored.serviceImages.conciergerie,
-        defaults.serviceImages.conciergerie!,
-        apiOrigin,
-      ),
-    },
+    serviceImages: mergeServicePublicImages(stored.serviceImages, apiOrigin),
     marquee: {
       enabled: stored.marquee.enabled,
       text: stored.marquee.text.trim() || defaults.marquee.text,
