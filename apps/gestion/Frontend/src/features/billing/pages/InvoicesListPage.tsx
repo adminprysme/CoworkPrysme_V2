@@ -18,6 +18,10 @@ import {
 } from "../../../lib/billing-api.js";
 import { RESERVATION_STATUS_LABELS } from "../../planning/planning-ui.js";
 import { BillingStats } from "../components/BillingStats.js";
+import {
+  BillingTablePagination,
+  type BillingPageSize,
+} from "../components/BillingTablePagination.js";
 import styles from "../BillingPages.module.css";
 
 const STATUS_LABELS: Record<StaffInvoiceStatus, string> = {
@@ -120,10 +124,14 @@ function CheckIcon() {
 export function InvoicesListPage() {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<StaffBillingInvoiceListItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<StaffBillingInvoiceListSummary>(EMPTY_SUMMARY);
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [status, setStatus] = useState<StaffInvoiceStatus | "">("");
   const [paymentMethod, setPaymentMethod] = useState<StaffPaymentMethod | "">("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<BillingPageSize>(25);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -139,27 +147,37 @@ export function InvoicesListPage() {
   const [markBusy, setMarkBusy] = useState(false);
   const [markError, setMarkError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQ(q.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await listBillingInvoices({
-        ...(q.trim() ? { q: q.trim() } : {}),
+        ...(debouncedQ ? { q: debouncedQ } : {}),
         ...(status ? { status } : {}),
         ...(paymentMethod ? { paymentMethod } : {}),
-        page: 1,
-        pageSize: 50,
+        page,
+        pageSize,
       });
       setInvoices(result.invoices);
+      setTotal(result.total);
       setSummary(result.summary);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger les factures.");
       setInvoices([]);
+      setTotal(0);
       setSummary(EMPTY_SUMMARY);
     } finally {
       setLoading(false);
     }
-  }, [q, status, paymentMethod]);
+  }, [debouncedQ, status, paymentMethod, page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -279,7 +297,10 @@ export function InvoicesListPage() {
         <select
           className={`${styles.select} ${styles.filterSelect}`}
           value={status}
-          onChange={(event) => setStatus(event.target.value as StaffInvoiceStatus | "")}
+          onChange={(event) => {
+            setStatus(event.target.value as StaffInvoiceStatus | "");
+            setPage(1);
+          }}
           aria-label="Filtrer par statut"
         >
           <option value="">Tous les statuts</option>
@@ -292,7 +313,10 @@ export function InvoicesListPage() {
         <select
           className={`${styles.select} ${styles.filterSelect}`}
           value={paymentMethod}
-          onChange={(event) => setPaymentMethod(event.target.value as StaffPaymentMethod | "")}
+          onChange={(event) => {
+            setPaymentMethod(event.target.value as StaffPaymentMethod | "");
+            setPage(1);
+          }}
           aria-label="Filtrer par moyen de paiement"
         >
           <option value="">Moyen de paiement</option>
@@ -397,6 +421,18 @@ export function InvoicesListPage() {
               })}
             </tbody>
           </table>
+          <BillingTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            disabled={loading}
+            itemLabel="factures"
+          />
         </div>
       ) : null}
 

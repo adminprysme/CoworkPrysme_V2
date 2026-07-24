@@ -508,7 +508,7 @@ describe("QuotesService", () => {
         findById: () => ({ select: () => ({ lean: () => ({ exec: async () => null }) }) }),
       });
 
-      await service.list({ q: "Ada", page: 1, pageSize: 20 });
+      const result = await service.list({ q: "Ada", page: 1, pageSize: 20 });
 
       expect(findQuotes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -520,6 +520,8 @@ describe("QuotesService", () => {
           ]),
         }),
       );
+      expect(result.summary).toEqual({ draft: 1, sent: 1, accepted: 1 });
+      expect(countDocuments).toHaveBeenCalledTimes(4);
     });
   });
 });

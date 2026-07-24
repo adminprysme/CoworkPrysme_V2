@@ -153,38 +153,10 @@ export class QuotesService {
   async list(query: StaffQuoteListQuery): Promise<StaffQuoteListResponse> {
     await connectMongo();
     const QuoteModel = await getQuoteModel();
-    const filter: Record<string, unknown> = {};
-    if (query.status) filter.status = query.status;
-    if (query.cardexId) filter.cardexId = query.cardexId;
-    if (query.q) {
-      const q = query.q.trim();
-      const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const rx = { $regex: escapeRegex(q), $options: "i" };
-      const Cardex = await getCardexModel();
-      const matchingCardexes = await Cardex.find({
-        $or: [
-          { "identity.firstName": rx },
-          { "identity.lastName": rx },
-          { "company.legalName": rx },
-        ],
-      })
-        .select({ _id: 1 })
-        .lean()
-        .exec();
-      const cardexIds = matchingCardexes.map((row) => row._id);
-      filter.$or = [
-        { reference: rx },
-        { "prospect.email": rx },
-        { "prospect.firstName": rx },
-        { "prospect.lastName": rx },
-        { "prospect.displayName": rx },
-        { "prospect.companyName": rx },
-        ...(cardexIds.length > 0 ? [{ cardexId: { $in: cardexIds } }] : []),
-      ];
-    }
+    const { filter, summaryFilter } = await this.buildListFilters(query);
 
     const skip = (query.page - 1) * query.pageSize;
-    const [rows, total] = await Promise.all([
+    const [rows, total, draft, sent, accepted] = await Promise.all([
       QuoteModel.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -192,6 +164,9 @@ export class QuotesService {
         .lean()
         .exec(),
       QuoteModel.countDocuments(filter).exec(),
+      QuoteModel.countDocuments({ ...summaryFilter, status: "draft" }).exec(),
+      QuoteModel.countDocuments({ ...summaryFilter, status: "sent" }).exec(),
+      QuoteModel.countDocuments({ ...summaryFilter, status: "accepted" }).exec(),
     ]);
 
     const cardexIdSet = [
@@ -242,7 +217,45 @@ export class QuotesService {
       total,
       page: query.page,
       pageSize: query.pageSize,
+      summary: { draft, sent, accepted },
     });
+  }
+
+  private async buildListFilters(
+    query: StaffQuoteListQuery,
+  ): Promise<{ filter: Record<string, unknown>; summaryFilter: Record<string, unknown> }> {
+    const summaryFilter: Record<string, unknown> = {};
+    if (query.cardexId) summaryFilter.cardexId = query.cardexId;
+    if (query.q) {
+      const q = query.q.trim();
+      const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = { $regex: escapeRegex(q), $options: "i" };
+      const Cardex = await getCardexModel();
+      const matchingCardexes = await Cardex.find({
+        $or: [
+          { "identity.firstName": rx },
+          { "identity.lastName": rx },
+          { "company.legalName": rx },
+        ],
+      })
+        .select({ _id: 1 })
+        .lean()
+        .exec();
+      const cardexIds = matchingCardexes.map((row) => row._id);
+      summaryFilter.$or = [
+        { reference: rx },
+        { "prospect.email": rx },
+        { "prospect.firstName": rx },
+        { "prospect.lastName": rx },
+        { "prospect.displayName": rx },
+        { "prospect.companyName": rx },
+        ...(cardexIds.length > 0 ? [{ cardexId: { $in: cardexIds } }] : []),
+      ];
+    }
+
+    const filter: Record<string, unknown> = { ...summaryFilter };
+    if (query.status) filter.status = query.status;
+    return { filter, summaryFilter };
   }
 
   async getById(id: string): Promise<StaffQuote> {

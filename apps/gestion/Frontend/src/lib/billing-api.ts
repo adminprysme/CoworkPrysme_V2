@@ -42,7 +42,7 @@ async function billingFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function listBillingInvoices(
-  query: StaffBillingInvoiceListQuery = { page: 1, pageSize: 50 },
+  query: StaffBillingInvoiceListQuery = { page: 1, pageSize: 25 },
 ): Promise<StaffBillingInvoiceListResponse> {
   const qs = new URLSearchParams();
   if (query.q) qs.set("q", query.q);

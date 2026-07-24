@@ -7,6 +7,11 @@ import type {
 
 import { listBankTransfers, markBankTransferReceived } from "../../../lib/billing-api.js";
 import { BillingStats } from "../components/BillingStats.js";
+import {
+  BillingTablePagination,
+  type BillingPageSize,
+} from "../components/BillingTablePagination.js";
+import billingStyles from "../BillingPages.module.css";
 import styles from "./MarkTransferReceivedPage.module.css";
 
 function formatEuroFromCents(cents: number): string {
@@ -90,6 +95,10 @@ export function MarkTransferReceivedPage() {
   const [listError, setListError] = useState<string | null>(null);
 
   const [filterQuery, setFilterQuery] = useState("");
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingPageSize, setPendingPageSize] = useState<BillingPageSize>(25);
+  const [validatedPage, setValidatedPage] = useState(1);
+  const [validatedPageSize, setValidatedPageSize] = useState<BillingPageSize>(25);
   const [markingRef, setMarkingRef] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -133,9 +142,28 @@ export function MarkTransferReceivedPage() {
     [validated, filterNormalized],
   );
 
+  useEffect(() => {
+    setPendingPage(1);
+    setValidatedPage(1);
+  }, [filterNormalized]);
+
+  const pendingPageCount = Math.max(1, Math.ceil(filteredPending.length / pendingPageSize));
+  const safePendingPage = Math.min(pendingPage, pendingPageCount);
+  const pagedPending = useMemo(() => {
+    const start = (safePendingPage - 1) * pendingPageSize;
+    return filteredPending.slice(start, start + pendingPageSize);
+  }, [filteredPending, safePendingPage, pendingPageSize]);
+
+  const validatedPageCount = Math.max(1, Math.ceil(filteredValidated.length / validatedPageSize));
+  const safeValidatedPage = Math.min(validatedPage, validatedPageCount);
+  const pagedValidated = useMemo(() => {
+    const start = (safeValidatedPage - 1) * validatedPageSize;
+    return filteredValidated.slice(start, start + validatedPageSize);
+  }, [filteredValidated, safeValidatedPage, validatedPageSize]);
+
   const pendingBalanceCents = useMemo(
-    () => pending.reduce((sum, row) => sum + (row.balanceDueCents ?? 0), 0),
-    [pending],
+    () => filteredPending.reduce((sum, row) => sum + (row.balanceDueCents ?? 0), 0),
+    [filteredPending],
   );
 
   const transferStats = useMemo(
@@ -143,7 +171,7 @@ export function MarkTransferReceivedPage() {
       {
         key: "pending",
         label: "En attente",
-        value: String(pending.length),
+        value: String(filteredPending.length),
         accent: "var(--color-primary)",
       },
       {
@@ -155,11 +183,11 @@ export function MarkTransferReceivedPage() {
       {
         key: "validated",
         label: `Validés (${validatedDays}j)`,
-        value: String(validated.length),
+        value: String(filteredValidated.length),
         accent: "var(--color-secondary)",
       },
     ],
-    [pending.length, pendingBalanceCents, validated.length, validatedDays],
+    [filteredPending.length, pendingBalanceCents, filteredValidated.length, validatedDays],
   );
 
   async function handleMarkReceived(options: {
@@ -248,90 +276,106 @@ export function MarkTransferReceivedPage() {
         ) : null}
 
         {!listLoading && filteredPending.length > 0 ? (
-          <ul className={styles.list}>
-            {filteredPending.map((row) => {
-              const marking = markingRef === row.reservationReference;
-              const suggestion = row.qontoSuggestion;
-              const canQonto = suggestion?.matchStatus === "exact";
-              return (
-                <li key={row.reservationId} className={`${styles.card} ${styles.cardPending}`}>
-                  <div className={styles.cardMain}>
-                    <div className={styles.cardTitleRow}>
-                      <strong className={styles.cardTitle}>{row.reservationReference}</strong>
-                      <span className={styles.badgePending}>En attente</span>
-                      {suggestion ? (
-                        <span
-                          className={
-                            suggestion.matchStatus === "exact"
-                              ? styles.badgeQonto
-                              : styles.badgeQontoMismatch
+          <>
+            <ul className={styles.list}>
+              {pagedPending.map((row) => {
+                const marking = markingRef === row.reservationReference;
+                const suggestion = row.qontoSuggestion;
+                const canQonto = suggestion?.matchStatus === "exact";
+                return (
+                  <li key={row.reservationId} className={`${styles.card} ${styles.cardPending}`}>
+                    <div className={styles.cardMain}>
+                      <div className={styles.cardTitleRow}>
+                        <strong className={styles.cardTitle}>{row.reservationReference}</strong>
+                        <span className={styles.badgePending}>En attente</span>
+                        {suggestion ? (
+                          <span
+                            className={
+                              suggestion.matchStatus === "exact"
+                                ? styles.badgeQonto
+                                : styles.badgeQontoMismatch
+                            }
+                          >
+                            {suggestion.matchStatus === "exact"
+                              ? `Qonto · ${formatEuroFromCents(suggestion.amountCents)}`
+                              : "Qonto · montant différent"}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className={styles.meta}>
+                        <p className={styles.metaRow}>
+                          <ClientIcon />
+                          <span className={styles.metaStrong}>{clientDisplay(row)}</span>
+                        </p>
+                        <p className={styles.metaRow}>
+                          <SpaceIcon />
+                          <span>
+                            {row.spaceName} · {formatDateTime(row.startAt)} →{" "}
+                            {formatDateTime(row.endAt)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className={styles.balanceRow}>
+                        <span className={styles.balanceAmount}>
+                          {formatEuroFromCents(row.balanceDueCents)}
+                        </span>
+                        {row.awaitingPaymentExpiresAt ? (
+                          <span className={styles.balanceHint}>
+                            Échéance {formatDateTime(row.awaitingPaymentExpiresAt)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className={styles.cardActions}>
+                      {canQonto ? (
+                        <button
+                          type="button"
+                          className={styles.primaryButton}
+                          disabled={marking}
+                          onClick={() =>
+                            void handleMarkReceived({
+                              reservationReference: row.reservationReference,
+                              withQonto: true,
+                              qontoTxId: suggestion.qontoTxId,
+                            })
                           }
                         >
-                          {suggestion.matchStatus === "exact"
-                            ? `Qonto · ${formatEuroFromCents(suggestion.amountCents)}`
-                            : "Qonto · montant différent"}
-                        </span>
+                          {marking ? "Encaissement…" : "Confirmer Qonto"}
+                        </button>
                       ) : null}
-                    </div>
-                    <div className={styles.meta}>
-                      <p className={styles.metaRow}>
-                        <ClientIcon />
-                        <span className={styles.metaStrong}>{clientDisplay(row)}</span>
-                      </p>
-                      <p className={styles.metaRow}>
-                        <SpaceIcon />
-                        <span>
-                          {row.spaceName} · {formatDateTime(row.startAt)} →{" "}
-                          {formatDateTime(row.endAt)}
-                        </span>
-                      </p>
-                    </div>
-                    <div className={styles.balanceRow}>
-                      <span className={styles.balanceAmount}>
-                        {formatEuroFromCents(row.balanceDueCents)}
-                      </span>
-                      {row.awaitingPaymentExpiresAt ? (
-                        <span className={styles.balanceHint}>
-                          Échéance {formatDateTime(row.awaitingPaymentExpiresAt)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className={styles.cardActions}>
-                    {canQonto ? (
                       <button
                         type="button"
-                        className={styles.primaryButton}
+                        className={canQonto ? styles.secondaryButton : styles.primaryButton}
                         disabled={marking}
                         onClick={() =>
                           void handleMarkReceived({
                             reservationReference: row.reservationReference,
-                            withQonto: true,
-                            qontoTxId: suggestion.qontoTxId,
+                            withQonto: false,
                           })
                         }
                       >
-                        {marking ? "Encaissement…" : "Confirmer Qonto"}
+                        {marking ? "Encaissement…" : "Marquer reçu"}
                       </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={canQonto ? styles.secondaryButton : styles.primaryButton}
-                      disabled={marking}
-                      onClick={() =>
-                        void handleMarkReceived({
-                          reservationReference: row.reservationReference,
-                          withQonto: false,
-                        })
-                      }
-                    >
-                      {marking ? "Encaissement…" : "Marquer reçu"}
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className={billingStyles.tableWrap}>
+              <BillingTablePagination
+                page={safePendingPage}
+                pageSize={pendingPageSize}
+                total={filteredPending.length}
+                onPageChange={setPendingPage}
+                onPageSizeChange={(size) => {
+                  setPendingPageSize(size);
+                  setPendingPage(1);
+                }}
+                disabled={listLoading}
+                itemLabel="virements"
+              />
+            </div>
+          </>
         ) : null}
       </section>
 
@@ -385,33 +429,51 @@ export function MarkTransferReceivedPage() {
             ) : null}
 
             {!listLoading && filteredValidated.length > 0 ? (
-              <ul className={styles.list}>
-                {filteredValidated.map((row) => (
-                  <li key={row.paymentId} className={styles.card}>
-                    <div className={styles.cardMain}>
-                      <div className={styles.cardTitleRow}>
-                        <strong className={styles.cardTitle}>{row.reservationReference}</strong>
-                        <span className={styles.badgeValidated}>
-                          {row.origin === "qonto" ? "Confirmé via Qonto" : "Confirmé manuellement"}
-                        </span>
-                      </div>
-                      <div className={styles.meta}>
-                        <p className={styles.metaRow}>
-                          <ClientIcon />
-                          <span className={styles.metaStrong}>{clientDisplay(row)}</span>
-                        </p>
-                        <p className={styles.metaRow}>
-                          <SpaceIcon />
-                          <span>
-                            {row.spaceName} · {formatEuroFromCents(row.amountReceivedCents)} ·{" "}
-                            {formatDateTime(row.receivedAt)}
+              <>
+                <ul className={styles.list}>
+                  {pagedValidated.map((row) => (
+                    <li key={row.paymentId} className={styles.card}>
+                      <div className={styles.cardMain}>
+                        <div className={styles.cardTitleRow}>
+                          <strong className={styles.cardTitle}>{row.reservationReference}</strong>
+                          <span className={styles.badgeValidated}>
+                            {row.origin === "qonto"
+                              ? "Confirmé via Qonto"
+                              : "Confirmé manuellement"}
                           </span>
-                        </p>
+                        </div>
+                        <div className={styles.meta}>
+                          <p className={styles.metaRow}>
+                            <ClientIcon />
+                            <span className={styles.metaStrong}>{clientDisplay(row)}</span>
+                          </p>
+                          <p className={styles.metaRow}>
+                            <SpaceIcon />
+                            <span>
+                              {row.spaceName} · {formatEuroFromCents(row.amountReceivedCents)} ·{" "}
+                              {formatDateTime(row.receivedAt)}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+                <div className={billingStyles.tableWrap}>
+                  <BillingTablePagination
+                    page={safeValidatedPage}
+                    pageSize={validatedPageSize}
+                    total={filteredValidated.length}
+                    onPageChange={setValidatedPage}
+                    onPageSizeChange={(size) => {
+                      setValidatedPageSize(size);
+                      setValidatedPage(1);
+                    }}
+                    disabled={listLoading}
+                    itemLabel="virements"
+                  />
+                </div>
+              </>
             ) : null}
           </div>
         ) : null}

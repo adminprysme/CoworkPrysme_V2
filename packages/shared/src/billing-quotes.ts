@@ -340,6 +340,15 @@ export const StaffQuoteListResponseSchema = z.object({
   total: z.number().int().min(0),
   page: z.number().int().min(1),
   pageSize: z.number().int().min(1),
+  /**
+   * Status counts over the search universe (q / cardexId), ignoring status filter
+   * so KPI cards stay meaningful when the table is status-filtered.
+   */
+  summary: z.object({
+    draft: z.number().int().min(0),
+    sent: z.number().int().min(0),
+    accepted: z.number().int().min(0),
+  }),
 });
 export type StaffQuoteListResponse = z.infer<typeof StaffQuoteListResponseSchema>;
 
@@ -382,7 +391,7 @@ export const StaffQuoteListQuerySchema = z.object({
     .optional(),
   q: z.string().trim().min(1).max(200).optional(),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 export type StaffQuoteListQuery = z.infer<typeof StaffQuoteListQuerySchema>;
 

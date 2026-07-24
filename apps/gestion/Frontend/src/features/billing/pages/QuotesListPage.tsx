@@ -19,6 +19,10 @@ import {
   refuseQuote,
 } from "../../../lib/billing-quotes-api.js";
 import { BillingStats } from "../components/BillingStats.js";
+import {
+  BillingTablePagination,
+  type BillingPageSize,
+} from "../components/BillingTablePagination.js";
 import styles from "../BillingPages.module.css";
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -169,8 +173,12 @@ function ExpireIcon() {
 export function QuotesListPage() {
   const [quotes, setQuotes] = useState<StaffQuoteListItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState({ draft: 0, sent: 0, accepted: 0 });
   const [status, setStatus] = useState<QuoteStatus | "">("");
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<BillingPageSize>(25);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -179,6 +187,15 @@ export function QuotesListPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<"summary" | "lines" | "conditions">("summary");
+  const [deleteTarget, setDeleteTarget] = useState<StaffQuoteListItem | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQ(q.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,55 +203,54 @@ export function QuotesListPage() {
     try {
       const result = await listQuotes({
         ...(status ? { status } : {}),
-        ...(q.trim() ? { q: q.trim() } : {}),
-        page: 1,
-        pageSize: 50,
+        ...(debouncedQ ? { q: debouncedQ } : {}),
+        page,
+        pageSize,
       });
       setQuotes(result.quotes);
       setTotal(result.total);
+      setSummary({
+        draft: result.summary?.draft ?? 0,
+        sent: result.summary?.sent ?? 0,
+        accepted: result.summary?.accepted ?? 0,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible de charger les devis.");
       setQuotes([]);
       setTotal(0);
+      setSummary({ draft: 0, sent: 0, accepted: 0 });
     } finally {
       setLoading(false);
     }
-  }, [status, q]);
+  }, [status, debouncedQ, page, pageSize]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const quoteStats = useMemo(() => {
-    let draft = 0;
-    let sent = 0;
-    let accepted = 0;
-    for (const quote of quotes) {
-      if (quote.status === "draft") draft += 1;
-      else if (quote.status === "sent") sent += 1;
-      else if (quote.status === "accepted") accepted += 1;
-    }
-    return [
+  const quoteStats = useMemo(
+    () => [
       {
         key: "draft",
         label: "Brouillons",
-        value: String(draft),
+        value: String(summary.draft),
         accent: "var(--color-secondary)",
       },
       {
         key: "sent",
         label: "Envoyés",
-        value: String(sent),
+        value: String(summary.sent),
         accent: "var(--color-primary)",
       },
       {
         key: "accepted",
         label: "Acceptés",
-        value: String(accepted),
+        value: String(summary.accepted),
         accent: "var(--color-accent, var(--color-primary))",
       },
-    ];
-  }, [quotes]);
+    ],
+    [summary],
+  );
 
   const openDetail = useCallback(async (quoteId: string) => {
     setDetail(null);
@@ -262,6 +278,13 @@ export function QuotesListPage() {
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function confirmDeleteDraft() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    await runAction(id, () => deleteQuoteDraft(id));
   }
 
   const detailCompany = detail?.companyLegalName ?? detail?.prospect?.companyName?.trim() ?? null;
@@ -292,7 +315,10 @@ export function QuotesListPage() {
         <select
           className={styles.select}
           value={status}
-          onChange={(event) => setStatus(event.target.value as QuoteStatus | "")}
+          onChange={(event) => {
+            setStatus(event.target.value as QuoteStatus | "");
+            setPage(1);
+          }}
           aria-label="Filtrer par statut"
         >
           <option value="">Tous les statuts</option>
@@ -392,9 +418,7 @@ export function QuotesListPage() {
                               title="Supprimer"
                               aria-label={`Supprimer ${quote.reference}`}
                               disabled={busy}
-                              onClick={() =>
-                                void runAction(quote.id, () => deleteQuoteDraft(quote.id))
-                              }
+                              onClick={() => setDeleteTarget(quote)}
                             >
                               <TrashIcon />
                             </button>
@@ -441,10 +465,20 @@ export function QuotesListPage() {
               })}
             </tbody>
           </table>
+          <BillingTablePagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            disabled={loading}
+            itemLabel="devis"
+          />
         </div>
       ) : null}
-
-      {!loading && total > 0 ? <p className={styles.muted}>{total} devis au total</p> : null}
 
       {detailLoading || detailError || detail ? (
         <div
@@ -645,6 +679,60 @@ export function QuotesListPage() {
                 </div>
               ) : null}
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <div className={styles.overlay} role="presentation" onClick={() => setDeleteTarget(null)}>
+          <div
+            className={styles.dialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-draft-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className={styles.dialogHeader}>
+              <div>
+                <h2 id="delete-draft-title" className={styles.dialogTitle}>
+                  Supprimer le brouillon
+                </h2>
+                <p className={styles.dialogSubtitle}>{deleteTarget.reference}</p>
+              </div>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setDeleteTarget(null)}
+                disabled={busyId === deleteTarget.id}
+              >
+                Fermer
+              </button>
+            </header>
+            <div className={styles.dialogBody}>
+              <div className={styles.confirmBox} role="group" aria-label="Confirmer la suppression">
+                <p className={styles.confirmText}>
+                  Souhaitez-vous vraiment supprimer ce brouillon&nbsp;?
+                </p>
+              </div>
+            </div>
+            <footer className={styles.dialogFooter}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setDeleteTarget(null)}
+                disabled={busyId === deleteTarget.id}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className={styles.dangerButton}
+                onClick={() => void confirmDeleteDraft()}
+                disabled={busyId === deleteTarget.id}
+              >
+                {busyId === deleteTarget.id ? "Suppression…" : "Supprimer"}
+              </button>
+            </footer>
           </div>
         </div>
       ) : null}

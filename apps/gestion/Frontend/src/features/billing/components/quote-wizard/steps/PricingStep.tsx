@@ -14,6 +14,21 @@ type PricingStepProps = {
   onOverridesChange: (next: WizardPricingOverride[]) => void;
 };
 
+function kindLabel(kind: StaffQuoteLineInput["kind"]): string {
+  switch (kind) {
+    case "space":
+      return "Espace";
+    case "service":
+      return "Service";
+    case "fee":
+      return "Frais";
+    case "discount":
+      return "Remise";
+    default:
+      return "Autre";
+  }
+}
+
 export function PricingStep({
   lines,
   depositPercent,
@@ -50,129 +65,166 @@ export function PricingStep({
 
   return (
     <section className={styles.panel} aria-labelledby="quote-pricing-title">
-      <h2 id="quote-pricing-title" className={styles.panelTitle}>
-        Tarification
-      </h2>
-      <p className={pageStyles.muted}>
-        Les paliers espace sont calculés côté client pour l’aperçu ; le serveur recalcule à
-        l’enregistrement. Un override exige une justification.
-      </p>
+      <header className={styles.stepHeader}>
+        <div>
+          <h2 id="quote-pricing-title" className={styles.panelTitle}>
+            Tarification
+          </h2>
+        </div>
+      </header>
 
       {lines.length === 0 ? (
-        <p className={pageStyles.muted}>Aucune ligne — ajoutez des espaces ou services.</p>
+        <div className={styles.emptyPanel}>
+          <p className={styles.emptyPanelTitle}>Aucune ligne tarifaire</p>
+          <p className={pageStyles.muted}>Ajoutez d’abord des espaces ou des services.</p>
+        </div>
       ) : (
-        <table className={styles.lineTable}>
-          <thead>
-            <tr>
-              <th>Ligne</th>
-              <th>PU HT</th>
-              <th>Total TTC</th>
-              <th>Override</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((line, index) => {
-              const pricedLine = priced.lines[index]!;
-              const override = overrides.find((item) => item.lineId === line.lineId);
-              return (
-                <tr key={line.lineId}>
-                  <td>
-                    <div>{line.label}</div>
-                    <div className={pageStyles.muted}>{line.kind}</div>
-                  </td>
-                  <td>{formatEuroFromCents(pricedLine.unitPriceHT)}</td>
-                  <td>{formatEuroFromCents(pricedLine.totalTTC)}</td>
-                  <td>
-                    <label className={styles.checkboxLabel}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(override)}
-                        onChange={(event) => {
-                          if (!event.target.checked) {
-                            setOverride(line.lineId, null);
-                            return;
+        <div className={styles.pricingLines}>
+          {lines.map((line, index) => {
+            const pricedLine = priced.lines[index]!;
+            const override = overrides.find((item) => item.lineId === line.lineId);
+            const forced = Boolean(override);
+            return (
+              <article
+                key={line.lineId}
+                className={styles.pricingLineCard}
+                data-forced={forced ? "true" : "false"}
+              >
+                <div className={styles.pricingLineTop}>
+                  <div className={styles.pricingLineIdentity}>
+                    <span className={styles.kindChip}>{kindLabel(line.kind)}</span>
+                    <h3 className={styles.pricingLineTitle}>{line.label}</h3>
+                    <p className={styles.pricingLineMeta}>
+                      Qté {line.qty}
+                      {line.vatRate !== undefined ? ` · TVA ${line.vatRate} %` : ""}
+                    </p>
+                  </div>
+                  <div className={styles.pricingLineAmounts}>
+                    <div>
+                      <p className={styles.miniLabel}>PU HT</p>
+                      <p className={styles.miniValue}>
+                        {formatEuroFromCents(pricedLine.unitPriceHT)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={styles.miniLabel}>Total TTC</p>
+                      <p className={styles.miniValueStrong}>
+                        {formatEuroFromCents(pricedLine.totalTTC)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.pricingLineActions}>
+                  <label className={styles.toggleLabel}>
+                    <input
+                      type="checkbox"
+                      className={styles.toggleInput}
+                      checked={forced}
+                      onChange={(event) => {
+                        if (!event.target.checked) {
+                          setOverride(line.lineId, null);
+                          return;
+                        }
+                        setOverride(line.lineId, {
+                          forcedUnitPriceHT: pricedLine.calculatedUnitPriceHT,
+                          priceOverrideReason: "",
+                        });
+                      }}
+                    />
+                    <span className={styles.toggleUi} aria-hidden="true" />
+                    <span>Changer le prix</span>
+                  </label>
+                  {forced && override ? (
+                    <div className={styles.overridePanel}>
+                      <label className={pageStyles.label}>
+                        Prix unitaire HT (€)
+                        <input
+                          className={pageStyles.input}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={override.forcedUnitPriceHT / 100}
+                          onChange={(event) =>
+                            setOverride(line.lineId, {
+                              forcedUnitPriceHT: Math.max(
+                                0,
+                                Math.round((Number(event.target.value) || 0) * 100),
+                              ),
+                            })
                           }
-                          setOverride(line.lineId, {
-                            forcedUnitPriceHT: pricedLine.calculatedUnitPriceHT,
-                            priceOverrideReason: "",
-                          });
-                        }}
-                      />
-                      Forcer
-                    </label>
-                    {override ? (
-                      <div className={pageStyles.fieldGrid} style={{ marginTop: "0.45rem" }}>
-                        <label className={pageStyles.label}>
-                          PU HT (centimes)
-                          <input
-                            className={pageStyles.input}
-                            type="number"
-                            min={0}
-                            value={override.forcedUnitPriceHT}
-                            onChange={(event) =>
-                              setOverride(line.lineId, {
-                                forcedUnitPriceHT: Math.max(0, Number(event.target.value) || 0),
-                              })
-                            }
-                          />
-                        </label>
-                        <label className={pageStyles.label}>
-                          Justification *
-                          <input
-                            className={pageStyles.input}
-                            value={override.priceOverrideReason}
-                            onChange={(event) =>
-                              setOverride(line.lineId, {
-                                priceOverrideReason: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                      </div>
-                    ) : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                        />
+                      </label>
+                      <label className={pageStyles.label}>
+                        Justification *
+                        <input
+                          className={pageStyles.input}
+                          placeholder="Motif commercial, geste client…"
+                          value={override.priceOverrideReason}
+                          onChange={(event) =>
+                            setOverride(line.lineId, {
+                              priceOverrideReason: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <p className={styles.overrideHint}>
+                        Calculé : {formatEuroFromCents(pricedLine.calculatedUnitPriceHT)} HT
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       )}
 
-      <div className={pageStyles.fieldGrid}>
-        <label className={pageStyles.label}>
-          Acompte (%)
-          <input
-            className={pageStyles.input}
-            type="number"
-            min={0}
-            max={100}
-            value={depositPercent}
-            onChange={(event) =>
-              onDepositChange(Math.min(100, Math.max(0, Number(event.target.value) || 0)))
-            }
-          />
-        </label>
+      <div className={styles.sectionCard}>
+        <h3 className={styles.sectionCardTitle}>Acompte</h3>
+        <div className={styles.depositRow}>
+          <label className={pageStyles.label}>
+            Pourcentage d’acompte
+            <div className={styles.depositControl}>
+              <input
+                className={`${pageStyles.input} ${styles.depositInput}`}
+                type="number"
+                min={0}
+                max={100}
+                value={depositPercent}
+                onChange={(event) =>
+                  onDepositChange(Math.min(100, Math.max(0, Number(event.target.value) || 0)))
+                }
+              />
+              <span className={styles.depositSuffix}>%</span>
+            </div>
+          </label>
+          {depositPercent > 0 ? (
+            <p className={styles.depositHint}>
+              Soit {formatEuroFromCents(priced.deposit.depositAmountTTC)} TTC à l’acceptation.
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <div className={styles.recapGrid}>
-        <p className={styles.recapRow}>
-          <span>Total HT</span>
-          <strong>{formatEuroFromCents(priced.totals.ht)}</strong>
-        </p>
-        <p className={styles.recapRow}>
-          <span>TVA</span>
-          <strong>{formatEuroFromCents(priced.totals.vat)}</strong>
-        </p>
-        <p className={styles.recapRow}>
-          <span>Total TTC</span>
-          <strong>{formatEuroFromCents(priced.totals.ttc)}</strong>
-        </p>
-        {depositPercent > 0 ? (
-          <p className={styles.recapRow}>
-            <span>Acompte TTC ({depositPercent} %)</span>
-            <strong>{formatEuroFromCents(priced.deposit.depositAmountTTC)}</strong>
-          </p>
-        ) : null}
+      <div className={styles.totalsStrip} aria-label="Totaux du devis">
+        {(
+          [
+            ["HT", priced.totals.ht],
+            ["TVA", priced.totals.vat],
+            ["TTC", priced.totals.ttc],
+            ...(depositPercent > 0 ? [["Acompte", priced.deposit.depositAmountTTC] as const] : []),
+          ] as const
+        ).map(([label, cents]) => (
+          <div
+            key={label}
+            className={styles.totalCard}
+            data-emphasis={label === "TTC" ? "true" : "false"}
+          >
+            <p className={styles.totalCardLabel}>{label}</p>
+            <p className={styles.totalCardValue}>{formatEuroFromCents(cents)}</p>
+          </div>
+        ))}
       </div>
     </section>
   );
