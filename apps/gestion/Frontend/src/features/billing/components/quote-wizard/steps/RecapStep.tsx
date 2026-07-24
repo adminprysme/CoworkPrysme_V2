@@ -11,18 +11,10 @@ type RecapStepProps = {
   lines: StaffQuoteLineInput[];
   lastSaved: StaffQuote | null;
   sending: boolean;
-  onSaveDraft: () => void;
   onSend: () => void;
 };
 
-export function RecapStep({
-  state,
-  lines,
-  lastSaved,
-  sending,
-  onSaveDraft,
-  onSend,
-}: RecapStepProps) {
+export function RecapStep({ state, lines, lastSaved, sending, onSend }: RecapStepProps) {
   const priced = recomputeQuotePricing({
     lines,
     depositPercent: state.depositPercent,
@@ -88,14 +80,6 @@ export function RecapStep({
       </div>
 
       <div className={pageStyles.toolbar}>
-        <button
-          type="button"
-          className={pageStyles.secondaryButton}
-          disabled={sending}
-          onClick={onSaveDraft}
-        >
-          Enregistrer le brouillon
-        </button>
         <button
           type="button"
           className={pageStyles.primaryButton}

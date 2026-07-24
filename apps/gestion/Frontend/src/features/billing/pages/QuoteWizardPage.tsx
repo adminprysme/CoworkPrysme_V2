@@ -111,6 +111,7 @@ export function QuoteWizardPage() {
   const [services, setServices] = useState<ServiceResponse[]>([]);
   const [loading, setLoading] = useState(!isNew);
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -415,7 +416,7 @@ export function QuoteWizardPage() {
   }
 
   async function handleSaveDraft() {
-    setBusy(true);
+    setSaving(true);
     setError(null);
     setInfo(null);
     try {
@@ -424,7 +425,7 @@ export function QuoteWizardPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Enregistrement impossible.");
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   }
 
@@ -547,7 +548,6 @@ export function QuoteWizardPage() {
             lines={lines}
             lastSaved={lastSaved}
             sending={sending}
-            onSaveDraft={() => void handleSaveDraft()}
             onSend={() => void handleSend()}
           />
         ) : null}
@@ -557,17 +557,25 @@ export function QuoteWizardPage() {
         <button
           type="button"
           className={pageStyles.secondaryButton}
-          disabled={stepIndex === 0 || busy || loading}
+          disabled={stepIndex === 0 || busy || loading || sending || saving}
           onClick={() => setStepIndex((prev) => Math.max(0, prev - 1))}
         >
           Précédent
         </button>
         <div className={styles.footerRight}>
+          <button
+            type="button"
+            className={pageStyles.secondaryButton}
+            disabled={busy || loading || sending || saving}
+            onClick={() => void handleSaveDraft()}
+          >
+            {saving ? "Enregistrement…" : "Enregistrer le brouillon"}
+          </button>
           {step.id !== "recap" ? (
             <button
               type="button"
               className={pageStyles.primaryButton}
-              disabled={busy || loading}
+              disabled={busy || loading || sending || saving}
               onClick={() => void handleNext()}
             >
               {busy ? "…" : "Suivant"}
